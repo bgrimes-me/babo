@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from babo.baton.town import BatonError, Town
+from babo.baton.town import BatonError, Town, slugify
 
 PUBLIC_TOP_LEVEL = ("CHARTER.md", "HOUSE.md", "REGISTRY.md")
 
@@ -63,7 +63,9 @@ class Scope:
         ref = ref.strip().strip("`\"'")
         if not ref:
             raise BatonError("Give a note path, for example knowledge/topic.md or commons/knowledge/topic.md")
-        if ref.startswith("skill:"):
+        if ref.startswith("[[") and ref.endswith("]]"):
+            path = self._linked(ref[2:-2])
+        elif ref.startswith("skill:"):
             name = ref.split(":", 1)[1].strip()
             path = self.town.skills / name / "SKILL.md"
         elif ref.startswith(("commons/", "residents/", "crew/")) or ref in PUBLIC_TOP_LEVEL:
@@ -79,6 +81,24 @@ class Scope:
         if not path.is_file():
             raise BatonError(f"No note at '{ref}'. Use search_memory to find the right path.")
         return path
+
+    def _linked(self, link: str) -> Path:
+        """An Obsidian-style [[link]]: the note by file name, title or alias; one's own notes first, then the commons."""
+        from babo.baton.notes import Note
+
+        name = link.split("|", 1)[0].split("#", 1)[0].strip()
+        slug = slugify(name)
+        folders = [self.home / "knowledge", self.town.knowledge]
+        for folder in folders:
+            if (folder / f"{slug}.md").is_file():
+                return folder / f"{slug}.md"
+        wanted = name.lower()
+        for folder in folders:
+            for path in sorted(folder.glob("*.md")) if folder.is_dir() else []:
+                note = Note.load(path)
+                if wanted == note.title.lower() or wanted in (a.lower() for a in note.aliases):
+                    return path
+        return self.town.knowledge / f"{slug}.md"
 
     def display(self, path: Path) -> str:
         """Show a path the way the resident would type it."""

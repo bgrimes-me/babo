@@ -157,6 +157,8 @@ def document_for(town: Town, path: Path) -> Document | None:
     if path.suffix != ".md" or not path.is_file():
         return None
     if parts[:2] == ("commons", "knowledge"):
+        if path.name == "INDEX.md":  # the generated map; it would only echo every note
+            return None
         owner, kind = "commons", "knowledge"
     elif parts[:2] == ("commons", "skills") and path.name == "SKILL.md":
         owner, kind = "commons", "skill"

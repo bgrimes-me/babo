@@ -82,6 +82,7 @@ async def test_full_night_cycle(make_loop, make_config, mock_llama: MockLlama, t
     # Archivist: the nomination became a commons note and was marked reviewed.
     assert (town.knowledge / "tomatoes.md").exists()
     assert split_frontmatter((town.promotions / "2026-01-01-mayor-tomatoes.md").read_text())[0]["status"] == "reviewed"
+    assert "[[tomatoes|Tomatoes]]" in (town.knowledge / "INDEX.md").read_text()  # the map of the commons
     # Inspector: the flag reached the Mayor's inbox and the pending tool has a review.
     assert any(i.kind == "flag" for i in unread(town, "mayor"))
     assert (town.tools / "pending" / "shout" / "REVIEW.md").exists()

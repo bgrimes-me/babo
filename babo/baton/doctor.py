@@ -143,8 +143,7 @@ def check_residents(cfg: Config) -> Check:
     try:
         town = Town.open(cfg.baton.town_path)
         registry = Registry(town)
-        for rid in ("mayor", "archivist", "inspector"):
-            registry.require_active(rid)
+        registry.require_active("mayor")  # the only resident every town has
         residents = [r.display for r in registry.all() if r.status == "active"]
     except BatonError as exc:
         return Check("residents present", "FAIL", str(exc))

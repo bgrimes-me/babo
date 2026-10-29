@@ -38,7 +38,10 @@ from babo.baton.town import (
     slugify,
 )
 
-FOUNDING_OFFICES = ("mayor", "archivist", "inspector")
+# A new town is founded with the Mayor alone. The other offices that come with
+# a written role are founded when the town needs them (a founding request).
+FOUNDING_OFFICES = ("mayor",)
+DESCRIBED_OFFICES = ("mayor", "archivist", "inspector")
 _TEMPLATES = files("babo.baton") / "templates"
 
 
@@ -54,9 +57,13 @@ _EARLIER_SHIPPED: dict[str, frozenset[str]] = {
         "a14b2f93fb1930c0d611b0cbe733cbc398f83b7ad5bc2f57ab406d169c530ebb",
         "42789c0fbee3ce65dfc82d82c7138817f578ab2f74fa9781a433efbac561b5fd",
         "ee431ebd6bf7841565bac1c43979ff2ccfbb07db9c654564ed28f70971350f35",
+        "e4f4d24e22f4ddccc44a587018081380687a9c6696a30b29143b85328b25374f",
     }),
     "HOUSE.md": frozenset({"f5db7f23720080bdc08805b3c0f64b6186e2edefd06367035ab70333490dd81e"}),
-    "offices/mayor.md": frozenset({"796e6bb50d56aa9dac20b24712e6fee0f89ed7542111eadb9020ca3c22ade724"}),
+    "offices/mayor.md": frozenset({
+        "796e6bb50d56aa9dac20b24712e6fee0f89ed7542111eadb9020ca3c22ade724",
+        "e25af6ebdef63a8b29380bf84831b2a912793600e5ff93b42e5aa18a59d340ac",
+    }),
     "offices/archivist.md": frozenset({"f2ae5b783190f844e40284333105bce537920f877599b809ba7c1df436236df5"}),
     "offices/inspector.md": frozenset({
         "da6fd4cb1521656dfb05df33dcfffe2d69bf0a3f88915222f36d90eb2e0af87d",
@@ -140,12 +147,13 @@ def _found_resident(
     return resident
 
 
-def found_town(root: str | Path) -> tuple[Town, list[str]]:
-    """Create the town and its three founding residents. Idempotent: an
-    existing town is left as it is, and only missing founding residents are
-    founded (an interrupted first run can simply be repeated). The one change
-    to an existing town: founding documents nobody has edited (CHARTER.md,
-    HOUSE.md, the founding residents' ROLE.md) are brought up to date."""
+def found_town(root: str | Path, *, offices: tuple[str, ...] = FOUNDING_OFFICES) -> tuple[Town, list[str]]:
+    """Create the town and its founding resident, the Mayor (``offices`` can
+    name more, for tests). Idempotent: an existing town is left as it is, and
+    only missing founding residents are founded (an interrupted first run can
+    simply be repeated). The one change to an existing town: founding
+    documents nobody has edited (CHARTER.md, HOUSE.md, the ROLE.md of the
+    residents whose office has a written role) are brought up to date."""
     town = Town.at(root)
     created: list[str] = []
     updated: list[str] = []
@@ -178,13 +186,15 @@ def found_town(root: str | Path) -> tuple[Town, list[str]]:
     if not (town.root / TOWN_MARKER).exists():
         atomic_write(town.root / TOWN_MARKER, "baton town v1\n")
     registry = Registry(town)
-    for office in FOUNDING_OFFICES:
+    for office in offices:
         if registry.get(office) is None:
             authority = _authority("founding resident of the town", "squid (install)", _TOKEN)
             _found_resident(town, office, office, template_text(f"offices/{office}.md"), authority)
             created.append(f"residents/{office}")
-        elif _refresh_if_untouched(town.resident_dir(office) / "ROLE.md", f"offices/{office}.md"):
-            updated.append(f"residents/{office}/ROLE.md")
+    for resident in registry.all():
+        if resident.office in DESCRIBED_OFFICES and f"residents/{resident.id}" not in created:
+            if _refresh_if_untouched(town.resident_dir(resident.id) / "ROLE.md", f"offices/{resident.office}.md"):
+                updated.append(f"residents/{resident.id}/ROLE.md")
     registry.render()
     from babo.baton.ledger import write_ledger
 
@@ -230,9 +240,12 @@ def approve_founding_request(town: Town, request: Path, *, approved_by: str, not
     office = str(meta.get("office") or "").strip() or "resident"
     registry = Registry(town)
     resident_id = _unique_id(registry, town, office)
-    role = Template(template_text("offices/default.md")).render(
-        office_title=office.replace("-", " ").title(), description=body.strip(),
-    )
+    if slugify(office) in DESCRIBED_OFFICES and slugify(office) != "mayor":
+        role = template_text(f"offices/{slugify(office)}.md")  # an office the charter describes keeps its written role
+    else:
+        role = Template(template_text("offices/default.md")).render(
+            office_title=office.replace("-", " ").title(), description=body.strip(),
+        )
     authority = _authority(f"founding request {request.name}", approved_by, _TOKEN)
     resident = _found_resident(town, resident_id, slugify(office), role, authority)
     template = town.state / "profiles" / "_new-residents.json"  # profiles.NEW_RESIDENTS

@@ -240,6 +240,8 @@ class Toolbox:
         return self.town.resident_dir(self.resident_id)
 
     def _require_office(self, *offices: str) -> None:
+        if "archivist" in offices and self.curates_for_archivist():
+            return
         if self.me.office not in offices:
             raise BatonError(f"Blocked: only the {' or '.join(offices)} can do this; it is their lane. To get it done, send_letter to the {offices[0]} and say what you need.")
 
@@ -257,8 +259,14 @@ class Toolbox:
 
     def available(self) -> list[str]:
         office = self.me.office
-        names = [s.name for s in TOOL_SPECS.values() if not s.offices or office in s.offices]
+        offices: set[str] = {office, "archivist"} if self.curates_for_archivist() else {office}
+        names = [s.name for s in TOOL_SPECS.values() if not s.offices or offices & set(s.offices)]
         return names + list(self.extra)
+
+    def curates_for_archivist(self) -> bool:
+        """The Mayor keeps the commons while the town has no Archivist."""
+        return self.me.office == "mayor" and not any(
+            r.office == "archivist" and r.status == "active" for r in self.registry.all())
 
     def call(self, name: str, **kwargs: object) -> str:
         if name in self.extra:

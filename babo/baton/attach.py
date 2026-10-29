@@ -121,6 +121,8 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
     for tool in baton_tools(toolbox, {"checkpoint": CHECKPOINT_SPEC, "visit": VISIT_SPEC}):
         loop.tools.register(tool)
     allowed = profiles.harness_tools(profile, baton_cfg, resident_id, resident.office)
+    if toolbox.curates_for_archivist():
+        allowed |= {n for n in toolbox.available() if n.startswith("commons_")}
     for name in list(loop.tools.tool_names):
         if name not in allowed and not profiles.mcp_permitted(profile, name):
             loop.tools.unregister(name)

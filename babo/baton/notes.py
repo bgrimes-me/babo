@@ -82,7 +82,7 @@ class Note:
             supersedes=str(supersedes) if supersedes else None,
             aliases=_as_list(meta.pop("aliases", None)),
             keywords=_as_list(meta.pop("keywords", None)),
-            extra=meta,
+            extra={k: v for k, v in meta.items() if k != "tags"},  # tags are derived from keywords
         )
 
     def render(self) -> str:
@@ -98,6 +98,8 @@ class Note:
             meta["supersedes"] = self.supersedes
         meta["aliases"] = self.aliases
         meta["keywords"] = self.keywords
+        # Obsidian's own property for grouping notes: the keywords, as tags (no spaces).
+        meta["tags"] = [slugify(k) for k in self.keywords if slugify(k)]
         meta.update(self.extra)
         return join_frontmatter(meta, self.body)
 

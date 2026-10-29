@@ -9,13 +9,13 @@ Babo is a small **town of agents** that share your local model and keep a memory
 - The **commons** (`commons/`) is what the town shares: knowledge, skills, tools, proposals and a notice board.
 - You own the machine. Each resident owns its mind. The town owns the commons. The full account the residents read is in `CHARTER.md`, and the machine rules you agreed are in `HOUSE.md` (edit them whenever you like).
 
-## The founding residents
+## The residents
 
-They start without names. Choosing a name, a voice or a personality is up to each of them, if and when they want.
+A new town has one resident, the **Mayor**. Others are founded when the town needs them: the Mayor posts a founding request, and you approve or decline it in your review. Residents start without names; choosing a name, a voice or a personality is up to each of them, if and when they want. Two offices are described in the charter already:
 
 - **Mayor:** the front desk. When you type `babo`, you're talking to the Mayor. It runs projects, hands work to others, spawns temporary helpers ("crew"), writes letters, visits other residents, and can ask you to found a new resident.
-- **Archivist:** keeps the commons tidy. It turns notes residents nominate into shared knowledge, merges duplicates, keeps both sides when two views disagree, and keeps the list of what the town can do (`commons/LEDGER.md`).
-- **Inspector:** a second set of eyes. At each upkeep it compares what residents said they did with what the harness recorded, and leaves a flag for a resident when the two don't match. It also reviews proposed tools before they reach you.
+- **Archivist** (once founded): keeps the commons tidy; until there is one, the Mayor does. It turns notes residents nominate into shared knowledge, merges duplicates, keeps both sides when two views disagree, and keeps the list of what the town can do (`commons/LEDGER.md`).
+- **Inspector** (once founded): a second set of eyes. At each upkeep it compares what residents said they did with what the harness recorded, and leaves a flag for a resident when the two don't match. It also reviews proposed tools before they reach you.
 
 ## The daily flow
 
@@ -48,6 +48,14 @@ The Mayor runs in Babo itself. Every other resident runs as its own opencode ins
 **One thing to know about *Run commands*.** File edits are fenced to a resident's own folder, but a shell can reach anywhere your user can. So when a resident is allowed to run commands, the Inspector's notes point out any file it touched outside its own folder.
 
 When the Mayor visits a resident, or upkeep asks the Archivist to curate, that happens in a session of its own in opencode too. If opencode isn't installed, sessions can't start; visits and upkeep then run in Babo itself, and `babo doctor` says so.
+
+## The town's knowledge, and Obsidian
+
+What residents learn goes into their own `knowledge/` folders. What the whole town should know is promoted to the commons, `commons/knowledge/`, where the curator files it: the **Archivist**, or the **Mayor** while the town has none. The curator keeps one topic per note, merges duplicates, links related notes with `[[note name]]`, and marks outdated notes as replaced, so the commons stays small and current.
+
+At every upkeep Babo rewrites `commons/knowledge/INDEX.md`, a **map of the commons** by topic with a link to every current note. Residents start from the map and follow links with `read_note("[[note name]]")`, and `search_memory` finds anything else.
+
+**Reading it in Obsidian.** The town folder (`~/baton-town`) opens as an Obsidian vault as it is: *Open folder as vault* and choose it. Notes are plain markdown with Obsidian properties (title, aliases, tags), `[[links]]` work, and the graph view shows how the town's knowledge hangs together. Start from `commons/knowledge/INDEX.md`. Obsidian's own settings folder stays out of the town's git history. Read as much as you like; if you edit notes, remember the residents own their folders, so the commons is the place for your changes too.
 
 ## The weekly check-in
 

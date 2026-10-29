@@ -40,6 +40,7 @@ from babo.baton.checkpoint import HARNESS_SENDER, CheckpointService
 from babo.baton.clock import stamp
 from babo.baton.events import read_events, session_slug
 from babo.baton.inbox import items, set_flag
+from babo.baton.knowledge_map import write_map
 from babo.baton.ledger import write_ledger
 from babo.baton.model_client import BatonModelClient
 from babo.baton.notes import first_line, split_frontmatter
@@ -435,15 +436,26 @@ class Night:
         if not pending:
             self.ledger.mark("archivist", promotions=0)
             return
-        lines = [f"{NIGHT_MARK} From the Baton harness (time now {_now()}). The promotion queue has {len(pending)} nomination(s). For each: "
-                 "write or merge it into the commons with commons_write (add aliases and keywords), supersede outdated notes, "
-                 "and where two views genuinely disagree use commons_contest to keep both. Write to the author with send_letter "
-                 "when you change or decline their note. You may decline a nomination; say why in a letter."]
+        from babo.baton.knowledge_map import INDEX_NAME
+        from babo.baton.notes import Note
+
+        known = [Note.load(p) for p in sorted(self.town.knowledge.glob("*.md")) if p.name != INDEX_NAME]
+        topics = sorted({k.lower() for n in known if n.status == "active" for k in n.keywords})
+        lines = [f"{NIGHT_MARK} From the Baton harness (time now {_now()}). You curate the commons: keep it small, current and easy to find "
+                 f"your way around. The promotion queue has {len(pending)} nomination(s). For each: write it into the commons with "
+                 "commons_write, or merge it into the note that already covers it (one topic per note). Give it one to three keywords, "
+                 "reusing the topics below where they fit: they make the map of the commons (commons/knowledge/INDEX.md). Link related "
+                 "notes in the body with [[note name]]. Supersede notes it makes outdated, and where two views genuinely disagree use "
+                 "commons_contest to keep both. Write to the author with send_letter when you change or decline their note. "
+                 "You may decline a nomination; say why in a letter.",
+                 f"\nTopics so far: {', '.join(topics) or '(none yet)'}",
+                 "Notes in the commons: " + ("; ".join(f"{n.title} ([[{n.path.stem}]])" for n in known if n.status == "active")[:3000] or "(none yet)")]
         for p in pending:
             meta, body = split_frontmatter(p.read_text(encoding="utf-8"))
             lines.append(f"\n## {meta.get('title')} (from {meta.get('from')}, `{p.relative_to(self.town.root)}`)\n"
                          f"Reason: {meta.get('reason', '')}\nAliases: {meta.get('aliases', [])} Keywords: {meta.get('keywords', [])}\n\n{body.strip()[:3000]}")
-        reply = await self.agent_turn("archivist", "\n".join(lines), f"night:{self.night}")
+        curator = curator_of(self.town)
+        reply = await self.agent_turn(curator, "\n".join(lines), f"night:{self.night}")
         for p in pending:
             meta, body = split_frontmatter(p.read_text(encoding="utf-8"))
             from babo.baton.notes import join_frontmatter
@@ -451,7 +463,7 @@ class Night:
             meta.update({"status": "reviewed", "reviewed": now_iso()})
             atomic_write(p, join_frontmatter(meta, body))
         self.ledger.mark("archivist", promotions=len(pending))
-        self.log(f"archivist: {len(pending)} nomination(s) reviewed — {first_line(reply, 120)}")
+        self.log(f"{curator} (curating): {len(pending)} nomination(s) reviewed — {first_line(reply, 120)}")
 
     # -- 4. inspector ---------------------------------------------------------------
     def inspector_material(self) -> str | None:
@@ -481,7 +493,8 @@ class Night:
 
     async def inspector_turn(self) -> None:
         material = self.inspector_material()
-        if material is None:
+        if material is None or not any(r.office == "inspector" and r.status == "active" for r in Registry(self.town).all()):
+            # With no Inspector, tools and proposals still reach Squid; they just arrive without its review.
             self.ledger.mark("inspector", ran=False)
             return
         reply = await self.agent_turn("inspector", material, f"night:{self.night}")
@@ -527,6 +540,7 @@ class Night:
                 ensure_project_clones(self.town, resident.id)
         write_ledger(self.town)
         Registry(self.town).render()
+        write_map(self.town)
         count = reindex(self.town, self.cfg.index_file)
         offsets = self._offsets()
         offsets.update(self.ledger.data["steps"]["prepass"]["offsets"])
@@ -537,7 +551,7 @@ class Night:
         started = str(self.ledger.data.get("started", ""))
         flag_rows = (self.town.state / "flags.jsonl").read_text().splitlines() if (self.town.state / "flags.jsonl").exists() else []
         flags = sum(1 for line in flag_rows if str(json.loads(line).get("at", "")) >= started)
-        self.log(f"post-pass: ledger and registry regenerated, {count} notes indexed")
+        self.log(f"post-pass: ledger, registry and the map of the commons regenerated, {count} notes indexed")
         scrubbed = self.scrub()
         if scrubbed:
             self.log("redacted secret-looking text in: " + ", ".join(scrubbed))
@@ -578,6 +592,12 @@ def mismatch_hints(*, checkpoints_text: str, tools: list[dict[str, Any]]) -> lis
     if errors and "error" not in checkpoints_text and "fail" not in checkpoints_text and "blocker" not in checkpoints_text:
         hints.append(f"{len(errors)} tool call(s) failed, and no checkpoint mentions a failure")
     return hints
+
+
+def curator_of(town: Town) -> str:
+    """Who curates the commons: the Archivist, or the Mayor while the town has none."""
+    archivists = sorted(r.id for r in Registry(town).all() if r.office == "archivist" and r.status == "active")
+    return archivists[0] if archivists else "mayor"
 
 
 def outside_hints(town: Town, resident: str, tools: list[dict[str, Any]]) -> list[str]:
