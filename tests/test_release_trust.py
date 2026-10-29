@@ -81,7 +81,7 @@ def test_policy_is_fixed_to_manual_official_main_workflow(monkeypatch):
     expected = (release_trust.RELEASE_IDENTITY, release_trust.RELEASE_ISSUER, "workflow_dispatch")
     seen[0].verify(certificate(*expected))
     for changed in (
-        (expected[0].replace("HKUDS", "attacker"), expected[1], expected[2]),
+        (expected[0].replace("bgrimes-me", "attacker"), expected[1], expected[2]),
         (expected[0].replace("refs/heads/main", "refs/pull/1/merge"), expected[1], expected[2]),
         (expected[0], "https://example.com", expected[2]),
         (expected[0], expected[1], "pull_request_target"),

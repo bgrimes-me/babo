@@ -647,7 +647,9 @@ def isolated_environment(root: Path) -> dict[str, str]:
                   XDG_CACHE_HOME=str(root / "cache"), XDG_DATA_HOME=str(root / "data"),
                   TMPDIR=str(root), TMP=str(root), TEMP=str(root),
                   PIP_CONFIG_FILE=os.devnull, PIP_NO_INPUT="1", PIP_DISABLE_PIP_VERSION_CHECK="1", PYTHONUTF8="1",
-                  BABO_TUI_NO_DOWNLOAD="1", NO_COLOR="1", PATH=os.defpath)
+                  BABO_TUI_NO_DOWNLOAD="1", NO_COLOR="1", PATH=os.defpath,
+                  # The release feed is off in Babo until it publishes; these journeys use a local feed.
+                  BABO_RELEASE_FEED="1")
     if os.name == "nt":
         system["PATH"] = str(Path(system["SYSTEMROOT"]) / "System32")
     return system

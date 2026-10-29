@@ -271,7 +271,7 @@ try:
         raise ValueError
     record = json.loads(path.read_text(encoding="utf-8"))
     main = record["main_package"]
-    name = r"(?i)babo[-_.]ai(?:\[[a-z0-9_., -]+\])?"
+    name = r"(?i)babo(?:\[[a-z0-9_., -]+\])?"
     spec = main["package_or_url"]
     # An explicit wheel may replace an earlier wheel source, but not discard
     # registry constraints, lock workflows or recorded installer options.
@@ -592,7 +592,7 @@ if sys.argv[3] != "-" and record.is_file():
     if record.stat().st_size > 1024 * 1024:
         raise SystemExit("pipx installation record is too large; inspect it before updating")
     spec = json.loads(record.read_text(encoding="utf-8"))["main_package"]["package_or_url"]
-    extra_match = re.match(r"(?i)^babo[-_.]ai\[([a-z0-9_., -]+)\]", spec)
+    extra_match = re.match(r"(?i)^babo\[([a-z0-9_., -]+)\]", spec)
     if extra_match:
         extras = sorted({re.sub(r"[-_.]+", "-", extra.strip().lower()) for extra in extra_match[1].split(",")})
         if any(not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", extra) for extra in extras):
