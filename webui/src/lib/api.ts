@@ -1557,7 +1557,24 @@ export interface TownOverview {
   residents: TownResident[];
   board: { kind: string; author: string; created: string; text: string }[];
   pending: { tools: number; proposals: number; founding: number; flags: number };
-  last_night: { night: string; finished: boolean; steps: string[]; log: string } | null;
+  last_upkeep: { pass: string; finished: boolean; steps: string[]; log: string } | null;
+  upkeep: TownUpkeep;
+}
+
+/** Memory reviews, curation and inspection: what is waiting and why not yet. Same as `babo upkeep`. */
+export interface TownUpkeep {
+  service: "running" | "not running";
+  running: boolean;
+  waiting: string[];
+  waiting_for: string;
+  catch_up_requested: boolean;
+  last_pass: string;
+  quiet_hours: string;
+  wait_minutes: number;
+}
+
+export function requestTownUpkeep(transport: WebUIMutationTransport): Promise<TownChange> {
+  return mutation<TownChange>(transport, "town.upkeep", {});
 }
 
 export type TownDecisionKind = "tool" | "proposal" | "founding" | "flag";
@@ -1619,7 +1636,7 @@ export interface TownSetting {
   key: string;
   label: string;
   help: string;
-  kind: "int" | "time" | "text";
+  kind: "int" | "hours" | "text";
   applies: string;
   value: number | string;
 }

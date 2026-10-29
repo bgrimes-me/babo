@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -103,6 +104,18 @@ def flatten_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return merged
 
 
+_ORDER = ("interactive", "visit", "upkeep")
+# Upkeep sets this for the length of a pass, so every model call made on its behalf
+# (including checkpoints inside its agent turns) waits behind everyone else.
+priority_floor: ContextVar[str] = ContextVar("baton_priority_floor", default="interactive")
+
+
+def effective_priority(priority: str) -> str:
+    floor = priority_floor.get()
+    rank = {name: i for i, name in enumerate(_ORDER)}
+    return floor if rank.get(floor, 0) > rank.get(priority, 0) else priority
+
+
 class BatonModelClient:
     def __init__(self, config: BatonModelConfig, *, resident: str = "", transport: httpx.AsyncBaseTransport | None = None):
         self.config = config
@@ -110,7 +123,7 @@ class BatonModelClient:
         self._transport = transport
 
     def _headers(self, priority: str) -> dict[str, str]:
-        headers = {"Content-Type": "application/json", "X-Baton-Priority": priority}
+        headers = {"Content-Type": "application/json", "X-Baton-Priority": effective_priority(priority)}
         if self.resident:
             headers["X-Baton-Resident"] = self.resident
         if self.config.api_key:

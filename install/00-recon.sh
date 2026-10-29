@@ -332,7 +332,7 @@ else echo "bwrap_works=n/a"; fi
 rc, out, err = run(["loginctl", "show-user", USER, "-p", "Linger"])
 linger = out.split("=", 1)[1] if "=" in out else "unknown"
 add("linger", "PASS" if linger == "yes" else "WARN",
-    f"Linger={linger}" + ("" if linger == "yes" else " (Squid runs: loginctl enable-linger — needed for the night timer while logged out)"))
+    f"Linger={linger}" + ("" if linger == "yes" else " (Squid runs: loginctl enable-linger — needed for upkeep while logged out)"))
 rc, out, err = run(["systemctl", "--user", "is-system-running"])
 add("systemd --user", "PASS" if out in ("running", "degraded") else "WARN", out or err or "unknown")
 

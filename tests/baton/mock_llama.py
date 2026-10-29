@@ -50,6 +50,7 @@ class MockLlama:
     default: Reply = field(default_factory=lambda: text("ok"))
     delay_s: float = 0.0
     requests: list[dict[str, Any]] = field(default_factory=list)
+    request_headers: list[dict[str, str]] = field(default_factory=list)
     max_in_flight: int = 0
     _in_flight: int = 0
     port: int = 0
@@ -124,6 +125,7 @@ class MockLlama:
         body = await request.json()
         with self._lock:
             self.requests.append(body)
+            self.request_headers.append(dict(request.headers))
             self._in_flight += 1
             self.max_in_flight = max(self.max_in_flight, self._in_flight)
         try:

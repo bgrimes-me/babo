@@ -20,7 +20,7 @@ from pydantic import ValidationError
 from babo.baton.config import BatonConfig
 from babo.baton.town import BatonError
 
-Kind = Literal["int", "time", "text"]
+Kind = Literal["int", "hours", "text"]
 
 
 @dataclass(frozen=True)
@@ -32,6 +32,7 @@ class Setting:
     applies: str  # when the change takes effect, in plain words
 
 
+UPKEEP = "after the upkeep service restarts (systemctl --user restart babo-upkeep, on the host)"
 RESTART = "after Babo restarts (babo gateway restart, or the restart button in Settings)"
 SETTINGS: tuple[Setting, ...] = (
     Setting("memory.checkpoint_every_tool_calls", "Checkpoint every … tool calls",
@@ -44,11 +45,17 @@ SETTINGS: tuple[Setting, ...] = (
             "How much a resident sees when a session starts: who it is, its baton, letters and notes.", "int", RESTART),
     Setting("bundle.search_hits", "Notes found at session start",
             "How many related notes are put in front of a resident when a session starts (0–10).", "int", RESTART),
-    Setting("night.time", "Night cycle time",
-            "When the night runs each day (24-hour, HH:MM, this machine's time).",
-            "time", "after the services are rewritten: install steps 05 and the host step"),
+    Setting("upkeep.wait_minutes", "Upkeep waits until the model has been free for … minutes",
+            "Memory reviews and curation never get in your way: they wait until nobody has used the model this long.",
+            "int", UPKEEP),
+    Setting("upkeep.review_after_hours", "Review memory after … hours of activity",
+            "A resident reviews its memory once its unreviewed activity is this old and its session has gone quiet.",
+            "int", UPKEEP),
+    Setting("upkeep.quiet_hours", "Quiet hours",
+            "Everything waiting is done during these hours, and housekeeping runs even on a day nobody talked (HH:MM-HH:MM).",
+            "hours", UPKEEP),
     Setting("git_remote", "Push the town to",
-            "A git remote name for a backup of the town after each night (empty: no push).", "text", "from the next night"),
+            "A git remote name for a backup of the town after each upkeep (empty: no push).", "text", "from the next upkeep"),
 )
 _BY_KEY = {s.key: s for s in SETTINGS}
 

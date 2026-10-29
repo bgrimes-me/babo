@@ -1,4 +1,4 @@
-"""Secret redaction for the event log, and the regex fallback for the night scrub."""
+"""Secret redaction for the event log, and the regex fallback for the upkeep scrub."""
 
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ def redact(value: Any) -> Any:
 
 
 def find_secrets(text: str) -> list[str]:
-    """Return short descriptions of secret-looking matches (for the night scrub report)."""
+    """Return short descriptions of secret-looking matches (for the upkeep scrub report)."""
     found: list[str] = []
     for pattern in _PATTERNS:
         for match in pattern.finditer(text):

@@ -1,6 +1,6 @@
 # Baton integration map
 
-Phase 0 deliverable, written when Babo was still a fork that tracked nanobot. "Upstream" below means [nanobot](https://github.com/HKUDS/nanobot); since the rename Babo no longer tracks it, and module paths are shown with their current `babo.` names. It records how the runtime was put together, where each part of the town attaches to it, what the spec assumed that the code contradicted, and the routing decision.
+Phase 0 deliverable, written when Babo was still a fork that tracked nanobot. "Upstream" below means [nanobot](https://github.com/HKUDS/nanobot); since the rename Babo no longer tracks it, and module paths are shown with their current `babo.` names. It records how the runtime was put together, where each part of the town attaches to it, what the spec assumed that the code contradicted, and the routing decision. Since then the nightly cycle has become **upkeep** (`babo/baton/upkeep.py`): the same steps, run whenever they are due and the model is free instead of on a nightly timer; "night" below means an upkeep pass.
 
 - Upstream read: `HKUDS/nanobot` at `b1cc89e` (version 0.4.0).
 - Reference read: `RecursiveRabbit/nanobot`, branch `context-window`, at `bcd562a` (MIT). Ideas borrowed are credited in the table at the end. No code is copied.

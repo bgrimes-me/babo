@@ -1,4 +1,4 @@
-"""Phase 3: the night cycle, its idempotency and resume, tool quarantine, units."""
+"""An upkeep pass (formerly the night cycle): its idempotency and resume, tool quarantine, units."""
 
 from __future__ import annotations
 
@@ -91,11 +91,11 @@ async def test_full_night_cycle(make_loop, make_config, mock_llama: MockLlama, t
     assert not (town.tools / "active" / "shout").exists()
     # Post-pass: transcripts exported, one night commit with a readable summary.
     assert list((home / "sessions").rglob("*.transcript.jsonl"))
-    assert (town.state / "night" / "2026-01-02" / "diffs" / "mayor.md").exists()
+    assert (town.state / "upkeep" / "2026-01-02" / "diffs" / "mayor.md").exists()
     log = _commits(town)
-    assert len(log) == commits_before + 1 and log[0].startswith("Night 2026-01-02")
+    assert len(log) == commits_before + 1 and log[0].startswith("Upkeep 2026-01-02: 1 memory review")
     body = subprocess.run(["git", "-C", str(town.root), "log", "-1", "--format=%b"], capture_output=True, text=True).stdout
-    assert "Folds: mayor (own words)" in body and "Tools tested: shout" in body
+    assert "Memory reviews: mayor (own words)" in body and "Tools tested: shout" in body
     assert subprocess.run(["git", "-C", str(town.root), "status", "--porcelain"], capture_output=True, text=True).stdout.strip() == ""
 
 
@@ -126,14 +126,14 @@ async def test_interrupted_night_resumes_without_repeating(make_loop, make_confi
     folds = [c for c in iter_checkpoints(town.resident_dir("mayor")) if c.trigger == "fold 2026-01-02"]
     assert len(folds) == 1
     assert (town.knowledge / "tomatoes.md").exists()
-    assert _commits(town)[0].startswith("Night 2026-01-02")
+    assert _commits(town)[0].startswith("Upkeep 2026-01-02")
 
 
 async def test_unreachable_model_skips_the_night(make_config, town: Town) -> None:
     cfg = make_config("mayor", **{"baton.model": {"endpoint": "http://127.0.0.1:9/v1"}})
     result = await Night(cfg, night="2026-01-02").run()
     assert result["status"] == "skipped"
-    assert "not reachable" in (town.state / "night-logs" / "2026-01-02.md").read_text()
+    assert "not reachable" in (town.state / "upkeep-logs" / "2026-01-02.md").read_text()
 
 
 async def test_night_scrubs_secrets_before_committing(make_loop, make_config, mock_llama: MockLlama, town: Town) -> None:
@@ -176,8 +176,8 @@ def test_units_render_for_the_host() -> None:
     from babo.baton.config import BatonConfig
     from babo.baton.units import render_units
 
-    cfg = BatonConfig.model_validate({"box": "Agent", "baboPath": "/home/squid/.local/bin/babo", "night": {"time": "03:30"}})
+    cfg = BatonConfig.model_validate({"box": "Agent", "baboPath": "/home/squid/.local/bin/babo"})
     units = render_units(cfg)
-    assert "ExecStart=/usr/bin/distrobox enter Agent -- /home/squid/.local/bin/babo night" in units["babo-night.service"]
-    assert "OnCalendar=*-*-* 03:30:00" in units["babo-night.timer"]
+    assert "ExecStart=/usr/bin/distrobox enter Agent -- /home/squid/.local/bin/babo upkeep --watch" in units["babo-upkeep.service"]
+    assert sorted(units) == ["babo-gateway.service", "babo-queue.service", "babo-upkeep.service"]
     assert "babo queue" in units["babo-queue.service"] and "gateway --foreground" in units["babo-gateway.service"]

@@ -21,7 +21,7 @@ from babo.baton.town import BatonError, Town
 DecisionKind = Literal["tool", "proposal", "founding", "flag"]
 
 
-def town_overview(town: Town) -> dict[str, Any]:
+def town_overview(town: Town, cfg: BatonConfig) -> dict[str, Any]:
     residents: list[dict[str, Any]] = []
     for r in Registry(town).all():
         waiting = unread(town, r.id)
@@ -38,7 +38,7 @@ def town_overview(town: Town) -> dict[str, Any]:
                           "created": str(meta.get("created", "")), "text": first_line(body, 200)})
     return {
         "name": town.name, "root": str(town.root), "residents": residents, "board": board,
-        "pending": pending_counts(town), "last_night": last_night(town),
+        "pending": pending_counts(town), "last_upkeep": last_upkeep(town), "upkeep": upkeep_status(town, cfg),
     }
 
 
@@ -49,8 +49,12 @@ def pending_counts(town: Town) -> dict[str, int]:
     }
 
 
-def last_night(town: Town) -> dict[str, Any] | None:
-    ledgers = sorted((town.state / "night").glob("*.json"))
+def last_upkeep(town: Town) -> dict[str, Any] | None:
+    """The latest upkeep pass (or, in a town from before upkeep, the latest night)."""
+    ledgers = sorted(p for p in (town.state / "upkeep").glob("*.json") if p.name != "scheduler.json")
+    logs = town.state / "upkeep-logs"
+    if not ledgers:
+        ledgers, logs = sorted((town.state / "night").glob("*.json")), town.state / "night-logs"
     if not ledgers:
         return None
     try:
@@ -60,9 +64,24 @@ def last_night(town: Town) -> dict[str, Any] | None:
     if not isinstance(data, dict):
         return None
     steps = cast(dict[str, Any], cast(dict[str, Any], data).get("steps") or {})
-    night = ledgers[-1].stem
-    return {"night": night, "finished": "postpass" in steps, "steps": sorted(steps),
-            "log": _read(town.state / "night-logs" / f"{night}.md")[-4000:]}
+    name = ledgers[-1].stem
+    from babo.baton.night import pass_label
+
+    return {"pass": pass_label(name),
+            "finished": "postpass" in steps, "steps": sorted(steps),
+            "log": _read(logs / f"{name[:10]}.md")[-4000:]}
+
+
+def upkeep_status(town: Town, cfg: BatonConfig) -> dict[str, Any]:
+    from babo.baton import upkeep
+
+    return upkeep.status(town, cfg)
+
+
+def request_upkeep(town: Town) -> str:
+    from babo.baton import upkeep
+
+    return upkeep.request_catch_up(town)
 
 
 def review_items(town: Town) -> dict[str, Any]:

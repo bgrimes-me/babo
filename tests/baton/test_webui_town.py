@@ -102,3 +102,14 @@ async def test_profiles_from_the_web_match_babo_profile(town: Town, index_path: 
     assert next(c for c in archivist["capabilities"] if c["key"] == "web_search")["level"] == "allow"
     status, text = await _call(routes, "/api/town/profiles/update", {"agent": "mayor", "changes": {"shell": "ask"}})
     assert status == 400 and "can't stop to ask" in str(text)
+
+
+async def test_upkeep_status_and_catch_up_from_the_web(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from babo.baton import upkeep
+
+    routes = _routes(town, index_path, monkeypatch)
+    status, overview = await _call(routes, "/api/town")
+    assert status == 200 and overview["upkeep"]["service"] == "not running" and overview["last_upkeep"] is None
+    status, result = await _call(routes, "/api/town/upkeep/now", {})
+    assert status == 200 and "within a minute" in result["message"]
+    assert upkeep.catch_up_requested(town) and result["town"]["upkeep"]["catch_up_requested"]

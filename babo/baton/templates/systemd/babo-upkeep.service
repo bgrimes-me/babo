@@ -1,0 +1,13 @@
+[Unit]
+Description=Babo upkeep (memory reviews, curation and inspection whenever they are due)
+After=babo-queue.service
+Wants=babo-queue.service
+
+[Service]
+Type=simple
+ExecStart={{ distrobox }} enter {{ box }} -- {{ babo }} upkeep --watch
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target

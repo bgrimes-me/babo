@@ -4,8 +4,9 @@
 llama-server. Residents' provider config and Baton's own client point at it.
 It lets at most ``baton.model.slots`` requests reach the server at once
 (default 1), whichever process they come from, and orders waiting requests by
-priority (interactive, then visit, then night), oldest first. Streaming
-responses pass straight through.
+priority (interactive, then visit, then upkeep), oldest first. Streaming
+responses pass straight through. It also says how long the model has been
+free of everything but upkeep, which is how upkeep knows it won't be in the way.
 
 It also keeps the last request each resident sent, byte for byte, which
 ``babo context <resident>`` prints: the exact-context view.
@@ -29,7 +30,8 @@ from loguru import logger
 
 from babo.baton.config import BatonModelConfig
 
-PRIORITIES = {"interactive": 0, "visit": 1, "night": 2}
+PRIORITIES = {"interactive": 0, "visit": 1, "upkeep": 2, "night": 2}  # "night": upkeep's earlier name
+UPKEEP = PRIORITIES["upkeep"]
 _RESIDENT_RE = re.compile(r"You are the resident `([a-z][a-z0-9-]{1,31})`")
 _HOP_HEADERS = {"host", "content-length", "transfer-encoding", "connection", "keep-alive", "accept-encoding"}
 
@@ -99,6 +101,9 @@ class ModelQueue:
         self.slots = SlotQueue(config.slots)
         self.capture_dir = capture_dir
         self.started = time.time()
+        # Requests other than upkeep: how many are in flight, and when the last one ended.
+        self.busy = 0
+        self.last_busy = time.time()
         self._session: aiohttp.ClientSession | None = None
 
     def app(self) -> web.Application:
@@ -132,6 +137,7 @@ class ModelQueue:
         return {
             "slots": self.slots.slots, "active": self.slots.active, "waiting": self.slots.waiting,
             "served": self.slots.served, "max_active": self.slots.max_active, "uptime_s": int(time.time() - self.started),
+            "idle_s": 0 if self.busy else int(time.time() - self.last_busy),
         }
 
     async def _status(self, _req: web.Request) -> web.Response:
@@ -153,7 +159,16 @@ class ModelQueue:
         self._capture(resident, request.path, body)
         url = self.config.upstream.rstrip("/") + request.rel_url.path_qs
         headers = {k: v for k, v in request.headers.items() if k.lower() not in _HOP_HEADERS and not k.lower().startswith("x-baton-")}
-        await self.slots.acquire(priority)
+        someone = priority < UPKEEP
+        if someone:
+            self.busy += 1
+        try:
+            await self.slots.acquire(priority)
+        except BaseException:
+            if someone:
+                self.busy -= 1
+                self.last_busy = time.time()
+            raise
         released = False
 
         def release() -> None:
@@ -161,6 +176,9 @@ class ModelQueue:
             if not released:
                 released = True
                 self.slots.release()
+                if someone:
+                    self.busy -= 1
+                    self.last_busy = time.time()
 
         try:
             async with self._client().request(request.method, url, data=body, headers=headers) as upstream:

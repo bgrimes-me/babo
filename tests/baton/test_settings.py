@@ -21,18 +21,18 @@ def _config(tmp_path: Path) -> Path:
 
 def test_update_changes_only_the_named_setting_and_keeps_a_backup(tmp_path: Path) -> None:
     path = _config(tmp_path)
-    said = settings.update(path, {"memory.idle_minutes": "30", "night.time": "03:15"})
+    said = settings.update(path, {"memory.idle_minutes": "30", "upkeep.quiet_hours": "02:00-05:30"})
     data = json.loads(path.read_text())
-    assert data["baton"]["memory"]["idleMinutes"] == 30 and data["baton"]["night"]["time"] == "03:15"
+    assert data["baton"]["memory"]["idleMinutes"] == 30 and data["baton"]["upkeep"]["quietHours"] == "02:00-05:30"
     assert data["channels"]["telegram"]["token"] == "${TG}" and data["baton"]["town"] == "~/baton-town"
-    assert any("20 → 30" in s for s in said) and any("05:" not in s and "03:15" in s for s in said)
+    assert any("20 → 30" in s for s in said) and any("01:00-06:00 → 02:00-05:30" in s for s in said)
     assert len(list(tmp_path.glob("config.json.before-settings-*"))) == 1
     assert oct(path.stat().st_mode)[-3:] == "600"
     assert settings.update(path, {"memory.idle_minutes": 30}) == []
 
 
 @pytest.mark.parametrize(("key", "value", "message"), [
-    ("night.time", "25:00", "isn't allowed"),
+    ("upkeep.quiet_hours", "25:00-02:00", "isn't allowed"),
     ("memory.idle_minutes", "0", "isn't allowed"),
     ("memory.idle_minutes", "soon", "whole number"),
     ("model.upstream", "http://x", "Not a town setting"),
@@ -62,4 +62,4 @@ def test_cli_shows_and_changes_settings(tmp_path: Path) -> None:
     changed = runner.invoke(app, ["settings", "memory.idle_minutes", "45", "-c", str(path)])
     assert changed.exit_code == 0, changed.output
     assert json.loads(path.read_text())["baton"]["memory"]["idleMinutes"] == 45
-    assert runner.invoke(app, ["settings", "night.time", "7pm", "-c", str(path)]).exit_code == 1
+    assert runner.invoke(app, ["settings", "upkeep.quiet_hours", "7pm", "-c", str(path)]).exit_code == 1

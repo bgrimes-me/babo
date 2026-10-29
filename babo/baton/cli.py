@@ -15,7 +15,7 @@ from babo.baton.town import BatonError, Town
 if TYPE_CHECKING:
     from babo.config.schema import Config
 
-app = typer.Typer(help="The Baton town: residents, memory, night cycle, review.", no_args_is_help=True)
+app = typer.Typer(help="The Baton town: residents, memory, upkeep, review.", no_args_is_help=True)
 console = Console()
 
 _CONFIG_OPT = typer.Option(None, "--config", "-c", help="Path to the babo config (default: the usual one)")
@@ -218,23 +218,50 @@ def restore_session(
 
 
 @app.command()
-def night(
+def upkeep(
+    now: bool = typer.Option(False, "--now", help="Do everything that is waiting now: memory reviews, curation, inspection"),
+    watch: bool = typer.Option(False, "--watch", help="Keep watching and run upkeep whenever it is due (the babo-upkeep service)"),
     config: str | None = _CONFIG_OPT,
-    date: str | None = typer.Option(None, "--date", help="Night to run or resume (default: today)"),
 ):
-    """Run (or resume) the night cycle. Exits 0 even when the model is unreachable."""
-    from babo.baton.night import run_night
+    """Show what upkeep is doing, catch up now, or keep watching (memory reviews, curation, inspection)."""
+    from babo.baton import upkeep as town_upkeep
 
     try:
         cfg = _config(config)
-        result = run_night(cfg, night=date)
+        if watch:
+            asyncio.run(town_upkeep.watch(cfg))
+            return
+        if now:
+            result = asyncio.run(town_upkeep.run_now(cfg))
+            if result is None:
+                console.print("OK: nothing was waiting")
+            elif result["status"] == "skipped":
+                console.print(f"Upkeep skipped: {result['reason']}. It will be done once the model is back.")
+            else:
+                reviewed = ", ".join(result.get("ran") or []) or "nobody"
+                console.print(f"OK: upkeep done (memory reviews: {reviewed}; committed: {'yes' if result.get('committed') else 'nothing new'})")
+            return
+        town = Town.open(cfg.baton.town_path)
+        info = town_upkeep.status(town, cfg.baton)
     except BatonError as exc:
         _fail(exc)
         return
-    if result["status"] == "skipped":
-        console.print(f"Night skipped: {result['reason']}. It will resume next time.")
-        return
-    console.print(f"OK: night {result['night']} finished ({len(result['steps'])} steps)")
+    console.print(f"Upkeep service: {info['service']}{' (working now)' if info['running'] else ''}")
+    console.print(f"Last pass: {info['last_pass'] or 'none yet'}")
+    if info["waiting"]:
+        console.print("Waiting: " + "; ".join(info["waiting"]))
+        if info["waiting_for"]:
+            console.print(f"Not yet, because {info['waiting_for']}.")
+    else:
+        console.print("Nothing is waiting." if info["service"] == "running" else "Start the service to see what is waiting (babo-upkeep).")
+    console.print(f"Quiet hours: {info['quiet_hours']}. Upkeep waits until the model has been free for {info['wait_minutes']} minutes.")
+    console.print("Do everything now with: babo upkeep --now")
+
+
+@app.command(hidden=True)
+def night(config: str | None = _CONFIG_OPT):
+    """Upkeep's earlier name: does everything that is waiting now (babo upkeep --now)."""
+    upkeep(now=True, watch=False, config=config)
 
 
 @app.command()
@@ -242,7 +269,7 @@ def units(
     out: Path = typer.Option(Path("install/out/systemd"), "--out", help="Where to write the unit files"),
     config: str | None = _CONFIG_OPT,
 ):
-    """Write the systemd user units (queue, gateway, night timer) for Squid to install on the host."""
+    """Write the systemd user units (queue, gateway, upkeep) for Squid to install on the host."""
     from babo.baton.units import write_units
 
     cfg = _config(config)
@@ -274,13 +301,13 @@ def town(
     from babo.baton import views
 
     try:
-        t, _ = _town(config)
+        t, cfg = _town(config)
         if name is not None:
             console.print(views.name_town(t, name))
     except BatonError as exc:
         _fail(exc)
         return
-    view = views.town_overview(t)
+    view = views.town_overview(t, cfg.baton)
     console.print(f"[bold]{view['name'] or 'This town has no name yet'}[/bold] ({view['root']})\n")
     table = Table("resident", "office", "last active", "unread", "status")
     for r in view["residents"]:
@@ -293,6 +320,9 @@ def town(
     waiting = {k: v for k, v in view["pending"].items() if v}
     if waiting:
         console.print("\nWaiting for your review: " + ", ".join(f"{v} {k}" for k, v in waiting.items()) + " (babo review)")
+    up = view["upkeep"]
+    console.print(f"\nUpkeep: {up['service']}; last pass {up['last_pass'][:16].replace('T', ' ') or 'none yet'}"
+                  + (f"; waiting: {'; '.join(up['waiting'])}" if up["waiting"] else "") + " (babo upkeep)")
 
 
 def _ask_decision(question: str, yes: str, no: str) -> str:
