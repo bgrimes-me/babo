@@ -696,14 +696,27 @@ def session_send(resident: str = typer.Argument(...), message: str = typer.Argum
 def session_freeze(resident: str = typer.Argument(...), session_id: str | None = typer.Argument(None),
                    all_: bool = typer.Option(False, "--all", help="Freeze every running session of this resident"),
                    config: str | None = _CONFIG_OPT):
-    """Stop a session. Resuming it later continues exactly where it was."""
+    """Stop a session: the resident reviews it into its memory first. Resuming it later continues exactly where it was."""
     from babo.baton import opencode
 
-    t, _ = _town(config)
+    t, cfg = _town(config)
     try:
         targets = opencode.sessions(t, resident) if all_ else [opencode.get_session(t, resident, session_id)]
-        frozen = [s.id for s in targets if opencode.freeze(t, s)]
+        frozen = [s.id for s in targets if opencode.freeze(t, s, review=cfg, config_path=_config_path())]
     except BatonError as exc:
         _fail(exc)
         return
     console.print(f"OK: frozen {', '.join(frozen)}" if frozen else "Nothing was running.")
+
+
+@session_app.command("checkpoint", hidden=True)
+def session_checkpoint(resident: str = typer.Argument(...), session_id: str = typer.Argument(...),
+                       trigger: str = typer.Option("requested", "--trigger"), config: str | None = _CONFIG_OPT):
+    """Ask a resident in opencode for a checkpoint (Babo's plugin calls this at the right moments)."""
+    from babo.baton import opencode
+
+    t, cfg = _town(config)
+    try:
+        console.print(opencode.checkpoint(t, cfg, opencode.get_session(t, resident, session_id), trigger=trigger, config_path=_config_path()))
+    except BatonError as exc:
+        _fail(exc)

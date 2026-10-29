@@ -10,7 +10,7 @@ import pytest
 
 from babo.baton.baton_file import iter_checkpoints
 from babo.baton.inbox import items, unread
-from babo.baton.night import Night, NightInterruptedError, mismatch_hints
+from babo.baton.night import Night, NightInterruptedError, mismatch_hints, outside_hints
 from babo.baton.notes import split_frontmatter, write_note
 from babo.baton.tooltest import run_tool_test
 from babo.baton.town import Town
@@ -181,3 +181,11 @@ def test_units_render_for_the_host() -> None:
     assert "ExecStart=/usr/bin/distrobox enter Agent -- /home/squid/.local/bin/babo upkeep --watch" in units["babo-upkeep.service"]
     assert sorted(units) == ["babo-gateway.service", "babo-queue.service", "babo-upkeep.service"]
     assert "babo queue" in units["babo-queue.service"] and "gateway --foreground" in units["babo-gateway.service"]
+
+
+def test_files_outside_a_residents_own_folder_are_pointed_out(town: Town) -> None:
+    mine = str(town.resident_dir("archivist") / "notes.md")
+    theirs = str(town.resident_dir("mayor") / "SELF.md")
+    tools = [{"tool": "exec", "files": ["notes.md", mine]}, {"tool": "exec", "files": [theirs]}]
+    assert outside_hints(town, "archivist", tools) == [f"touched files outside its own folder: {theirs}"]
+    assert outside_hints(town, "archivist", tools[:1]) == []

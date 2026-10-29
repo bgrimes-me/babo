@@ -97,6 +97,8 @@ class BatonOpencodeConfig(Base):
     # The model's context window in tokens, as opencode should assume it; 0 uses Babo's model setting.
     context_tokens: int = Field(default=0, ge=0)
     start_timeout_s: int = Field(default=60, ge=5)
+    # A session nobody has used for this long is reviewed and frozen by upkeep.
+    freeze_after_idle_minutes: int = Field(default=60, ge=5)
     # Where opencode keeps each resident's sessions (outside the town repo).
     data_dir: str = "~/.local/share/babo/opencode"
 
