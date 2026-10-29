@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from baton.mock_llama import MockLlama
+
+# Baton targets Linux only (Squid's house has no Windows). Upstream's Windows CI
+# jobs still run nanobot's own suite; they just don't collect Baton's.
+if sys.platform == "win32":
+    collect_ignore_glob = ["test_*.py"]
 from nanobot.baton.founding import found_town
 from nanobot.baton.tools.core import Toolbox
 from nanobot.baton.town import Town
