@@ -35,7 +35,11 @@ async def _call(routes: TownRoutes, path: str, body: dict[str, Any] | None = Non
     request = WsRequest(path, Headers())
     if body is not None:
         routes.payloads[id(request)] = body  # type: ignore[attr-defined]
-    response = await routes.dispatch(request, path)
+    try:
+        response = await routes.dispatch(request, path)
+    finally:
+        # id() values are reused once a request is freed; never let a payload outlive its request.
+        routes.payloads.pop(id(request), None)  # type: ignore[attr-defined]
     assert response is not None
     text = response.body.decode() if response.body else ""
     try:
