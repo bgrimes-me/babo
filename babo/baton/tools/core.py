@@ -120,6 +120,7 @@ TOOL_SPECS: dict[str, ToolSpec] = {
                     "rationale": _str("Why this change is needed."),
                     "description": _str("What should change."),
                     "project": _str("Optional: the name of one of your projects, to propose moving it to the commons."),
+                    "town_name": _str("Optional: a name for the town. If Squid accepts, the town takes this name."),
                 },
                 "required": ["title", "rationale", "description"],
             },
@@ -344,7 +345,10 @@ class Toolbox:
         atomic_write(folder / "TOOL.md", join_frontmatter(meta, description.strip() + "\n"))
         return f"Proposed tool {name}. It will be tested tonight, reviewed by the Inspector, and then goes to Squid."
 
-    def propose_change(self, title: str, rationale: str, description: str, project: str | None = None) -> str:
+    def propose_change(self, title: str, rationale: str, description: str, project: str | None = None, town_name: str | None = None) -> str:
+        town_name = " ".join((town_name or "").split())
+        if len(town_name) > 60:
+            raise BatonError("Not filed: a town name is at most 60 characters. Shorten it and propose again.")
         if project:
             slug = slugify(project)
             if not (self.home / "projects" / slug).is_dir():
@@ -356,6 +360,8 @@ class Toolbox:
         meta: dict[str, Any] = {"title": title.strip(), "author": self.resident_id, "created": now_iso(), "status": "open"}
         if project:
             meta["project"] = project
+        if town_name:
+            meta["town_name"] = town_name
         body = f"# {title.strip()}\n\n## Why\n\n{rationale.strip()}\n\n## What\n\n{description.strip()}\n"
         atomic_write(path, join_frontmatter(meta, body))
         return f"Proposal filed as {self.scope.display(path)}. Squid will accept or decline it with a reason."

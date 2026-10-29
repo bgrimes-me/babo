@@ -212,3 +212,37 @@ def test_channel_bindings_generate_one_config_per_gateway(town: Town, tmp_path: 
     assert {mayor["gateway"]["port"], arch["gateway"]["port"]} == {18790, 18791}
     with pytest.raises(BatonError):
         generate_configs(base, town, {"telegram": "ghost"}, tmp_path / "gen2")
+
+
+# -- the town's name ------------------------------------------------------------------------
+def test_a_resident_proposes_the_town_name_and_accepting_applies_it(box, town: Town) -> None:
+    from babo.baton.bundle import build_bundle
+
+    assert town.name == "" and "of this town" in build_bundle(town, "mayor").text()
+    box("mayor").propose_change("Name the town", "We should have a name", "Call it Lantern Hill", town_name="Lantern  Hill")
+    prop = growth.open_proposals(town)[0]
+    assert prop.town_name == "Lantern Hill"
+    growth.decide_proposal(town, prop.path, accept=True, reason="lovely")
+    assert town.name == "Lantern Hill"
+    assert "of Lantern Hill" in build_bundle(town, "archivist").text()
+    assert any("now called Lantern Hill" in i.body for i in unread(town, "mayor"))
+
+
+def test_a_declined_name_changes_nothing(box, town: Town) -> None:
+    box("archivist").propose_change("Rename", "why", "what", town_name="Elsewhere")
+    growth.decide_proposal(town, growth.open_proposals(town)[0].path, accept=False, reason="not yet")
+    assert town.name == ""
+    with pytest.raises(BatonError, match="at most 60"):
+        box("archivist").propose_change("Rename", "why", "what", town_name="x" * 61)
+
+
+def test_squid_can_name_the_town_from_the_command_line(cli_config: Path, town: Town) -> None:
+    from babo.baton.cli import app
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["town", "--name", "Lantern Hill", "-c", str(cli_config)])
+    assert result.exit_code == 0, result.output
+    assert town.name == "Lantern Hill" and "Lantern Hill" in result.output
+    log = subprocess.run(["git", "-C", str(town.root), "log", "-1", "--format=%s"], capture_output=True, text=True).stdout
+    assert "Name the town: Lantern Hill" in log
+    assert runner.invoke(app, ["town", "--name", "   ", "-c", str(cli_config)]).exit_code == 1

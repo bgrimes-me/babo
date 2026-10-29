@@ -266,7 +266,10 @@ def note(resident: str = typer.Argument(...), text: str = typer.Argument(...), c
 
 
 @app.command()
-def town(config: str | None = _CONFIG_OPT):
+def town(
+    name: str | None = typer.Option(None, "--name", help="Give the town a name (usually you accept a resident's proposal instead)"),
+    config: str | None = _CONFIG_OPT,
+):
     """Who lives here, when they were last active, unread letters, and the board."""
     from babo.baton.inbox import unread
     from babo.baton.notes import first_line, split_frontmatter
@@ -277,6 +280,16 @@ def town(config: str | None = _CONFIG_OPT):
     except BatonError as exc:
         _fail(exc)
         return
+    if name is not None:
+        try:
+            console.print(f"The town is now called {t.set_name(name, by='squid')}.")
+        except BatonError as exc:
+            _fail(exc)
+            return
+        from babo.baton import gitops
+
+        gitops.commit_all(t, f"Name the town: {t.name}")
+    console.print(f"[bold]{t.name or 'This town has no name yet'}[/bold] ({t.root})\n")
     table = Table("resident", "office", "last active", "unread", "status")
     for r in Registry(t).all():
         waiting = unread(t, r.id)
@@ -341,7 +354,8 @@ def review(config: str | None = _CONFIG_OPT):
     props = growth.open_proposals(t)
     console.print(f"\n[bold]2. Proposals[/bold] ({len(props)})")
     for prop in props:
-        console.print(f"\n• {prop.title} by {prop.author}" + (f" (moves project '{prop.project}' to the commons)" if prop.project else ""))
+        console.print(f"\n• {prop.title} by {prop.author}" + (f" (moves project '{prop.project}' to the commons)" if prop.project else "")
+                      + (f" (names the town '{prop.town_name}')" if prop.town_name else ""))
         console.print(prop.path.read_text(encoding="utf-8").split("---", 2)[-1].strip()[:1500])
         console.print(f"  Inspector's review: {prop.review or '(none yet)'}")
         choice = _ask_decision("Accept this proposal?", "accept", "decline")

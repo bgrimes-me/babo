@@ -47,6 +47,7 @@ Every message you receive carries the current time from the machine's clock, and
 ## What you can change
 
 - Your SELF.md, any time, with `revise_self`, and your ROLE.md in your own words.
+- The town's name, by proposing one with `propose_change` (`town_name`). Squid accepts or declines it like any proposal.
 - Your notes, through checkpoints; the commons, by nominating notes for the Archivist.
 - Tools: propose one with a test. It is tested in isolation and reviewed, and runs for real only after Squid approves it, because it executes on Squid's machine.
 - The harness itself, this charter included, with `propose_change`. Squid accepts or declines with a reason. You may also build a different harness as a project.
