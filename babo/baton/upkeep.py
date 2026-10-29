@@ -49,6 +49,7 @@ class Due:
     reasons: list[str] = field(default_factory=list)
     keys: list[str] = field(default_factory=list)  # identifies the work, so unfinished work isn't retried at once
     residents: list[str] = field(default_factory=list)  # whose activity a pass would review
+    sessions: list[str] = field(default_factory=list)  # "<resident>/<session>" opencode sessions to review and freeze
     waiting_for: str = ""  # why not now, in plain words ("" when it may run)
 
     @property
@@ -106,10 +107,21 @@ def catch_up_requested(town: Town) -> bool:
     return _request_path(town).exists()
 
 
-def due(town: Town, cfg: BatonConfig, *, now: datetime, model_idle_s: int | None, catch_up: bool = False) -> Due:
+def due(town: Town, cfg: BatonConfig, *, now: datetime, model_idle_s: int | None, catch_up: bool = False,
+        config: Config | None = None) -> Due:
+    """``config`` (the whole config) adds residents' opencode sessions to look after."""
     up = cfg.upkeep
     quiet = in_quiet_hours(now, up.quiet_hours)
     out = Due()
+
+    from babo.baton import opencode
+
+    opencode.ingest_all(town)
+    closing = opencode.needing_review(town, config, now=now) if config is not None else []
+    for session, why in closing:
+        out.sessions.append(f"{session.resident}/{session.id}")
+        out.reasons.append(f"{session.resident}'s session “{session.title}” to review and freeze ({why})")
+        out.keys.append(f"session:{session.resident}:{session.id}:{session.last_active}")
 
     activity, sizes = unreviewed_events(town, read_offsets(town))
     for resident, events in activity.items():
@@ -187,7 +199,7 @@ def _unfinished_pass(town: Town) -> str | None:
 async def run_pass(config: Config, plan: Due, **kwargs: Any) -> dict[str, Any]:
     town = Town.open(config.baton.town_path)
     kwargs.setdefault("night", _unfinished_pass(town))
-    result = await Night(config, residents=plan.residents, **kwargs).run()
+    result = await Night(config, residents=plan.residents, sessions=plan.sessions, **kwargs).run()
     state = load_state(town)
     if result.get("status") == "ok":
         state.update({"last_pass": now_iso(), "last_tried": now_iso(), "last_keys": plan.keys, "last_reasons": plan.reasons,
@@ -202,7 +214,7 @@ async def run_pass(config: Config, plan: Due, **kwargs: Any) -> dict[str, Any]:
 async def run_now(config: Config, **kwargs: Any) -> dict[str, Any] | None:
     """Do everything that is waiting, now (`babo upkeep --now`). None when nothing was waiting."""
     town = Town.open(config.baton.town_path)
-    plan = due(town, config.baton, now=datetime.now().astimezone(), model_idle_s=None, catch_up=True)
+    plan = due(town, config.baton, now=datetime.now().astimezone(), model_idle_s=None, catch_up=True, config=config)
     if not plan.reasons:
         return None
     return await run_pass(config, plan, **kwargs)
@@ -221,7 +233,8 @@ async def watch(config: Config) -> None:
     while True:
         try:
             catch_up = catch_up_requested(town)
-            plan = due(town, cfg, now=datetime.now().astimezone(), model_idle_s=await model_idle_seconds(cfg), catch_up=catch_up)
+            plan = due(town, cfg, now=datetime.now().astimezone(), model_idle_s=await model_idle_seconds(cfg), catch_up=catch_up,
+                       config=config)
             if catch_up:
                 _request_path(town).unlink(missing_ok=True)
             _heartbeat(town, plan, running=plan.run)

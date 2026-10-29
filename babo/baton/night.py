@@ -161,6 +161,7 @@ class Night:
         *,
         night: str | None = None,
         residents: list[str] | None = None,
+        sessions: list[str] | None = None,
         agent_turn: AgentTurn | None = None,
         client: BatonModelClient | None = None,
         interrupt_after: str | None = None,
@@ -172,6 +173,8 @@ class Night:
         self.night = night or pass_id()
         # Whose activity this pass reviews; None means everyone with activity waiting.
         self.only = set(residents) if residents is not None else None
+        # Residents' opencode sessions ("<resident>/<session>") to review and freeze first.
+        self.sessions = list(sessions or [])
         self.state_dir = self.town.state / "upkeep"
         self.work_dir = self.state_dir / self.night
         self.ledger = NightLedger.load(self.state_dir / f"{self.night}.json")
@@ -237,6 +240,10 @@ class Night:
         self.ledger.save()
         summary: dict[str, Any] = {"status": "ok", "night": self.night}
         try:
+            for item in self.sessions:
+                step = f"session:{item}"
+                if not self.ledger.done(step):
+                    await self.close_session(item)
             if not self.ledger.done("prepass"):
                 self.prepass()
             self._checkpoint_interrupt("prepass")
@@ -258,6 +265,27 @@ class Night:
             self._write_log()
         summary["steps"] = sorted(self.ledger.data["steps"])
         return summary
+
+    # -- 0. sessions that ended, or that nobody uses any more --------------------------------
+    async def close_session(self, item: str) -> None:
+        """The resident reviews the session into its memory; then it is frozen."""
+        import httpx
+
+        from babo.baton import opencode
+        from babo.baton.town import BatonError
+        from babo.config.loader import get_config_path
+
+        resident, _, session_id = item.partition("/")
+        try:
+            session = opencode.get_session(self.town, resident, session_id)
+            said = await asyncio.to_thread(opencode.checkpoint, self.town, self.config, session,
+                                           trigger="session_end", config_path=get_config_path())
+            await asyncio.to_thread(opencode.freeze, self.town, opencode.get_session(self.town, resident, session_id))
+            self.log(f"session review {item}: {said}")
+            self.ledger.mark(f"session:{item}", reviewed=True)
+        except (BatonError, OSError, httpx.HTTPError) as exc:
+            self.log(f"session review {item} failed: {exc}")
+            self.ledger.mark(f"session:{item}", reviewed=False, error=str(exc))
 
     # -- 1. pre-pass -------------------------------------------------------------
     def prepass(self) -> None:
@@ -333,6 +361,7 @@ class Night:
             lines.append(f"- {str(e.get('at', ''))[11:16]} {e.get('tool')} {label}{extra}")
         lines += ["", "## Things worth a look"]
         hints = mismatch_hints(checkpoints_text=" ".join(" ".join([c.doing, *c.done]) for c in checkpoints).lower(), tools=tools)
+        hints += outside_hints(self.town, resident, tools)
         lines += [f"- {h}" for h in hints] or ["- nothing stood out"]
         path = self.work_dir / "diffs" / f"{resident}.md"
         atomic_write(path, "\n".join(lines) + "\n")
@@ -551,8 +580,23 @@ def mismatch_hints(*, checkpoints_text: str, tools: list[dict[str, Any]]) -> lis
     return hints
 
 
+def outside_hints(town: Town, resident: str, tools: list[dict[str, Any]]) -> list[str]:
+    """Files a resident's tools touched outside its own folder (a shell can reach
+    them even when edits can't). Relative paths are inside its folder."""
+    home = town.resident_dir(resident).resolve()
+    outside: list[str] = []
+    for event in tools:
+        for name in cast(list[str], event.get("files") or []):
+            path = Path(name).expanduser()
+            if path.is_absolute() and not path.resolve().is_relative_to(home) and name not in outside:
+                outside.append(name)
+    if not outside:
+        return []
+    return [f"touched files outside its own folder: {', '.join(outside[:8])}" + (" …" if len(outside) > 8 else "")]
+
+
 def run_night(config: Config, **kwargs: Any) -> dict[str, Any]:
     return asyncio.run(Night(config, **kwargs).run())
 
 
-__all__ = ["Night", "NightInterruptedError", "mismatch_hints", "pass_id", "pass_label", "read_events", "read_offsets", "run_night", "unreviewed_events"]
+__all__ = ["Night", "NightInterruptedError", "mismatch_hints", "outside_hints", "pass_id", "pass_label", "read_events", "read_offsets", "run_night", "unreviewed_events"]

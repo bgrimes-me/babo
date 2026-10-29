@@ -107,7 +107,7 @@ def _session_change(action: str, payload: dict[str, Any]) -> str:
     session_id = _text(payload, "id", 80)
     if action == "resume":
         return views.resume_session(town, cfg, resident, session_id, config_path=get_config_path().resolve())
-    return views.freeze_session(town, resident, session_id)
+    return views.freeze_session(town, cfg, resident, session_id, config_path=get_config_path().resolve())
 
 
 class TownRoutes:

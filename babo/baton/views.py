@@ -213,12 +213,16 @@ def resume_session(town: Town, config: Config, resident: str, session_id: str, *
     return f"{resident}'s session “{session.title}” is running again, where it left off."
 
 
-def freeze_session(town: Town, resident: str, session_id: str) -> str:
+def freeze_session(town: Town, config: Config, resident: str, session_id: str, *, config_path: Any) -> str:
     from babo.baton import opencode
 
     session = opencode.get_session(town, resident, session_id)
-    was = opencode.freeze(town, session)
-    return f"{resident}'s session “{session.title}” is frozen." if was else f"“{session.title}” wasn't running."
+    was = opencode.freeze(town, session, review=config, config_path=config_path)
+    reviewed = opencode.get_session(town, resident, session_id).reviewed
+    if not was:
+        return f"“{session.title}” wasn't running."
+    return f"{resident} reviewed “{session.title}” into its memory, and the session is frozen." if reviewed != session.reviewed \
+        else f"{resident}'s session “{session.title}” is frozen; its review didn't go through, so upkeep will do it."
 
 
 def _child(folder: Any, name: str) -> Any:

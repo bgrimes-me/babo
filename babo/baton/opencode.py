@@ -41,6 +41,7 @@ import subprocess
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta, timezone
 from importlib.resources import files
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -91,6 +92,13 @@ class Session:
     created: str = ""
     last_active: str = ""
     by: str = "squid"
+    reviewed: str = ""  # when the resident last reviewed this session into its memory
+    previous: list[str] = field(default_factory=lambda: cast(list[str], []))  # earlier opencode sessions, after one filled up
+
+    @property
+    def key(self) -> str:
+        """The session's name in the town's event log, checkpoints and transcripts."""
+        return f"opencode:{self.id}"
 
 
 def _sessions_dir(town: Town, resident: str) -> Path:
@@ -315,6 +323,26 @@ def _resident_env(config: Config, resident: str, *, password: str, inline: dict[
     return env
 
 
+def _memory_env(town: Town, config: Config, session: Session, *, config_path: Path, babo: str) -> dict[str, str]:
+    """What Babo's plugin needs to know: where to spool events, and when to ask for a checkpoint."""
+    profile = effective_profile(town, config, session.resident, session.overrides, by=session.by)
+    memory = config.baton.memory
+    return {
+        "BABO_BIN": babo, "BABO_CONFIG": str(config_path), "BABO_RESIDENT": session.resident, "BABO_SESSION": session.id,
+        "BABO_SPOOL": str(spool_path(town, session)),
+        "BABO_CHECKPOINT_EVERY": str(profile.memory.checkpoint_every_tool_calls or memory.checkpoint_every_tool_calls),
+        "BABO_COMMIT_GATE": str(memory.commit_gate_after_tool_calls),
+        "BABO_IDLE_MINUTES": str(profile.memory.idle_minutes or memory.idle_minutes),
+        "BABO_CONTEXT_TOKENS": str(_context_tokens(config)),
+    }
+
+
+def _install_plugin(config: Config, resident: str) -> None:
+    plugins = Path(config.baton.opencode.data_dir).expanduser() / resident / "config" / "opencode" / "plugins"
+    plugins.mkdir(parents=True, exist_ok=True)
+    atomic_write(plugins / "babo.js", (files("babo.baton") / "templates" / "opencode" / "babo-plugin.js").read_text(encoding="utf-8"))
+
+
 def write_bundle(town: Town, config: Config, session: Session) -> Path:
     from babo.baton.bundle import build_bundle
 
@@ -341,9 +369,12 @@ def start(town: Town, config: Config, session: Session, *, config_path: Path) ->
             password = secrets.token_urlsafe(18)
             port = _free_port()
             log = (_runtime_dir(town, session.resident) / f"{session.id}.log").open("ab")
+            env = _resident_env(config, session.resident, password=password, inline=inline)
+            env.update(_memory_env(town, config, session, config_path=config_path, babo=babo))
+            _install_plugin(config, session.resident)
             proc = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
                 [binary, "serve", "--port", str(port), "--hostname", "127.0.0.1"],
-                cwd=town.resident_dir(session.resident), env=_resident_env(config, session.resident, password=password, inline=inline),
+                cwd=town.resident_dir(session.resident), env=env,
                 stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
             )
             run = Running(pid=proc.pid, port=port, password=password, started=now_iso())
@@ -377,10 +408,21 @@ def _wait_healthy(run: Running, proc: subprocess.Popen[bytes], timeout_s: int, *
     raise BatonError(f"opencode didn't answer within {timeout_s} seconds.")
 
 
-def freeze(town: Town, session: Session) -> bool:
-    """Stop the session's instance. Its opencode session stays, so resuming continues it. True if it was running."""
+def freeze(town: Town, session: Session, *, review: Config | None = None, config_path: Path | None = None) -> bool:
+    """Stop the session's instance. Its opencode session stays, so resuming
+    continues it. With ``review`` (the config), the resident first reviews the
+    session into its memory. True if it was running."""
     run = running(town, session)
     was_running = run is not None
+    if run is not None and review is not None and config_path is not None and session.kind == "work":
+        try:
+            checkpoint(town, review, session, trigger="session_end", config_path=config_path)
+        except (BatonError, httpx.HTTPError) as exc:
+            # The safety net in upkeep reviews it later; stopping must not depend on the model.
+            from loguru import logger
+
+            logger.warning("Babo: {}'s session {} was frozen without its review: {}", session.resident, session.id, exc)
+        session = get_session(town, session.resident, session.id)
     if run is not None:
         # Ask opencode to close the instance (its sessions are already saved),
         # then stop the process; it can take its time over a plain SIGTERM.
@@ -402,6 +444,7 @@ def freeze(town: Town, session: Session) -> bool:
             except (ProcessLookupError, PermissionError):
                 pass
     _runtime_path(town, session).unlink(missing_ok=True)
+    ingest(town, session)
     session.status = "frozen"
     save_session(town, session)
     return was_running
@@ -418,6 +461,181 @@ def send(town: Town, config: Config, session: Session, text: str, *, config_path
     save_session(town, session)
     parts = cast(list[dict[str, Any]], data.get("parts") or [])
     return "\n".join(str(p.get("text", "")) for p in parts if p.get("type") == "text").strip()
+
+
+# -- memory: events, checkpoints, reviews -------------------------------------------------
+
+def spool_path(town: Town, session: Session) -> Path:
+    return _runtime_dir(town, session.resident) / f"{session.id}.spool.jsonl"
+
+
+_TOOL_ALIASES = {"bash": "exec"}  # the event log's names for opencode's tools, so its rules apply alike
+
+
+def ingest(town: Town, session: Session) -> list[dict[str, Any]]:
+    """Move what Babo's plugin spooled into the town's event log, redacted
+    and classified the same way as for residents running in Babo."""
+    from babo.baton.events import append_event, classify, tool_record
+
+    spool = spool_path(town, session)
+    if not spool.exists():
+        return []
+    taking = spool.with_suffix(".ingesting")
+    spool.replace(taking)
+    written: list[dict[str, Any]] = []
+    for line in taking.read_text(encoding="utf-8").splitlines():
+        try:
+            raw = cast(dict[str, Any], json.loads(line))
+        except ValueError:
+            continue
+        at = str(raw.get("at", "")) or now_iso()
+        if raw.get("kind") == "tool":
+            tool = _TOOL_ALIASES.get(str(raw.get("tool", "")), str(raw.get("tool", "")))
+            args = cast(dict[str, Any], raw.get("args") if isinstance(raw.get("args"), dict) else {})
+            args = {("path" if k == "filePath" else k): v for k, v in args.items()}
+            code = raw.get("exit_code")
+            result = (f"Exit code: {code}\n" if isinstance(code, int) else "") + str(raw.get("output", ""))
+            event = classify(tool, args, result, error=False)
+            written.append(append_event(town, session.resident, session.key, "tool", at=at, via="opencode", **tool_record(event)))
+        elif raw.get("kind") == "turn_start":
+            written.append(append_event(town, session.resident, session.key, "turn_start", at=at, via="opencode"))
+    taking.unlink(missing_ok=True)
+    if written:
+        latest = max(str(r["at"]) for r in written)
+        fresh = get_session(town, session.resident, session.id)
+        if _when(latest) > _when(fresh.last_active):
+            fresh.last_active = latest
+            save_session(town, fresh)
+    return written
+
+
+def _when(value: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    return parsed if parsed.tzinfo else parsed.astimezone()
+
+
+def needing_review(town: Town, config: Config, *, now: datetime) -> list[tuple[Session, str]]:
+    """Work sessions upkeep should review and freeze: nobody has used them for
+    ``freeze_after_idle_minutes``, or their instance stopped without a review."""
+    idle = timedelta(minutes=config.baton.opencode.freeze_after_idle_minutes)
+    out: list[tuple[Session, str]] = []
+    for resident in (r.id for r in Registry(town).all() if r.status == "active" and runs_in_opencode(r.office)):
+        for session in sessions(town, resident):
+            if session.kind != "work" or not session.opencode_id:
+                continue
+            reviewed = _when(session.reviewed)
+            active = _when(session.last_active)
+            if running(town, session) is not None:
+                if now - active >= idle:
+                    out.append((session, "idle"))
+            elif active > reviewed and session.status == "running":
+                out.append((session, "stopped without a review"))
+    return out
+
+
+def ingest_all(town: Town) -> int:
+    """Every resident's spooled events into the event log (upkeep does this before it looks)."""
+    count = 0
+    root = town.state / "runtime" / "opencode"
+    for spool in sorted(root.glob("*/*.spool.jsonl")) if root.exists() else []:
+        resident, session_id = spool.parent.name, spool.name.removesuffix(".spool.jsonl")
+        try:
+            count += len(ingest(town, get_session(town, resident, session_id)))
+        except BatonError:
+            continue
+    return count
+
+
+def _messages(run: Running, session: Session) -> list[dict[str, Any]]:
+    with _client(run, 60) as client:
+        resp = client.get(f"/session/{session.opencode_id}/message")
+        resp.raise_for_status()
+        return cast(list[dict[str, Any]], resp.json())
+
+
+def conversation(messages: list[dict[str, Any]], *, budget_tokens: int) -> list[dict[str, Any]]:
+    """The session as plain chat messages (tool calls written out), newest kept within the budget."""
+    from babo.baton.tokens import estimate_tokens
+
+    out: list[dict[str, Any]] = []
+    for message in messages:
+        info = cast(dict[str, Any], message.get("info") or {})
+        role = str(info.get("role", ""))
+        if role not in ("user", "assistant"):
+            continue
+        pieces: list[str] = []
+        for part in cast(list[dict[str, Any]], message.get("parts") or []):
+            if part.get("type") == "text" and part.get("text"):
+                pieces.append(str(part["text"]))
+            elif part.get("type") == "tool":
+                state = cast(dict[str, Any], part.get("state") or {})
+                pieces.append(f"[{part.get('tool')}] {json.dumps(state.get('input', {}), ensure_ascii=False)[:400]}"
+                              f" → {str(state.get('output', state.get('error', '')))[:600]}")
+        if pieces:
+            out.append({"role": role, "content": "\n".join(pieces)})
+    kept: list[dict[str, Any]] = []
+    used = 0
+    for message in reversed(out):
+        cost = estimate_tokens(str(message["content"]))
+        if kept and used + cost > budget_tokens:
+            break
+        kept.append(message)
+        used += cost
+    return list(reversed(kept))
+
+
+def export_transcript(town: Town, session: Session, messages: list[dict[str, Any]]) -> Path:
+    from babo.baton.events import session_slug
+    from babo.baton.town import today
+
+    path = town.resident_dir(session.resident) / "sessions" / today() / f"{session_slug(session.key)}.transcript.jsonl"
+    atomic_write(path, "".join(json.dumps(m, ensure_ascii=False, default=str) + "\n" for m in messages))
+    return path
+
+
+def checkpoint(town: Town, config: Config, session: Session, *, trigger: str, config_path: Path) -> str:
+    """Ask the resident, with its own session in view, to write a checkpoint in
+    its own words; at the end of a session this is its review of the session.
+    Starts the instance if it isn't running (that is how a session that ended
+    without one is reviewed)."""
+    import asyncio
+
+    from babo.baton.checkpoint import CheckpointService
+
+    with FileLock(str(town.locks / f"opencode-checkpoint-{session.resident}-{session.id}.lock"), timeout=600):
+        session = get_session(town, session.resident, session.id)
+        events = ingest(town, session)
+        run = running(town, session) or start(town, config, session, config_path=config_path)
+        messages = _messages(run, session)
+        bundle_path = _runtime_dir(town, session.resident) / f"{session.id}.bundle.md"
+        bundle = bundle_path.read_text(encoding="utf-8") if bundle_path.exists() else write_bundle(town, config, session).read_text(encoding="utf-8")
+        prompt = (files("babo.baton") / "templates" / "opencode" / "resident.md").read_text(encoding="utf-8")
+        convo = [{"role": "system", "content": prompt + "\n\n" + bundle},
+                 *conversation(messages, budget_tokens=int(_context_tokens(config) * 0.6))]
+        profile = effective_profile(town, config, session.resident, session.overrides, by=session.by)
+        overrides = {k: v for k, v in profile.memory.model_dump().items() if v is not None}
+        baton_cfg = config.baton.model_copy(update={"memory": config.baton.memory.model_copy(update=overrides)}) if overrides else config.baton
+        outcome = asyncio.run(CheckpointService(town, session.resident, baton_cfg).run(
+            convo, trigger=trigger, session_key=session.key, events=events))
+        if trigger in ("session_end", "context_full"):
+            export_transcript(town, session, messages)
+            session.reviewed = now_iso()
+        if trigger == "context_full":
+            _rotate(town, session, run)
+        save_session(town, session)
+        return f"{'Written by ' + session.resident if outcome.authored else 'Recorded from the event log'}: {outcome.checkpoint.thread}"
+
+
+def _rotate(town: Town, session: Session, run: Running) -> None:
+    """A full session continues in a fresh opencode session that starts from the resident's baton."""
+    with _client(run, 30) as client:
+        created = client.post("/session", json={"title": session.title})
+        created.raise_for_status()
+    session.previous.append(session.opencode_id)
+    session.opencode_id = str(created.json()["id"])
 
 
 def special_session(town: Town, config: Config, resident: str, kind: str) -> Session:
