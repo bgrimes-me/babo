@@ -23,6 +23,15 @@ const settings = [{
   kind: "int", applies: "after Babo restarts", value: 20,
 }];
 
+const capability = (key: string, label: string, level: string, levels = ["allow", "ask", "deny"]) => ({ key, label, help: "", level, levels });
+const profile = (agent: string, main: boolean, level: string) => ({
+  agent, office: agent, main, saved: false,
+  capabilities: [capability("shell", "Run commands", level, main ? ["allow", "deny"] : undefined)],
+  mcp: [], mcp_known: [], model: "", memory: { checkpoint_every_tool_calls: null, idle_minutes: null },
+  memory_defaults: { checkpoint_every_tool_calls: 15, idle_minutes: 20 },
+});
+const profiles = [profile("mayor", true, "allow"), profile("archivist", false, "deny")];
+
 const mocks = vi.hoisted(() => ({ mutation: vi.fn(), fetch: vi.fn(), getToken: () => "token" }));
 vi.mock("@/providers/ClientProvider", () => ({ useClient: () => ({ client: { requestMutation: mocks.mutation }, getToken: mocks.getToken }) }));
 
@@ -30,7 +39,8 @@ beforeEach(async () => {
   await i18n.changeLanguage("en");
   mocks.mutation.mockReset().mockResolvedValue({ message: "Proposal accepted. The town is now called Lantern Hill.", town: town("Lantern Hill") });
   mocks.fetch.mockReset().mockImplementation((url: string) => Promise.resolve(new Response(
-    JSON.stringify(url.endsWith("/api/town/review") ? review : url.endsWith("/api/town/settings") ? { settings } : town()),
+    JSON.stringify(url.endsWith("/api/town/review") ? review : url.endsWith("/api/town/settings") ? { settings }
+      : url.endsWith("/api/town/profiles") ? { profiles } : town()),
     { status: 200, headers: { "content-type": "application/json" } },
   )));
   vi.stubGlobal("fetch", mocks.fetch);
@@ -69,5 +79,21 @@ describe("town page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
     await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.settings", { changes: { "memory.idle_minutes": "30" } }, 20_000));
     expect(await screen.findByRole("status")).toHaveTextContent("20 → 30");
+  });
+
+  it("marks the Mayor as the main agent and changes a resident's profile, like `babo profile`", async () => {
+    mocks.mutation.mockResolvedValue({
+      message: "Profile of archivist: Run commands: deny → ask. It applies from the agent's next session.",
+      profiles: [profiles[0], profile("archivist", false, "ask")],
+    });
+    render(<TownPage onBackToChat={() => {}} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Profiles" }));
+    const mayor = await screen.findByRole("region", { name: "Mayor" });
+    expect(within(mayor).getByText("Main agent")).toBeVisible();
+    expect(within(mayor).queryByRole("radio", { name: "Ask" })).toBeNull();
+    const archivist = screen.getByRole("region", { name: "archivist · archivist" });
+    fireEvent.click(within(archivist).getByRole("radio", { name: "Ask" }));
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.profile", { agent: "archivist", changes: { shell: "ask" } }, expect.any(Number)));
+    expect(await screen.findByRole("status")).toHaveTextContent("Run commands: deny → ask");
   });
 });

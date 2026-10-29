@@ -1634,3 +1634,31 @@ export function updateTownSettings(
 ): Promise<{ message: string; settings: TownSetting[] }> {
   return mutation<{ message: string; settings: TownSetting[] }>(transport, "town.settings", { changes });
 }
+
+export type TownLevel = "allow" | "ask" | "deny";
+
+export interface TownProfile {
+  agent: string;
+  office: string;
+  /** The Mayor: Babo's main agent, with one profile for every session. */
+  main: boolean;
+  saved: boolean;
+  capabilities: { key: string; label: string; help: string; level: TownLevel; levels: TownLevel[] }[];
+  mcp: string[];
+  mcp_known: string[];
+  model: string;
+  memory: { checkpoint_every_tool_calls: number | null; idle_minutes: number | null };
+  memory_defaults: { checkpoint_every_tool_calls: number; idle_minutes: number };
+}
+
+export function fetchTownProfiles(token: string, base: string = ""): Promise<{ profiles: TownProfile[] }> {
+  return request<{ profiles: TownProfile[] }>(`${base}/api/town/profiles`, token, undefined, API_READ_TIMEOUT_MS);
+}
+
+export function updateTownProfile(
+  transport: WebUIMutationTransport,
+  agent: string,
+  changes: Record<string, string | string[]>,
+): Promise<{ message: string; profiles: TownProfile[] }> {
+  return mutation<{ message: string; profiles: TownProfile[] }>(transport, "town.profile", { agent, changes });
+}

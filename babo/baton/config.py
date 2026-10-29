@@ -26,7 +26,7 @@ _COMMON_BATON = [
 ]
 
 DEFAULT_TOOLSETS: dict[str, list[str]] = {
-    "mayor": ["read_file", "write_file", "exec", "spawn", *_COMMON_BATON, "visit", "post_board"],
+    "mayor": ["read_file", "write_file", "exec", "subagent", *_COMMON_BATON, "visit", "post_board"],
     "archivist": [
         "read_file",
         *_COMMON_BATON,
@@ -35,7 +35,7 @@ DEFAULT_TOOLSETS: dict[str, list[str]] = {
         "commons_contest",
     ],
     "inspector": ["read_file", *_COMMON_BATON, "file_flag", "review_item"],
-    "default": ["read_file", "write_file", "exec", "spawn", *_COMMON_BATON],
+    "default": ["read_file", "write_file", "exec", "subagent", *_COMMON_BATON],
 }
 
 

@@ -1,5 +1,5 @@
 """The town pages of the web interface: overview, review, notes, the town's
-name, and the doctor. Reads are GET routes; changes arrive as allowlisted WebUI
+name, profiles, settings and the doctor. Reads are GET routes; changes arrive as allowlisted WebUI
 mutations. Everything goes through ``babo.baton.views``, the same functions
 `babo town`, `babo review` and `babo note` use."""
 
@@ -22,6 +22,7 @@ TOWN_MUTATION_PATHS = {
     "town.note": "/api/town/note",
     "town.name": "/api/town/name",
     "town.settings": "/api/town/settings/update",
+    "town.profile": "/api/town/profiles/update",
 }
 _DECISION_KINDS = ("tool", "proposal", "founding", "flag")
 _doctor_lock = asyncio.Lock()
@@ -52,6 +53,22 @@ def _update_settings(payload: dict[str, Any]) -> dict[str, Any]:
     said = town_settings.update(get_config_path(), cast(dict[str, object], changes))
     return {"message": "; ".join(said) if said else "Nothing changed.",
             "settings": town_settings.current(load_config().baton)}
+
+
+def _profiles() -> dict[str, Any]:
+    from babo.baton import views
+    from babo.config.loader import load_config
+
+    cfg = load_config()
+    return {"profiles": views.profiles_overview(Town.open(cfg.baton.town_path), cfg.baton, sorted(cfg.tools.mcp_servers))}
+
+
+def _update_profile(agent: str, changes: dict[str, object]) -> str:
+    from babo.baton import views
+    from babo.config.loader import load_config
+
+    cfg = load_config()
+    return views.update_profile(Town.open(cfg.baton.town_path), cfg.baton, agent, changes, sorted(cfg.tools.mcp_servers))
 
 
 class TownRoutes:
@@ -90,6 +107,8 @@ class TownRoutes:
             from babo.config.loader import load_config
 
             return http_json_response({"settings": town_settings.current(load_config().baton)})
+        if got == "/api/town/profiles":
+            return http_json_response(await asyncio.to_thread(_profiles))
         if not self.is_mutation_path(got):
             return http_error(404, "Not found")
         payload = self._payload(request)
@@ -107,6 +126,12 @@ class TownRoutes:
         elif got == "/api/town/note":
             resident, text = _text(payload, "resident", 80), _text(payload, "text")
             message = await asyncio.to_thread(lambda: views.leave_note(_town(), resident, text))
+        elif got == "/api/town/profiles/update":
+            agent, changes = _text(payload, "agent", 80), payload.get("changes")
+            if not isinstance(changes, dict) or not changes:
+                raise BatonError("missing changes")
+            message = await asyncio.to_thread(lambda: _update_profile(agent, cast(dict[str, object], changes)))
+            return http_json_response({"message": message, **await asyncio.to_thread(_profiles)})
         elif got == "/api/town/name":
             name = _text(payload, "name", 200)
             message = await asyncio.to_thread(lambda: views.name_town(_town(), name))

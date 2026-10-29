@@ -87,3 +87,18 @@ async def test_unauthorized_requests_are_refused(town: Town, index_path: Path, m
     status, _ = await _call(routes, "/api/town")
     assert status == 401
     assert await routes.dispatch(WsRequest("/api/other", Headers()), "/api/other") is None
+
+
+async def test_profiles_from_the_web_match_babo_profile(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    routes = _routes(town, index_path, monkeypatch)
+    status, body = await _call(routes, "/api/town/profiles")
+    assert status == 200
+    mayor = body["profiles"][0]
+    assert mayor["agent"] == "mayor" and mayor["main"] and mayor["capabilities"][0]["levels"] == ["allow", "deny"]
+    status, result = await _call(routes, "/api/town/profiles/update", {"agent": "archivist", "changes": {"web_search": "allow"}})
+    assert status == 200, result
+    assert result["message"].startswith("Profile of archivist: Search the web: deny → allow")
+    archivist = next(p for p in result["profiles"] if p["agent"] == "archivist")
+    assert next(c for c in archivist["capabilities"] if c["key"] == "web_search")["level"] == "allow"
+    status, text = await _call(routes, "/api/town/profiles/update", {"agent": "mayor", "changes": {"shell": "ask"}})
+    assert status == 400 and "can't stop to ask" in str(text)

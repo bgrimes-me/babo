@@ -231,6 +231,9 @@ def approve_founding_request(town: Town, request: Path, *, approved_by: str, not
     )
     authority = _authority(f"founding request {request.name}", approved_by, _TOKEN)
     resident = _found_resident(town, resident_id, slugify(office), role, authority)
+    template = town.state / "profiles" / "_new-residents.json"  # profiles.NEW_RESIDENTS
+    if template.is_file():
+        atomic_write(town.state / "profiles" / f"{resident_id}.json", template.read_text(encoding="utf-8"))
     meta.update({"status": "approved", "resident": resident_id, "decided": now_iso(), "decided_by": approved_by})
     if note:
         meta["decision_note"] = note

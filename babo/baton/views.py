@@ -1,6 +1,6 @@
 """The town as plain data, and Squid's decisions as plain calls.
 
-The command line (`babo town`, `babo review`, `babo note`) and the web
+The command line (`babo town`, `babo review`, `babo note`, `babo profile`) and the web
 interface's town pages both go through these functions, so the two always
 show the same thing and decide the same way.
 """
@@ -11,6 +11,7 @@ import json
 from typing import Any, Literal, cast
 
 from babo.baton import gitops, growth
+from babo.baton.config import BatonConfig
 from babo.baton.founding import founding_requests
 from babo.baton.inbox import unread
 from babo.baton.notes import first_line, split_frontmatter
@@ -120,6 +121,45 @@ def leave_note(town: Town, resident: str, text: str) -> str:
         raise BatonError("The note is empty.")
     growth.leave_note(town, resident, text.strip())
     return f"Note left for {resident}."
+
+
+# -- profiles ------------------------------------------------------------------
+
+def _office(town: Town, agent: str) -> str:
+    from babo.baton import profiles
+
+    if agent == profiles.NEW_RESIDENTS:
+        return "default"
+    return Registry(town).require_active(agent).office
+
+
+def profile_agent(name: str) -> str:
+    """``new-residents`` (what people type) names the template new residents start from."""
+    from babo.baton import profiles
+
+    return profiles.NEW_RESIDENTS if name.strip() in ("new-residents", profiles.NEW_RESIDENTS) else name.strip()
+
+
+def profiles_overview(town: Town, cfg: BatonConfig, mcp_known: list[str]) -> list[dict[str, Any]]:
+    """The Mayor first (the main agent), then the residents, then the template for new ones."""
+    from babo.baton import profiles
+
+    agents = sorted((r.id for r in Registry(town).all() if r.status == "active"), key=lambda a: (a != profiles.MAYOR, a))
+    out = [profiles.describe(town, cfg, a, _office(town, a), mcp_known=mcp_known) for a in agents]
+    out.append(profiles.describe(town, cfg, profiles.NEW_RESIDENTS, "default", mcp_known=mcp_known))
+    return out
+
+
+def update_profile(town: Town, cfg: BatonConfig, agent: str, changes: dict[str, object], mcp_known: list[str]) -> str:
+    from babo.baton import profiles
+
+    agent = profile_agent(agent)
+    said = profiles.update(town, cfg, agent, _office(town, agent), changes, mcp_known=mcp_known)
+    if not said:
+        return "Nothing changed."
+    if agent == profiles.NEW_RESIDENTS:
+        return "Profile for new residents: " + "; ".join(said) + ". Residents founded from now on start with it."
+    return f"Profile of {agent}: " + "; ".join(said) + ". It applies from the agent's next session."
 
 
 def _child(folder: Any, name: str) -> Any:
