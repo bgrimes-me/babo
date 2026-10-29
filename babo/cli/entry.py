@@ -90,13 +90,6 @@ def _command_args(args: list[str]) -> list[str]:
 
 def main() -> None:
     """Acquire a runtime lease before loading application code."""
-    # An installation from before the rename keeps its settings: ~/.nanobot moves to ~/.babo once.
-    from babo.config.home import migrate_legacy_home
-    try:
-        if migrate_legacy_home() is not None:
-            print("Moved ~/.nanobot to ~/.babo (a link is left at ~/.nanobot).", file=sys.stderr)
-    except OSError as exc:
-        print(f"Note: could not move ~/.nanobot to ~/.babo: {exc}", file=sys.stderr)
     # `--as <resident>` selects a resident's workspace.
     from babo.baton.cli_support import has_as, rewrite_as_args
     if has_as(sys.argv[1:]):

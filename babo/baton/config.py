@@ -104,8 +104,6 @@ class BatonOpencodeConfig(Base):
 
 
 class BatonNightConfig(Base):
-    # `time` is unused since upkeep replaced the nightly timer; kept so older config files still load.
-    time: str = Field(default="04:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     tool_test_timeout_s: int = Field(default=120, ge=5)
     tool_test_image: str = "docker.io/library/python:3.12-slim"
 

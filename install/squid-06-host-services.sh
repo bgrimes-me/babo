@@ -9,25 +9,14 @@ need_host
 boxhome="$(distrobox enter "$BOX" -- sh -c 'printf %s "$HOME"' 2>/dev/null | tail -1 || true)"
 src=""
 for dir in "$INSTALL_DIR/out/systemd" \
-           ${boxhome:+"$boxhome/$(basename "$REPO_DIR")/install/out/systemd" "$boxhome/babo/install/out/systemd" "$boxhome/nanobot/install/out/systemd"}; do
+           ${boxhome:+"$boxhome/$(basename "$REPO_DIR")/install/out/systemd" "$boxhome/babo/install/out/systemd"}; do
   if ls "$dir"/babo-*.service >/dev/null 2>&1; then src="$dir"; break; fi
 done
 [ -n "$src" ] || fail "no units found (looked in $INSTALL_DIR/out/systemd${boxhome:+ and under $boxhome}); run 05-units.sh in the box ($BOX) first"
 echo "using units from $src"
 dest="$HOME/.config/systemd/user"
 mkdir -p "$dest"
-# Units from before the rename (baton-*), and Babo units no longer shipped (the old night
-# timer, replaced by babo-upkeep), are stopped and removed, so nothing runs twice.
-for old in "$dest"/baton-*; do
-  [ -e "$old" ] || continue
-  unit="$(basename "$old")"
-  case "$unit" in *@.service) ;; *) systemctl --user disable --now "$unit" >/dev/null 2>&1 || true ;; esac
-  rm -f "$old"
-  echo "removed the old unit $unit"
-done
-for running in $(systemctl --user list-units --plain --no-legend 'baton-gateway@*' 2>/dev/null | awk '{print $1}'); do
-  systemctl --user disable --now "$running" >/dev/null 2>&1 || true
-done
+# Babo units no longer shipped (such as the old night timer) are stopped and removed, so nothing runs twice.
 for old in "$dest"/babo-*; do
   [ -e "$old" ] || continue
   unit="$(basename "$old")"

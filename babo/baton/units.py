@@ -29,9 +29,15 @@ def render_units(config: BatonConfig, *, distrobox: str = "/usr/bin/distrobox") 
 
 
 def write_units(config: BatonConfig, out: Path) -> list[Path]:
+    """Write the units, and remove units from earlier versions still in ``out``
+    (the host step installs every ``babo-*`` file it finds there)."""
     out.mkdir(parents=True, exist_ok=True)
+    units = render_units(config)
+    for stale in out.glob("babo-*"):
+        if stale.name not in units:
+            stale.unlink()
     written: list[Path] = []
-    for name, text in render_units(config).items():
+    for name, text in units.items():
         path = out / name
         path.write_text(text, encoding="utf-8")
         written.append(path)

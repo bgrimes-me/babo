@@ -108,21 +108,19 @@ Tell Squid: "Babo is installed. Doctor passed. You can talk to the Mayor with `b
 
 ## Upgrading an existing install
 
-The same rules apply. For a town installed before the rename to Babo (the code is in `~/nanobot` in the box and the command is `nanobot`), also do the steps marked *(rename only)*. Everything is kept: the town, its git history, the residents' memory and your settings.
+The same rules apply. Everything is kept: the town, its git history, the residents' memory and your settings. Step 4 also removes what earlier versions left behind (obsolete settings, old config backups, stale folders in the checkout) and lists each thing it removed; step 7 removes Babo services that are no longer part of it.
 
-1. *(rename only)* Move the code to its new folder — BOX: `cd ~ && [ -d nanobot/.git ] && [ ! -e babo ] && mv nanobot babo`
-2. Get the latest code — BOX: `cd ~/babo && git pull --ff-only`
-3. Reinstall — BOX: `cd ~/babo && bash install/run.sh 02-install-babo`. On a rename this installs `babo` and then removes the old `nanobot` command.
-4. *(rename only)* Move the settings — BOX: `babo residents`. The first `babo` command moves `~/.nanobot` to `~/.babo` and leaves a link behind; it prints a line saying so.
-5. Refresh the config — BOX: `cd ~/babo && bash install/run.sh 03-config`
-6. Bring the town's own files up to date — BOX: `cd ~/babo && bash install/run.sh 04-found-town`. Files nobody has edited (charter, house rules, founding roles, `.gitignore`) are updated; everything else is left alone.
-7. Write the services — BOX: `cd ~/babo && bash install/run.sh 05-units`
-8. Start the services — HOST, **SQUID**: as in step 7 above, with CODE = the box's `$HOME/babo`. On a rename this also stops and removes the old `baton-*` services.
-9. Check everything — BOX: `cd ~/babo && bash install/run.sh 07-doctor`
+1. Get the latest code — BOX: `cd ~/babo && git pull --ff-only`
+2. Reinstall — BOX: `cd ~/babo && bash install/run.sh 02-install-babo`
+3. Refresh the config — BOX: `cd ~/babo && bash install/run.sh 03-config`. This also finds opencode and records where it is.
+4. Bring the town's files up to date and tidy — BOX: `cd ~/babo && bash install/run.sh 04-found-town`. Files nobody has edited (charter, house rules, roles, `.gitignore`) are updated; everything else is left alone.
+5. Write the services — BOX: `cd ~/babo && bash install/run.sh 05-units`
+6. Start the services — HOST, **SQUID**: as in step 7 above, with CODE = the box's `$HOME/babo`.
+7. Check everything — BOX: `cd ~/babo && bash install/run.sh 07-doctor`
 
 What an upgrade changes, and what it doesn't:
 
 - **Residents other than the Mayor now run in opencode.** Install it in the box if it isn't there (`command -v opencode`, otherwise `curl -fsSL https://opencode.ai/install | bash`); the doctor checks. Residents already in the town stay, with their memory; they work in opencode from their next session.
-- **The night timer is replaced by the upkeep service.** Step 8 removes `babo-night.timer` and starts `babo-upkeep`. A town from before keeps its history; its night logs stay in `state/night-logs/`.
+- **The night timer is replaced by the upkeep service.** Step 6 removes `babo-night.timer` and starts `babo-upkeep`. A town from before keeps its history; its night logs stay in `state/night-logs/`.
 - **Profiles.** Every agent keeps exactly the tools its office had until you change its profile (`babo profile`, or the Town page's Profiles tab). Web search is off for everyone until you allow it.
 - **New towns start with the Mayor alone.** An existing town keeps the residents it has.
