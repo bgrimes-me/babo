@@ -139,6 +139,10 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
                 limit=baton_cfg.memory.commit_gate_after_tool_calls, counters=formation.counters,
             )
     loop._hook_factories.append(formation.hook_factory)  # pyright: ignore[reportPrivateUsage]
+    # A clock the resident can trust, on every turn.
+    from nanobot.baton.clock import clock_provider
+
+    loop.register_runtime_context_provider(clock_provider(town, resident_id))
     from nanobot.baton.compaction import BatonConsolidator
 
     if isinstance(loop.consolidator, BatonConsolidator):

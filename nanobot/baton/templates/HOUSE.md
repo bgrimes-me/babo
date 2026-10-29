@@ -8,3 +8,4 @@ These are the machine agreements between Squid and the town. Squid edits this fi
 - New tools and new residents need Squid's approval before they are real.
 - We keep secrets (keys, passwords, tokens) out of notes, letters and commits.
 - When something looks risky or unclear, we stop and ask rather than guess.
+- When a task touches another resident's lane, we route it rather than touch it.

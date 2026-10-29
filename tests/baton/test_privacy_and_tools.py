@@ -170,7 +170,7 @@ def test_remember_goes_to_own_inbox_not_announced(town: Town, box) -> None:
     ],
 )
 def test_office_tools_are_refused_to_others(box, resident: str, tool: str, kwargs: dict) -> None:
-    with pytest.raises(BatonError, match="Only the"):
+    with pytest.raises(BatonError, match="only the .* lane"):
         box(resident).call(tool, **kwargs)
 
 

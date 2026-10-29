@@ -75,9 +75,9 @@ class Scope:
         if not path.suffix and path.with_suffix(".md").exists():
             path = path.with_suffix(".md")
         if not self.can_read(path):
-            raise BatonError(f"'{ref}' is outside what you can read (the commons, your own files, and letters to you).")
+            raise BatonError(f"Blocked: '{ref}' is outside what you can read (the commons, your own files, and letters to you). If you need something from another resident, send_letter to them and ask.")
         if not path.is_file():
-            raise BatonError(f"No note at '{ref}'.")
+            raise BatonError(f"No note at '{ref}'. Use search_memory to find the right path.")
         return path
 
     def display(self, path: Path) -> str:

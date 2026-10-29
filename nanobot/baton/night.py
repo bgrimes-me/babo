@@ -26,6 +26,7 @@ import tempfile
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import date as date_cls
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -34,6 +35,7 @@ from loguru import logger
 from nanobot.baton import gitops
 from nanobot.baton.baton_file import iter_checkpoints
 from nanobot.baton.checkpoint import HARNESS_SENDER, CheckpointService
+from nanobot.baton.clock import stamp
 from nanobot.baton.events import read_events, session_slug
 from nanobot.baton.inbox import items, set_flag
 from nanobot.baton.ledger import write_ledger
@@ -50,6 +52,12 @@ if TYPE_CHECKING:
     from nanobot.config.schema import Config
 
 NIGHT_MARK = "[baton:night]"
+
+
+def _now() -> str:
+    return stamp(datetime.now().astimezone())
+
+
 AgentTurn = Callable[[str, str, str], Awaitable[str]]  # (resident, message, session_key) -> reply
 
 
@@ -300,7 +308,7 @@ class Night:
         remember = [i for i in items(self.town, resident) if i.kind == "remember" and not i.folded]
         received = [i for i in items(self.town, resident) if i.kind != "remember" and i.created[:10] >= self.night[:10]]
         diff = self.work_dir / "diffs" / f"{resident}.md"
-        parts = [f"{NIGHT_MARK} From the Baton harness, not Squid. It's night ({self.night}): time to fold the day into your memory."]
+        parts = [f"{NIGHT_MARK} From the Baton harness, not Squid. It's night ({self.night}; time now {_now()}): time to fold the day into your memory."]
         parts.append("## Your checkpoints today\n" + ("\n".join(c.render() for c in cps[-8:]) or "(none)"))
         parts.append("## Notes you asked to remember\n" + ("\n".join(f"- {first_line(i.body, 200)}" for i in remember) or "(none)"))
         parts.append("## Letters and flags you received\n" + ("\n".join(f"- {i.kind} from {i.sender}: {first_line(i.body, 160)}" for i in received) or "(none)"))
@@ -337,7 +345,7 @@ class Night:
         if not pending:
             self.ledger.mark("archivist", promotions=0)
             return
-        lines = [f"{NIGHT_MARK} From the Baton harness. The promotion queue has {len(pending)} nomination(s). For each: "
+        lines = [f"{NIGHT_MARK} From the Baton harness (time now {_now()}). The promotion queue has {len(pending)} nomination(s). For each: "
                  "write or merge it into the commons with commons_write (add aliases and keywords), supersede outdated notes, "
                  "and where two views genuinely disagree use commons_contest to keep both. Write to the author with send_letter "
                  "when you change or decline their note. You may decline a nomination; say why in a letter."]
@@ -376,7 +384,7 @@ class Night:
             parts.append(f"# Open proposal ({prop.relative_to(self.town.root)})\n\n{prop.read_text(encoding='utf-8')[:2500]}")
         if not parts:
             return None
-        head = (f"{NIGHT_MARK} From the Baton harness. Tonight's material for the Inspector. Compare each resident's checkpoint "
+        head = (f"{NIGHT_MARK} From the Baton harness (time now {_now()}). Tonight's material for the Inspector. Compare each resident's checkpoint "
                 "claims with the event log; when they disagree, file_flag to that resident with the evidence (a note to a "
                 "colleague, not a verdict). Review each pending tool and open proposal for risk with review_item.")
         return head + "\n\n" + "\n\n---\n\n".join(parts)

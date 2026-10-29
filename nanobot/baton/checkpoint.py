@@ -15,16 +15,19 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
 from loguru import logger
 
 from nanobot.baton.baton_file import Checkpoint, append_checkpoint, current_entry
+from nanobot.baton.clock import stamp
 from nanobot.baton.config import BatonConfig
 from nanobot.baton.events import append_event, session_slug
 from nanobot.baton.model_client import BatonModelClient, ModelUnavailableError
 from nanobot.baton.notes import Note, first_line, join_frontmatter, write_note
+from nanobot.baton.registry import UNCHOSEN, Registry
 from nanobot.baton.runtime_state import CounterStore
 from nanobot.baton.schemas import CHECKPOINT_SCHEMA, FOLD_SCHEMA, CheckpointReply, parse_reply
 from nanobot.baton.search import index_file
@@ -34,7 +37,8 @@ HARNESS_SENDER = "baton-harness"
 CHECKPOINT_MARK = "[baton:checkpoint]"
 
 _REQUEST = """{mark} This message is from the Baton harness, not from Squid. It is a checkpoint (reason: {trigger}).
-Write your checkpoint in your own words, as JSON:
+Time now: {now}. You are {who}.
+{fold_intro}Write your checkpoint in your own words, as JSON:
 - thread: short name of what you are working on (reuse the name if it continues: "{thread}")
 - doing: one sentence, what you are in the middle of
 - done, learned, next, blockers: short lists (may be empty)
@@ -44,6 +48,10 @@ Write your checkpoint in your own words, as JSON:
 {extra}Only the JSON. Nothing else is expected of you; after this the conversation continues where it was."""
 
 _FOLD_EXTRA = "- revise_self: the full new text of your SELF.md if you want to revise it tonight, otherwise \"\"\n"
+_FOLD_INTRO = (
+    "Before you write, look back over the day: did you answer to a name, a voice or a job that isn't yours, "
+    "or work in another resident's lane? If so, say so in `learned`, and set SELF.md straight with revise_self if it needs it.\n"
+)
 
 
 @dataclass
@@ -73,9 +81,14 @@ class CheckpointService:
     # -- the turn --------------------------------------------------------
     def request_text(self, trigger: str, *, fold: bool = False) -> str:
         last = current_entry(self.home)
+        resident = Registry(self.town).get(self.resident_id)
+        who = f"the resident `{self.resident_id}`"
+        if resident is not None:
+            who += f", office: {resident.office}" if resident.name == UNCHOSEN else f", named {resident.name}, office: {resident.office}"
         return _REQUEST.format(
             mark=CHECKPOINT_MARK, trigger=trigger, thread=last.thread if last else "general",
-            extra=_FOLD_EXTRA if fold else "",
+            now=stamp(datetime.now().astimezone()), who=who,
+            fold_intro=_FOLD_INTRO if fold else "", extra=_FOLD_EXTRA if fold else "",
         )
 
     async def ask(self, messages: list[dict[str, Any]], trigger: str, *, fold: bool = False, priority: str = "interactive") -> tuple[CheckpointReply | None, int, str, list[dict[str, Any]]]:
