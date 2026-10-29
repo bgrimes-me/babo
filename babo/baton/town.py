@@ -13,6 +13,7 @@ import tempfile
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
+from typing import cast
 
 TOWN_MARKER = ".baton-town"
 RESIDENT_MARKER = ".baton-resident"
@@ -129,10 +130,12 @@ class Town:
     def name(self) -> str:
         """The name the town chose, or "" while it has none."""
         try:
-            data = json.loads(self.name_file.read_text(encoding="utf-8"))
+            data: object = json.loads(self.name_file.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return ""
-        return str(data.get("name") or "") if isinstance(data, dict) else ""
+        if not isinstance(data, dict):
+            return ""
+        return str(cast(dict[str, object], data).get("name") or "")
 
     def set_name(self, name: str, *, by: str) -> str:
         clean = " ".join(name.split())
