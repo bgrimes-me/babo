@@ -119,6 +119,7 @@ TOOL_SPECS: dict[str, ToolSpec] = {
                     "title": _str("Short title."),
                     "rationale": _str("Why this change is needed."),
                     "description": _str("What should change."),
+                    "project": _str("Optional: the name of one of your projects, to propose moving it to the commons."),
                 },
                 "required": ["title", "rationale", "description"],
             },
@@ -222,7 +223,7 @@ class Toolbox:
     # Called after a write that changes indexed knowledge (tests hook it).
     on_write: Callable[[Path], None] | None = None
     # Extra tool implementations (checkpoint, visit, commons tools) registered by later phases.
-    extra: dict[str, Callable[..., str]] = field(default_factory=dict)
+    extra: dict[str, Callable[..., Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.registry = Registry(self.town)
@@ -343,11 +344,18 @@ class Toolbox:
         atomic_write(folder / "TOOL.md", join_frontmatter(meta, description.strip() + "\n"))
         return f"Proposed tool {name}. It will be tested tonight, reviewed by the Inspector, and then goes to Squid."
 
-    def propose_change(self, title: str, rationale: str, description: str) -> str:
+    def propose_change(self, title: str, rationale: str, description: str, project: str | None = None) -> str:
+        if project:
+            slug = slugify(project)
+            if not (self.home / "projects" / slug).is_dir():
+                raise BatonError(f"You have no project called {slug} in projects/.")
+            project = slug
         path = self.town.proposals / "open" / f"{today()}-{slugify(title)}.md"
         if path.exists():
             path = path.with_name(f"{path.stem}-{self.resident_id}.md")
-        meta = {"title": title.strip(), "author": self.resident_id, "created": now_iso(), "status": "open"}
+        meta: dict[str, Any] = {"title": title.strip(), "author": self.resident_id, "created": now_iso(), "status": "open"}
+        if project:
+            meta["project"] = project
         body = f"# {title.strip()}\n\n## Why\n\n{rationale.strip()}\n\n## What\n\n{description.strip()}\n"
         atomic_write(path, join_frontmatter(meta, body))
         return f"Proposal filed as {self.scope.display(path)}. Squid will accept or decline it with a reason."

@@ -25,6 +25,21 @@ from nanobot.baton.tools.core import Toolbox, ToolSpec
 from nanobot.baton.tools.nanobot_adapter import baton_tools
 from nanobot.baton.town import BatonError, Town, find_town_for_workspace
 
+VISIT_SPEC = ToolSpec(
+    "visit",
+    "Visit another resident: they take one turn with your message, in their own session, and you get their reply.",
+    {
+        "type": "object",
+        "properties": {
+            "resident": {"type": "string", "description": "Resident id or name."},
+            "message": {"type": "string", "description": "What you want to say or ask."},
+        },
+        "required": ["resident", "message"],
+    },
+    offices=("mayor",),
+)
+MAX_TOOLS_WARNING = 14
+
 CHECKPOINT_SPEC = ToolSpec(
     "checkpoint",
     "Write a checkpoint of your work now, in your own words. Optional note says why.",
@@ -91,15 +106,29 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
         return "A checkpoint turn will follow this tool call. Write it in your own words."
 
     toolbox.extra["checkpoint"] = checkpoint_tool
+    if resident.office in VISIT_SPEC.offices:
+        toolbox.extra["visit"] = make_visit(config, town, resident_id)
 
     # Tools: Baton's own, then prune upstream's to the office's toolset.
-    for tool in baton_tools(toolbox, {"checkpoint": CHECKPOINT_SPEC}):
+    for tool in baton_tools(toolbox, {"checkpoint": CHECKPOINT_SPEC, "visit": VISIT_SPEC}):
         loop.tools.register(tool)
     allowed = set(baton_cfg.toolset_for(resident_id, resident.office))
     for name in list(loop.tools.tool_names):
         if name not in allowed:
             loop.tools.unregister(name)
             runtime.pruned.append(name)
+
+    # Plus every tool Squid approved for the town.
+    from nanobot.baton.tools.active import active_commons_tools
+
+    for tool in active_commons_tools(town):
+        if not loop.tools.has(tool.name):
+            loop.tools.register(tool)
+    if len(loop.tools.tool_names) > MAX_TOOLS_WARNING:
+        logger.warning("Baton: {} has {} tools; a small model chooses better from about 12", resident_id, len(loop.tools.tool_names))
+    from nanobot.baton.growth import ensure_project_clones
+
+    ensure_project_clones(town, resident_id)
 
     # Memory formation: the commit gate, the per-turn hook, compaction, session end.
     for name in GATED_TOOLS:
@@ -129,3 +158,33 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
     )
     loop.baton = runtime  # type: ignore[attr-defined]
     return runtime
+
+
+def make_visit(config: Config, town: Town, visitor: str):
+    """The Mayor's visit: one turn of another resident's own loop, in a session
+    reserved for visits from this visitor. The model queue keeps it in line."""
+
+    async def visit(resident: str, message: str) -> str:
+        from nanobot.agent.loop import AgentLoop
+        from nanobot.agent.tools.registry import ToolRegistry
+
+        registry = Registry(town)
+        target = registry.resolve(resident)
+        if target is None or target.status != "active":
+            raise BatonError(f"No resident called '{resident}'.")
+        if target.id == visitor:
+            raise BatonError("You can't visit yourself.")
+        cfg = config.model_copy(deep=True)
+        cfg.agents.defaults.workspace = str(town.resident_dir(target.id))
+        other = AgentLoop.from_config(cfg, tool_registry=ToolRegistry())
+        try:
+            reply = await other.process_direct(
+                f"[visit from {visitor}] {message}", session_key=f"visit:{visitor}",
+                channel="visit", chat_id=visitor, sender_id=visitor,
+            )
+        finally:
+            await other.aclose()
+        content = str(getattr(reply, "content", "") or "").strip() or "(no reply)"
+        return f"{target.display} replied:\n{content}"
+
+    return visit
