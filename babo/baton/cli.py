@@ -148,11 +148,24 @@ def mcp(
     try:
         t, cfg = _town(config)
         box = Toolbox(t, as_, cfg.baton.index_file)
-        box.me
+        extra = _profile_tools(t, cfg, as_, box.me.office)
     except BatonError as exc:
         _fail(exc)
         return
-    asyncio.run(serve(box))
+    asyncio.run(serve(box, extra))
+
+
+def _profile_tools(town: Town, cfg: Config, resident: str, office: str) -> list[Any]:
+    """Babo's own tools a resident outside Babo gets over MCP when its profile allows them."""
+    from babo.baton import profiles
+
+    if profiles.load(town, cfg.baton, resident, office).level("web_search") != "allow":
+        return []
+    from babo.agent.tools.web import WebSearchTool
+    from babo.config.loader import resolve_config_env_vars
+
+    web = resolve_config_env_vars(cfg).tools.web
+    return [WebSearchTool(config=web.search, proxy=cfg.network.resolve_proxy(web.use_proxy), user_agent=web.user_agent)]  # pyright: ignore[reportAbstractUsage]
 
 
 @app.command()
@@ -567,3 +580,130 @@ def settings(
         return
     console.print("\n".join(said) if said else "Nothing changed.")
     console.print("OK: settings saved")
+
+
+# -- residents' sessions in opencode -----------------------------------------------------
+
+session_app = typer.Typer(help="Residents' sessions in opencode: start, open, send, freeze.", no_args_is_help=True)
+app.add_typer(session_app, name="session")
+
+
+def _config_path() -> Path:
+    from babo.config.loader import get_config_path
+
+    return get_config_path().resolve()
+
+
+def _overrides(values: list[str]) -> dict[str, object]:
+    out: dict[str, object] = {}
+    for item in values:
+        key, sep, value = item.partition("=")
+        if not sep:
+            raise BatonError(f"--set takes setting=value (e.g. shell=deny), not '{item}'")
+        out[key.strip()] = value.strip()
+    return out
+
+
+@session_app.command("list")
+def session_list(resident: str | None = typer.Argument(None, help="Only this resident"), config: str | None = _CONFIG_OPT):
+    """Each resident's sessions: running, frozen or new."""
+    from babo.baton import opencode
+    from babo.baton.registry import Registry
+
+    t, _ = _town(config)
+    residents = [resident] if resident else [r.id for r in Registry(t).all() if r.status == "active" and opencode.runs_in_opencode(r.office)]
+    table = Table("resident", "session", "title", "status", "last active", "changes for this session")
+    try:
+        for rid in residents:
+            for s in opencode.overview(t, rid):
+                changes = ", ".join(f"{k}={v}" for k, v in s["overrides"].items()) or "-"
+                table.add_row(rid, s["id"], s["title"], s["status"], (s["last_active"] or "never")[:16].replace("T", " "), changes)
+    except BatonError as exc:
+        _fail(exc)
+    console.print(table)
+    console.print("Start one with: babo session new <resident>   open one with: babo session open <resident> [session]")
+
+
+@session_app.command("new")
+def session_new(
+    resident: str = typer.Argument(...),
+    title: str = typer.Option("", "--title", help="What the session is for"),
+    set_: list[str] = typer.Option([], "--set", help="Change the profile for this session only, e.g. --set shell=deny"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Start a new session for a resident (it starts from the resident's profile)."""
+    from babo.baton import opencode
+
+    t, cfg = _town(config)
+    try:
+        session = opencode.new_session(t, cfg, resident, title=title, overrides=_overrides(set_))
+        run = opencode.start(t, cfg, session, config_path=_config_path())
+    except BatonError as exc:
+        _fail(exc)
+        return
+    console.print(f"OK: session {session.id} for {resident} is running ({run.url}, user opencode, password {run.password})")
+    console.print(f"Open it in the terminal with: babo session open {resident} {session.id}")
+
+
+@session_app.command("open")
+def session_open(resident: str = typer.Argument(...), session_id: str | None = typer.Argument(None),
+                 config: str | None = _CONFIG_OPT):
+    """Open a session in opencode's terminal interface (the latest one, or a new one if there is none)."""
+    import os
+
+    from babo.baton import opencode
+
+    t, cfg = _town(config)
+    try:
+        try:
+            session = opencode.get_session(t, resident, session_id)
+        except BatonError:
+            if session_id is not None:
+                raise
+            session = opencode.new_session(t, cfg, resident)
+        run = opencode.start(t, cfg, session, config_path=_config_path())
+        argv, env = opencode.attach_argv(cfg, session, run)
+    except BatonError as exc:
+        _fail(exc)
+        return
+    console.print(f"Opening {resident}'s session {session.id}. When you leave, it keeps running until you freeze it: babo session freeze {resident}")
+    os.execvpe(argv[0], argv, env)  # noqa: S606 - opencode's own terminal interface takes over
+
+
+@session_app.command("send")
+def session_send(resident: str = typer.Argument(...), message: str = typer.Argument(...),
+                 session_id: str | None = typer.Option(None, "--session", help="Which session (default: the latest)"),
+                 config: str | None = _CONFIG_OPT):
+    """Send a resident one message in a session and print the reply."""
+    from babo.baton import opencode
+
+    t, cfg = _town(config)
+    try:
+        try:
+            session = opencode.get_session(t, resident, session_id)
+        except BatonError:
+            if session_id is not None:
+                raise
+            session = opencode.new_session(t, cfg, resident)
+        reply = opencode.send(t, cfg, session, message, config_path=_config_path())
+    except BatonError as exc:
+        _fail(exc)
+        return
+    console.print(reply or "(no reply)")
+
+
+@session_app.command("freeze")
+def session_freeze(resident: str = typer.Argument(...), session_id: str | None = typer.Argument(None),
+                   all_: bool = typer.Option(False, "--all", help="Freeze every running session of this resident"),
+                   config: str | None = _CONFIG_OPT):
+    """Stop a session. Resuming it later continues exactly where it was."""
+    from babo.baton import opencode
+
+    t, _ = _town(config)
+    try:
+        targets = opencode.sessions(t, resident) if all_ else [opencode.get_session(t, resident, session_id)]
+        frozen = [s.id for s in targets if opencode.freeze(t, s)]
+    except BatonError as exc:
+        _fail(exc)
+        return
+    console.print(f"OK: frozen {', '.join(frozen)}" if frozen else "Nothing was running.")

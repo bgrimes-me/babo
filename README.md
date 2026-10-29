@@ -22,7 +22,8 @@ Everyday commands:
 
 | Command | What it does |
 |---|---|
-| `babo agent` | Chat with the Mayor in the terminal (`--as archivist` to talk to another resident) |
+| `babo agent` | Chat with the Mayor in the terminal |
+| `babo session open archivist` | Open a resident's session in opencode (`babo session list` shows them all) |
 | `babo webui` | Open the web interface |
 | `babo residents` | Who lives in the town |
 | `babo review` | Decide on tools, proposals, founding requests and flags |

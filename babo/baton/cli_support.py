@@ -2,7 +2,9 @@
 
 ``babo agent --as archivist`` becomes ``babo agent --workspace
 <town>/residents/archivist`` before babo parses its arguments. The resident
-must already be founded; this never creates one.
+must already be founded; this never creates one. A resident who lives in
+opencode is opened there instead (``babo session open``, or ``babo session
+send`` with ``-m``), when opencode is installed.
 """
 
 from __future__ import annotations
@@ -59,6 +61,12 @@ def rewrite_as_args(args: list[str]) -> list[str]:
         print(f"Error: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
     rest = args[:start] + args[start + length:]
+    from babo.baton.opencode import opencode_bin, runs_in_opencode
+
+    if rest[:1] == ["agent"] and runs_in_opencode(resident.office) and opencode_bin(config) is not None:
+        message, _, _ = _option(rest, "--message", "-m")
+        config_args = ["--config", str(config_path)]
+        return ["session", "send", resident.id, message, *config_args] if message else ["session", "open", resident.id, *config_args]
     if any(a in ("--workspace", "-w") or a.startswith("--workspace=") for a in rest):
         print("Error: use either --as or --workspace, not both.", file=sys.stderr)
         raise SystemExit(1)

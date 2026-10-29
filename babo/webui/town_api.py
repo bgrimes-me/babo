@@ -25,6 +25,9 @@ TOWN_MUTATION_PATHS = {
     "town.settings": "/api/town/settings/update",
     "town.profile": "/api/town/profiles/update",
     "town.upkeep": "/api/town/upkeep/now",
+    "town.session.new": "/api/town/sessions/new",
+    "town.session.resume": "/api/town/sessions/resume",
+    "town.session.freeze": "/api/town/sessions/freeze",
 }
 _DECISION_KINDS = ("tool", "proposal", "founding", "flag")
 _doctor_lock = asyncio.Lock()
@@ -79,6 +82,34 @@ def _update_profile(agent: str, changes: dict[str, object]) -> str:
     return views.update_profile(Town.open(cfg.baton.town_path), cfg.baton, agent, changes, sorted(cfg.tools.mcp_servers))
 
 
+def _sessions() -> dict[str, Any]:
+    from babo.baton import views
+    from babo.config.loader import load_config
+
+    cfg = load_config()
+    return views.sessions_overview(Town.open(cfg.baton.town_path), cfg)
+
+
+def _session_change(action: str, payload: dict[str, Any]) -> str:
+    from babo.baton import views
+    from babo.config.loader import get_config_path, load_config
+
+    cfg = load_config()
+    town = Town.open(cfg.baton.town_path)
+    resident = _text(payload, "resident", 80)
+    if action == "new":
+        overrides: object = payload.get("overrides") or {}
+        if not isinstance(overrides, dict):
+            raise BatonError("overrides must be an object")
+        title = payload.get("title") if isinstance(payload.get("title"), str) else ""
+        return views.start_session(town, cfg, resident, title=cast(str, title)[:200], overrides=cast(dict[str, object], overrides),
+                                   config_path=get_config_path().resolve())
+    session_id = _text(payload, "id", 80)
+    if action == "resume":
+        return views.resume_session(town, cfg, resident, session_id, config_path=get_config_path().resolve())
+    return views.freeze_session(town, resident, session_id)
+
+
 class TownRoutes:
     def __init__(self, *, authorized: Callable[[WsRequest], bool], payload: Callable[[WsRequest], dict[str, Any] | None]) -> None:
         self._authorized = authorized
@@ -115,6 +146,8 @@ class TownRoutes:
             from babo.config.loader import load_config
 
             return http_json_response({"settings": town_settings.current(load_config().baton)})
+        if got == "/api/town/sessions":
+            return http_json_response(await asyncio.to_thread(_sessions))
         if got == "/api/town/profiles":
             return http_json_response(await asyncio.to_thread(_profiles))
         if not self.is_mutation_path(got):
@@ -140,6 +173,9 @@ class TownRoutes:
                 raise BatonError("missing changes")
             message = await asyncio.to_thread(lambda: _update_profile(agent, cast(dict[str, object], changes)))
             return http_json_response({"message": message, **await asyncio.to_thread(_profiles)})
+        elif got.startswith("/api/town/sessions/"):
+            message = await asyncio.to_thread(lambda: _session_change(got.rsplit("/", 1)[-1], payload))
+            return http_json_response({"message": message, **await asyncio.to_thread(_sessions)})
         elif got == "/api/town/upkeep/now":
             message = await asyncio.to_thread(lambda: views.request_upkeep(_town()))
         elif got == "/api/town/name":

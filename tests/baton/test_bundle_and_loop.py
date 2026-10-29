@@ -185,7 +185,8 @@ def test_as_rewrites_to_resident_workspace(town: Town, tmp_path, index_path) -> 
     from babo.baton.cli_support import rewrite_as_args
 
     cfg = tmp_path / "config.json"
-    cfg.write_text(json.dumps({"baton": {"town": str(town.root), "indexPath": str(index_path)}}))
+    without_opencode = {"town": str(town.root), "indexPath": str(index_path), "opencode": {"bin": str(tmp_path / "none")}}
+    cfg.write_text(json.dumps({"baton": without_opencode}))
     assert rewrite_as_args(["agent", "--as", "archivist", "--config", str(cfg)]) == [
         "agent", "--config", str(cfg), "--workspace", str(town.resident_dir("archivist")),
     ]
@@ -194,3 +195,8 @@ def test_as_rewrites_to_resident_workspace(town: Town, tmp_path, index_path) -> 
     with pytest.raises(SystemExit):
         rewrite_as_args(["agent", "--as", "ghost", "--config", str(cfg)])
     assert not (town.residents_dir / "ghost").exists()
+    # With opencode installed, a resident who lives there is opened there.
+    (tmp_path / "opencode").write_text("#!/bin/sh\n")
+    cfg.write_text(json.dumps({"baton": {**without_opencode, "opencode": {"bin": str(tmp_path / "opencode")}}}))
+    assert rewrite_as_args(["agent", "--as", "archivist", "--config", str(cfg)]) == ["session", "open", "archivist", "--config", str(cfg)]
+    assert rewrite_as_args(["agent", "--as", "archivist", "-m", "hi", "-c", str(cfg)]) == ["session", "send", "archivist", "hi", "--config", str(cfg)]

@@ -203,17 +203,24 @@ def make_visit(config: Config, town: Town, visitor: str):
             raise BatonError(f"No resident called '{resident}'.")
         if target.id == visitor:
             raise BatonError("You can't visit yourself.")
-        cfg = config.model_copy(deep=True)
-        cfg.agents.defaults.workspace = str(town.resident_dir(target.id))
-        other = AgentLoop.from_config(cfg, tool_registry=ToolRegistry())
-        try:
-            reply = await other.process_direct(
-                f"[visit from {visitor}] {message}", session_key=f"visit:{visitor}",
-                channel="visit", chat_id=visitor, sender_id=visitor,
-            )
-        finally:
-            await other.aclose()
-        content = str(getattr(reply, "content", "") or "").strip() or "(no reply)"
+
+        async def in_babo() -> str:
+            cfg = config.model_copy(deep=True)
+            cfg.agents.defaults.workspace = str(town.resident_dir(target.id))
+            other = AgentLoop.from_config(cfg, tool_registry=ToolRegistry())
+            try:
+                reply = await other.process_direct(
+                    f"[visit from {visitor}] {message}", session_key=f"visit:{visitor}",
+                    channel="visit", chat_id=visitor, sender_id=visitor,
+                )
+            finally:
+                await other.aclose()
+            return str(getattr(reply, "content", "") or "")
+
+        from babo.baton.opencode import resident_turn
+
+        content = (await resident_turn(config, town, target.id, f"[visit from {visitor}] {message}",
+                                       kind=f"visit:{visitor}", in_babo=in_babo)).strip() or "(no reply)"
         return f"{target.display} replied:\n{content}"
 
     return visit

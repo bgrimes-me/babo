@@ -11,7 +11,9 @@ import {
   decideTownItem,
   fetchTown,
   fetchTownReview,
+  changeTownSession,
   fetchTownProfiles,
+  fetchTownSessions,
   fetchTownSettings,
   updateTownProfile,
   updateTownSettings,
@@ -26,12 +28,14 @@ import {
   type TownOverview,
   type TownProfile,
   type TownReview,
+  type TownSession,
+  type TownSessions,
   type TownSetting,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import "./town.css";
 
-type TownTab = "town" | "review" | "profiles" | "doctor" | "settings";
+type TownTab = "town" | "sessions" | "review" | "profiles" | "doctor" | "settings";
 
 function errorText(reason: unknown): string {
   return reason instanceof Error && reason.message ? reason.message : String(reason);
@@ -98,6 +102,7 @@ export function TownPage({ mainNavigationExpanded = false, hostChromeInset = fal
           <SegmentedControl<TownTab> mode="tabs" value={tab} onChange={setTab} ariaLabel={t("town.sections", { defaultValue: "Town sections" })}
             options={[
               { value: "town", label: t("town.tab.town", { defaultValue: "Residents" }) },
+              { value: "sessions", label: t("town.tab.sessions", { defaultValue: "Sessions" }) },
               { value: "review", label: waiting ? t("town.tab.reviewWaiting", { defaultValue: "Review ({{count}})", count: waiting }) : t("town.tab.review", { defaultValue: "Review" }) },
               { value: "profiles", label: t("town.tab.profiles", { defaultValue: "Profiles" }) },
               { value: "doctor", label: t("town.tab.doctor", { defaultValue: "Doctor" }) },
@@ -107,6 +112,7 @@ export function TownPage({ mainNavigationExpanded = false, hostChromeInset = fal
           {error && <p role="alert" className="settings-list-inset flex items-center gap-2 text-[13px] text-destructive"><AlertCircle className="h-4 w-4 shrink-0" />{error}</p>}
           {tab === "town" && <ResidentsView town={town} onChanged={changed} onError={setError} transport={client} />}
           {tab === "review" && <ReviewView token={getToken} transport={client} onChanged={changed} onError={setError} />}
+          {tab === "sessions" && <SessionsView token={getToken} transport={client} onNotice={(message) => { setNotice(message); setError(""); }} onError={setError} />}
           {tab === "profiles" && <ProfilesView token={getToken} transport={client} onNotice={(message) => { setNotice(message); setError(""); }} onError={setError} />}
           {tab === "doctor" && <DoctorView token={getToken} />}
           {tab === "settings" && <TownSettingsView token={getToken} transport={client} onNotice={(message) => { setNotice(message); setError(""); }} onError={setError} />}
@@ -548,4 +554,123 @@ function ProfileCard({ profile, busy, onChange }: {
       </form>
     </SettingsGroup>
   </section>;
+}
+
+const SESSION_CHANGES = [
+  { key: "files", label: "Change files" },
+  { key: "shell", label: "Run commands" },
+  { key: "subagents", label: "Start crew" },
+  { key: "web_fetch", label: "Read web pages" },
+  { key: "web_search", label: "Search the web" },
+] as const;
+
+/** Residents other than the Mayor run in opencode, one session at a time or several.
+ *  The same as `babo session list|new|open|freeze`. */
+function SessionsView({ token, transport, onNotice, onError }: {
+  token: () => string;
+  transport: Parameters<typeof changeTownSession>[0];
+  onNotice: (message: string) => void;
+  onError: (message: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [data, setData] = useState<TownSessions | null>(null);
+  const [busy, setBusy] = useState("");
+  useEffect(() => {
+    fetchTownSessions(token()).then(setData).catch((reason) => onError(errorText(reason)));
+  }, [onError, token]);
+  if (!data) return <p className="settings-list-inset text-[13px] text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{t("town.loading", { defaultValue: "Loading the town…" })}</p>;
+
+  const act = async (key: string, action: "new" | "resume" | "freeze", payload: Parameters<typeof changeTownSession>[2]) => {
+    setBusy(key);
+    try {
+      const result = await changeTownSession(transport, action, payload);
+      setData(result); onNotice(result.message);
+    } catch (reason) { onError(errorText(reason)); }
+    finally { setBusy(""); }
+  };
+  return <>
+    <p className="settings-list-inset text-[13px] leading-6 text-muted-foreground">
+      {t("town.sessionsIntro", { defaultValue: "Residents other than the Mayor work in opencode. Each session starts from the resident's profile; freezing one stops it, and resuming it continues exactly where it was. In the terminal: `babo session open <resident>`." })}
+    </p>
+    {!data.opencode && <p role="note" className="settings-list-inset text-[13px] text-destructive">
+      {t("town.noOpencode", { defaultValue: "opencode isn't installed where Babo runs, so residents' sessions can't start. Install it in the box with: curl -fsSL https://opencode.ai/install | bash" })}
+    </p>}
+    {data.residents.length === 0 && <p className="settings-list-inset text-[13px]">{t("town.noResidents", { defaultValue: "Only the Mayor lives here so far." })}</p>}
+    {data.residents.map((r) => <section key={r.id} aria-label={r.name || r.id} className="mt-2">
+      <h2 className="settings-list-inset text-[13px] font-medium text-foreground">{r.name ? `${r.name} (${r.id})` : r.id} · <span className="text-muted-foreground">{r.office}</span></h2>
+      <SettingsGroup>
+        {r.sessions.map((s) => <SessionRow key={s.id} session={s} busy={busy === s.id}
+          onResume={() => void act(s.id, "resume", { resident: r.id, id: s.id })}
+          onFreeze={() => void act(s.id, "freeze", { resident: r.id, id: s.id })} />)}
+        <NewSessionForm resident={r.id} disabled={!data.opencode || busy === `new:${r.id}`} busy={busy === `new:${r.id}`}
+          onStart={(title, overrides) => void act(`new:${r.id}`, "new", { resident: r.id, title, overrides })} />
+      </SettingsGroup>
+    </section>)}
+  </>;
+}
+
+function SessionRow({ session, busy, onResume, onFreeze }: {
+  session: TownSession;
+  busy: boolean;
+  onResume: () => void;
+  onFreeze: () => void;
+}) {
+  const { t } = useTranslation();
+  const changes = Object.entries(session.overrides).map(([key, value]) => `${key}: ${value}`).join(", ");
+  const running = session.status === "running";
+  return <div className="settings-list-row flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+    <span className="min-w-[14rem] flex-1">
+      <span className="block text-[14px] font-medium">{session.title}</span>
+      <span className="mt-0.5 block text-xs text-muted-foreground">
+        {running ? t("town.sessionRunning", { defaultValue: "running" }) : session.status === "frozen" ? t("town.sessionFrozen", { defaultValue: "frozen" }) : t("town.sessionNew", { defaultValue: "not started" })}
+        {" · "}{t("town.lastActive", { defaultValue: "last active {{when}}", when: when(session.last_active) })}
+        {changes ? ` · ${t("town.sessionChanges", { defaultValue: "this session: {{changes}}", changes })}` : ""}
+      </span>
+      {running && <span className="mt-0.5 block text-xs text-muted-foreground">
+        {t("town.sessionLogin", { defaultValue: "opencode asks for a login: user opencode, password {{password}}", password: session.password })}
+      </span>}
+    </span>
+    {running && <Button asChild variant="secondary" size="sm"><a href={session.url} target="_blank" rel="noreferrer">{t("town.openSession", { defaultValue: "Open" })}</a></Button>}
+    {running
+      ? <Button variant="ghost" size="sm" disabled={busy} onClick={onFreeze}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("town.freeze", { defaultValue: "Freeze" })}</Button>
+      : <Button variant="ghost" size="sm" disabled={busy} onClick={onResume}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("town.resume", { defaultValue: "Resume" })}</Button>}
+  </div>;
+}
+
+function NewSessionForm({ resident, disabled, busy, onStart }: {
+  resident: string;
+  disabled: boolean;
+  busy: boolean;
+  onStart: (title: string, overrides: Record<string, string>) => void;
+}) {
+  const { t } = useTranslation();
+  const [title, setTitle] = useState("");
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  return <form className="settings-list-row flex flex-col gap-3 py-3" onSubmit={(event) => { event.preventDefault(); onStart(title, overrides); setTitle(""); setOverrides({}); }}>
+    <div className="flex flex-wrap gap-2">
+      <Input className="min-w-[14rem] flex-1" value={title} maxLength={200} onChange={(event) => setTitle(event.target.value)}
+        aria-label={t("town.sessionTitle", { defaultValue: "What the new session is for ({{who}})", who: resident })}
+        placeholder={t("town.sessionTitlePlaceholder", { defaultValue: "What is this session for? (optional)" })} />
+      <Button type="submit" disabled={disabled}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("town.newSession", { defaultValue: "New session" })}</Button>
+    </div>
+    <details>
+      <summary className="cursor-pointer text-xs text-muted-foreground">{t("town.sessionOptions", { defaultValue: "Change what this session may do" })}</summary>
+      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">
+        {SESSION_CHANGES.map((c) => <label key={c.key} className="flex items-center gap-2 text-[13px]">
+          {t(`town.cap.${c.key}`, { defaultValue: c.label })}
+          <select className="rounded border bg-background px-1 py-0.5 text-[13px]" value={overrides[c.key] ?? ""}
+            onChange={(event) => setOverrides((current) => {
+              const next = { ...current };
+              if (event.target.value) next[c.key] = event.target.value; else delete next[c.key];
+              return next;
+            })}>
+            <option value="">{t("town.asProfile", { defaultValue: "as in the profile" })}</option>
+            <option value="allow">{t("town.level.allow", { defaultValue: "Allow" })}</option>
+            <option value="ask">{t("town.level.ask", { defaultValue: "Ask" })}</option>
+            <option value="deny">{t("town.level.deny", { defaultValue: "Deny" })}</option>
+          </select>
+        </label>)}
+      </div>
+    </details>
+  </form>;
 }

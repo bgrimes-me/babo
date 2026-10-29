@@ -1679,3 +1679,36 @@ export function updateTownProfile(
 ): Promise<{ message: string; profiles: TownProfile[] }> {
   return mutation<{ message: string; profiles: TownProfile[] }>(transport, "town.profile", { agent, changes });
 }
+
+export interface TownSession {
+  resident: string;
+  id: string;
+  title: string;
+  kind: string;
+  opencode_id: string;
+  status: "new" | "running" | "frozen";
+  overrides: Record<string, string>;
+  created: string;
+  last_active: string;
+  /** Only while it runs: where opencode's own page for this session is, and its password (user "opencode"). */
+  url: string;
+  password: string;
+}
+
+export interface TownSessions {
+  opencode: boolean;
+  residents: { id: string; name: string; office: string; sessions: TownSession[] }[];
+}
+
+export function fetchTownSessions(token: string, base: string = ""): Promise<TownSessions> {
+  return request<TownSessions>(`${base}/api/town/sessions`, token, undefined, API_READ_TIMEOUT_MS);
+}
+
+/** Start, resume or freeze a resident's session in opencode (the same as `babo session new|open|freeze`). */
+export function changeTownSession(
+  transport: WebUIMutationTransport,
+  action: "new" | "resume" | "freeze",
+  payload: { resident: string; id?: string; title?: string; overrides?: Record<string, string> },
+): Promise<TownSessions & { message: string }> {
+  return mutation<TownSessions & { message: string }>(transport, `town.session.${action}`, payload, 120_000);
+}

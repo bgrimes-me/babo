@@ -64,6 +64,8 @@ def config_dict(town: Town, resident: str, *, api_base: str, index_path: Path, *
             "town": str(town.root),
             "indexPath": str(index_path),
             "model": {"endpoint": api_base, "model": "mock-model"},
+            # Residents run in Babo itself unless a test gives them opencode (tests/baton/test_opencode.py).
+            "opencode": {"bin": "/nonexistent/opencode"},
         },
     }
     for dotted, value in overrides.items():

@@ -34,6 +34,14 @@ const profile = (agent: string, main: boolean, level: string) => ({
 });
 const profiles = [profile("mayor", true, "allow"), profile("archivist", false, "deny")];
 
+const sessions = {
+  opencode: true,
+  residents: [{ id: "archivist", name: "", office: "archivist", sessions: [{
+    resident: "archivist", id: "s1", title: "Tidy the commons", kind: "work", opencode_id: "ses_1", status: "running",
+    overrides: { shell: "deny" }, created: "", last_active: "", url: "http://127.0.0.1:4801", password: "pw",
+  }] }],
+};
+
 const mocks = vi.hoisted(() => ({ mutation: vi.fn(), fetch: vi.fn(), getToken: () => "token" }));
 vi.mock("@/providers/ClientProvider", () => ({ useClient: () => ({ client: { requestMutation: mocks.mutation }, getToken: mocks.getToken }) }));
 
@@ -42,7 +50,7 @@ beforeEach(async () => {
   mocks.mutation.mockReset().mockResolvedValue({ message: "Proposal accepted. The town is now called Lantern Hill.", town: town("Lantern Hill") });
   mocks.fetch.mockReset().mockImplementation((url: string) => Promise.resolve(new Response(
     JSON.stringify(url.endsWith("/api/town/review") ? review : url.endsWith("/api/town/settings") ? { settings }
-      : url.endsWith("/api/town/profiles") ? { profiles } : town()),
+      : url.endsWith("/api/town/profiles") ? { profiles } : url.endsWith("/api/town/sessions") ? sessions : town()),
     { status: 200, headers: { "content-type": "application/json" } },
   )));
   vi.stubGlobal("fetch", mocks.fetch);
@@ -107,5 +115,21 @@ describe("town page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Catch up now" }));
     await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.upkeep", {}, expect.any(Number)));
     expect(await screen.findByRole("status")).toHaveTextContent("Catch-up requested");
+  });
+
+  it("lists residents' sessions in opencode and starts one with its own options, like `babo session new`", async () => {
+    mocks.mutation.mockResolvedValue({ ...sessions, message: "archivist's session “Index the notes” is running." });
+    render(<TownPage onBackToChat={() => {}} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Sessions" }));
+    const archivist = await screen.findByRole("region", { name: "archivist" });
+    expect(within(archivist).getByText("Tidy the commons")).toBeVisible();
+    expect(within(archivist).getByRole("link", { name: "Open" })).toHaveAttribute("href", "http://127.0.0.1:4801");
+    expect(within(archivist).getByText(/password pw/)).toBeVisible();
+    fireEvent.change(within(archivist).getByRole("textbox"), { target: { value: "Index the notes" } });
+    fireEvent.change(within(archivist).getByRole("combobox", { name: "Search the web" }), { target: { value: "allow" } });
+    fireEvent.click(within(archivist).getByRole("button", { name: "New session" }));
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.new",
+      { resident: "archivist", title: "Index the notes", overrides: { web_search: "allow" } }, 120_000));
+    expect(await screen.findByRole("status")).toHaveTextContent("is running");
   });
 });
