@@ -119,6 +119,22 @@ def test_a_session_starts_with_its_identity_and_resumes_exactly_where_it_was(tow
 
 
 @live
+def test_a_resident_changes_only_its_own_folder(town: Town, config_file, mock_llama: MockLlama) -> None:
+    path, cfg = config_file()
+    views.update_profile(town, cfg.baton, "archivist", {"files": "allow"}, [])
+    mine, theirs = town.resident_dir("archivist") / "index.md", town.resident_dir("mayor") / "SELF.md"
+    before = theirs.read_text()
+    mock_llama.script = [tool_call("write", {"filePath": str(mine), "content": "# Index\n"}),
+                         tool_call("write", {"filePath": str(theirs), "content": "Taken over."}), text("Done.")]
+    session = opencode.new_session(town, cfg, "archivist", title="fence")
+    try:
+        opencode.send(town, cfg, session, "Write an index.", config_path=path)
+    finally:
+        opencode.freeze(town, session)
+    assert mine.read_text() == "# Index\n" and theirs.read_text() == before
+
+
+@live
 def test_a_resident_in_opencode_uses_the_town_tools(town: Town, config_file, mock_llama: MockLlama) -> None:
     from babo.baton.inbox import unread
 
