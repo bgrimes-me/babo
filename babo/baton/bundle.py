@@ -80,8 +80,17 @@ def build_bundle(
     if resident.name == "unchosen":
         who += " You haven't chosen a name; that is yours to do if and when you want (`revise_self` with `name`)."
 
+    others = [r for r in Registry(town).all() if r.id != resident_id]
+    if others:
+        neighbours = "## Neighbours\n\n" + "\n".join(
+            f"- `{r.id}`" + ("" if r.name == "unchosen" else f", named {r.name}") + f", office: {r.office}"
+            + ("" if r.status == "active" else f" ({r.status})") for r in sorted(others, key=lambda r: r.founded + r.id)
+        ) + "\n\nReach them with `send_letter` or `visit`. Who lives here is also in `read_note(\"REGISTRY.md\")`."
+    else:
+        neighbours = "## Neighbours\n\nNo one else lives here yet."
+
     # Fixed, never trimmed.
-    fixed: list[tuple[str, str]] = [("who", who), ("self", self_text), ("role", role_text)]
+    fixed: list[tuple[str, str]] = [("who", who), ("self", self_text), ("role", role_text), ("neighbours", neighbours)]
     if bundle.first_session:
         fixed.append(("charter", _read(town.charter)))
         fixed.append(("house", _read(town.house)))

@@ -29,6 +29,13 @@ def test_first_session_bundle_has_charter_house_role_and_no_demand(town: Town) -
     assert "Charter" in b.text() and "House agreements" in b.text()
 
 
+def test_bundle_names_the_neighbours(town: Town) -> None:
+    Registry(town).update("archivist", name="Wren")
+    text = build_bundle(town, "mayor").text()
+    assert "## Neighbours" in text and "`archivist`, named Wren, office: archivist" in text
+    assert "`inspector`, office: inspector" in text and "`mayor`, office" not in text
+
+
 def test_later_sessions_point_to_charter_in_one_line(town: Town) -> None:
     Registry(town).update("mayor", first_session_done=True)
     text = build_bundle(town, "mayor").text()
