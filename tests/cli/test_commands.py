@@ -3631,11 +3631,6 @@ def test_gateway_local_trigger_queue_submits_agent_turns(
         def register_system_job(self, _job) -> None:
             return None
 
-
-        def remove_system_job(self, _job_id) -> None:  # BATON: Dream is off by default
-
-            return None
-
         def remove_system_job(self, job_id: str) -> bool:
             seen.setdefault("cron_reconciliation", []).append(f"remove:{job_id}")
             return False
@@ -3964,9 +3959,7 @@ def test_gateway_health_endpoint_binds_and_serves_expected_responses(
         def register_system_job(self, _job) -> None:
             return None
 
-
         def remove_system_job(self, _job_id) -> None:  # BATON: Dream is off by default
-
             return None
 
     class _FakeServer:
@@ -4208,9 +4201,7 @@ def test_gateway_agent_task_owns_initial_mcp_provider_close(
         def register_system_job(self, _job) -> None:
             return None
 
-
         def remove_system_job(self, _job_id) -> None:  # BATON: Dream is off by default
-
             return None
 
     class _FakeServer:
@@ -4350,9 +4341,7 @@ def test_gateway_shutdown_event_exits_forever_runtime_tasks(
         def register_system_job(self, _job) -> None:
             return None
 
-
         def remove_system_job(self, _job_id) -> None:  # BATON: Dream is off by default
-
             return None
 
     class _FakeServer:
