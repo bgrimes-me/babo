@@ -89,6 +89,18 @@ class BatonUpkeepConfig(Base):
     retry_after_hours: int = Field(default=6, ge=1)
 
 
+class BatonOpencodeConfig(Base):
+    """Residents other than the Mayor run in opencode (https://opencode.ai)."""
+
+    # The opencode command; "" finds it on PATH. Without it, upkeep turns run in Babo itself.
+    bin: str = ""
+    # The model's context window in tokens, as opencode should assume it; 0 uses Babo's model setting.
+    context_tokens: int = Field(default=0, ge=0)
+    start_timeout_s: int = Field(default=60, ge=5)
+    # Where opencode keeps each resident's sessions (outside the town repo).
+    data_dir: str = "~/.local/share/babo/opencode"
+
+
 class BatonNightConfig(Base):
     # `time` is unused since upkeep replaced the nightly timer; kept so older config files still load.
     time: str = Field(default="04:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
@@ -112,6 +124,7 @@ class BatonConfig(Base):
     memory: BatonMemoryConfig = Field(default_factory=BatonMemoryConfig)
     bundle: BatonBundleConfig = Field(default_factory=BatonBundleConfig)
     upkeep: BatonUpkeepConfig = Field(default_factory=BatonUpkeepConfig)
+    opencode: BatonOpencodeConfig = Field(default_factory=BatonOpencodeConfig)
     night: BatonNightConfig = Field(default_factory=BatonNightConfig)
     toolsets: dict[str, list[str]] = Field(default_factory=lambda: {k: list(v) for k, v in DEFAULT_TOOLSETS.items()})
     # channel name -> resident id. Unbound channels go to the Mayor.

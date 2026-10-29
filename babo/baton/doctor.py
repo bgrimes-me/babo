@@ -176,6 +176,21 @@ def check_upkeep() -> Check:
     return Check("upkeep service", "PASS" if state == "active" else "FAIL", state or "unknown")
 
 
+def check_opencode(cfg: Config) -> Check:
+    from babo.baton.opencode import opencode_bin
+
+    binary = opencode_bin(cfg)
+    if binary is None:
+        return Check("opencode", "WARN", "not installed: residents other than the Mayor can't start sessions, and their "
+                     "visits and upkeep turns run in Babo itself. Install: curl -fsSL https://opencode.ai/install | bash")
+    try:
+        result = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return Check("opencode", "FAIL", f"{binary} doesn't run: {exc}")
+    version = (result.stdout or result.stderr).strip().splitlines()
+    return Check("opencode", "PASS" if result.returncode == 0 else "FAIL", f"{binary} {version[-1] if version else ''}".strip())
+
+
 def check_git(cfg: Config) -> Check:
     from babo.baton import gitops
     from babo.baton.town import BatonError, Town
@@ -210,6 +225,7 @@ async def run_doctor(cfg: Config, *, config_path: Path | None = None, include_ti
     checks += [await check_mcp(cfg, config_path), check_index(cfg), check_residents(cfg), check_backup()]
     if include_timer:
         checks.append(check_upkeep())
+    checks.append(check_opencode(cfg))
     checks.append(check_git(cfg))
     checks += check_config(cfg)
     return checks

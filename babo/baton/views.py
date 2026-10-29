@@ -8,7 +8,7 @@ show the same thing and decide the same way.
 from __future__ import annotations
 
 import json
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from babo.baton import gitops, growth
 from babo.baton.config import BatonConfig
@@ -17,6 +17,9 @@ from babo.baton.inbox import unread
 from babo.baton.notes import first_line, split_frontmatter
 from babo.baton.registry import Registry
 from babo.baton.town import BatonError, Town
+
+if TYPE_CHECKING:
+    from babo.config.schema import Config
 
 DecisionKind = Literal["tool", "proposal", "founding", "flag"]
 
@@ -179,6 +182,43 @@ def update_profile(town: Town, cfg: BatonConfig, agent: str, changes: dict[str, 
     if agent == profiles.NEW_RESIDENTS:
         return "Profile for new residents: " + "; ".join(said) + ". Residents founded from now on start with it."
     return f"Profile of {agent}: " + "; ".join(said) + ". It applies from the agent's next session."
+
+
+# -- residents' sessions in opencode -----------------------------------------------
+
+def sessions_overview(town: Town, config: Config) -> dict[str, Any]:
+    from babo.baton import opencode
+
+    residents = [r for r in Registry(town).all() if r.status == "active" and opencode.runs_in_opencode(r.office)]
+    return {
+        "opencode": opencode.opencode_bin(config) is not None,
+        "residents": [{"id": r.id, "name": "" if r.name == "unchosen" else r.name, "office": r.office,
+                       "sessions": opencode.overview(town, r.id)} for r in residents],
+    }
+
+
+def start_session(town: Town, config: Config, resident: str, *, title: str, overrides: dict[str, object], config_path: Any) -> str:
+    from babo.baton import opencode
+
+    session = opencode.new_session(town, config, resident, title=title, overrides=overrides)
+    opencode.start(town, config, session, config_path=config_path)
+    return f"{resident}'s session “{session.title}” is running."
+
+
+def resume_session(town: Town, config: Config, resident: str, session_id: str, *, config_path: Any) -> str:
+    from babo.baton import opencode
+
+    session = opencode.get_session(town, resident, session_id)
+    opencode.start(town, config, session, config_path=config_path)
+    return f"{resident}'s session “{session.title}” is running again, where it left off."
+
+
+def freeze_session(town: Town, resident: str, session_id: str) -> str:
+    from babo.baton import opencode
+
+    session = opencode.get_session(town, resident, session_id)
+    was = opencode.freeze(town, session)
+    return f"{resident}'s session “{session.title}” is frozen." if was else f"“{session.title}” wasn't running."
 
 
 def _child(folder: Any, name: str) -> Any:

@@ -113,3 +113,19 @@ async def test_upkeep_status_and_catch_up_from_the_web(town: Town, index_path: P
     status, result = await _call(routes, "/api/town/upkeep/now", {})
     assert status == 200 and "within a minute" in result["message"]
     assert upkeep.catch_up_requested(town) and result["town"]["upkeep"]["catch_up_requested"]
+
+
+async def test_sessions_from_the_web_match_babo_session(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from babo.config.schema import Config
+
+    cfg = Config.model_validate({"baton": {"town": str(town.root), "indexPath": str(index_path),
+                                           "opencode": {"bin": str(tmp_path / "no-opencode"), "dataDir": str(tmp_path / "oc")}}})
+    routes = _routes(town, index_path, monkeypatch)
+    monkeypatch.setattr("babo.config.loader.load_config", lambda *_a, **_k: cfg)
+    status, body = await _call(routes, "/api/town/sessions")
+    assert status == 200 and body["opencode"] is False
+    assert [r["id"] for r in body["residents"]] == ["archivist", "inspector"]  # the Mayor stays in Babo
+    status, text = await _call(routes, "/api/town/sessions/new", {"resident": "archivist", "title": "tidy"})
+    assert status == 400 and "opencode is not installed" in str(text)
+    status, text = await _call(routes, "/api/town/sessions/new", {"resident": "mayor"})
+    assert status == 400 and "runs in Babo itself" in str(text)

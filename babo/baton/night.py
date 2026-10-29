@@ -203,16 +203,20 @@ class Night:
     async def _real_agent_turn(self, resident: str, message: str, session_key: str) -> str:
         from babo.agent.loop import AgentLoop
         from babo.agent.tools.registry import ToolRegistry
+        from babo.baton.opencode import resident_turn
 
-        cfg = self.config.model_copy(deep=True)
-        cfg.agents.defaults.workspace = str(self.town.resident_dir(resident))
-        upkeep_priority(cfg)
-        loop = AgentLoop.from_config(cfg, tool_registry=ToolRegistry())
-        try:
-            reply = await loop.process_direct(message, session_key=session_key, channel="night", chat_id=self.night, sender_id=HARNESS_SENDER)
-            return str(getattr(reply, "content", "") or "")
-        finally:
-            await loop.aclose()
+        async def in_babo() -> str:
+            cfg = self.config.model_copy(deep=True)
+            cfg.agents.defaults.workspace = str(self.town.resident_dir(resident))
+            upkeep_priority(cfg)
+            loop = AgentLoop.from_config(cfg, tool_registry=ToolRegistry())
+            try:
+                reply = await loop.process_direct(message, session_key=session_key, channel="night", chat_id=self.night, sender_id=HARNESS_SENDER)
+                return str(getattr(reply, "content", "") or "")
+            finally:
+                await loop.aclose()
+
+        return await resident_turn(self.config, self.town, resident, message, kind="upkeep", in_babo=in_babo)
 
     # -- the run -------------------------------------------------------------
     async def run(self) -> dict[str, Any]:

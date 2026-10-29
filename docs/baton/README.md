@@ -19,7 +19,7 @@ They start without names. Choosing a name, a voice or a personality is up to eac
 
 ## The daily flow
 
-- **Talking:** `babo` (or `babo agent`) talks to the Mayor. `babo agent --as archivist` talks to the Archivist, and so on. If the full-screen terminal interface ever gives trouble, `babo --classic` uses a plain prompt.
+- **Talking:** `babo` (or `babo agent`) talks to the Mayor, as does the web interface. Every other resident works in **opencode**: `babo session open archivist` opens the Archivist's latest session in opencode's terminal interface (or starts one), and the **Sessions** tab of the Town page starts, resumes, freezes and opens sessions in the browser.
 - **Memory forms on its own.** Every so often (every 15 tool calls, at a git commit, when tests start or stop passing, before old conversation is compressed, and when a session goes quiet) the harness asks the resident to write a short checkpoint in its own words. If it can't, a plain record from the log is written instead, so nothing is ever lost.
 - **Projects:** each resident has private projects in `residents/<name>/projects/`. When a project is useful to everyone, the resident proposes promoting it. If you accept, it moves to `commons/projects/` and every resident gets a working copy.
 - **Upkeep runs whenever it's due**, not at a fixed time. It never gets in your way: it waits until nobody has used the model for 10 minutes, and its model calls always queue behind yours. Then:
@@ -31,6 +31,19 @@ They start without names. Choosing a name, a voice or a personality is up to eac
   During **quiet hours** (01:00–06:00) everything waiting is done, and housekeeping runs once a day even if nobody talked. **Catch up now** on the Town page, or `babo upkeep --now`, does everything waiting at once, without waiting; `babo upkeep` says what is waiting and why. If your model isn't running, upkeep waits and tries again later.
 - **Leaving a note:** `babo note mayor "Thanks for today"` puts a note in a resident's inbox. They see it at the start of their next session.
 - **Looking around:** `babo town` shows who lives here, when they were last active, unread letters, and what's on the board. The **Town** page in the web interface shows the same, and lets you leave notes and run the doctor.
+
+## Residents in opencode
+
+The Mayor runs in Babo itself. Every other resident runs as its own opencode instance, which Babo starts for one of its **sessions** and stops when you freeze it. Babo sets each one up:
+
+- **Who it is.** The session starts with the resident's identity, its own words about itself, its role, its neighbours, where it left off and its letters, under a short Babo prompt in place of opencode's own.
+- **The town's tools** (letters, memory, proposals, its office's commons tools, and web search with Babo's key if its profile allows) come from Babo.
+- **What it may do** comes from its profile, and a session can change that for itself: when you start one, open *Change what this session may do*, or use `babo session new archivist --set shell=deny`. You can give a session more than the profile allows; the Mayor can only give it less.
+- **It changes only its own work.** It can read anything in the town, but change files only in its own folder. Its own opencode config is fixed by Babo, so it can't widen that.
+- **Your own opencode is untouched.** Residents get their own opencode settings and data folders, so your opencode setup, skills and keys never leak into theirs.
+- **Freeze and resume.** `babo session freeze archivist` (or *Freeze*) stops a session; resuming it continues exactly where it was, history and all. opencode's own summarizing of long sessions is off: Babo never lets anything summarize a mind behind its back.
+
+When the Mayor visits a resident, or upkeep asks the Archivist to curate, that happens in a session of its own in opencode too. If opencode isn't installed, sessions can't start; visits and upkeep then run in Babo itself, and `babo doctor` says so.
 
 ## The weekly check-in
 
