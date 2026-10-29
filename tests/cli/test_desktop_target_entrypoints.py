@@ -6,7 +6,7 @@ from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.output import DummyOutput
 from typer.testing import CliRunner
 
-from nanobot.cli import commands, desktop_target, entry
+from babo.cli import commands, desktop_target, entry
 
 
 @pytest.mark.parametrize("args", [[], ["webui"]])
@@ -21,7 +21,7 @@ def test_retained_launcher_attaches_without_starting_python(monkeypatch, args):
     monkeypatch.setattr(entry, "_run_agent", lambda *_a, **_kw: pytest.fail("agent started"))
     # Callback exits before webui can inspect/load config or start its runtime.
     monkeypatch.setattr(
-        "nanobot.cli.webui._resolve_webui_config_path",
+        "babo.cli.webui._resolve_webui_config_path",
         lambda *_a, **_kw: pytest.fail("Python WebUI started"),
     )
     result = CliRunner().invoke(commands.app, args)
@@ -41,10 +41,10 @@ def test_launcher_picker_ctrl_c_does_not_start_python(monkeypatch, args, launche
     monkeypatch.setattr(desktop_target, "discover_desktop_target", Target)
     monkeypatch.setattr(entry, "_run_agent", lambda *_a, **_kw: pytest.fail("agent started"))
     monkeypatch.setattr(
-        "nanobot.cli.webui._resolve_webui_config_path",
+        "babo.cli.webui._resolve_webui_config_path",
         lambda *_a, **_kw: pytest.fail("Python WebUI started"),
     )
-    monkeypatch.setattr(entry.sys, "argv", ["nanobot", *args])
+    monkeypatch.setattr(entry.sys, "argv", ["babo", *args])
     with create_pipe_input() as pipe_input:
         with create_app_session(input=pipe_input, output=DummyOutput()):
             pipe_input.send_text("\x03")
@@ -70,7 +70,7 @@ def test_retained_launcher_explicit_commands_never_discover(monkeypatch, args):
     def stop_webui(*_args, **_kwargs):
         raise PythonWebuiReachedError
 
-    monkeypatch.setattr("nanobot.cli.webui._resolve_webui_config_path", stop_webui)
+    monkeypatch.setattr("babo.cli.webui._resolve_webui_config_path", stop_webui)
     result = CliRunner().invoke(commands.app, args)
     if args[0] == "webui":
         assert isinstance(result.exception, PythonWebuiReachedError), result.output
@@ -86,7 +86,7 @@ def test_modern_webui_invocation_prompts_once(monkeypatch):
         return 0
 
     monkeypatch.setattr(desktop_target, "dispatch_bare_desktop_target", dispatch)
-    monkeypatch.setattr(entry.sys, "argv", ["nanobot", "webui"])
+    monkeypatch.setattr(entry.sys, "argv", ["babo", "webui"])
     with pytest.raises(SystemExit) as exc:
         entry.main()
     assert exc.value.code == 0

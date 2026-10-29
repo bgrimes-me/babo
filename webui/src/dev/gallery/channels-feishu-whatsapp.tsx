@@ -1,9 +1,9 @@
 import { useState } from "react";
 
-import { FeishuAssistantsPanelView, type FeishuConnectOptions } from "../../../../nanobot/channels/feishu/webui/FeishuAssistantsPanelView";
-import { FeishuConnectFlowView } from "../../../../nanobot/channels/feishu/webui/FeishuConnectFlowView";
-import { WhatsAppConnectFlowView } from "../../../../nanobot/channels/whatsapp/webui/WhatsAppConnectFlowView";
-import type { ChannelConnectPayload, NanobotChannelInstanceInfo } from "@/lib/types";
+import { FeishuAssistantsPanelView, type FeishuConnectOptions } from "../../../../babo/channels/feishu/webui/FeishuAssistantsPanelView";
+import { FeishuConnectFlowView } from "../../../../babo/channels/feishu/webui/FeishuConnectFlowView";
+import { WhatsAppConnectFlowView } from "../../../../babo/channels/whatsapp/webui/WhatsAppConnectFlowView";
+import type { ChannelConnectPayload, BaboChannelInstanceInfo } from "@/lib/types";
 import { channelFeatures } from "./channel-fixtures";
 import { StatePicker, type ComponentExample } from "./example";
 import { useGalleryTranslation } from "./i18n";
@@ -51,11 +51,11 @@ function WhatsAppConnectionPreview() {
 const assistantStates = ["running", "starting", "failed", "needs-authorization", "mixed"] as const;
 type AssistantState = typeof assistantStates[number];
 
-function assistantSnapshots(state: AssistantState): NanobotChannelInstanceInfo[] {
+function assistantSnapshots(state: AssistantState): BaboChannelInstanceInfo[] {
   const configured = state !== "needs-authorization";
-  const first: NanobotChannelInstanceInfo = {
+  const first: BaboChannelInstanceInfo = {
     id: "default",
-    name: "nanobot",
+    name: "babo",
     display_name: "Support assistant",
     enabled: configured,
     configured,
@@ -132,7 +132,7 @@ function FeishuAssistantsPreview() {
 export const feishuWhatsAppChannelExamples: ComponentExample[] = [
   {
     title: "previews.feishuConnect.title",
-    files: ["nanobot/channels/feishu/webui/FeishuConnectFlowView.tsx", "webui/src/components/settings/channels/ChannelQrConnectFlowView.tsx"],
+    files: ["babo/channels/feishu/webui/FeishuConnectFlowView.tsx", "webui/src/components/settings/channels/ChannelQrConnectFlowView.tsx"],
     description: "previews.feishuConnect.description",
     options: "previews.feishuConnect.options",
     code: "<FeishuConnectFlowView connect={connect} busy={busy} error={error} onStart={start} onCancel={cancel} onPoll={poll} />",
@@ -140,7 +140,7 @@ export const feishuWhatsAppChannelExamples: ComponentExample[] = [
   },
   {
     title: "previews.feishuAssistants.title",
-    files: ["nanobot/channels/feishu/webui/FeishuAssistantsPanelView.tsx", "webui/src/components/settings/channels/ChannelInstancesPanelView.tsx"],
+    files: ["babo/channels/feishu/webui/FeishuAssistantsPanelView.tsx", "webui/src/components/settings/channels/ChannelInstancesPanelView.tsx"],
     description: "previews.feishuAssistants.description",
     options: "previews.feishuAssistants.options",
     code: "<FeishuAssistantsPanelView feature={feature} showBrandLogos={false} onToggleInstance={toggle} onSaveInstance={save} renderConnectFlow={renderAuthorization} />",
@@ -148,7 +148,7 @@ export const feishuWhatsAppChannelExamples: ComponentExample[] = [
   },
   {
     title: "previews.whatsappConnect.title",
-    files: ["nanobot/channels/whatsapp/webui/WhatsAppConnectFlowView.tsx"],
+    files: ["babo/channels/whatsapp/webui/WhatsAppConnectFlowView.tsx"],
     description: "previews.whatsappConnect.description",
     options: "previews.whatsappConnect.options",
     code: "<WhatsAppConnectFlowView connect={connect} busy={busy} error={error} onStart={start} onCancel={cancel} onPoll={poll} />",

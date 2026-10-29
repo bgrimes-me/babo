@@ -1,6 +1,6 @@
-# How AI Agent Memory Works in nanobot
+# How AI Agent Memory Works in babo
 
-This guide explains how to use nanobot's long-term AI agent memory: session history, compressed archives, durable memory files, Dream consolidation, and Git-backed memory changes.
+This guide explains how to use babo's long-term AI agent memory: session history, compressed archives, durable memory files, Dream consolidation, and Git-backed memory changes.
 
 ## What you will build
 
@@ -11,7 +11,7 @@ This guide explains how to use nanobot's long-term AI agent memory: session hist
 
 ## When to use this
 
-Use memory when an agent should remember stable preferences, project facts, decisions, and recurring context across sessions. Do not use memory as a dumping ground for every raw transcript; nanobot separates short-term messages from curated durable knowledge.
+Use memory when an agent should remember stable preferences, project facts, decisions, and recurring context across sessions. Do not use memory as a dumping ground for every raw transcript; babo separates short-term messages from curated durable knowledge.
 
 ## Before you start
 
@@ -29,7 +29,7 @@ In your existing chat, send a specific preference, such as “For Acme release n
 
 Compaction puts recent conversation into the archive Dream reads. Dream then decides what to save; inspect its changes to confirm the preference reached `USER.md` or `memory/MEMORY.md`. Ask the agent to read the saved preference, then check it in a new chat. For corrections and restoration, follow [Save and Check a Preference](../memory.md#save-and-check-a-preference).
 
-The files live in the configured agent workspace, normally `~/.nanobot/workspace/`. Selecting a project or starting a new topic does not move or isolate this memory.
+The files live in the configured agent workspace, normally `~/.babo/workspace/`. Selecting a project or starting a new topic does not move or isolate this memory.
 
 ## Production notes
 
@@ -50,9 +50,9 @@ The files live in the configured agent workspace, normally `~/.nanobot/workspace
 - If memory changed incorrectly, use `/dream-restore` to inspect and restore previous versions.
 - If a new session lacks context, confirm the fact was saved and it uses the same configured agent workspace.
 
-## Related nanobot docs
+## Related babo docs
 
-- [AI Agent Memory in nanobot](../memory.md)
+- [AI Agent Memory in babo](../memory.md)
 - [Concepts](../concepts.md)
 - [Configuration](../configuration.md#auto-compact)
 - [Chat Commands](../chat-commands.md)

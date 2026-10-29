@@ -1,6 +1,6 @@
 """Durability configuration is applied to every SQLite connection."""
 
-from nanobot.session.manager import SessionManager
+from babo.session.manager import SessionManager
 
 
 def test_every_transaction_uses_full_synchronous_and_foreign_keys(tmp_path):

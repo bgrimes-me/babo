@@ -133,8 +133,8 @@ async function openFixture(page: Page, width = 1440) {
   await page.setViewportSize({ width, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
-    localStorage.setItem("nanobot.locale", "en");
-    localStorage.setItem("nanobot_debug_ws", "0");
+    localStorage.setItem("babo.locale", "en");
+    localStorage.setItem("babo_debug_ws", "0");
   });
   const backend = await installBackend(page);
   await page.goto("/browser/fixture.html?case=history-hydration");

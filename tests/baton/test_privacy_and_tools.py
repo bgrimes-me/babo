@@ -9,13 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.baton import tools as tools_pkg
-from nanobot.baton.inbox import items, unread
-from nanobot.baton.notes import Note, write_note
-from nanobot.baton.registry import Registry
-from nanobot.baton.scope import Scope
-from nanobot.baton.search import fts_query, reindex
-from nanobot.baton.town import BatonError, Town
+from babo.baton import tools as tools_pkg
+from babo.baton.inbox import items, unread
+from babo.baton.notes import Note, write_note
+from babo.baton.registry import Registry
+from babo.baton.scope import Scope
+from babo.baton.search import fts_query, reindex
+from babo.baton.town import BatonError, Town
 
 
 def _seed(town: Town) -> None:

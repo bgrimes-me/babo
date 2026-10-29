@@ -15,7 +15,7 @@ export {
   fetchGatewayHealth,
   sanitizeConnectionFailure,
 } from "./connection"
-export { NanobotClient } from "./nanobot-client"
+export { BaboClient } from "./babo-client"
 export type {
   ApiReauthenticator,
   ConnectionStatus,

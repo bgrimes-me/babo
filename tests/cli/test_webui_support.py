@@ -10,9 +10,9 @@ from urllib.parse import quote
 import pytest
 from rich.console import Console
 
-from nanobot.cli import webui_support
-from nanobot.cli.webui_support import _prepare_webui_bundle_for_gateway
-from nanobot.config.schema import Config
+from babo.cli import webui_support
+from babo.cli.webui_support import _prepare_webui_bundle_for_gateway
+from babo.config.schema import Config
 
 
 @pytest.mark.parametrize("width", [32, 100])
@@ -22,7 +22,7 @@ def test_webui_ready_keeps_the_complete_login_url_copyable(monkeypatch, width: i
     password = "local/中文+#?" * 5
     config = Config(channels={"websocket": {"tokenIssueSecret": password}})
     url = webui_support._webui_browser_url(config)
-    config_path = Path("/srv/nanobot/config.json")
+    config_path = Path("/srv/babo/config.json")
 
     webui_support._print_webui_ready(
         config, config_path, url, workspace=None, dev=False, managed=True,
@@ -37,7 +37,7 @@ def test_webui_ready_keeps_the_complete_login_url_copyable(monkeypatch, width: i
     assert "Open in your browser:" in output.getvalue()
     assert f"Config: {config_path}" in lines
     log_command = next(line.removeprefix("Logs: ") for line in lines if line.startswith("Logs: "))
-    assert shlex.split(log_command) == ["nanobot", "gateway", "logs", "--config", str(config_path)]
+    assert shlex.split(log_command) == ["babo", "gateway", "logs", "--config", str(config_path)]
 
 
 def test_unix_browser_reports_delayed_launcher_failure_without_raw_output(monkeypatch, tmp_path, capfd) -> None:
@@ -54,7 +54,7 @@ def test_unix_browser_reports_delayed_launcher_failure_without_raw_output(monkey
     monkeypatch.setattr(webui_support.sys, "platform", "linux")
     monkeypatch.delenv("WSL_DISTRO_NAME", raising=False)
     monkeypatch.delenv("BROWSER", raising=False)
-    monkeypatch.setattr(webbrowser, "_tryorder", ["nanobot-test-browser"])
+    monkeypatch.setattr(webbrowser, "_tryorder", ["babo-test-browser"])
     monkeypatch.setattr(webui_support.webbrowser, "get", lambda _choice=None: browser)
 
     assert not webui_support._open_webui_browser(
@@ -79,7 +79,7 @@ def test_unix_browser_preserves_custom_commands_and_candidate_order(monkeypatch,
     )
     command = shlex.join([sys.executable, str(launcher), str(result), "%s"])
     monkeypatch.setenv("WSL_DISTRO_NAME", "Ubuntu")
-    monkeypatch.setenv("BROWSER", f"unavailable-nanobot-test-browser{os.pathsep}{command}")
+    monkeypatch.setenv("BROWSER", f"unavailable-babo-test-browser{os.pathsep}{command}")
     monkeypatch.setenv("DISPLAY", "")
     monkeypatch.setenv("WAYLAND_DISPLAY", "")
     monkeypatch.setattr(webbrowser, "_tryorder", None)
@@ -104,7 +104,7 @@ def test_unix_browser_falls_back_to_platform_browser(monkeypatch, tmp_path, capf
         encoding="utf-8",
     )
     selected = (
-        "unavailable-nanobot-test-browser" if failure == "missing"
+        "unavailable-babo-test-browser" if failure == "missing"
         else shlex.join([sys.executable, str(launcher), "fail", "%s"])
     )
     fallback = webbrowser.BackgroundBrowser([sys.executable, str(launcher), str(received), "%s"])
@@ -112,7 +112,7 @@ def test_unix_browser_falls_back_to_platform_browser(monkeypatch, tmp_path, capf
 
     def register_browsers():
         register_standard()
-        webbrowser.register("nanobot-test-platform-browser", None, fallback)
+        webbrowser.register("babo-test-platform-browser", None, fallback)
 
     monkeypatch.setenv("BROWSER", selected)
     monkeypatch.setenv("WSL_DISTRO_NAME", "Ubuntu")
@@ -135,7 +135,7 @@ def test_unix_browser_keeps_native_controller_new_tab_behavior(monkeypatch) -> N
     opened = []
     controller = SimpleNamespace(open=lambda url, **options: opened.append((url, options)) or True)
     monkeypatch.delenv("BROWSER", raising=False)
-    monkeypatch.setattr(webbrowser, "_tryorder", ["nanobot-test-browser"])
+    monkeypatch.setattr(webbrowser, "_tryorder", ["babo-test-browser"])
     monkeypatch.setattr(webui_support.webbrowser, "get", lambda _choice=None: controller)
 
     assert webui_support._launch_unix_browser("http://127.0.0.1:8765/")
@@ -152,12 +152,12 @@ def test_unix_browser_keeps_native_controller_new_tab_behavior(monkeypatch) -> N
 def test_source_checkout_respects_webui_build_mode(monkeypatch, mode) -> None:
     modes: list[str] = []
     monkeypatch.setattr(
-        "nanobot.cli.webui_support.inspect_webui_bundle",
+        "babo.cli.webui_support.inspect_webui_bundle",
         lambda: SimpleNamespace(source_available=True),
     )
-    monkeypatch.setattr("nanobot.cli.webui_support._webui_channel_enabled", lambda _config: True)
+    monkeypatch.setattr("babo.cli.webui_support._webui_channel_enabled", lambda _config: True)
     monkeypatch.setattr(
-        "nanobot.cli.webui_support.ensure_webui_bundle",
+        "babo.cli.webui_support.ensure_webui_bundle",
         lambda **kwargs: modes.append(kwargs["mode"]),
     )
 

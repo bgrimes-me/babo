@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from nanobot.agent.tools.base import Tool, ToolResult
-from nanobot.agent.tools.filesystem import ReadFileTool
-from nanobot.agent.tools.registry import ToolRegistry
+from babo.agent.tools.base import Tool, ToolResult
+from babo.agent.tools.filesystem import ReadFileTool
+from babo.agent.tools.registry import ToolRegistry
 
 
 class _FakeTool(Tool):
@@ -173,7 +173,7 @@ def test_prepare_call_decodes_json_string_for_nested_object_schema() -> None:
     tool, params, error = registry.prepare_call(
         "read_note",
         {
-            "target": '{"type":"path","path":"Projects/nanobot.md"}',
+            "target": '{"type":"path","path":"Projects/babo.md"}',
             "format": "content",
         },
     )
@@ -181,7 +181,7 @@ def test_prepare_call_decodes_json_string_for_nested_object_schema() -> None:
     assert tool is not None
     assert error is None
     assert params == {
-        "target": {"type": "path", "path": "Projects/nanobot.md"},
+        "target": {"type": "path", "path": "Projects/babo.md"},
         "format": "content",
     }
 

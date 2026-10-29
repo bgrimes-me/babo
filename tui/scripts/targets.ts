@@ -46,7 +46,7 @@ export function targetPlan(raw: string): TargetPlan {
   if (!Object.hasOwn(targets, raw)) throw new Error(`unsupported target: ${raw}`)
   const id = raw as keyof typeof targets
   const spec = targets[id]
-  return { ...spec, id, executable: `nanobot-tui-${id}${spec.platform === "win32" ? ".exe" : ""}` }
+  return { ...spec, id, executable: `babo-tui-${id}${spec.platform === "win32" ? ".exe" : ""}` }
 }
 
 export function nativePackages(plan: TargetPlan): string[] {

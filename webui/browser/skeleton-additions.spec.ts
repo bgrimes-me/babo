@@ -38,7 +38,7 @@ for (const width of [390, 1440]) for (const locale of ["en", "zh-CN"]) {
   test.describe(`${width}px ${locale} new first-load skeletons`, () => {
     test.use({ viewport: { width, height: 1000 }, reducedMotion: "reduce", hasTouch: width === 390 });
     test.beforeEach(async ({ page }) => {
-      await page.addInitScript((language) => localStorage.setItem("nanobot.locale", language), locale);
+      await page.addInitScript((language) => localStorage.setItem("babo.locale", language), locale);
       await page.clock.setFixedTime(new Date("2026-10-19T12:00:00Z"));
     });
 
@@ -95,7 +95,7 @@ for (const width of [390, 1440]) for (const locale of ["en", "zh-CN"]) {
     });
 
     test("appearance stays usable and keeps its layout while gateway settings load or fail", async ({ page }) => {
-      await page.addInitScript(() => localStorage.setItem("nanobot-webui.settings-preferences", JSON.stringify({
+      await page.addInitScript(() => localStorage.setItem("babo-webui.settings-preferences", JSON.stringify({
         schemaVersion: 1, readingTextSize: "custom", customReadingTextSize: 24,
       })));
       await page.goto(fixture("settings", "loaded", "&section=appearance"));
@@ -119,7 +119,7 @@ for (const width of [390, 1440]) for (const locale of ["en", "zh-CN"]) {
         await input.fill("22");
         await input.press("Enter");
         await expect(target.locator("[data-reading-preview-content] .markdown-content p").first()).toHaveCSS("font-size", "22px");
-        expect(await page.evaluate(() => JSON.parse(localStorage.getItem("nanobot-webui.settings-preferences")!).customReadingTextSize)).toBe(22);
+        expect(await page.evaluate(() => JSON.parse(localStorage.getItem("babo-webui.settings-preferences")!).customReadingTextSize)).toBe(22);
       }
     });
 

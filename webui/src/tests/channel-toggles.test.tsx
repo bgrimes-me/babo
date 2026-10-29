@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { NanobotFeatureInfo, NanobotFeaturesPayload } from "@/lib/types";
+import type { BaboFeatureInfo, BaboFeaturesPayload } from "@/lib/types";
 import {
   installSettingsViewTestHooks,
   jsonResponse,
@@ -18,7 +18,7 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-function feature(enabled: boolean, instances = false): NanobotFeatureInfo {
+function feature(enabled: boolean, instances = false): BaboFeatureInfo {
   return {
     name: "test-chat",
     display_name: "Test Chat",
@@ -53,15 +53,15 @@ function feature(enabled: boolean, instances = false): NanobotFeatureInfo {
   };
 }
 
-function payload(channel: NanobotFeatureInfo): NanobotFeaturesPayload {
+function payload(channel: BaboFeatureInfo): BaboFeaturesPayload {
   return { features: [channel], enabled_count: Number(channel.enabled) };
 }
 
-function renderChannel(channel: NanobotFeatureInfo) {
+function renderChannel(channel: BaboFeatureInfo) {
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
     if (url === "/api/settings") return jsonResponse(settingsPayload());
-    if (url === "/api/settings/nanobot-features") return jsonResponse(payload(channel));
+    if (url === "/api/settings/babo-features") return jsonResponse(payload(channel));
     return { ok: false, status: 404, json: async () => ({}) } as Response;
   }));
   renderSettingsView({ initialSection: "channels" });
@@ -129,7 +129,7 @@ describe("optimistic channel switches", () => {
       const result = payload(feature(!initial, surface === "instance"));
       await act(async () => {
         if (succeeds) {
-          mutation.resolve(surface === "setup" && !initial ? { nanobot_features: result } : result);
+          mutation.resolve(surface === "setup" && !initial ? { babo_features: result } : result);
         } else {
           mutation.reject(new Error("Channel update failed"));
         }

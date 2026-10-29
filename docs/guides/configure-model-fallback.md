@@ -1,6 +1,6 @@
-# How to Configure Model Fallback in nanobot
+# How to Configure Model Fallback in babo
 
-Model fallback lets nanobot try a primary model first, then fall back to one or more named presets when the primary provider fails or rate-limits.
+Model fallback lets babo try a primary model first, then fall back to one or more named presets when the primary provider fails or rate-limits.
 
 ## What you will build
 
@@ -14,7 +14,7 @@ Use fallback when you want better reliability across rate limits, provider outag
 
 ## Before you start
 
-Complete [Quick Start](../quick-start.md) if nanobot is not installed or cannot reply yet. If you already have a working WebUI or CLI session, continue here using that instance; no reinstall or second gateway is needed.
+Complete [Quick Start](../quick-start.md) if babo is not installed or cannot reply yet. If you already have a working WebUI or CLI session, continue here using that instance; no reinstall or second gateway is needed.
 
 Verify each provider works before adding it as a fallback.
 
@@ -25,7 +25,7 @@ In **Settings → Models**, create the primary and backup presets, then use **En
 <details>
 <summary>Manual configuration</summary>
 
-Merge this shape into `~/.nanobot/config.json` and replace provider/model names with ones you control:
+Merge this shape into `~/.babo/config.json` and replace provider/model names with ones you control:
 
 ```json
 {
@@ -78,7 +78,7 @@ String entries in `fallbackModels` are preset names, not raw model IDs. Replace 
 - If startup fails, check that each fallback string matches a key under `modelPresets`.
 - If output is truncated after fallback, review `maxTokens` and `contextWindowTokens`.
 
-## Related nanobot docs
+## Related babo docs
 
 - [Providers and Models](../providers.md)
 - [Provider Cookbook: Fallback Presets](../provider-cookbook.md#recipe-fallback-presets)

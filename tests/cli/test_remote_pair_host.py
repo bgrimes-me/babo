@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from nanobot.cli import remote
+from babo.cli import remote
 
 
 @pytest.fixture

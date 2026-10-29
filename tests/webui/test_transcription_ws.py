@@ -8,9 +8,9 @@ from typing import Any
 
 import pytest
 
-from nanobot.config.loader import save_config
-from nanobot.config.schema import Config
-from nanobot.webui.transcription_ws import webui_transcription_event
+from babo.config.loader import save_config
+from babo.config.schema import Config
+from babo.webui.transcription_ws import webui_transcription_event
 
 
 def _audio_data_url(payload: bytes = b"voice", mime: str = "audio/webm") -> str:
@@ -26,7 +26,7 @@ async def test_webui_transcribe_audio_rejects_unconfigured_provider(
     config = Config()
     config.transcription.provider = "groq"
     save_config(config, config_path)
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", config_path)
+    monkeypatch.setattr("babo.config.loader._current_config_path", config_path)
 
     event, payload = await webui_transcription_event({
         "request_id": "voice-1",
@@ -55,7 +55,7 @@ async def test_webui_transcription_uses_explicit_gateway_config(
     gateway.transcription.provider = "groq"
     save_config(default, default_path)
     save_config(gateway, gateway_path)
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", default_path)
+    monkeypatch.setattr("babo.config.loader._current_config_path", default_path)
 
     event, payload = await webui_transcription_event(
         {
@@ -79,7 +79,7 @@ async def test_webui_transcribe_audio_rejects_unsupported_mime(
     config.transcription.provider = "groq"
     config.providers.groq.api_key = "gsk-test"
     save_config(config, config_path)
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", config_path)
+    monkeypatch.setattr("babo.config.loader._current_config_path", config_path)
 
     event, payload = await webui_transcription_event({
         "request_id": "voice-1",
@@ -102,8 +102,8 @@ async def test_webui_transcribe_audio_rejects_oversized_audio(
     config.transcription.max_upload_mb = 1
     config.providers.groq.api_key = "gsk-test"
     save_config(config, config_path)
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", config_path)
-    monkeypatch.setattr("nanobot.audio.transcription.get_media_dir", lambda _channel=None: tmp_path)
+    monkeypatch.setattr("babo.config.loader._current_config_path", config_path)
+    monkeypatch.setattr("babo.audio.transcription.get_media_dir", lambda _channel=None: tmp_path)
 
     event, payload = await webui_transcription_event({
         "request_id": "voice-1",
@@ -127,9 +127,9 @@ async def test_webui_transcribe_audio_returns_text_and_removes_temp_file(
     config.transcription.provider = "groq"
     config.providers.groq.api_key = "gsk-test"
     save_config(config, config_path)
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", config_path)
+    monkeypatch.setattr("babo.config.loader._current_config_path", config_path)
     monkeypatch.setattr(
-        "nanobot.audio.transcription.get_media_dir",
+        "babo.audio.transcription.get_media_dir",
         lambda _channel=None: media_dir,
     )
     captured_paths: list[Path] = []
@@ -141,7 +141,7 @@ async def test_webui_transcribe_audio_returns_text_and_removes_temp_file(
         return "hello voice"
 
     monkeypatch.setattr(
-        "nanobot.audio.transcription.transcribe_audio_file",
+        "babo.audio.transcription.transcribe_audio_file",
         fake_transcribe_audio_file,
     )
 

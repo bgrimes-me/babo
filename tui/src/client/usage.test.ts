@@ -2,7 +2,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test"
 
 import { fetchSessionUsage } from "."
 
-const apiUrl = "http://nanobot.test"
+const apiUrl = "http://babo.test"
 const apiToken = "usage-token"
 const chatId = "usage/chat"
 const threadPath = "/api/sessions/websocket%3Ausage%2Fchat/webui-thread?limit=120&direction=latest"

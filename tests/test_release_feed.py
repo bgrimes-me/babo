@@ -3,14 +3,15 @@
 import hashlib
 import io
 import zipfile
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import httpx
 import pytest
 from packaging.tags import Tag
 
-from nanobot.release_feed import CATALOGUE_URL, PYPI_URL, ReleaseFeed, ReleaseFeedError
-from nanobot.releases import (
+from babo.release_feed import CATALOGUE_URL, PYPI_URL, ReleaseFeed, ReleaseFeedError
+from babo.releases import (
     ReleaseArtifact,
     ReleaseCatalogue,
     ReleaseManifest,
@@ -31,15 +32,15 @@ def checksum_only_fixtures(monkeypatch):
 def wheel_bytes(version):
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as wheel:
-        wheel.writestr(f"nanobot_ai-{version}.dist-info/METADATA",
-                       f"Metadata-Version: 2.1\nName: nanobot-ai\nVersion: {version}\n")
+        wheel.writestr(f"babo-{version}.dist-info/METADATA",
+                       f"Metadata-Version: 2.1\nName: babo\nVersion: {version}\n")
     return buffer.getvalue()
 
 
 def pypi(version="0.3.5", data=None):
     data = data or wheel_bytes(version)
     return {
-        "info": {"name": "nanobot-ai", "version": version, "requires_python": ">=3.11"},
+        "info": {"name": "babo", "version": version, "requires_python": ">=3.11"},
         "urls": [{"filename": name, "size": len(data), "yanked": False,
                   "digests": {"sha256": hashlib.sha256(data).hexdigest()},
                   "url": f"https://files.pythonhosted.org/packages/test/{name}"}
@@ -120,7 +121,7 @@ async def test_bad_stable_metadata_never_becomes_an_offer(tmp_path, change):
     elif change == "prerelease":
         metadata = pypi("0.3.6.dev1")
     elif change == "other_name":
-        metadata["info"]["name"] = "not-nanobot"
+        metadata["info"]["name"] = "not-babo"
     else:
         for file in metadata["urls"]:
             file["url"] = file["url"].replace("files.pythonhosted.org", "evil.example")
@@ -289,3 +290,13 @@ async def test_corrupt_manifest_cannot_select_a_different_build(tmp_path):
     ))) as client:
         with pytest.raises(ValueError, match="checksum"):
             await client.latest("preview")
+
+
+async def test_feed_fetches_nothing_until_babo_publishes_releases(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from babo.release_feed import NO_RELEASES
+
+    monkeypatch.delenv("BABO_RELEASE_FEED")
+    async with ReleaseFeed(tmp_path) as feed:
+        with pytest.raises(ReleaseFeedError, match="no published releases"):
+            await feed.catalogue()
+    assert "git pull" in NO_RELEASES

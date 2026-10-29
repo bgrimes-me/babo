@@ -9,7 +9,7 @@ import {
   fetchTrendingMarketplaceSkills,
   searchMarketplaceSkills,
 } from "@/lib/api";
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 import { requestSkillsRefresh, SKILLS_CHANGED_EVENT } from "@/lib/skill-events";
 import { ClientProvider } from "@/providers/ClientProvider";
 import { useSkills } from "@/hooks/useSkills";
@@ -24,7 +24,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
   };
 });
 
-const client = {} as NanobotClient;
+const client = {} as BaboClient;
 
 function marketplace(token: string) {
   return (

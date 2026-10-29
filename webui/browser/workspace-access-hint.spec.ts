@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.use({ reducedMotion: "reduce" });
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+  await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
   await page.route("**/api/commands", route => route.fulfill({ json: { commands: [] } }));
 });
 

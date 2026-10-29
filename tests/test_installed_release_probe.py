@@ -32,7 +32,7 @@ def test_probe_waits_for_listener_teardown_after_redirector_exit(monkeypatch):
 def test_isolation_retains_windows_cpu_identity_without_developer_paths():
     environment = {"SYSTEMROOT": r"C:\Windows", "PROCESSOR_ARCHITECTURE": "AMD64",
                    "PROCESSOR_ARCHITEW6432": "AMD64", "PATH": r"C:\dev\bun",
-                   "PYTHONPATH": r"C:\checkout", "NANOBOT_TUI_BIN": r"C:\old\tui.exe"}
+                   "PYTHONPATH": r"C:\checkout", "BABO_TUI_BIN": r"C:\old\tui.exe"}
     expected = {key: environment[key] for key in (
         "SYSTEMROOT", "PROCESSOR_ARCHITECTURE", "PROCESSOR_ARCHITEW6432",
     )}

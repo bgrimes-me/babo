@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { type TextareaRenderable } from "@opentui/core"
 import { MockTreeSitterClient, createTestRenderer, type TestRendererSetup } from "@opentui/core/testing"
 
-import { NanobotTui } from "./app"
+import { BaboTui } from "./app"
 import type { UsagePanel } from "../views/usage-panel"
 import type { RecoveryState } from "../client"
 
@@ -59,8 +59,8 @@ describe("TUI /usage", () => {
       return Response.json({ commands: [], sessions: [], skills: [], candidates: [] })
     }) as typeof fetch
     setup = await createTestRenderer({ width: 80, height: 30, screenMode: "alternate-screen", consoleMode: "disabled" })
-    const app = NanobotTui.mount(setup.renderer, {
-      wsUrl: "ws://localhost.invalid/ws", apiUrl: "http://nanobot.test", apiToken: "test-token",
+    const app = BaboTui.mount(setup.renderer, {
+      wsUrl: "ws://localhost.invalid/ws", apiUrl: "http://babo.test", apiToken: "test-token",
       model: "test/model", modelPreset: "default", workspace: "/test", version: "test",
       access: "workspace access", theme: "dark",
     }, client, new MockTreeSitterClient({ autoResolveTimeout: 0 }))
@@ -104,7 +104,7 @@ describe("TUI /usage", () => {
       await setup!.renderOnce()
       frame = setup!.captureCharFrame()
       expect(frame).toContain("Context 9k / 262k")
-      expect(frame).toContain("Ask nanobot anything")
+      expect(frame).toContain("Ask babo anything")
     }
     await close(ui)
     await setup!.renderOnce()

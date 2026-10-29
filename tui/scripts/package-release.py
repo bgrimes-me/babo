@@ -61,12 +61,12 @@ def _source_archive(root: Path) -> bytes:
             path = root / relative
             if not path.exists():
                 raise FileNotFoundError(path)
-            archive.add(path, arcname=Path("nanobot-tui-source/tui") / relative)
+            archive.add(path, arcname=Path("babo-tui-source/tui") / relative)
         archive.add(root.parent / "packages/client-events",
-                    arcname="nanobot-tui-source/packages/client-events")
+                    arcname="babo-tui-source/packages/client-events")
         for name in ("check_client_import_boundaries.mjs", "check_client_import_boundaries.test.mjs"):
-            archive.add(root.parent / "scripts" / name, arcname=f"nanobot-tui-source/scripts/{name}")
-        archive.add(root.parent / "LICENSE", arcname="nanobot-tui-source/LICENSE")
+            archive.add(root.parent / "scripts" / name, arcname=f"babo-tui-source/scripts/{name}")
+        archive.add(root.parent / "LICENSE", arcname="babo-tui-source/LICENSE")
     return output.getvalue()
 
 
@@ -79,7 +79,7 @@ def main() -> None:
     root = Path(__file__).resolve().parent.parent
     project_root = root.parent
     extension = ".exe" if target.startswith("win32-") else ""
-    asset = f"nanobot-tui-{target}{extension}"
+    asset = f"babo-tui-{target}{extension}"
     dist = root / "dist"
     notices = (dist / f"{asset}.THIRD_PARTY_NOTICES.txt").read_bytes()
     _validate_opentui_version(root, notices.decode("utf-8"))
@@ -93,7 +93,7 @@ def main() -> None:
         "BUN-1.3.13-LICENSE.md": (root / "licenses" / "BUN-1.3.13-LICENSE.md").read_bytes(),
         "LGPL-2.0.txt": (root / "licenses" / "LGPL-2.0.txt").read_bytes(),
         "LGPL-2.1.txt": (root / "licenses" / "LGPL-2.1.txt").read_bytes(),
-        "nanobot-tui-source.tar.gz": _source_archive(root),
+        "babo-tui-source.tar.gz": _source_archive(root),
     }
     manifest = "".join(f"{_sha256(content)}  {name}\n" for name, content in files.items()).encode()
     files["MANIFEST.sha256"] = manifest

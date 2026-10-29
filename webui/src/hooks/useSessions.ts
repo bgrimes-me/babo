@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useClient } from "@/providers/ClientProvider";
-import { useNanobotStream } from "@/hooks/useNanobotStream";
+import { useBaboStream } from "@/hooks/useBaboStream";
 import {
   ApiError,
   deleteSession as apiDeleteSession,
@@ -208,7 +208,7 @@ export function useSessions(): {
 
 /** Read-only history view backed by the conversation owner. */
 export function useSessionHistory(key: string | null) {
-  const { messages, history, refreshHistory, loadOlder } = useNanobotStream(
+  const { messages, history, refreshHistory, loadOlder } = useBaboStream(
     null, undefined, false, undefined, undefined, undefined, { key },
   );
   return { messages, ...history, refresh: refreshHistory, loadOlder };

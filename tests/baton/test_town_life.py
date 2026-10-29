@@ -9,13 +9,13 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from babo.baton import growth
+from babo.baton.inbox import items, unread
+from babo.baton.night import Night
+from babo.baton.registry import Registry
+from babo.baton.town import BatonError, Town
+from babo.session.manager import SessionPolicy
 from baton.mock_llama import MockLlama, malformed, text, tool_call
-from nanobot.baton import growth
-from nanobot.baton.inbox import items, unread
-from nanobot.baton.night import Night
-from nanobot.baton.registry import Registry
-from nanobot.baton.town import BatonError, Town
-from nanobot.session.manager import SessionPolicy
 
 
 def _schema_or(chats):
@@ -80,7 +80,7 @@ def _propose_shout(box, town: Town, *, passing: bool = True) -> None:
         "shout", "def run(input: str) -> str:\n    return input.upper()\n",
         "from tool import run\n\ndef test_it():\n    assert run('a') == " + ("'A'" if passing else "'a'") + "\n", "Upper-cases text",
     )
-    from nanobot.baton.tooltest import run_pending_tool_tests
+    from babo.baton.tooltest import run_pending_tool_tests
 
     run_pending_tool_tests(town, timeout_s=30, image="x", prefer_container=False)
 
@@ -165,7 +165,7 @@ def cli_config(town: Town, index_path: Path, tmp_path: Path) -> Path:
 
 
 def test_note_and_town_commands(cli_config: Path, town: Town) -> None:
-    from nanobot.baton.cli import app
+    from babo.baton.cli import app
 
     runner = CliRunner()
     result = runner.invoke(app, ["note", "archivist", "Thanks for the tidy ledger.", "-c", str(cli_config)])
@@ -177,7 +177,7 @@ def test_note_and_town_commands(cli_config: Path, town: Town) -> None:
 
 
 def test_review_walkthrough_with_plain_answers(cli_config: Path, town: Town, box) -> None:
-    from nanobot.baton.cli import app
+    from babo.baton.cli import app
 
     _propose_shout(box, town)
     box("mayor").propose_change("Quiet hours", "Night is busy", "No visits after 22:00")
@@ -195,7 +195,7 @@ def test_review_walkthrough_with_plain_answers(cli_config: Path, town: Town, box
 
 # -- channel bindings ----------------------------------------------------------------------
 def test_channel_bindings_generate_one_config_per_gateway(town: Town, tmp_path: Path) -> None:
-    from nanobot.baton.configs import generate_configs
+    from babo.baton.configs import generate_configs
 
     base = tmp_path / "config.json"
     base.write_text(json.dumps({

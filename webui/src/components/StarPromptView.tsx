@@ -8,7 +8,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 
 import "./StarPrompt.css";
 
-const REPOSITORY_URL = "https://github.com/HKUDS/nanobot";
+const REPOSITORY_URL = "https://github.com/bgrimes-me/babo";
 const actionClassName = "h-full min-h-[46px] min-w-0 !whitespace-normal px-3 py-2.5 text-center text-[15px] font-medium max-[480px]:text-sm";
 
 export function StarLinkView({ onActivate, error = false, fullWidth = false }: {

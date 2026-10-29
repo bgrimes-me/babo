@@ -8,14 +8,14 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.channels.websocket.runtime import WebSocketConfig
-from nanobot.config.loader import load_config, resolve_config_env_vars
+from babo.channels.websocket.runtime import WebSocketConfig
+from babo.config.loader import load_config, resolve_config_env_vars
 
 
 def _initialize(path: Path, web_token: str = "", api_key: str = "") -> subprocess.CompletedProcess[str]:
-    env = dict(os.environ, NANOBOT_WEB_TOKEN=web_token, NANOBOT_API_KEY=api_key)
+    env = dict(os.environ, BABO_WEB_TOKEN=web_token, BABO_API_KEY=api_key)
     return subprocess.run(
-        [sys.executable, "-m", "nanobot.cli.docker_bootstrap", str(path)],
+        [sys.executable, "-m", "babo.cli.docker_bootstrap", str(path)],
         env=env, capture_output=True, text=True,
     )
 
@@ -63,7 +63,7 @@ def test_failed_write_does_not_leave_an_existing_config(tmp_path):
     # replacement boundary rather than only validating the input template.
     from unittest.mock import patch
 
-    from nanobot.cli.docker_bootstrap import initialize_config
+    from babo.cli.docker_bootstrap import initialize_config
 
     path = tmp_path / "config.json"
     with patch.object(Path, "replace", side_effect=PermissionError("read-only mount")):

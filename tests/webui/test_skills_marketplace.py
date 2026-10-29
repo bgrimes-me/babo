@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 import pytest
 
-from nanobot.webui.skills_marketplace import (
+from babo.webui.skills_marketplace import (
     SkillsMarketplaceError,
     _valid_skillhub_download_url,
     _validated_skillhub_entries,
@@ -58,11 +58,11 @@ async def test_search_marketplace_skills_filters_and_marks_installed(
             return FakeResponse()
 
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace.httpx.AsyncClient",
+        "babo.webui.skills_marketplace.httpx.AsyncClient",
         lambda **_kwargs: FakeClient(),
     )
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace.skills_install_supported",
+        "babo.webui.skills_marketplace.skills_install_supported",
         lambda: True,
     )
     payload = await search_marketplace_skills(
@@ -136,7 +136,7 @@ async def test_search_skillhub_skills_normalizes_provider_metadata(
             return FakeResponse()
 
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace.httpx.AsyncClient",
+        "babo.webui.skills_marketplace.httpx.AsyncClient",
         lambda **_kwargs: FakeClient(),
     )
 
@@ -194,7 +194,7 @@ async def test_skillhub_listings_link_to_public_skill_details(
         return httpx.Response(200, json={"skills": [row]})
 
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace._skillhub_client",
+        "babo.webui.skills_marketplace._skillhub_client",
         lambda: httpx.AsyncClient(transport=httpx.MockTransport(respond)),
     )
 
@@ -256,7 +256,7 @@ async def test_trending_marketplace_skills_diversifies_sources_and_keeps_rank(
             return FakeResponse()
 
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace.httpx.AsyncClient",
+        "babo.webui.skills_marketplace.httpx.AsyncClient",
         lambda **_kwargs: FakeClient(),
     )
     payload = await trending_marketplace_skills(tmp_path, provider="skills_sh")
@@ -295,11 +295,11 @@ async def test_marketplace_skill_trends_returns_history_separately(
         }
 
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace.httpx.AsyncClient",
+        "babo.webui.skills_marketplace.httpx.AsyncClient",
         lambda **_kwargs: FakeClient(),
     )
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace._load_weekly_installs",
+        "babo.webui.skills_marketplace._load_weekly_installs",
         weekly_installs,
     )
 
@@ -333,7 +333,7 @@ async def test_search_marketplace_skills_returns_safe_upstream_error(
             raise httpx.ConnectError("private network detail")
 
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace.httpx.AsyncClient",
+        "babo.webui.skills_marketplace.httpx.AsyncClient",
         lambda **_kwargs: FailingClient(),
     )
 
@@ -371,11 +371,11 @@ async def test_install_marketplace_skill_uses_official_cli_and_workspace(
         return FakeProcess()
 
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace.shutil.which",
+        "babo.webui.skills_marketplace.shutil.which",
         lambda executable: "/usr/local/bin/npx" if executable == "npx" else None,
     )
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace.asyncio.create_subprocess_exec",
+        "babo.webui.skills_marketplace.asyncio.create_subprocess_exec",
         create_subprocess_exec,
     )
 
@@ -499,7 +499,7 @@ async def test_install_skillhub_skill_checks_fingerprint_and_extracts_safely(
             )
 
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace.httpx.AsyncClient",
+        "babo.webui.skills_marketplace.httpx.AsyncClient",
         lambda **_kwargs: FakeClient(),
     )
 
@@ -562,7 +562,7 @@ async def test_install_marketplace_skill_is_idempotent(
     (skill_dir / "SKILL.md").write_text("---\nname: already-here\n---\n", encoding="utf-8")
     launch = pytest.fail
     monkeypatch.setattr(
-        "nanobot.webui.skills_marketplace.asyncio.create_subprocess_exec",
+        "babo.webui.skills_marketplace.asyncio.create_subprocess_exec",
         launch,
     )
 

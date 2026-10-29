@@ -5,24 +5,24 @@ import pytest
 from loguru import logger
 
 from agent.session_helpers import run_session
-from nanobot.agent.context import TranscriptInput
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.runner import AgentRunResult
-from nanobot.agent.subagent_sessions import SubagentSessions
-from nanobot.agent.tools.context import current_request_context
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.bus.events import (
+from babo.agent.context import TranscriptInput
+from babo.agent.loop import AgentLoop
+from babo.agent.runner import AgentRunResult
+from babo.agent.subagent_sessions import SubagentSessions
+from babo.agent.tools.context import current_request_context
+from babo.agent.tools.registry import ToolRegistry
+from babo.bus.events import (
     INBOUND_META_RUNTIME_CONTROL,
     RUNTIME_CONTROL_SESSION_DISCARD,
     InboundMessage,
 )
-from nanobot.bus.queue import MessageBus
-from nanobot.providers.base import GenerationSettings, LLMResponse, ToolCallRequest
-from nanobot.runtime_context import RuntimeContextBlock, public_history_message
-from nanobot.session.keys import UNIFIED_SESSION_KEY
-from nanobot.session.manager import SessionPolicy
-from nanobot.webui.temporary_chats import WebUITemporaryChats
-from nanobot.webui.workspaces import WebUIWorkspaceController
+from babo.bus.queue import MessageBus
+from babo.providers.base import GenerationSettings, LLMResponse, ToolCallRequest
+from babo.runtime_context import RuntimeContextBlock, public_history_message
+from babo.session.keys import UNIFIED_SESSION_KEY
+from babo.session.manager import SessionPolicy
+from babo.webui.temporary_chats import WebUITemporaryChats
+from babo.webui.workspaces import WebUIWorkspaceController
 
 
 def _message(key: str, content: str) -> InboundMessage:
@@ -90,7 +90,7 @@ async def test_transient_session_keeps_history_without_persisting_or_durable_too
 
 @pytest.mark.parametrize("selection", ["explicit_empty", "disable_all", "default"])
 async def test_turn_tool_selection_preserves_empty_registries(tmp_path, monkeypatch, selection) -> None:
-    monkeypatch.setattr("nanobot.agent.tools.loader.entry_points", lambda **kwargs: [])
+    monkeypatch.setattr("babo.agent.tools.loader.entry_points", lambda **kwargs: [])
     loop = _loop(tmp_path, [], max_iterations=2)
     key = "cli:tool-selection"
     write_tool = loop.tools.get("write_file")
@@ -179,7 +179,7 @@ async def test_session_policy_controls_tool_logs_and_result_offload(
     messages = loop.provider.chat_stream_with_retry.await_args.kwargs["messages"]
     content = next(m["content"] for m in messages if m["role"] == "tool")
     preview = content[0]["text"] if structured else content
-    offload_root = tmp_path / ".nanobot" / "tool-results"
+    offload_root = tmp_path / ".babo" / "tool-results"
     assert (secret in "\n".join(logs)) is (privacy == "ordinary")
     if structured:
         assert content[1] == image
@@ -226,13 +226,13 @@ async def test_direct_transient_run_never_spills_before_cancellation(tmp_path) -
     ))
     try:
         await asyncio.wait_for(second_call.wait(), timeout=2)
-        assert not (tmp_path / ".nanobot" / "tool-results").exists()
+        assert not (tmp_path / ".babo" / "tool-results").exists()
     finally:
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
     await loop.discard_session(session.key)
-    assert not (tmp_path / ".nanobot" / "tool-results").exists()
+    assert not (tmp_path / ".babo" / "tool-results").exists()
     assert current_request_context() is None
 
 

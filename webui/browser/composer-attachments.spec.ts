@@ -38,7 +38,7 @@ async function expectAttachmentDetails(page: Page, chip: Locator, name: string, 
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+  await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
   await page.route("**/api/**", route => route.fulfill({ json: {} }));
 });
 

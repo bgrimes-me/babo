@@ -1,6 +1,6 @@
 # Configuration
 
-Config file: `~/.nanobot/config.json`
+Config file: `~/.babo/config.json`
 
 This is the full reference. If this is your first install, start with [`quick-start.md`](./quick-start.md). If you are trying to choose a model or fix provider/model matching, use [`providers.md`](./providers.md) first and come back here for exact fields and advanced options.
 
@@ -8,12 +8,12 @@ For normal local use, prefer the WebUI before editing JSON: **Settings → Model
 
 Use the graphical steps for settings exposed in the WebUI. Their JSON alternatives are collapsed under **Manual configuration**. Settings without a graphical control retain direct configuration instructions. JSON examples are usually partial snippets to merge into your existing config, not full replacement files. For the mental model behind config, workspace, gateway, channels, sessions, tools, and memory, see [`concepts.md`](./concepts.md).
 
-The generated `config.json` uses camelCase keys such as `apiKey` and `intervalS`. snake_case keys are also accepted for compatibility, but the docs prefer camelCase because that is what nanobot writes back to disk.
+The generated `config.json` uses camelCase keys such as `apiKey` and `intervalS`. snake_case keys are also accepted for compatibility, but the docs prefer camelCase because that is what babo writes back to disk.
 
 For setup and runtime failures, follow the diagnosis order in [`troubleshooting.md`](./troubleshooting.md) before changing multiple config areas at once.
 
 > [!NOTE]
-> If your config file is older than the current schema, run `nanobot onboard --refresh`. nanobot adds missing default fields while preserving your existing values.
+> If your config file is older than the current schema, run `babo onboard --refresh`. babo adds missing default fields while preserving your existing values.
 
 ## Configuration Guides
 
@@ -27,7 +27,7 @@ This page is the complete configuration reference. For task-oriented setup, use 
 | Add an OpenAI-compatible provider | [`guides/configure-openai-compatible-provider.md`](./guides/configure-openai-compatible-provider.md) |
 | Add Langfuse observability | [`guides/configure-langfuse-observability.md`](./guides/configure-langfuse-observability.md) |
 | Secure a local AI agent | [`guides/secure-local-ai-agent.md`](./guides/secure-local-ai-agent.md) |
-| Deploy the gateway | [`guides/deploy-nanobot-gateway.md`](./guides/deploy-nanobot-gateway.md) |
+| Deploy the gateway | [`guides/deploy-babo-gateway.md`](./guides/deploy-babo-gateway.md) |
 
 ## Quick Jump
 
@@ -56,22 +56,22 @@ If the WebUI does not expose the option you need, start from the task below. Mos
 | Task | First keys to check | Verify with | Deep dive |
 |---|---|---|---|
 | Make the first model reply work | Choose a provider and model in **Settings → Models**; add its API key or complete sign-in, keeping the default connection settings | Send `Hello!` in chat | [Providers](#providers), [Model Presets](#model-presets) |
-| Add fallback models | `modelPresets.<fallback>`, `agents.defaults.fallbackModels` | `nanobot status`, then a normal agent run | [Model Fallbacks](#model-fallbacks) |
-| Keep secrets out of the config file | `${ENV_VAR}` placeholders inside any string value | Start nanobot from the same environment that sets the variable | [Environment Variables for Secrets](#environment-variables-for-secrets) |
-| Open the bundled WebUI | `channels.websocket.enabled`, optional `channels.websocket.port`, `channels.websocket.tokenIssueSecret` | `nanobot webui` | [Channel Settings](#channel-settings), [WebSocket docs](./websocket.md) |
-| Connect one chat app | `channels.<channel>.enabled`, channel credentials, optional pairing or `channels.<channel>.allowFrom` | `nanobot channels status`, then `nanobot gateway --verbose` | [Channel Settings](#channel-settings), [Chat Apps](./chat-apps.md) |
+| Add fallback models | `modelPresets.<fallback>`, `agents.defaults.fallbackModels` | `babo status`, then a normal agent run | [Model Fallbacks](#model-fallbacks) |
+| Keep secrets out of the config file | `${ENV_VAR}` placeholders inside any string value | Start babo from the same environment that sets the variable | [Environment Variables for Secrets](#environment-variables-for-secrets) |
+| Open the bundled WebUI | `channels.websocket.enabled`, optional `channels.websocket.port`, `channels.websocket.tokenIssueSecret` | `babo webui` | [Channel Settings](#channel-settings), [WebSocket docs](./websocket.md) |
+| Connect one chat app | `channels.<channel>.enabled`, channel credentials, optional pairing or `channels.<channel>.allowFrom` | `babo channels status`, then `babo gateway --verbose` | [Channel Settings](#channel-settings), [Chat Apps](./chat-apps.md) |
 | Enable voice transcription | `transcription.enabled`, `transcription.provider`, matching `providers.<name>.apiKey` | Send or upload a short voice message through a configured surface | [Transcription Settings](#transcription-settings) |
 | Enable web search or fetch | `tools.web.search.*`, `tools.web.fetch.*`, optional `tools.ssrfWhitelist` | Ask a question that requires current web information, then inspect logs if needed | [Web Tools](#web-tools), [Security](#security) |
 | Enable image generation | `tools.imageGeneration.enabled`, `tools.imageGeneration.provider`, `tools.imageGeneration.model`, matching provider credentials | Enable Image Generation in the WebUI and send one image request | [Image Generation](#image-generation) |
-| Add external tools through MCP | `tools.mcpServers.<name>` | Start `nanobot gateway --verbose` and check startup/tool logs | [MCP](#mcp-model-context-protocol) |
+| Add external tools through MCP | `tools.mcpServers.<name>` | Start `babo gateway --verbose` and check startup/tool logs | [MCP](#mcp-model-context-protocol) |
 | Tighten tool and network safety | `tools.restrictToWorkspace`, `tools.exec.sandbox`, `tools.ssrfWhitelist`, `channels.*.allowFrom` | Run the same workflow through the channel or CLI you plan to expose | [Security](#security), [Pairing](#pairing) |
-| Tune request timeouts or process concurrency | `NANOBOT_STREAM_IDLE_TIMEOUT_S`, `NANOBOT_MAX_CONCURRENT_REQUESTS` | Start nanobot from the same environment and inspect startup/runtime logs | [Runtime Environment Variables](#runtime-environment-variables) |
+| Tune request timeouts or process concurrency | `BABO_STREAM_IDLE_TIMEOUT_S`, `BABO_MAX_CONCURRENT_REQUESTS` | Start babo from the same environment and inspect startup/runtime logs | [Runtime Environment Variables](#runtime-environment-variables) |
 | Run multiple isolated bots | separate `--home` directories, or `--config` and `--workspace` paths, plus distinct `gateway.port` or channel ports when processes run together | Place `--home` before the subcommand; use the same instance selectors with `status`, `agent`, `webui`, `gateway`, and `serve` | [Multiple Instances](./multiple-instances.md), [CLI Reference](./cli-reference.md) |
 | Observe model calls | `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_BASE_URL` environment variables | Run one model call, then check the matching Langfuse project | [Langfuse Observability](#langfuse-observability) |
 
 ## Shared network proxy
 
-Set one proxy address in **Settings → Advanced → Shared proxy**, then turn on **Use proxy** for each provider, Web access, channel, or remote MCP connection that needs it. The address is used by the gateway, so `127.0.0.1` refers to the machine running nanobot. Restart when Settings requests it. MCP connections can select the proxy before browser sign-in.
+Set one proxy address in **Settings → Advanced → Shared proxy**, then turn on **Use proxy** for each provider, Web access, channel, or remote MCP connection that needs it. The address is used by the gateway, so `127.0.0.1` refers to the machine running babo. Restart when Settings requests it. MCP connections can select the proxy before browser sign-in.
 
 For proxies that require credentials, expand **Authentication (optional)** and enter the username and password, then choose **Save** to apply the address and credentials together. The same editor is available from **Configure proxy** without leaving the current form. Passwords are masked in the interface but remain part of the proxy URL in the local configuration; protect that file. If the address is a whole-URL `${ENV_VAR}` reference, include authentication in the referenced URL.
 
@@ -102,7 +102,7 @@ HTTP, HTTPS, SOCKS5, and SOCKS5H URLs are accepted; individual integrations reta
 
 </details>
 
-On upgrade, one legacy proxy address moves to `network.proxy` and previously configured features receive `useProxy: true`. The migrated configuration is written on the next normal save, including `nanobot onboard --refresh`. If the old configuration contains different proxy addresses, choose one and set `network.proxy` explicitly before upgrading; multiple per-feature addresses are no longer supported. For Discord configurations that store the entire proxy URL in an environment variable and credentials separately, combine them into one full URL environment variable and set `network.proxy` to that reference before upgrading. Credential references inside a URL remain references when saved. Back up the original configuration before saving if you may need to downgrade.
+On upgrade, one legacy proxy address moves to `network.proxy` and previously configured features receive `useProxy: true`. The migrated configuration is written on the next normal save, including `babo onboard --refresh`. If the old configuration contains different proxy addresses, choose one and set `network.proxy` explicitly before upgrading; multiple per-feature addresses are no longer supported. For Discord configurations that store the entire proxy URL in an environment variable and credentials separately, combine them into one full URL environment variable and set `network.proxy` to that reference before upgrading. Credential references inside a URL remain references when saved. Back up the original configuration before saving if you may need to downgrade.
 
 ## Environment Variables for Secrets
 
@@ -123,9 +123,9 @@ Instead of storing secrets directly in `config.json`, you can use `${VAR_NAME}` 
 }
 ```
 
-Any string value in `config.json` can use `${VAR_NAME}`. Resolution runs once at startup, in memory only — resolved values are never written back to disk, so editing config through `nanobot onboard` or the WebUI preserves the placeholder.
+Any string value in `config.json` can use `${VAR_NAME}`. Resolution runs once at startup, in memory only — resolved values are never written back to disk, so editing config through `babo onboard` or the WebUI preserves the placeholder.
 
-If a referenced variable is unset, nanobot fails fast and reports the exact config field and variable name without echoing the field value. Run `nanobot status` with the same `--config` path to inspect the problem.
+If a referenced variable is unset, babo fails fast and reports the exact config field and variable name without echoing the field value. Run `babo status` with the same `--config` path to inspect the problem.
 
 ### More examples
 
@@ -166,20 +166,20 @@ If a referenced variable is unset, nanobot fails fast and reports the exact conf
 
 ### Loading variables at startup
 
-Set the variables in the environment that starts nanobot. Choose the method that fits your deployment:
+Set the variables in the environment that starts babo. Choose the method that fits your deployment:
 
 **systemd** — use `EnvironmentFile=` in the service unit to load variables from a file that only the deploying user can read:
 
 ```ini
-# /etc/systemd/system/nanobot.service (excerpt)
+# /etc/systemd/system/babo.service (excerpt)
 [Service]
-EnvironmentFile=/home/youruser/nanobot_secrets.env
-User=nanobot
+EnvironmentFile=/home/youruser/babo_secrets.env
+User=babo
 ExecStart=...
 ```
 
 ```bash
-# /home/youruser/nanobot_secrets.env (mode 600, owned by youruser)
+# /home/youruser/babo_secrets.env (mode 600, owned by youruser)
 TELEGRAM_TOKEN=your-token-here
 IMAP_PASSWORD=your-password-here
 ```
@@ -187,9 +187,9 @@ IMAP_PASSWORD=your-password-here
 **Docker** — pass an env file to the locally built image (one `KEY=VALUE` per line), or use `-e KEY=value`:
 
 ```bash
-docker run --rm --env-file=./nanobot.env \
-  -v ~/.nanobot:/home/nanobot/.nanobot \
-  nanobot agent -m "Hello"
+docker run --rm --env-file=./babo.env \
+  -v ~/.babo:/home/babo/.babo \
+  babo agent -m "Hello"
 ```
 
 **direnv** — drop a `.envrc` in your working directory and run `direnv allow`:
@@ -204,58 +204,58 @@ export ANTHROPIC_API_KEY=...
 
 ```bash
 # 1Password — references in .env.tpl look like `op://Vault/Item/field`
-op run --env-file=.env.tpl -- nanobot agent
+op run --env-file=.env.tpl -- babo agent
 
 # pass (passwordstore.org)
-ANTHROPIC_API_KEY="$(pass show api/anthropic)" nanobot agent
+ANTHROPIC_API_KEY="$(pass show api/anthropic)" babo agent
 
 # Bitwarden
-ANTHROPIC_API_KEY="$(bw get password api/anthropic)" nanobot agent
+ANTHROPIC_API_KEY="$(bw get password api/anthropic)" babo agent
 ```
 
 ## Runtime Environment Variables
 
-These variables are process-level switches. Set them in the same terminal, service unit, container, or supervisor that starts nanobot.
+These variables are process-level switches. Set them in the same terminal, service unit, container, or supervisor that starts babo.
 
 ### Runtime controls
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NANOBOT_MAX_CONCURRENT_REQUESTS` | Unlimited | Maximum concurrently running inbound agent requests. Set a positive integer to apply a cap; unset, `0`, or a negative value means unlimited. |
-| `NANOBOT_LLM_TIMEOUT_S` | Unused | Model calls use streaming idle timeouts instead of a fixed total duration. Use `NANOBOT_STREAM_IDLE_TIMEOUT_S` to control stalled requests. |
-| `NANOBOT_STREAM_IDLE_TIMEOUT_S` | `90` | Maximum idle wait, in seconds, for model streams, including internal tasks such as Dream, memory archiving, title generation, and Heartbeat evaluation. Each stream event renews the wait, including reasoning and tool-call deltas. Invalid or non-positive values are ignored; values above `3600` are clamped. |
-| `NANOBOT_OPENAI_COMPAT_TIMEOUT_S` | `120` | HTTP request timeout, in seconds, for direct non-streaming OpenAI-compatible provider calls. Streaming calls use `NANOBOT_STREAM_IDLE_TIMEOUT_S`. Invalid or non-positive values are ignored. |
-| `NANOBOT_WORKSPACE_SANDBOX_ENFORCED` | unset | Marks that an external workspace sandbox is already enforced. Truthy values (`1`, `true`, `yes`, `on`, `enabled`) use `NANOBOT_WORKSPACE_SANDBOX_PROVIDER` as the label; any other non-false value is treated as the provider name. |
-| `NANOBOT_WORKSPACE_SANDBOX_PROVIDER` | `unknown` | Display label for the external workspace sandbox when `NANOBOT_WORKSPACE_SANDBOX_ENFORCED` is truthy, for example `macos_app_sandbox` or `bwrap`. |
-| `NANOBOT_SANDBOX_ENFORCED` | unset | Legacy compatibility alias for `NANOBOT_WORKSPACE_SANDBOX_ENFORCED`. |
-| `NANOBOT_TMUX_SOCKET_DIR` | `${TMPDIR:-/tmp}/nanobot-tmux-sockets` | Socket directory used by the bundled `tmux` skill scripts. |
+| `BABO_MAX_CONCURRENT_REQUESTS` | Unlimited | Maximum concurrently running inbound agent requests. Set a positive integer to apply a cap; unset, `0`, or a negative value means unlimited. |
+| `BABO_LLM_TIMEOUT_S` | Unused | Model calls use streaming idle timeouts instead of a fixed total duration. Use `BABO_STREAM_IDLE_TIMEOUT_S` to control stalled requests. |
+| `BABO_STREAM_IDLE_TIMEOUT_S` | `90` | Maximum idle wait, in seconds, for model streams, including internal tasks such as Dream, memory archiving, title generation, and Heartbeat evaluation. Each stream event renews the wait, including reasoning and tool-call deltas. Invalid or non-positive values are ignored; values above `3600` are clamped. |
+| `BABO_OPENAI_COMPAT_TIMEOUT_S` | `120` | HTTP request timeout, in seconds, for direct non-streaming OpenAI-compatible provider calls. Streaming calls use `BABO_STREAM_IDLE_TIMEOUT_S`. Invalid or non-positive values are ignored. |
+| `BABO_WORKSPACE_SANDBOX_ENFORCED` | unset | Marks that an external workspace sandbox is already enforced. Truthy values (`1`, `true`, `yes`, `on`, `enabled`) use `BABO_WORKSPACE_SANDBOX_PROVIDER` as the label; any other non-false value is treated as the provider name. |
+| `BABO_WORKSPACE_SANDBOX_PROVIDER` | `unknown` | Display label for the external workspace sandbox when `BABO_WORKSPACE_SANDBOX_ENFORCED` is truthy, for example `macos_app_sandbox` or `bwrap`. |
+| `BABO_SANDBOX_ENFORCED` | unset | Legacy compatibility alias for `BABO_WORKSPACE_SANDBOX_ENFORCED`. |
+| `BABO_TMUX_SOCKET_DIR` | `${TMPDIR:-/tmp}/babo-tmux-sockets` | Socket directory used by the bundled `tmux` skill scripts. |
 
 ### Installer, build, and WebUI development
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NANOBOT_BIN_DIR` | `$HOME/.local/bin` | Installer launcher directory on macOS/Linux. |
-| `NANOBOT_VENV` | `$HOME/.nanobot/venv` | Managed virtual environment path used by the installer fallback. |
-| `NANOBOT_SKIP_WIZARD` | unset | Set to `1` to skip automatic WebUI or wizard setup after one-command install. |
-| `NANOBOT_SKIP_WEBUI_BUILD` | unset | Set to `1` to skip bundling the WebUI during package builds. |
-| `NANOBOT_FORCE_WEBUI_BUILD` | unset | Set to `1` to rebuild the bundled WebUI even when `nanobot/web/dist/index.html` already exists. |
-| `NANOBOT_EXTRAS` | unset | Docker build argument containing comma-separated Python extras such as `bedrock`. |
-| `NANOBOT_CHANNELS` | `whatsapp` | Docker build argument containing comma-separated channels whose manifest dependencies are preinstalled. |
-| `NANOBOT_API_URL` | `http://127.0.0.1:8765` | Gateway target for the Vite WebUI dev server proxy. |
+| `BABO_BIN_DIR` | `$HOME/.local/bin` | Installer launcher directory on macOS/Linux. |
+| `BABO_VENV` | `$HOME/.babo/venv` | Managed virtual environment path used by the installer fallback. |
+| `BABO_SKIP_WIZARD` | unset | Set to `1` to skip automatic WebUI or wizard setup after one-command install. |
+| `BABO_SKIP_WEBUI_BUILD` | unset | Set to `1` to skip bundling the WebUI during package builds. |
+| `BABO_FORCE_WEBUI_BUILD` | unset | Set to `1` to rebuild the bundled WebUI even when `babo/web/dist/index.html` already exists. |
+| `BABO_EXTRAS` | unset | Docker build argument containing comma-separated Python extras such as `bedrock`. |
+| `BABO_CHANNELS` | `whatsapp` | Docker build argument containing comma-separated channels whose manifest dependencies are preinstalled. |
+| `BABO_API_URL` | `http://127.0.0.1:8765` | Gateway target for the Vite WebUI dev server proxy. |
 
-Internal variables such as `NANOBOT_RESTART_*` and `NANOBOT_PATH_*` are set by nanobot itself and are not a supported user configuration surface.
+Internal variables such as `BABO_RESTART_*` and `BABO_PATH_*` are set by babo itself and are not a supported user configuration surface.
 
 ## Langfuse Observability
 
 Use Langfuse to trace OpenAI-compatible model calls and Codex OAuth calls. Configure it with environment variables, not `config.json`.
 
-Install the optional package in the same Python environment that runs nanobot:
+Install the optional package in the same Python environment that runs babo:
 
 ```bash
-nanobot plugins enable langfuse
+babo plugins enable langfuse
 ```
 
-Set Langfuse credentials before starting `nanobot agent`, `nanobot gateway`, or `nanobot serve`:
+Set Langfuse credentials before starting `babo agent`, `babo gateway`, or `babo serve`:
 
 ```bash
 export LANGFUSE_SECRET_KEY="sk-lf-..."
@@ -271,7 +271,7 @@ $env:LANGFUSE_PUBLIC_KEY = "pk-lf-..."
 $env:LANGFUSE_BASE_URL = "https://cloud.langfuse.com"
 ```
 
-When `LANGFUSE_SECRET_KEY` is set and the `langfuse` package is installed, tracing is enabled for OpenAI-compatible providers and the Codex OAuth provider (`openai_codex`). If the package is missing, nanobot logs a warning and model calls continue without tracing.
+When `LANGFUSE_SECRET_KEY` is set and the `langfuse` package is installed, tracing is enabled for OpenAI-compatible providers and the Codex OAuth provider (`openai_codex`). If the package is missing, babo logs a warning and model calls continue without tracing.
 
 Use the Langfuse region or self-hosted URL that matches your project. The [Langfuse OpenAI SDK docs](https://langfuse.com/integrations/model-providers/openai-py) use `LANGFUSE_BASE_URL` for cloud regions and self-hosted instances.
 
@@ -294,14 +294,14 @@ For a company gateway, a custom service, or a local model server at a different 
 <details>
 <summary>Custom endpoints and provider-specific options</summary>
 
-A Base URL is the service address nanobot sends model requests to. Change it only when your service supplies a different endpoint, such as a company proxy, a regional service, or a subscription-specific endpoint. Prefer a dedicated built-in provider when one matches your subscription. For an unlisted service, create a custom connection and enter its address and any required credential; choose the request API under **Advanced options** only when that service requires it. See [custom connection APIs](#custom-connection-apis) for protocol details.
+A Base URL is the service address babo sends model requests to. Change it only when your service supplies a different endpoint, such as a company proxy, a regional service, or a subscription-specific endpoint. Prefer a dedicated built-in provider when one matches your subscription. For an unlisted service, create a custom connection and enter its address and any required credential; choose the request API under **Advanced options** only when that service requires it. See [custom connection APIs](#custom-connection-apis) for protocol details.
 
 > [!TIP]
 > - **Voice transcription**: Choose Groq, OpenAI, OpenRouter, Xiaomi MiMo, StepFun, AssemblyAI, or SiliconFlow in **Settings → Capabilities → Transcription**. Voice messages and WebUI microphone input share these settings; Groq is the runtime default. Configure the matching provider credential in **Settings → Models**.
-> - **MiniMax Coding Plan**: Exclusive discount links for the nanobot community: [Overseas](https://platform.minimax.io/subscribe/coding-plan?code=9txpdXw04g&source=link) · [Mainland China](https://platform.minimaxi.com/subscribe/token-plan?code=GILTJpMTqZ&source=link)
+> - **MiniMax Coding Plan**: Exclusive discount links for the babo community: [Overseas](https://platform.minimax.io/subscribe/coding-plan?code=9txpdXw04g&source=link) · [Mainland China](https://platform.minimaxi.com/subscribe/token-plan?code=GILTJpMTqZ&source=link)
 > - **MiniMax (Mainland China)**: If your API key is from MiniMax's mainland China platform (minimaxi.com), open the minimax connection in **Settings → Models** and set its base URL to `https://api.minimaxi.com/v1`.
-> - **MiniMax thinking mode**: `providers.minimaxAnthropic` is the config block for `reasoningEffort` / thinking mode. MiniMax exposes that capability through its Anthropic-compatible endpoint, so nanobot keeps it as a separate provider instead of guessing MiniMax-specific thinking parameters on the generic OpenAI-compatible `minimax` endpoint. It uses the same `MINIMAX_API_KEY`. Default Anthropic-compatible base URL: `https://api.minimax.io/anthropic`; for mainland China use `https://api.minimaxi.com/anthropic`.
-> - **Kimi Coding Plan**: Use `providers.kimiCoding` with `provider: "kimi_coding"` for Kimi's dedicated Anthropic Messages API endpoint. The endpoint requires a Claude-compatible `User-Agent`; nanobot sends `claude-code/0.1.0` by default, and you can override it with `extraHeaders.User-Agent` if your account requires a different value.
+> - **MiniMax thinking mode**: `providers.minimaxAnthropic` is the config block for `reasoningEffort` / thinking mode. MiniMax exposes that capability through its Anthropic-compatible endpoint, so babo keeps it as a separate provider instead of guessing MiniMax-specific thinking parameters on the generic OpenAI-compatible `minimax` endpoint. It uses the same `MINIMAX_API_KEY`. Default Anthropic-compatible base URL: `https://api.minimax.io/anthropic`; for mainland China use `https://api.minimaxi.com/anthropic`.
+> - **Kimi Coding Plan**: Use `providers.kimiCoding` with `provider: "kimi_coding"` for Kimi's dedicated Anthropic Messages API endpoint. The endpoint requires a Claude-compatible `User-Agent`; babo sends `claude-code/0.1.0` by default, and you can override it with `extraHeaders.User-Agent` if your account requires a different value.
 > - **VolcEngine / BytePlus Coding Plan**: Subscription endpoints are configured through dedicated providers `volcengineCodingPlan` or `byteplusCodingPlan`, separate from the pay-per-use `volcengine` / `byteplus` providers.
 > - **OpenCode Zen / Go**: `providers.opencode` (canonical Zen), the legacy-compatible `providers.opencodeZen`, and `providers.opencodeGo` use the same `OPENCODE_API_KEY`, but route to different OpenCode gateways. These providers use OpenCode's OpenAI-compatible `chat/completions` endpoints; choose model IDs from that endpoint family.
 > - **Zhipu Coding Plan**: If you're on Zhipu's coding plan, open the zhipu connection in **Settings → Models** and set its base URL to `https://open.bigmodel.cn/api/coding/paas/v4`.
@@ -326,10 +326,10 @@ A Base URL is the service address nanobot sends model requests to. Change it onl
 | `opencode_go` | LLM gateway (OpenCode Go low-cost coding models) | [opencode.ai/docs/go](https://opencode.ai/docs/go/) |
 | `huggingface` | LLM (Hugging Face Inference Providers) | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
 | `skywork` | LLM (Skywork / APIFree API gateway) | [apifree.ai](https://www.apifree.ai) |
-| `volcengine` | LLM (VolcEngine, pay-per-use) | [Coding Plan](https://www.volcengine.com/activity/codingplan?utm_campaign=nanobot&utm_content=nanobot&utm_medium=devrel&utm_source=OWO&utm_term=nanobot) · [volcengine.com](https://www.volcengine.com) |
-| `volcengine_coding_plan` | LLM (VolcEngine Coding Plan subscription endpoint) | [volcengine.com](https://www.volcengine.com/activity/codingplan?utm_campaign=nanobot&utm_content=nanobot&utm_medium=devrel&utm_source=OWO&utm_term=nanobot) |
-| `byteplus` | LLM (VolcEngine international, pay-per-use) | [Coding Plan](https://www.byteplus.com/en/activity/codingplan?utm_campaign=nanobot&utm_content=nanobot&utm_medium=devrel&utm_source=OWO&utm_term=nanobot) · [byteplus.com](https://www.byteplus.com) |
-| `byteplus_coding_plan` | LLM (BytePlus Coding Plan subscription endpoint) | [byteplus.com](https://www.byteplus.com/en/activity/codingplan?utm_campaign=nanobot&utm_content=nanobot&utm_medium=devrel&utm_source=OWO&utm_term=nanobot) |
+| `volcengine` | LLM (VolcEngine, pay-per-use) | [Coding Plan](https://www.volcengine.com/activity/codingplan) · [volcengine.com](https://www.volcengine.com) |
+| `volcengine_coding_plan` | LLM (VolcEngine Coding Plan subscription endpoint) | [volcengine.com](https://www.volcengine.com/activity/codingplan) |
+| `byteplus` | LLM (VolcEngine international, pay-per-use) | [Coding Plan](https://www.byteplus.com/en/activity/codingplan) · [byteplus.com](https://www.byteplus.com) |
+| `byteplus_coding_plan` | LLM (BytePlus Coding Plan subscription endpoint) | [byteplus.com](https://www.byteplus.com/en/activity/codingplan) |
 | `anthropic` | LLM (Claude direct) | [console.anthropic.com](https://console.anthropic.com) |
 | `azure_openai` | LLM (Azure OpenAI) | [portal.azure.com](https://portal.azure.com) |
 | `bedrock` | LLM (AWS Bedrock Converse, Claude/Nova/Llama/etc.) | [aws.amazon.com/bedrock](https://aws.amazon.com/bedrock/) |
@@ -345,8 +345,8 @@ A Base URL is the service address nanobot sends model requests to. Change it onl
 | `novita` | LLM (Novita AI OpenAI-compatible gateway) | [novita.ai](https://novita.ai) |
 | `dashscope` | LLM (Qwen) | [dashscope.console.aliyun.com](https://dashscope.console.aliyun.com) |
 | `modelscope` | LLM (ModelScope/魔搭社区) + Image generation | [modelscope.cn](https://modelscope.cn) |
-| `moonshot` | LLM (Moonshot/Kimi) | [platform.kimi.com](https://platform.kimi.com?aff=nanobot) |
-| `kimi_coding` | LLM (Kimi Coding Plan, Anthropic Messages API) | [platform.kimi.com](https://platform.kimi.com?aff=nanobot) |
+| `moonshot` | LLM (Moonshot/Kimi) | [platform.kimi.com](https://platform.kimi.com) |
+| `kimi_coding` | LLM (Kimi Coding Plan, Anthropic Messages API) | [platform.kimi.com](https://platform.kimi.com) |
 | `zhipu` | LLM (Zhipu GLM) | [open.bigmodel.cn](https://open.bigmodel.cn) |
 | `xiaomi_mimo` | LLM (MiMo) | [platform.xiaomimimo.com](https://platform.xiaomimimo.com) |
 | `longcat` | LLM (LongCat) | [longcat.chat](https://longcat.chat/platform/docs/zh/) |
@@ -359,9 +359,9 @@ A Base URL is the service address nanobot sends model requests to. Change it onl
 | `ovms` | LLM (local, OpenVINO Model Server) | [docs.openvino.ai](https://docs.openvino.ai/2026/model-server/ovms_docs_llm_quickstart.html) |
 | `vllm` | LLM (local, any OpenAI-compatible server) | — |
 | `nvidia` | LLM (NVIDIA NIM) | [build.nvidia.com](https://build.nvidia.com/) |
-| `openai_codex` | LLM (Codex, OAuth) | `nanobot provider login openai-codex --set-main` |
-| `xai_grok` | LLM (Grok, OAuth) | `nanobot provider login xai-grok --set-main` |
-| `github_copilot` | LLM (GitHub Copilot, OAuth) | `nanobot provider login github-copilot` |
+| `openai_codex` | LLM (Codex, OAuth) | `babo provider login openai-codex --set-main` |
+| `xai_grok` | LLM (Grok, OAuth) | `babo provider login xai-grok --set-main` |
+| `github_copilot` | LLM (GitHub Copilot, OAuth) | `babo provider login github-copilot` |
 | `qianfan` | LLM (Baidu Qianfan) | [cloud.baidu.com](https://cloud.baidu.com/doc/qianfan/s/Hmh4suq26) |
 
 <details>
@@ -392,7 +392,7 @@ Headers match without case sensitivity. Query and body keys match exactly. An ov
 
 Changing the provider in WebUI clears the preset's overrides so credentials cannot follow it to another endpoint. Existing configurations without overrides need no migration. An older version ignores these new preset fields; remove them before downgrading if the request depends on them. No prompt or tool-definition changes are made by this setting.
 
-Use fields accepted by the selected API in `extraBody`. Set `extraBody.tools` to add provider-hosted tools alongside nanobot's function tools. Responses also accepts `extraBody.include` to request additional output fields:
+Use fields accepted by the selected API in `extraBody`. Set `extraBody.tools` to add provider-hosted tools alongside babo's function tools. Responses also accepts `extraBody.include` to request additional output fields:
 
 ```json
 {
@@ -409,7 +409,7 @@ Use fields accepted by the selected API in `extraBody`. Set `extraBody.tools` to
 }
 ```
 
-The WebUI's OpenAI web-search switch selects Responses without Chat fallback. Provider-hosted search replaces nanobot's local `web_search` for those requests; other tools such as `web_fetch` remain available.
+The WebUI's OpenAI web-search switch selects Responses without Chat fallback. Provider-hosted search replaces babo's local `web_search` for those requests; other tools such as `web_fetch` remain available.
 
 </details>
 
@@ -419,7 +419,7 @@ The WebUI's OpenAI web-search switch selects Responses without Chat fallback. Pr
 
 Providers that use the Responses API can keep reasoning context across a conversation, which helps with multi-step tasks. Supported providers can also compact long conversations automatically.
 
-nanobot preserves Responses conversation state automatically for OpenAI Responses, OpenAI Codex, Azure OpenAI, DeepSeek V4, and compatible GitHub Copilot models. Native compaction is also automatic when the provider supports it. The threshold is derived from the active model's context window and reserved output headroom; no provider configuration is required.
+babo preserves Responses conversation state automatically for OpenAI Responses, OpenAI Codex, Azure OpenAI, DeepSeek V4, and compatible GitHub Copilot models. Native compaction is also automatic when the provider supports it. The threshold is derived from the active model's context window and reserved output headroom; no provider configuration is required.
 
 <details>
 <summary><b>Azure OpenAI</b></summary>
@@ -478,7 +478,7 @@ Omit `apiKey` (or leave it empty) to use your Azure identity through [`DefaultAz
 Install the optional dependency:
 
 ```bash
-nanobot plugins enable azure
+babo plugins enable azure
 ```
 
 `DefaultAzureCredential` walks this chain in order and uses the first identity that succeeds:
@@ -493,7 +493,7 @@ nanobot plugins enable azure
 
 The identity that ends up signing the request **must be assigned the `Cognitive Services OpenAI User` RBAC role** (or higher) on the Azure OpenAI resource. Without that role you will see `401`/`403` errors at the first request.
 
-> `apiBase` remains mandatory in both modes — it's your Azure resource endpoint and cannot be inferred. If neither `apiKey` is set nor `azure-identity` is installed, the provider raises a clear error pointing you at `nanobot plugins enable azure`.
+> `apiBase` remains mandatory in both modes — it's your Azure resource endpoint and cannot be inferred. If neither `apiKey` is set nor `azure-identity` is installed, the provider raises a clear error pointing you at `babo plugins enable azure`.
 
 </details>
 
@@ -540,11 +540,11 @@ This provider is for Bedrock's native Converse API, not Bedrock's OpenAI-compati
 Install Bedrock support first:
 
 ```bash
-nanobot plugins enable bedrock
+babo plugins enable bedrock
 ```
 
 > [!NOTE]
-> If you configured Bedrock before `boto3` became an optional dependency, run `nanobot plugins enable bedrock` after upgrading. Otherwise the provider will fail when it first tries to create a Bedrock client.
+> If you configured Bedrock before `boto3` became an optional dependency, run `babo plugins enable bedrock` after upgrading. Otherwise the provider will fail when it first tries to create a Bedrock client.
 
 **1. Configure credentials**
 
@@ -672,13 +672,13 @@ With a named AWS profile:
 
 For regional routing, use one of Bedrock's inference IDs, for example `bedrock/us.anthropic.claude-opus-4-7`, `bedrock/eu.anthropic.claude-opus-4-7`, or `bedrock/jp.anthropic.claude-opus-4-7`.
 
-Claude Opus 4.7 does not accept `temperature`, `top_p`, or `top_k`; nanobot omits `temperature` automatically for this model. If `reasoningEffort` is set to `low`, `medium`, `high`, `max`, or `adaptive`, nanobot sends Bedrock's adaptive thinking parameter.
+Claude Opus 4.7 does not accept `temperature`, `top_p`, or `top_k`; babo omits `temperature` automatically for this model. If `reasoningEffort` is set to `low`, `medium`, `high`, `max`, or `adaptive`, babo sends Bedrock's adaptive thinking parameter.
 
 Anthropic models on Bedrock can also require Anthropic use-case registration and are subject to Anthropic-supported country/region restrictions. If Claude fails with a `ValidationException` about unsupported countries or regions, try a non-Anthropic Bedrock model such as Amazon Nova to verify the provider setup.
 
 **4. Model IDs**
 
-Use Bedrock model IDs or inference profile IDs with a `bedrock/` prefix in nanobot config.
+Use Bedrock model IDs or inference profile IDs with a `bedrock/` prefix in babo config.
 
 Examples:
 
@@ -694,7 +694,7 @@ Check the Bedrock console for the exact model ID and region availability. Some m
 
 **5. Advanced model fields**
 
-Model-specific fields can be supplied with `extraBody`; nanobot merges it into Converse `additionalModelRequestFields`:
+Model-specific fields can be supplied with `extraBody`; babo merges it into Converse `additionalModelRequestFields`:
 
 ```json
 {
@@ -731,7 +731,7 @@ export AWS_REGION="us-east-1"
 Then run:
 
 ```bash
-nanobot agent -m "Reply with one short sentence."
+babo agent -m "Reply with one short sentence."
 ```
 
 </details>
@@ -743,16 +743,16 @@ nanobot agent -m "Reply with one short sentence."
 Codex uses OAuth instead of API keys and requires a ChatGPT Plus or Pro account. Authenticate it and make the current flagship model the active agent model with one command:
 
 ```bash
-nanobot provider login openai-codex --set-main
+babo provider login openai-codex --set-main
 ```
 
 Then run:
 
 ```bash
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
-The WebUI model selector loads the models available to the signed-in account from Codex's online catalog. Context-window and reasoning-effort metadata come from that response; if discovery is unavailable, nanobot keeps a small built-in fallback instead of emptying the selector.
+The WebUI model selector loads the models available to the signed-in account from Codex's online catalog. Context-window and reasoning-effort metadata come from that response; if discovery is unavailable, babo keeps a small built-in fallback instead of emptying the selector.
 
 Codex Fast mode can be enabled from the WebUI provider settings, or with:
 
@@ -781,13 +781,13 @@ For proxy, remote/headless login, model-name, or config-key errors, see [`troubl
 Use an eligible X Premium / Grok subscription without putting an API key in `config.json`:
 
 ```bash
-nanobot provider login xai-grok --set-main
-nanobot agent -m "Hello from Grok."
+babo provider login xai-grok --set-main
+babo agent -m "Hello from Grok."
 ```
 
 The default model is `xai-grok/grok-4.6` with a 500,000-token context window. The provider reads and caches xAI's online model catalog for both WebUI model selection and runtime capabilities. Newly available models appear automatically; when discovery fails, the last successful catalog or built-in fallback remains available. The server-hosted `x_search` tool is included only when the selected model advertises support. Models without that capability continue normally without hosted X Search. When enabled, searches run inside xAI's Responses API and citations arrive as inline links. Hosted X Search is on by default to preserve this behavior. It can be turned off in the WebUI provider settings or with `providers.xaiGrok.extraBody.tools: []`.
 
-This is xAI subscription OAuth, not X Developer OAuth. nanobot follows the public OAuth client and proxy contract used by [Grok Build](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/02-authentication.md). The browser flow uses a random loopback callback and PKCE. The resulting token is stored in the active instance's `auth/xai.json` (normally `~/.nanobot/auth/xai.json`), separately from Grok Build so rotating refresh tokens cannot invalidate one another.
+This is xAI subscription OAuth, not X Developer OAuth. babo follows the public OAuth client and proxy contract used by [Grok Build](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/02-authentication.md). The browser flow uses a random loopback callback and PKCE. The resulting token is stored in the active instance's `auth/xai.json` (normally `~/.babo/auth/xai.json`), separately from Grok Build so rotating refresh tokens cannot invalidate one another.
 
 To use the shared proxy, configure its address and enable it for xAI before login:
 
@@ -800,7 +800,7 @@ To use the shared proxy, configure its address and enable it for xAI before logi
 }
 ```
 
-The proxy applies to OAuth discovery, token exchange/refresh, model-catalog lookups, and subscription model requests. Because this integration depends on xAI's public Grok Build client contract, an upstream contract change may require a nanobot update.
+The proxy applies to OAuth discovery, token exchange/refresh, model-catalog lookups, and subscription model requests. Because this integration depends on xAI's public Grok Build client contract, an upstream contract change may require a babo update.
 
 </details>
 
@@ -808,26 +808,26 @@ The proxy applies to OAuth discovery, token exchange/refresh, model-catalog look
 <details>
 <summary><b>GitHub Copilot (OAuth)</b></summary>
 
-GitHub Copilot uses OAuth instead of API keys. Requires a [GitHub account with a plan](https://github.com/features/copilot/plans) configured. No `providers.github_copilot` block is needed in `config.json`; `nanobot provider login` stores the OAuth session outside config.
+GitHub Copilot uses OAuth instead of API keys. Requires a [GitHub account with a plan](https://github.com/features/copilot/plans) configured. No `providers.github_copilot` block is needed in `config.json`; `babo provider login` stores the OAuth session outside config.
 
-After login, the WebUI loads the account-specific Copilot model catalog online. Only models compatible with nanobot's current chat-completions or Responses transport are shown.
+After login, the WebUI loads the account-specific Copilot model catalog online. Only models compatible with babo's current chat-completions or Responses transport are shown.
 
 For GitHub Enterprise / Copilot for Business, set the endpoint overrides you need before login:
 ```bash
-export NANOBOT_GITHUB_COPILOT_CLIENT_ID="your-enterprise-client-id"
-export NANOBOT_GITHUB_DEVICE_CODE_URL="https://ghe.example/login/device/code"
-export NANOBOT_GITHUB_ACCESS_TOKEN_URL="https://ghe.example/login/oauth/access_token"
-export NANOBOT_GITHUB_USER_URL="https://api.ghe.example/user"
-export NANOBOT_COPILOT_TOKEN_URL="https://api.ghe.example/copilot_internal/v2/token"
-export NANOBOT_COPILOT_BASE_URL="https://copilot-api.ghe.example"
+export BABO_GITHUB_COPILOT_CLIENT_ID="your-enterprise-client-id"
+export BABO_GITHUB_DEVICE_CODE_URL="https://ghe.example/login/device/code"
+export BABO_GITHUB_ACCESS_TOKEN_URL="https://ghe.example/login/oauth/access_token"
+export BABO_GITHUB_USER_URL="https://api.ghe.example/user"
+export BABO_COPILOT_TOKEN_URL="https://api.ghe.example/copilot_internal/v2/token"
+export BABO_COPILOT_BASE_URL="https://copilot-api.ghe.example"
 ```
 
 **1. Login:**
 ```bash
-nanobot provider login github-copilot
+babo provider login github-copilot
 ```
 
-**2. Set model** (merge into `~/.nanobot/config.json`):
+**2. Set model** (merge into `~/.babo/config.json`):
 ```json
 {
   "modelPresets": {
@@ -846,13 +846,13 @@ nanobot provider login github-copilot
 
 **3. Chat:**
 ```bash
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 
 # Target a specific workspace/config locally
-nanobot agent -c ~/.nanobot-telegram/config.json -m "Hello!"
+babo agent -c ~/.babo-telegram/config.json -m "Hello!"
 
 # One-off workspace override on top of that config
-nanobot agent -c ~/.nanobot-telegram/config.json -w /tmp/nanobot-telegram-test -m "Hello!"
+babo agent -c ~/.babo-telegram/config.json -w /tmp/babo-telegram-test -m "Hello!"
 ```
 
 > Docker users: use `docker run -it` for interactive OAuth login.
@@ -862,9 +862,9 @@ nanobot agent -c ~/.nanobot-telegram/config.json -w /tmp/nanobot-telegram-test -
 <details>
 <summary><b>OpenCode Zen / Go</b></summary>
 
-OpenCode Zen and OpenCode Go are available through nanobot's built-in OpenAI-compatible provider flow. They share the `OPENCODE_API_KEY` environment variable, but use separate provider keys and default base URLs:
+OpenCode Zen and OpenCode Go are available through babo's built-in OpenAI-compatible provider flow. They share the `OPENCODE_API_KEY` environment variable, but use separate provider keys and default base URLs:
 
-| Provider | Default API base | Model prefix accepted by nanobot |
+| Provider | Default API base | Model prefix accepted by babo |
 |----------|------------------|-----------------------------------|
 | `opencode` | `https://opencode.ai/zen/v1` | `opencode/<model-id>` |
 | `opencode_zen` | `https://opencode.ai/zen/v1` | `opencode/<model-id>` |
@@ -918,14 +918,14 @@ OpenCode Go:
 }
 ```
 
-OpenCode's own docs list models across `responses`, `messages`, provider-specific model endpoints, and `chat/completions`. nanobot's OpenCode providers use the OpenAI-compatible `chat/completions` path, so pick model IDs from that endpoint family. The `opencode/...` and `opencode-go/...` prefixes are accepted for config readability and stripped before sending the request.
+OpenCode's own docs list models across `responses`, `messages`, provider-specific model endpoints, and `chat/completions`. babo's OpenCode providers use the OpenAI-compatible `chat/completions` path, so pick model IDs from that endpoint family. The `opencode/...` and `opencode-go/...` prefixes are accepted for config readability and stripped before sending the request.
 
 </details>
 
 <details>
 <summary><b>LongCat (OpenAI-compatible)</b></summary>
 
-LongCat is available through nanobot's built-in OpenAI-compatible provider flow. The default API base already points to `https://api.longcat.chat/openai/v1`, so you usually only need to set `apiKey`.
+LongCat is available through babo's built-in OpenAI-compatible provider flow. The default API base already points to `https://api.longcat.chat/openai/v1`, so you usually only need to set `apiKey`.
 
 ```json
 {
@@ -1021,7 +1021,7 @@ Supported models include `step-3.5-flash`, `step-3.5-flash-2603`, and `step-rout
 <details>
 <summary><b>Ant Ling (OpenAI-compatible)</b></summary>
 
-Ant Ling is available through nanobot's built-in OpenAI-compatible provider flow. The default API base points to `https://api.ant-ling.com/v1`, so you usually only need to set `apiKey`.
+Ant Ling is available through babo's built-in OpenAI-compatible provider flow. The default API base points to `https://api.ant-ling.com/v1`, so you usually only need to set `apiKey`.
 
 ```json
 {
@@ -1079,7 +1079,7 @@ Connects directly to any OpenAI-compatible endpoint — llama.cpp, Together AI, 
 >
 > Custom connections default to Chat Completions when no API declaration is configured. For a Responses-only endpoint, set `providers.custom.api.supportedApis` to `["responses"]`. For an Anthropic-compatible endpoint, use `["anthropic_messages"]`. Named custom providers accept the same declaration. Native Anthropic credentials and proxies can also use `providers.anthropic`. See [custom connection APIs](#custom-connection-apis).
 
-Some OpenAI-compatible gateways expose request-body extensions such as vLLM guided decoding or local sampling controls. Put those under `extraBody`; nanobot merges them into the chat-completions request body after its provider defaults:
+Some OpenAI-compatible gateways expose request-body extensions such as vLLM guided decoding or local sampling controls. Put those under `extraBody`; babo merges them into the chat-completions request body after its provider defaults:
 
 ```json
 {
@@ -1098,7 +1098,7 @@ Some OpenAI-compatible gateways expose request-body extensions such as vLLM guid
 }
 ```
 
-If a custom OpenAI-compatible endpoint exposes a provider-specific thinking toggle, set `thinkingStyle` so nanobot can translate `reasoningEffort` into the right request body. Supported styles are `thinking_type` (`{"thinking":{"type":"enabled"}}`), `enable_thinking` (`{"enable_thinking": true}`), and `reasoning_split` (`{"reasoning_split": true}`):
+If a custom OpenAI-compatible endpoint exposes a provider-specific thinking toggle, set `thinkingStyle` so babo can translate `reasoningEffort` into the right request body. Supported styles are `thinking_type` (`{"thinking":{"type":"enabled"}}`), `enable_thinking` (`{"enable_thinking": true}`), and `reasoning_split` (`{"reasoning_split": true}`):
 
 ```json
 {
@@ -1134,7 +1134,7 @@ Run a local model with Ollama, then add to config:
 ollama run llama3.2
 ```
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.babo/config.json`):
 ```json
 {
   "providers": {
@@ -1171,7 +1171,7 @@ ollama run llama3.2
 - Load a model (e.g., Llama, Mistral, Qwen)
 - Click "Start Server" (default port: 1234)
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.babo/config.json`):
 ```json
 {
   "providers": {
@@ -1202,7 +1202,7 @@ ollama run llama3.2
 <details>
 <summary><b>Atomic Chat (local)</b></summary>
 
-[Atomic Chat](https://atomic.chat/) is a local-first desktop app that exposes an **OpenAI-compatible** HTTP API (default `http://localhost:1337/v1`). This setup applies when you want to run nanobot against a model on your own machine instead of a hosted API provider.
+[Atomic Chat](https://atomic.chat/) is a local-first desktop app that exposes an **OpenAI-compatible** HTTP API (default `http://localhost:1337/v1`). This setup applies when you want to run babo against a model on your own machine instead of a hosted API provider.
 
 **1. Start Atomic Chat**
 
@@ -1210,7 +1210,7 @@ ollama run llama3.2
 - Open Atomic Chat, download a model, and keep the app running. The local API is enabled by default.
 - Copy the model ID exposed by the local API. For example, the model ID for `Qwen 3 32B` might be `qwen3-32b`.
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.babo/config.json`):
 
 ```json
 {
@@ -1293,7 +1293,7 @@ docker run -d \
   --target_device GPU
 ```
 
-**3. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**3. Add to config** (partial — merge into `~/.babo/config.json`):
 
 ```json
 {
@@ -1330,7 +1330,7 @@ Run your own model with vLLM or any OpenAI-compatible server, then add to config
 vllm serve meta-llama/Llama-3.1-8B-Instruct --port 8000
 ```
 
-**2. Add to config** (partial — merge into `~/.nanobot/config.json`):
+**2. Add to config** (partial — merge into `~/.babo/config.json`):
 
 *Provider (set API key to null for local servers):*
 ```json
@@ -1465,7 +1465,7 @@ In `config.json`, set `providers.<name>.api` for the built-in `custom` provider 
 
 If your configuration uses `providers.openai.apiType` (or `api_type`), save it with a version that supports the migration before upgrading further. Saving replaces the old field with `api`: `chat_completions` or `responses` becomes a single-API declaration, while `auto` keeps automatic selection. If both fields are present, `api` takes precedence, including `api: null`.
 
-The migration also accepts the `NANOBOT_PROVIDERS__OPENAI__API_TYPE` and `NANOBOT_PROVIDERS__OPENAI__APITYPE` environment variables.
+The migration also accepts the `BABO_PROVIDERS__OPENAI__API_TYPE` and `BABO_PROVIDERS__OPENAI__APITYPE` environment variables.
 
 The old field is accepted in the first release containing this migration and the immediately following release. The third release will require the current `api` format.
 
@@ -1569,7 +1569,7 @@ Preset fallback chain:
 
 </details>
 
-String entries are preset names, not raw model names. In the example above, `"deep"` means `modelPresets.deep`; nanobot will not interpret it as a provider model ID. Changing a preset updates both `/model <preset>` switching and any fallback chain that references it.
+String entries are preset names, not raw model names. In the example above, `"deep"` means `modelPresets.deep`; babo will not interpret it as a provider model ID. Changing a preset updates both `/model <preset>` switching and any fallback chain that references it.
 
 Inline fallback object:
 
@@ -1606,9 +1606,9 @@ Inline fallback object:
 
 Use inline objects only when a fallback is not worth naming as a reusable preset. `fallbackModels` belongs under `agents.defaults`, not inside individual `modelPresets` entries.
 
-Failover normally runs when the primary provider returns a fallbackable model/provider error before any answer text has been streamed. Stream-stall timeouts are the recovery exception: if the provider already emitted partial answer text and then stalls, nanobot closes the current stream segment and retries/fails over in a new segment. Typical fallback cases include timeouts, connection errors, 5xx server errors, 429 rate limits, overloads, authentication/permission failures such as invalid or expired credentials, and quota/balance exhaustion. It does not run for malformed requests, content filtering/refusals, or context-length/message-format errors.
+Failover normally runs when the primary provider returns a fallbackable model/provider error before any answer text has been streamed. Stream-stall timeouts are the recovery exception: if the provider already emitted partial answer text and then stalls, babo closes the current stream segment and retries/fails over in a new segment. Typical fallback cases include timeouts, connection errors, 5xx server errors, 429 rate limits, overloads, authentication/permission failures such as invalid or expired credentials, and quota/balance exhaustion. It does not run for malformed requests, content filtering/refusals, or context-length/message-format errors.
 
-If fallback candidates use smaller `contextWindowTokens` values, nanobot builds context using the smallest window in the active chain so every candidate can receive the same prompt.
+If fallback candidates use smaller `contextWindowTokens` values, babo builds context using the smallest window in the active chain so every candidate can receive the same prompt.
 
 ## Transcription Settings
 
@@ -1683,7 +1683,7 @@ If you are adding a new transcription provider, see [`development.md`](./develop
 
 Open **Channels** in the sidebar, select the chat platform, and follow its credential or QR setup. Channel-specific options are in its **Advanced** section. Global channel output settings without a graphical control remain documented directly below.
 
-Global settings apply to all channels and have no graphical controls. Configure them under the `channels` section in `~/.nanobot/config.json`:
+Global settings apply to all channels and have no graphical controls. Configure them under the `channels` section in `~/.babo/config.json`:
 
 <details>
 <summary>Manual configuration</summary>
@@ -1758,7 +1758,7 @@ Telegram `richMessages` defaults to `false`. Enable it only to opt in to Bot API
 
 ### Retry Behavior
 
-When message delivery fails, nanobot retries. `channels.sendMaxRetries` defaults to `3`, including the initial attempt.
+When message delivery fails, babo retries. `channels.sendMaxRetries` defaults to `3`, including the initial attempt.
 
 - **Attempt 1**: Send immediately
 - **Attempt 2**: Retry after `1s`
@@ -1770,17 +1770,17 @@ When message delivery fails, nanobot retries. `channels.sendMaxRetries` defaults
 > [!NOTE]
 > Some channels make additional retries for specific errors, so the total number of delivery attempts can exceed `channels.sendMaxRetries`. Telegram, for example, also retries timeouts and flood-control errors.
 >
-> If a channel is completely unreachable, nanobot cannot notify the user through that same channel. Watch logs for `Failed to send to {channel} after N attempts` to spot persistent delivery failures.
+> If a channel is completely unreachable, babo cannot notify the user through that same channel. Watch logs for `Failed to send to {channel} after N attempts` to spot persistent delivery failures.
 
 ## File Search
 
-When ripgrep (`rg`) is installed, nanobot automatically uses it in place of the built-in `grep` and `find_files` tools.
+When ripgrep (`rg`) is installed, babo automatically uses it in place of the built-in `grep` and `find_files` tools.
 
 ## Web Tools
 
 Open **Settings → Capabilities → Web access** to enable or disable web tools and configure search and fetch. Use **Configure → Advanced options** for **Use proxy** and User-Agent, and **Settings → Advanced** for the shared proxy address and SSRF whitelist. Follow any restart prompt.
 
-nanobot includes web search and web fetch tools. They are enabled by default. The collapsed examples below show the equivalent `tools.web` configuration.
+babo includes web search and web fetch tools. They are enabled by default. The collapsed examples below show the equivalent `tools.web` configuration.
 
 Turn off **Web access** in **Settings → Capabilities** to remove both `web_search` and `web_fetch` from the tool list sent to the model. The manual equivalent is:
 
@@ -1799,7 +1799,7 @@ Turn off **Web access** in **Settings → Capabilities** to remove both `web_sea
 
 </details>
 
-nanobot uses a shared SSRF guard for built-in web fetches and HTTP/SSE MCP connections. By default it blocks loopback, RFC1918/private ranges, CGNAT/Tailscale ranges, link-local addresses, and cloud metadata endpoints. If you need to allow trusted private ranges, explicitly exempt them from SSRF blocking with `tools.ssrfWhitelist`:
+babo uses a shared SSRF guard for built-in web fetches and HTTP/SSE MCP connections. By default it blocks loopback, RFC1918/private ranges, CGNAT/Tailscale ranges, link-local addresses, and cloud metadata endpoints. If you need to allow trusted private ranges, explicitly exempt them from SSRF blocking with `tools.ssrfWhitelist`:
 
 <details>
 <summary>Manual configuration</summary>
@@ -1844,7 +1844,7 @@ Set the address in **Settings → Advanced → Shared proxy**, then enable **Use
 
 In **Settings → Capabilities → Web access**, choose the search provider, enter its key or base URL when required, and set the result limit. Save and ask a question requiring current information.
 
-nanobot supports multiple web search providers. Select one in the WebUI as described above; the collapsed examples show the equivalent `tools.web.search` configuration.
+babo supports multiple web search providers. Select one in the WebUI as described above; the collapsed examples show the equivalent `tools.web.search` configuration.
 
 By default, web search uses `duckduckgo`, and it works out of the box without an API key.
 
@@ -2145,7 +2145,7 @@ In **Settings → Capabilities → Web access**, expand the fetch options and ch
 >
 > </details>
 
-nanobot by default uses [Jina Reader](https://jina.ai/reader/), a third-party API, to convert arbitrary pages into Markdown format for easy digestion by the LLM, with a local fallback based on [readability-lxml](https://github.com/buriy/python-readability) if the former fails.
+babo by default uses [Jina Reader](https://jina.ai/reader/), a third-party API, to convert arbitrary pages into Markdown format for easy digestion by the LLM, with a local fallback based on [readability-lxml](https://github.com/buriy/python-readability) if the former fails.
 
 > [!NOTE]
 > Using the remote reader means the fetched URL itself is disclosed to the third-party service. URLs that visibly carry credentials (userinfo, signed-URL or token-style query parameters) are detected and fetched locally instead, but secrets embedded in a URL's *path* (for example bot-token or webhook-style URLs) cannot be reliably detected. Set `useJinaReader: false` if fetched URLs must never leave the machine.
@@ -2188,7 +2188,7 @@ Open **Apps → MCP**, choose a preset or **Add MCP server**, and enter the stdi
 > [!TIP]
 > The config format is compatible with Claude Desktop / Cursor. You can copy MCP server configs directly from any MCP server's README.
 
-nanobot supports [MCP](https://modelcontextprotocol.io/) — connect external tool servers and use them as native agent tools.
+babo supports [MCP](https://modelcontextprotocol.io/) — connect external tool servers and use them as native agent tools.
 
 For headless or deployment-managed setup, expand the manual configuration below:
 
@@ -2225,7 +2225,7 @@ MCP servers can run locally over stdio or connect remotely over HTTP:
 
 Remote HTTP servers may use browser OAuth instead of static headers. In the WebUI, open **Apps → MCP → Add MCP server**, choose **Custom**, select HTTP or SSE, and choose **OAuth** under **Authentication**. Save the server, then choose **Connect**. For manual configuration, add `auth: "oauth"` and open **Apps → MCP** to connect. Known presets such as Xmind, Notion, and Linear add the config automatically on first click.
 
-The [MCP service presets](./mcp-presets.md) include hosted services with browser sign-in or API keys, plus local servers for Google Workspace, Microsoft 365, Firebase, and databases. Services such as Metabase and Sigma first ask for your instance or organization MCP URL. Credential fields accept the token itself; nanobot adds the required authorization header.
+The [MCP service presets](./mcp-presets.md) include hosted services with browser sign-in or API keys, plus local servers for Google Workspace, Microsoft 365, Firebase, and databases. Services such as Metabase and Sigma first ask for your instance or organization MCP URL. Credential fields accept the token itself; babo adds the required authorization header.
 
 <details>
 <summary>Manual configuration</summary>
@@ -2246,9 +2246,9 @@ The [MCP service presets](./mcp-presets.md) include hosted services with browser
 
 </details>
 
-nanobot opens the server's authorization page and handles the callback through the gateway. The tools become available immediately when hot reload succeeds; otherwise the WebUI asks for a restart. OAuth tokens and dynamic client registration data are stored in the nanobot data directory under `auth/mcp.json`; they are not written to `config.json`. Removing the MCP server from Apps also removes its saved OAuth credentials. Normal gateway startup never opens a browser or registers a new OAuth client when credentials are missing—interactive authorization starts only after a user clicks **Connect**.
+babo opens the server's authorization page and handles the callback through the gateway. The tools become available immediately when hot reload succeeds; otherwise the WebUI asks for a restart. OAuth tokens and dynamic client registration data are stored in the babo data directory under `auth/mcp.json`; they are not written to `config.json`. Removing the MCP server from Apps also removes its saved OAuth credentials. Normal gateway startup never opens a browser or registers a new OAuth client when credentials are missing—interactive authorization starts only after a user clicks **Connect**.
 
-For a remotely accessed WebUI, HTTPS is recommended. Configure `channels.websocket.publicWsUrl` with the browser-facing `wss://` endpoint so nanobot can register the matching HTTPS callback and finish automatically. A loopback WebUI may use HTTP. When a remote WebUI is served over plain HTTP, nanobot instead registers a localhost callback and asks you to paste the complete callback URL from the browser address bar after authorization.
+For a remotely accessed WebUI, HTTPS is recommended. Configure `channels.websocket.publicWsUrl` with the browser-facing `wss://` endpoint so babo can register the matching HTTPS callback and finish automatically. A loopback WebUI may use HTTP. When a remote WebUI is served over plain HTTP, babo instead registers a localhost callback and asks you to paste the complete callback URL from the browser address bar after authorization.
 
 > [!IMPORTANT]
 > HTTP/SSE MCP URLs are validated before probing or connecting, and every outgoing MCP HTTP request—including OAuth metadata, client registration, token exchange, and redirects—is validated again. `localhost`, `127.0.0.1`, RFC1918/private IPs, CGNAT/Tailscale ranges, link-local addresses, and cloud metadata endpoints are blocked by default. This can break previously working local or private HTTP MCP configs until the endpoint is explicitly allowed with `tools.ssrfWhitelist`, preferably with a single-host CIDR such as `127.0.0.1/32`, `::1/128`, or `192.168.1.50/32`. Stdio MCP servers are not affected.
@@ -2294,7 +2294,7 @@ Use `enabledTools` to register only a subset of tools from an MCP server:
 
 </details>
 
-`enabledTools` accepts either the raw MCP tool name (for example `read_file`) or the wrapped nanobot tool name (for example `mcp_filesystem_write_file`).
+`enabledTools` accepts either the raw MCP tool name (for example `read_file`) or the wrapped babo tool name (for example `mcp_filesystem_write_file`).
 
 - Omit `enabledTools`, or set it to `["*"]`, to register all capabilities (tools, resources, and prompts).
 - Set `enabledTools` to `[]` to register no tools from that server. Resources and prompts are also skipped, since they have no per-name filter.
@@ -2310,16 +2310,16 @@ MCP tools are automatically discovered and registered on startup. The LLM can us
 Open **Settings → Advanced** for workspace restriction, shell sandbox settings, SSRF exceptions, and remote package installation. Choose the narrowest access needed and follow any restart prompt. Use **Channels** for each chat platform's access controls.
 
 > [!TIP]
-> For production deployments, set both `"restrictToWorkspace": true` and `"tools.exec.sandbox"` (`"bwrap"` on Linux, `"seatbelt"` on macOS) in your config. `restrictToWorkspace` enables nanobot's application-level workspace guards; `tools.exec.sandbox` provides process-level isolation for shell commands.
+> For production deployments, set both `"restrictToWorkspace": true` and `"tools.exec.sandbox"` (`"bwrap"` on Linux, `"seatbelt"` on macOS) in your config. `restrictToWorkspace` enables babo's application-level workspace guards; `tools.exec.sandbox` provides process-level isolation for shell commands.
 
 For API keys, tokens, and other secrets, see [Environment Variables for Secrets](#environment-variables-for-secrets) — avoid storing them directly in `config.json`.
 
 > [!NOTE]
-> When a restricted WebUI chat selects a project outside the configured agent workspace, that project becomes the normal file and shell boundary. Nanobot adds capability-specific, read-only access for built-in skills, the agent workspace's `skills/` directory, and the exact agent `memory/history.jsonl` file. Neighboring memory/profile files and all cross-workspace writes remain denied. Agent-owned `SOUL.md` and `USER.md` are assembled into model context directly; this does not grant file tools broader access to the agent workspace.
+> When a restricted WebUI chat selects a project outside the configured agent workspace, that project becomes the normal file and shell boundary. Babo adds capability-specific, read-only access for built-in skills, the agent workspace's `skills/` directory, and the exact agent `memory/history.jsonl` file. Neighboring memory/profile files and all cross-workspace writes remain denied. Agent-owned `SOUL.md` and `USER.md` are assembled into model context directly; this does not grant file tools broader access to the agent workspace.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `tools.restrictToWorkspace` | `false` | When `true`, enables nanobot's application-level workspace guards for workspace-aware tools. File tools resolve paths under the active workspace; selected internal roots can be added as read-only or explicitly write-enabled roots, and media uploads are read-only by default. Shell execution rejects workspace-external `working_dir` values and applies best-effort command path checks, but this is not an OS sandbox. |
+| `tools.restrictToWorkspace` | `false` | When `true`, enables babo's application-level workspace guards for workspace-aware tools. File tools resolve paths under the active workspace; selected internal roots can be added as read-only or explicitly write-enabled roots, and media uploads are read-only by default. Shell execution rejects workspace-external `working_dir` values and applies best-effort command path checks, but this is not an OS sandbox. |
 | `tools.maxSessionMessagesPerMinute` | `6` | Maximum messages one source session may send during any rolling 60-second window. Additional sends are rejected to stop runaway agent loops. |
 | `tools.exec.sandbox` | `""` | Sandbox backend for shell commands. `"bwrap"` (Linux) or `"seatbelt"` (macOS) restricts filesystem access to the workspace (read-write), media (read-only), required system paths and configured extra binds. The workspace's parent is denied except for allowed roots; keep secrets outside the workspace and binds. Automatically enables workspace restriction for file tools. `"bwrap"` requires bubblewrap (`apt install bubblewrap`; pre-installed in Docker). `"seatbelt"` uses macOS `sandbox-exec(1)`; it sets `HOME` and `TMPDIR` to the workspace rather than sharing host temporary directories. Use `mktemp "$TMPDIR/job.XXXXXX"` for macOS shell scratch files. Neither backend restricts network access. Windows logs a warning and runs commands without OS sandboxing. |
 | `tools.exec.enable` | `true` | When `false`, the shell `exec` tool is not registered at all. Use this to completely disable shell command execution. |
@@ -2332,7 +2332,7 @@ For API keys, tokens, and other secrets, see [Environment Variables for Secrets]
 | `tools.exec.pathAppend` | `""` | Extra directories to append to `PATH` when running shell commands (e.g. `/usr/sbin` for `ufw`). |
 | `tools.exec.sandboxRoBinds` | `[]` | Extra absolute paths to expose read-only inside the exec sandbox, such as `/home/user/.local/bin` or `/home/user/.cargo/bin` when those paths are also in `pathPrepend`/`pathAppend`. These roots are also accepted by the shell absolute-path guard only while a sandbox is active. Bind only directories whose contents are safe for agent commands to read; paths equal to or containing the active workspace are ignored so they cannot uncover its masked parent directory. |
 | `tools.exec.sandboxRwBinds` | `[]` | Extra absolute paths to expose read-write inside the exec sandbox, for trusted tool caches or scratch directories. Use sparingly: paths listed here are intentionally writable by shell commands inside the sandbox. Paths equal to or containing the active workspace are ignored. |
-| `tools.webuiAllowRemotePackageInstall` | `false` | When `false`, the WebUI can install missing optional packages only from a browser opened on the same machine as nanobot. Set to `true` only when a trusted remote admin is allowed to install Python packages into this nanobot environment. |
+| `tools.webuiAllowRemotePackageInstall` | `false` | When `false`, the WebUI can install missing optional packages only from a browser opened on the same machine as babo. Set to `true` only when a trusted remote admin is allowed to install Python packages into this babo environment. |
 | `tools.ssrfWhitelist` | `[]` | CIDR ranges exempted from the shared SSRF guard used by web fetches and HTTP/SSE MCP connections. Prefer exact host CIDRs such as `192.168.1.50/32`; broad ranges increase SSRF exposure. |
 | `channels.*.allowFrom` | omitted | For channels using the common sender allowlist, omit to require pairing, set `["*"]` to allow everyone, or list specific user IDs. Slack and Mattermost instead use `dm.policy` / `dm.allowFrom` for DMs and default to open DMs; review their group policy separately. See [Pairing](#pairing). |
 
@@ -2340,7 +2340,7 @@ Each new user request includes the current project and file-access restriction i
 
 To diagnose a path error, the agent can call `my(action="check", key="workspace_sandbox")`. This read-only result shows the current tool directory and workspace restriction, including the restriction from `tools.exec.sandbox`. The older `workspace` value is an agent-directory display; it does not select the current project or grant access. Check `exec_config` for the configured shell sandbox and extra binds. Those binds do not grant file-tool access or permit an external shell `working_dir`. OS file permissions still apply. The `workspace_sandbox.enforced` field reports external sandbox markers, not whether a configured shell sandbox has started successfully.
 
-**Docker security**: The official Docker image runs as a non-root user (`nanobot`, UID 1000) with bubblewrap pre-installed. The default `docker-compose.yml` drops all Linux capabilities except the `CHOWN`, `SETGID`, and `SETUID` capabilities required by the root entrypoint to initialize bind-mount ownership and become UID 1000. It enables `no-new-privileges` so the final non-root process cannot regain those bootstrap capabilities, and keeps Docker's default AppArmor/seccomp profiles enabled. If you enable `"tools.exec.sandbox": "bwrap"` inside Docker, start Compose with `docker-compose.bwrap.yml` as an additional override so bubblewrap can create nested namespaces. The host must also allow unprivileged user namespaces; the override cannot bypass a host-level namespace restriction.
+**Docker security**: The official Docker image runs as a non-root user (`babo`, UID 1000) with bubblewrap pre-installed. The default `docker-compose.yml` drops all Linux capabilities except the `CHOWN`, `SETGID`, and `SETUID` capabilities required by the root entrypoint to initialize bind-mount ownership and become UID 1000. It enables `no-new-privileges` so the final non-root process cannot regain those bootstrap capabilities, and keeps Docker's default AppArmor/seccomp profiles enabled. If you enable `"tools.exec.sandbox": "bwrap"` inside Docker, start Compose with `docker-compose.bwrap.yml` as an additional override so bubblewrap can create nested namespaces. The host must also allow unprivileged user namespaces; the override cannot bypass a host-level namespace restriction.
 
 
 ### Shell command timing
@@ -2463,8 +2463,8 @@ You can find user IDs in the output of `/pairing list`.
 From the terminal:
 
 ```bash
-nanobot agent -m "/pairing list"
-nanobot agent -m "/pairing approve ABCD-EFGH"
+babo agent -m "/pairing list"
+babo agent -m "/pairing approve ABCD-EFGH"
 ```
 
 
@@ -2472,7 +2472,7 @@ nanobot agent -m "/pairing approve ABCD-EFGH"
 
 The WebUI has no control for heartbeat registration or its interval. Configure these fields directly in `config.json` and restart the gateway.
 
-The gateway can run a protected heartbeat cron job that periodically checks `HEARTBEAT.md` in the active workspace. This is enabled by default when you run `nanobot gateway`.
+The gateway can run a protected heartbeat cron job that periodically checks `HEARTBEAT.md` in the active workspace. This is enabled by default when you run `babo gateway`.
 
 ```json
 {
@@ -2506,7 +2506,7 @@ To customize which heartbeat results trigger a notification, place your prompt a
 
 Open **Settings → Advanced** and change **Concurrent subagents** under **Run limits**. Follow any restart prompt.
 
-By default, nanobot allows four subagents to run at the same time. Additional subagents wait for capacity instead of being rejected. Lower the limit if a local model server cannot hold multiple KV caches, or raise it when the provider can handle more parallel work:
+By default, babo allows four subagents to run at the same time. Additional subagents wait for capacity instead of being rejected. Lower the limit if a local model server cannot hold multiple KV caches, or raise it when the provider can handle more parallel work:
 
 <details>
 <summary>Manual configuration</summary>
@@ -2534,7 +2534,7 @@ The deprecated `agents.defaults.failOnToolError` field is silently ignored when 
 
 Configure **Auto-compact idle sessions** and **Idle timeout** in **Settings → System → Sessions**, then restart the gateway to apply changes. The scan interval is configured directly in `config.json`; use `/compact` for an immediate compaction.
 
-When a session is idle for longer than the configured timeout, nanobot summarizes its conversation context to reduce input token usage on later requests. Summarization is lossy and may omit details. When you return, the model receives that summary and new messages instead of replaying the messages covered by the summary. The original conversation remains in your saved chat history, but even its most recent messages are no longer included verbatim in the model's context after idle compaction.
+When a session is idle for longer than the configured timeout, babo summarizes its conversation context to reduce input token usage on later requests. Summarization is lossy and may omit details. When you return, the model receives that summary and new messages instead of replaying the messages covered by the summary. The original conversation remains in your saved chat history, but even its most recent messages are no longer included verbatim in the model's context after idle compaction.
 
 If your provider retains its prompt cache longer, you can increase the idle timeout to delay compaction. Set the timeout to `0` to disable idle compaction if preserving the full context matters more than reducing subsequent input usage.
 
@@ -2556,7 +2556,7 @@ If your provider retains its prompt cache longer, you can increase the idle time
 
 `sessionTtlMinutes` remains accepted as a legacy alias for backward compatibility, but `idleCompactAfterMinutes` is the preferred config key going forward.
 
-The compacted context remains available after restarting nanobot.
+The compacted context remains available after restarting babo.
 
 Use `/compact` in chat to compact the current session without waiting for the idle threshold.
 
@@ -2566,7 +2566,7 @@ Open **Settings → System → Timezone**. Keep **System timezone** on to follow
 
 Time is context. Context should be precise.
 
-New configurations use `agents.defaults.timezoneMode: "auto"`: nanobot detects the host's IANA timezone when loading the config and falls back to `UTC` if detection fails. To use a fixed timezone, set `timezoneMode` to `"manual"` and `timezone` to a valid [IANA timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones):
+New configurations use `agents.defaults.timezoneMode: "auto"`: babo detects the host's IANA timezone when loading the config and falls back to `UTC` if detection fails. To use a fixed timezone, set `timezoneMode` to `"manual"` and `timezone` to a valid [IANA timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones):
 
 <details>
 <summary>Manual configuration</summary>
@@ -2596,7 +2596,7 @@ Common examples: `UTC`, `America/New_York`, `America/Los_Angeles`, `Europe/Londo
 
 Open **Settings → System** and change **Shared sessions**. Enable it only for a single-user setup where conversations should share context. Follow any restart prompt.
 
-By default, each channel × chat ID combination gets its own session. If you use nanobot across multiple channels (e.g. Telegram + Discord + CLI) and want them to share the same conversation, enable `unifiedSession`:
+By default, each channel × chat ID combination gets its own session. If you use babo across multiple channels (e.g. Telegram + Discord + CLI) and want them to share the same conversation, enable `unifiedSession`:
 
 <details>
 <summary>Manual configuration</summary>
@@ -2629,7 +2629,7 @@ When enabled, all incoming messages — regardless of which channel they arrive 
 
 Open **Skills** in the sidebar, find the installed skill, and turn its switch off or on. This controls whether the agent can load it without deleting its files.
 
-nanobot ships with built-in skills, and your workspace can also define custom skills under `skills/`. If you want to hide specific skills from the agent, set `agents.defaults.disabledSkills` to a list of skill directory names:
+babo ships with built-in skills, and your workspace can also define custom skills under `skills/`. If you want to hide specific skills from the agent, set `agents.defaults.disabledSkills` to a list of skill directory names:
 
 <details>
 <summary>Manual configuration</summary>
@@ -2660,7 +2660,7 @@ Directory presence means installed; activation is explicit in **Apps**. Skills u
 
 Changing any packaged file disables the plugin until you review and enable it again.
 
-Enabled plugins run with the same operating-system permissions as nanobot. Their declared permissions are descriptive, **not an OS sandbox**. Install and enable only plugins you trust.
+Enabled plugins run with the same operating-system permissions as babo. Their declared permissions are descriptive, **not an OS sandbox**. Install and enable only plugins you trust.
 
 ## Tool Hint Max Length
 

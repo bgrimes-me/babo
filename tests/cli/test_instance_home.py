@@ -6,11 +6,11 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from nanobot.cli.commands import app
-from nanobot.config import home as instance_home
-from nanobot.config import loader
-from nanobot.config.paths import get_cli_history_path, get_legacy_sessions_dir, get_media_dir
-from nanobot.config.schema import Config
+from babo.cli.commands import app
+from babo.config import home as instance_home
+from babo.config import loader
+from babo.config.paths import get_cli_history_path, get_legacy_sessions_dir, get_media_dir
+from babo.config.schema import Config
 
 
 @pytest.fixture(autouse=True)
@@ -65,7 +65,7 @@ def test_installed_entry_dispatch_and_help(tmp_path):
     root = Path(__file__).parents[2]
     for args in (["--home", str(tmp_path), "onboard"], ["-h"], ["--home", str(tmp_path), "status"]):
         result = subprocess.run(
-            [sys.executable, "-m", "nanobot", *args], cwd=root,
+            [sys.executable, "-m", "babo", *args], cwd=root,
             capture_output=True, text=True, encoding="utf-8", check=False,
         )
         assert result.returncode == 0, result.stderr
@@ -80,7 +80,7 @@ def test_home_rejects_file(tmp_path):
 
 
 def test_home_bare_command_starts_agent_and_restores_selection(monkeypatch, tmp_path):
-    from nanobot.cli import entry
+    from babo.cli import entry
 
     selected = tmp_path / "selected"
     observed = []
@@ -96,7 +96,7 @@ def test_home_bare_command_starts_agent_and_restores_selection(monkeypatch, tmp_
 
 
 def test_gateway_child_receives_home_after_cli_selection_ends(tmp_path):
-    from nanobot.gateway import GatewayInstance, build_gateway_command
+    from babo.gateway import GatewayInstance, build_gateway_command
 
     home = tmp_path / "instance with spaces"
     instance_home.set_home_path(home)
@@ -104,6 +104,6 @@ def test_gateway_child_receives_home_after_cli_selection_ends(tmp_path):
     instance_home.set_home_path(None)
     options = instance.start_options(port=18791)
     command = build_gateway_command(sys.executable, options)
-    assert command[:5] == [sys.executable, "-m", "nanobot", "--home", str(home)]
+    assert command[:5] == [sys.executable, "-m", "babo", "--home", str(home)]
     assert command[5] == "gateway"
     assert options.config_path == str(home / "config.json")

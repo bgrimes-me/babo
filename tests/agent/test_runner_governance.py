@@ -9,8 +9,8 @@ import pytest
 import tiktoken
 
 from agent.runner_helpers import make_run_spec
-from nanobot.agent.context import TranscriptInput
-from nanobot.agent.context_governance import (
+from babo.agent.context import TranscriptInput
+from babo.agent.context_governance import (
     BACKFILL_CONTENT,
     ContextCompactionState,
     ContextGovernanceConfig,
@@ -19,10 +19,10 @@ from nanobot.agent.context_governance import (
     ModelRequestState,
     _request_extends_measured,
 )
-from nanobot.agent.runner import AgentRunner, AgentRunSpec
-from nanobot.config.schema import AgentDefaults, ModelPresetConfig
-from nanobot.events import ContextCompactionEvent, EventSink
-from nanobot.providers.base import (
+from babo.agent.runner import AgentRunner, AgentRunSpec
+from babo.config.schema import AgentDefaults, ModelPresetConfig
+from babo.events import ContextCompactionEvent, EventSink
+from babo.providers.base import (
     GenerationSettings,
     LLMProvider,
     LLMResponse,
@@ -30,10 +30,10 @@ from nanobot.providers.base import (
     ProviderConversationState,
     ToolCallRequest,
 )
-from nanobot.providers.conversation_state import ProviderConversationStateController
-from nanobot.providers.fallback_provider import FallbackProvider
-from nanobot.runtime_context import public_history_message
-from nanobot.session.summary import SUMMARY_CONTINUATION_TEXT
+from babo.providers.conversation_state import ProviderConversationStateController
+from babo.providers.fallback_provider import FallbackProvider
+from babo.runtime_context import public_history_message
+from babo.session.summary import SUMMARY_CONTINUATION_TEXT
 
 _MAX_TOOL_RESULT_CHARS = AgentDefaults().max_tool_result_chars
 
@@ -77,7 +77,7 @@ def _compaction_state(spec: AgentRunSpec) -> ContextCompactionState:
 
 
 async def test_provider_can_emit_without_an_event_specific_runner_callback():
-    from nanobot.events import AgentEvent
+    from babo.events import AgentEvent
 
     event = AgentEvent()
     received = []
@@ -103,7 +103,7 @@ async def test_provider_can_emit_without_an_event_specific_runner_callback():
 
 
 async def test_runner_propagates_context_governance_failure():
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     provider = MagicMock()
     provider.chat_stream_with_retry = AsyncMock()
@@ -158,7 +158,7 @@ async def test_runner_summarizes_history_and_preserves_current_input(monkeypatch
     tools.get_definitions.return_value = []
     old_answer = "old answer " * 2_000
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         lambda _provider, _model, messages, _tools: (
             (600, "test-counter")
             if any(message.get("content") == old_answer for message in messages)
@@ -216,7 +216,7 @@ async def test_runner_rejects_oversized_delta_without_summarizable_history(monke
     tools = MagicMock()
     tools.get_definitions.return_value = []
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         lambda *_args, **_kwargs: (600, "test-counter"),
     )
     consolidate = AsyncMock(return_value=None)
@@ -253,7 +253,7 @@ async def test_runner_governs_history_before_summarizing_it(monkeypatch):
     tools = MagicMock()
     tools.get_definitions.return_value = []
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         lambda _provider, _model, messages, _tools: (
             (100, "test-counter")
             if messages[0].get("content") == "fresh checkpoint"
@@ -339,7 +339,7 @@ async def test_native_compaction_uses_provider_request_boundary(
     tools.get_definitions.return_value = []
     tools.execute = AsyncMock(return_value="complete tool result")
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         lambda *_args: (100, "test-counter"),
     )
     consolidate = AsyncMock(return_value="portable checkpoint")
@@ -403,7 +403,7 @@ async def test_native_checkpoint_failure_does_not_relabel_completed_compaction(m
     ))
     tools = MagicMock()
     tools.get_definitions.return_value = []
-    monkeypatch.setattr("nanobot.agent.context_governance.estimate_prompt_tokens_chain", lambda *_args: (100, "test-counter"))
+    monkeypatch.setattr("babo.agent.context_governance.estimate_prompt_tokens_chain", lambda *_args: (100, "test-counter"))
     notices: list[ContextCompactionEvent] = []
 
     async def observe(event) -> None:
@@ -458,7 +458,7 @@ async def test_runner_keeps_current_tool_exchange_outside_summary(monkeypatch):
         return (600 if has_tool_result and has_old_system else 100, "test-counter")
 
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         estimate,
     )
     consolidate = AsyncMock(return_value="fresh checkpoint")
@@ -522,7 +522,7 @@ async def test_repeated_pressure_advances_summary_boundary(monkeypatch):
         return 100, "test-counter"
 
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         estimate,
     )
     consolidate = AsyncMock(side_effect=[
@@ -584,7 +584,7 @@ async def test_runner_refuses_checkpoint_that_cannot_fit_with_delta(monkeypatch)
         return 100, "test-counter"
 
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         estimate,
     )
     consolidate = AsyncMock(return_value="small checkpoint")
@@ -618,18 +618,18 @@ async def test_runner_refuses_checkpoint_that_cannot_fit_with_delta(monkeypatch)
 async def test_runner_recovers_oversized_file_read_delta(
     tmp_path, monkeypatch, context_window, omitted_count, fallback,
 ):
-    from nanobot.agent.tools.filesystem import ReadFileTool
-    from nanobot.agent.tools.registry import ToolRegistry
+    from babo.agent.tools.filesystem import ReadFileTool
+    from babo.agent.tools.registry import ToolRegistry
 
     # A cold/offline tokenizer must exercise the same conservative count as #5879.
     if fallback:
         monkeypatch.setattr(
-            "nanobot.utils.helpers._get_token_encoding",
+            "babo.utils.helpers._get_token_encoding",
             MagicMock(side_effect=RuntimeError("tokenizer unavailable")),
         )
     else:
         encoding = tiktoken.get_encoding("cl100k_base")
-        monkeypatch.setattr("nanobot.utils.helpers._get_token_encoding", lambda: encoding)
+        monkeypatch.setattr("babo.utils.helpers._get_token_encoding", lambda: encoding)
     paths = [tmp_path / f"result-{index}.json" for index in range(3)]
     for path in paths:
         path.write_text("record, " * 10_000, encoding="utf-8")
@@ -688,7 +688,7 @@ async def test_runner_recovers_oversized_file_read_delta(
     assert consolidate.await_count == 2
     assert not any(m["role"] == "tool" for m in consolidate.await_args_list[0].args[0])
     assert all(path.read_text(encoding="utf-8") == "record, " * 10_000 for path in paths)
-    assert not (tmp_path / ".nanobot" / "tool-results").exists()
+    assert not (tmp_path / ".babo" / "tool-results").exists()
 
 
 @pytest.mark.parametrize("fallback, same_round, context_window", [
@@ -699,11 +699,11 @@ async def test_runner_recovers_oversized_file_read_delta(
 async def test_file_reads_that_fit_each_round_are_not_omitted(
     tmp_path, monkeypatch, fallback, same_round, context_window,
 ):
-    from nanobot.agent.tools.filesystem import ReadFileTool
-    from nanobot.agent.tools.registry import ToolRegistry
+    from babo.agent.tools.filesystem import ReadFileTool
+    from babo.agent.tools.registry import ToolRegistry
 
     encoding = None if fallback else tiktoken.get_encoding("cl100k_base")
-    monkeypatch.setattr("nanobot.utils.helpers._get_token_encoding", lambda: encoding)
+    monkeypatch.setattr("babo.utils.helpers._get_token_encoding", lambda: encoding)
     paths = [tmp_path / f"result-{index}.json" for index in range(3)]
     for path in paths:
         path.write_text("record, " * 10_000, encoding="utf-8")
@@ -746,13 +746,13 @@ async def test_file_reads_that_fit_each_round_are_not_omitted(
 async def test_recovered_file_read_results_survive_session_replay(
     tmp_path, monkeypatch, structured_transcript,
 ):
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.agent.tools.filesystem import ReadFileTool
-    from nanobot.agent.tools.registry import ToolRegistry
-    from nanobot.session.manager import SessionManager
+    from babo.agent.loop import AgentLoop
+    from babo.agent.tools.filesystem import ReadFileTool
+    from babo.agent.tools.registry import ToolRegistry
+    from babo.session.manager import SessionManager
 
     monkeypatch.setattr(
-        "nanobot.utils.helpers._get_token_encoding",
+        "babo.utils.helpers._get_token_encoding",
         MagicMock(side_effect=RuntimeError("tokenizer unavailable")),
     )
     workspace = tmp_path / "workspace"
@@ -825,8 +825,8 @@ async def test_recovered_file_read_results_survive_session_replay(
 
 @pytest.mark.asyncio
 async def test_runner_governs_messages_added_by_before_iteration_hook(monkeypatch):
-    from nanobot.agent.hook import AgentHook, AgentHookContext
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.hook import AgentHook, AgentHookContext
+    from babo.agent.runner import AgentRunner
 
     provider = MagicMock(spec=LLMProvider)
     provider.chat_stream_with_retry = AsyncMock(return_value=LLMResponse(content="unexpected"))
@@ -835,7 +835,7 @@ async def test_runner_governs_messages_added_by_before_iteration_hook(monkeypatc
     oversized = "hook-added-oversized-message"
 
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         lambda _provider, _model, messages, _tools: (
             (2_000, "test-counter")
             if any(oversized in str(message.get("content")) for message in messages)
@@ -886,7 +886,7 @@ async def test_matching_reported_provider_usage_avoids_local_estimate(
         max_tool_result_chars=_MAX_TOOL_RESULT_CHARS,
     )
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(
             AssertionError("matching provider usage must be authoritative")
         ),
@@ -935,7 +935,7 @@ async def test_changed_messages_use_local_estimate_after_reported_usage(monkeypa
     )
     estimate = MagicMock(return_value=(600, "test-counter"))
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         estimate,
     )
 
@@ -975,7 +975,7 @@ async def test_reported_usage_floor_triggers_pressure_despite_low_estimate(monke
     )
     estimate = MagicMock(return_value=(100, "test-counter"))
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         estimate,
     )
 
@@ -1037,7 +1037,7 @@ async def test_runner_does_not_compact_primary_request_from_fallback_usage(monke
     tools.execute = AsyncMock(return_value="inspection complete")
     consolidate = AsyncMock(return_value=None)
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         lambda *_args, **_kwargs: (100, "test-counter"),
     )
 
@@ -1076,7 +1076,7 @@ async def test_reported_usage_floor_stays_idle_below_budget(monkeypatch):
     )
     estimate = MagicMock(return_value=(100, "test-counter"))
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         estimate,
     )
 
@@ -1122,7 +1122,7 @@ async def test_estimated_usage_does_not_apply_reported_floor(monkeypatch):
     )
     estimate = MagicMock(return_value=(100, "test-counter"))
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         estimate,
     )
     consolidate = AsyncMock(return_value="checkpoint")
@@ -1217,7 +1217,7 @@ def test_missing_usage_falls_back_to_pure_estimate(monkeypatch, estimated_tokens
     )
     estimate = MagicMock(return_value=(estimated_tokens, "test-counter"))
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         estimate,
     )
 
@@ -1250,7 +1250,7 @@ async def test_rewritten_request_does_not_inherit_reported_usage_floor(monkeypat
     )
     estimate = MagicMock(return_value=(100, "test-counter"))
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         estimate,
     )
 
@@ -1329,7 +1329,7 @@ def test_resumed_provider_context_avoids_full_transcript_estimate(monkeypatch):
         max_tool_result_chars=_MAX_TOOL_RESULT_CHARS,
     )
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(
             AssertionError("resumed provider context must be authoritative")
         ),
@@ -1350,7 +1350,7 @@ def test_resumed_provider_context_avoids_full_transcript_estimate(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_runner_refuses_oversized_resumed_state_without_compactor(monkeypatch):
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     provider = MagicMock(spec=LLMProvider)
     provider.can_resume_conversation_state.return_value = True
@@ -1379,11 +1379,11 @@ async def test_runner_refuses_oversized_resumed_state_without_compactor(monkeypa
         pending_messages=[current_message],
     )
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         lambda *_args, **_kwargs: (100, "test-counter"),
     )
     monkeypatch.setattr(
-        "nanobot.providers.conversation_state.estimate_prompt_tokens_chain",
+        "babo.providers.conversation_state.estimate_prompt_tokens_chain",
         lambda *_args, **_kwargs: (100, "test-counter"),
     )
 
@@ -1415,14 +1415,14 @@ async def test_runner_refuses_oversized_request_without_compactor(
     context_window_tokens,
     expected_budget,
 ):
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     provider = MagicMock(spec=LLMProvider)
     provider.chat_stream_with_retry = AsyncMock(return_value=LLMResponse(content="unexpected"))
     tools = MagicMock()
     tools.get_definitions.return_value = []
     monkeypatch.setattr(
-        "nanobot.agent.context_governance.estimate_prompt_tokens_chain",
+        "babo.agent.context_governance.estimate_prompt_tokens_chain",
         lambda *_args, **_kwargs: (2_000, "test-counter"),
     )
 
@@ -1524,7 +1524,7 @@ async def test_backfill_noop_when_complete():
 
 @pytest.mark.asyncio
 async def test_runner_drops_orphan_tool_results_before_model_request():
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     provider = MagicMock()
     captured_messages: list[dict] = []
@@ -1564,9 +1564,9 @@ async def test_runner_drops_orphan_tool_results_before_model_request():
 @pytest.mark.asyncio
 async def test_backfill_repairs_model_context_without_shifting_save_turn_boundary(tmp_path):
     """Historical backfill should not duplicate old tail messages on persist."""
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.events import InboundMessage
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.events import InboundMessage
+    from babo.bus.queue import MessageBus
 
     provider = MagicMock()
     provider.get_default_model.return_value = "test-model"
@@ -1646,7 +1646,7 @@ async def test_backfill_repairs_model_context_without_shifting_save_turn_boundar
 @pytest.mark.asyncio
 async def test_runner_backfill_only_mutates_model_context_not_returned_messages():
     """Runner should repair orphaned tool calls for the model without rewriting result.messages."""
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     provider = MagicMock()
     captured_messages: list[dict] = []
@@ -1729,7 +1729,7 @@ async def test_runner_backfill_only_mutates_model_context_not_returned_messages(
 
 def test_drop_malformed_tool_calls_trims_response():
     """LLM response tool_calls with a missing/empty name are dropped in place."""
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     candidate_state = ProviderConversationState(
         kind="openai_responses",
@@ -1761,7 +1761,7 @@ def test_drop_malformed_tool_calls_trims_response():
 
 def test_drop_malformed_tool_calls_all_bad_disables_execution():
     """If every tool call is malformed, execution is disabled (no empty exec)."""
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     response = LLMResponse(
         content="some text",
@@ -1779,7 +1779,7 @@ def test_drop_malformed_tool_calls_all_bad_disables_execution():
 
 def test_drop_malformed_returns_tuple_no_calls():
     """No tool calls returns (0, False, current_finish_reason)."""
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     response = LLMResponse(content="hi", finish_reason="stop")
     dropped, all_dropped, orig = AgentRunner._drop_malformed_tool_calls(response)

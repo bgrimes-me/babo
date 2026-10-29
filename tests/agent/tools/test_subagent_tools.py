@@ -6,14 +6,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from nanobot.agent.context import TranscriptInput
-from nanobot.agent.memory import Consolidator
-from nanobot.agent.runner import AgentRunResult
-from nanobot.agent.tools.context import RequestContext
-from nanobot.agent.tools.registry import is_tool_error_result
-from nanobot.config.schema import AgentDefaults
-from nanobot.providers.base import GenerationSettings
-from nanobot.utils.llm_runtime import LLMRuntime
+from babo.agent.context import TranscriptInput
+from babo.agent.memory import Consolidator
+from babo.agent.runner import AgentRunResult
+from babo.agent.tools.context import RequestContext
+from babo.agent.tools.registry import is_tool_error_result
+from babo.config.schema import AgentDefaults
+from babo.providers.base import GenerationSettings
+from babo.utils.llm_runtime import LLMRuntime
 
 _MAX_TOOL_RESULT_CHARS = AgentDefaults().max_tool_result_chars
 
@@ -26,8 +26,8 @@ def _runtime(provider: MagicMock, model: str = "test-model") -> LLMRuntime:
 @pytest.mark.asyncio
 async def test_run_inline_returns_result_without_announcement(tmp_path):
     """Inline subagents return directly instead of injecting a follow-up."""
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.subagent import SubagentManager
+    from babo.bus.queue import MessageBus
 
     provider = MagicMock()
     manager = SubagentManager(
@@ -60,9 +60,9 @@ async def test_run_inline_returns_result_without_announcement(tmp_path):
 @pytest.mark.asyncio
 async def test_run_inline_returns_structured_error(tmp_path):
     """Inline subagent failures remain tool errors for the parent runner."""
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.agent.tools.registry import is_tool_error_result
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.subagent import SubagentManager
+    from babo.agent.tools.registry import is_tool_error_result
+    from babo.bus.queue import MessageBus
 
     manager = SubagentManager(
         consolidator=MagicMock(spec=Consolidator),
@@ -93,10 +93,10 @@ async def test_run_inline_returns_structured_error(tmp_path):
 @pytest.mark.asyncio
 async def test_subagent_exec_tool_receives_allowed_env_keys(tmp_path):
     """allowed_env_keys from ExecToolConfig must be forwarded to the subagent's ExecTool."""
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.agent.tools.shell import ExecToolConfig
-    from nanobot.bus.queue import MessageBus
-    from nanobot.config.schema import ToolsConfig
+    from babo.agent.subagent import SubagentManager
+    from babo.agent.tools.shell import ExecToolConfig
+    from babo.bus.queue import MessageBus
+    from babo.config.schema import ToolsConfig
 
     bus = MessageBus()
     provider = MagicMock()
@@ -138,8 +138,8 @@ async def test_subagent_exec_tool_receives_allowed_env_keys(tmp_path):
 @pytest.mark.asyncio
 async def test_subagent_uses_configured_max_iterations(tmp_path):
     """Subagents should honor the configured tool-iteration limit."""
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.subagent import SubagentManager
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
@@ -179,8 +179,8 @@ async def test_subagent_uses_configured_max_iterations(tmp_path):
 @pytest.mark.asyncio
 async def test_subagent_checkpoint_updates_status_and_preserves_omitted_fields(tmp_path):
     """Runner checkpoints update detached task snapshots without resetting omitted fields."""
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.subagent import SubagentManager
+    from babo.bus.queue import MessageBus
 
     mgr = SubagentManager(
         consolidator=MagicMock(spec=Consolidator),
@@ -225,8 +225,8 @@ async def test_subagent_checkpoint_updates_status_and_preserves_omitted_fields(t
 @pytest.mark.asyncio
 async def test_spawn_forwards_temperature_to_run_spec(tmp_path):
     """A temperature passed to spawn() should reach the AgentRunSpec."""
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.subagent import SubagentManager
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
@@ -263,9 +263,9 @@ async def test_spawn_forwards_temperature_to_run_spec(tmp_path):
 @pytest.mark.asyncio
 async def test_background_spawn_waits_for_concurrency_capacity(tmp_path):
     """Background tasks should be accepted and start when capacity becomes available."""
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.agent.tools.subagent import SubagentTool
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.subagent import SubagentManager
+    from babo.agent.tools.subagent import SubagentTool
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
@@ -302,7 +302,7 @@ async def test_background_spawn_waits_for_concurrency_capacity(tmp_path):
 
     mgr.runner.run = AsyncMock(side_effect=fake_run)
 
-    from nanobot.agent.tools.context import RequestContext, request_context
+    from babo.agent.tools.context import RequestContext, request_context
 
     tool = SubagentTool(mgr)
     with request_context(RequestContext(
@@ -333,8 +333,8 @@ async def test_background_spawn_waits_for_concurrency_capacity(tmp_path):
 
 @pytest.mark.asyncio
 async def test_subagent_tool_waits_for_inline_result():
-    from nanobot.agent.tools.context import RequestContext, request_context
-    from nanobot.agent.tools.subagent import SubagentTool
+    from babo.agent.tools.context import RequestContext, request_context
+    from babo.agent.tools.subagent import SubagentTool
 
     class Manager:
         max_concurrent_subagents = 1
@@ -367,10 +367,10 @@ async def test_subagent_tool_waits_for_inline_result():
 
 @pytest.mark.asyncio
 async def test_inline_spawn_waits_for_concurrency_capacity(tmp_path):
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.agent.tools.context import RequestContext, request_context
-    from nanobot.agent.tools.subagent import SubagentTool
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.subagent import SubagentManager
+    from babo.agent.tools.context import RequestContext, request_context
+    from babo.agent.tools.subagent import SubagentTool
+    from babo.bus.queue import MessageBus
 
     manager = SubagentManager(
         consolidator=MagicMock(spec=Consolidator),
@@ -430,14 +430,14 @@ async def test_inline_spawn_waits_for_concurrency_capacity(tmp_path):
 @pytest.mark.asyncio
 async def test_runner_executes_inline_spawn_batch_concurrently(tmp_path):
     """Adjacent blocking consultations should share one concurrent tool batch."""
-    from nanobot.agent.hook import AgentHook, AgentHookContext
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.agent.tools.context import RequestContext, request_context
-    from nanobot.agent.tools.execution import execute_tool_calls
-    from nanobot.agent.tools.registry import ToolRegistry
-    from nanobot.agent.tools.subagent import SubagentTool
-    from nanobot.bus.queue import MessageBus
-    from nanobot.providers.base import ToolCallRequest
+    from babo.agent.hook import AgentHook, AgentHookContext
+    from babo.agent.subagent import SubagentManager
+    from babo.agent.tools.context import RequestContext, request_context
+    from babo.agent.tools.execution import execute_tool_calls
+    from babo.agent.tools.registry import ToolRegistry
+    from babo.agent.tools.subagent import SubagentTool
+    from babo.bus.queue import MessageBus
+    from babo.providers.base import ToolCallRequest
 
     manager = SubagentManager(
         consolidator=MagicMock(spec=Consolidator),
@@ -507,8 +507,8 @@ async def test_runner_executes_inline_spawn_batch_concurrently(tmp_path):
 
 @pytest.mark.asyncio
 async def test_cancel_by_session_cancels_inline_subagent(tmp_path):
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.subagent import SubagentManager
+    from babo.bus.queue import MessageBus
 
     manager = SubagentManager(
         consolidator=MagicMock(spec=Consolidator),
@@ -540,8 +540,8 @@ async def test_cancel_by_session_cancels_inline_subagent(tmp_path):
 
 def test_subagent_default_max_concurrent_matches_agent_defaults(tmp_path):
     """Direct SubagentManager construction should use the agent default concurrency limit."""
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.subagent import SubagentManager
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     mgr = SubagentManager(
@@ -557,8 +557,8 @@ def test_subagent_default_max_concurrent_matches_agent_defaults(tmp_path):
 
 def test_subagent_default_max_iterations_matches_agent_defaults(tmp_path):
     """Direct SubagentManager construction should use the agent default limit."""
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.subagent import SubagentManager
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     mgr = SubagentManager(
@@ -573,8 +573,8 @@ def test_subagent_default_max_iterations_matches_agent_defaults(tmp_path):
 
 def test_agent_loop_passes_max_iterations_to_subagents(tmp_path):
     """AgentLoop's configured limit should be shared with spawned subagents."""
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
@@ -594,8 +594,8 @@ def test_agent_loop_passes_max_iterations_to_subagents(tmp_path):
 @pytest.mark.asyncio
 async def test_agent_loop_syncs_updated_max_iterations_before_run(tmp_path):
     """Runtime max_iterations changes should be reflected before tool execution."""
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
@@ -637,8 +637,8 @@ async def test_agent_loop_syncs_updated_max_iterations_before_run(tmp_path):
 @pytest.mark.asyncio
 async def test_drain_pending_no_block_when_no_subagents(tmp_path):
     """_drain_pending should not block when no sub-agents are running."""
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
@@ -687,9 +687,9 @@ async def test_drain_pending_no_block_when_no_subagents(tmp_path):
 @pytest.mark.asyncio
 async def test_terminal_drain_timeout(tmp_path):
     """The terminal drain should return empty after its shared timeout expires."""
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.queue import MessageBus
-    from nanobot.session.manager import Session
+    from babo.agent.loop import AgentLoop
+    from babo.bus.queue import MessageBus
+    from babo.session.manager import Session
 
     bus = MessageBus()
     provider = MagicMock()
@@ -744,7 +744,7 @@ async def test_terminal_drain_timeout(tmp_path):
         awaitable.close()
         raise asyncio.TimeoutError
 
-    with patch("nanobot.agent.loop.asyncio.wait_for", side_effect=_timeout):
+    with patch("babo.agent.loop.asyncio.wait_for", side_effect=_timeout):
         results = await terminal_injection_callback()
         assert results == []
 
@@ -754,10 +754,10 @@ async def test_terminal_drain_timeout(tmp_path):
 @pytest.mark.asyncio
 async def test_terminal_drain_reuses_one_timeout_budget(tmp_path):
     """Repeated terminal rendezvous calls share one 300-second deadline."""
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.events import InboundMessage
-    from nanobot.bus.queue import MessageBus
-    from nanobot.session.manager import Session
+    from babo.agent.loop import AgentLoop
+    from babo.bus.events import InboundMessage
+    from babo.bus.queue import MessageBus
+    from babo.session.manager import Session
 
     loop = AgentLoop(
         bus=MessageBus(),
@@ -818,7 +818,7 @@ async def test_terminal_drain_reuses_one_timeout_budget(tmp_path):
     loop_asyncio = SimpleNamespace(**vars(asyncio))
     loop_asyncio.get_running_loop = lambda: fake_loop
     loop_asyncio.wait_for = _deliver
-    with patch("nanobot.agent.loop.asyncio", loop_asyncio):
+    with patch("babo.agent.loop.asyncio", loop_asyncio):
         assert await terminal_injection_callback()
         assert await terminal_injection_callback()
 

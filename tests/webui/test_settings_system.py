@@ -6,12 +6,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from nanobot.channels.contracts import channel_default_config, channel_instance_specs
-from nanobot.channels.manager import ChannelManager
-from nanobot.channels.registry import load_channel_plugin
-from nanobot.config.loader import load_config, save_config
-from nanobot.config.schema import Config
-from nanobot.webui.settings_system import (
+from babo.channels.contracts import channel_default_config, channel_instance_specs
+from babo.channels.manager import ChannelManager
+from babo.channels.registry import load_channel_plugin
+from babo.config.loader import load_config, save_config
+from babo.config.schema import Config
+from babo.webui.settings_system import (
     coerce_channel_value,
     pairing_payload,
     save_channel_config_values,
@@ -36,7 +36,7 @@ def test_pairing_payload_preserves_optional_delivery_state(status):
 
 
 def test_system_domain_owns_runtime_dto_and_agent_updates(tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr("nanobot.webui.settings_system.COMMIT", "a" * 40)
+    monkeypatch.setattr("babo.webui.settings_system.COMMIT", "a" * 40)
     config = Config()
 
     changed, restart_required = update_agent_system_settings(

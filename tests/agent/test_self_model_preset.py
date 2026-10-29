@@ -3,15 +3,15 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import RequestContext, request_context
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.agent.tools.runtime_control import AgentRuntimeControl
-from nanobot.agent.tools.self import MyTool
-from nanobot.bus.queue import MessageBus
-from nanobot.config.schema import ModelPresetConfig
-from nanobot.providers.factory import ProviderSnapshot
-from nanobot.session.model_selection import model_preset_from_metadata
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import RequestContext, request_context
+from babo.agent.tools.registry import ToolRegistry
+from babo.agent.tools.runtime_control import AgentRuntimeControl
+from babo.agent.tools.self import MyTool
+from babo.bus.queue import MessageBus
+from babo.config.schema import ModelPresetConfig
+from babo.providers.factory import ProviderSnapshot
+from babo.session.model_selection import model_preset_from_metadata
 
 
 def _provider(default_model: str, max_tokens: int = 123) -> MagicMock:
@@ -373,12 +373,12 @@ async def test_self_tool_set_model_clears_active_preset(tmp_path) -> None:
 def test_from_config_injects_default_preset(tmp_path) -> None:
     from unittest.mock import patch
 
-    from nanobot.config.schema import Config
+    from babo.config.schema import Config
     config = Config.model_validate({
         "agents": {"defaults": {"model": "openai/gpt-4.1", "workspace": str(tmp_path)}},
     })
     fake_provider = _provider("openai/gpt-4.1")
-    with patch("nanobot.providers.factory.make_provider", return_value=fake_provider):
+    with patch("babo.providers.factory.make_provider", return_value=fake_provider):
         loop = AgentLoop.from_config(config, tool_registry=ToolRegistry())
     assert loop.model == "openai/gpt-4.1"
     assert loop.model_preset is None
@@ -389,13 +389,13 @@ def test_from_config_injects_default_preset(tmp_path) -> None:
 def test_from_config_static_preset_loader_does_not_enable_hot_reload(tmp_path) -> None:
     from unittest.mock import patch
 
-    from nanobot.config.schema import Config
+    from babo.config.schema import Config
     config = Config.model_validate({
         "agents": {"defaults": {"model": "openai/gpt-4.1", "workspace": str(tmp_path)}},
         "model_presets": {"fast": {"model": "openai/gpt-4.1-mini"}},
     })
     fake_provider = _provider("openai/gpt-4.1")
-    with patch("nanobot.providers.factory.make_provider", return_value=fake_provider):
+    with patch("babo.providers.factory.make_provider", return_value=fake_provider):
         loop = AgentLoop.from_config(config, tool_registry=ToolRegistry())
         default_runtime = loop.runtime_resolver.runtime
         resolved = loop.runtime_resolver.resolve_preset("fast")

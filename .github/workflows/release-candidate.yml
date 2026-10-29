@@ -118,13 +118,13 @@ jobs:
       - name: Ad-hoc sign macOS arm64
         uses: indygreg/apple-code-sign-action@44d0985b7f4363198e80b6fea63ac3e9dd3e9957
         with:
-          input_path: ${{ env.CANDIDATE_DIR }}/tui/dist/nanobot-tui-darwin-arm64
+          input_path: ${{ env.CANDIDATE_DIR }}/tui/dist/babo-tui-darwin-arm64
           rcodesign_version: 0.29.0
 
       - name: Ad-hoc sign macOS x64
         uses: indygreg/apple-code-sign-action@44d0985b7f4363198e80b6fea63ac3e9dd3e9957
         with:
-          input_path: ${{ env.CANDIDATE_DIR }}/tui/dist/nanobot-tui-darwin-x64
+          input_path: ${{ env.CANDIDATE_DIR }}/tui/dist/babo-tui-darwin-x64
           rcodesign_version: 0.29.0
 
       - name: Package licensed native archives
@@ -141,8 +141,8 @@ jobs:
         run: |
           version="$CANDIDATE_VERSION"
           python -m scripts.release_candidate assemble --source-commit "$SOURCE_COMMIT" \
-            --wheel "$RUNNER_TEMP/python-dist/nanobot_ai-${version}-py3-none-any.whl" \
-            --sdist "$RUNNER_TEMP/python-dist/nanobot_ai-${version}.tar.gz" \
+            --wheel "$RUNNER_TEMP/python-dist/babo-${version}-py3-none-any.whl" \
+            --sdist "$RUNNER_TEMP/python-dist/babo-${version}.tar.gz" \
             --tui-dir tui/dist --output "$RUNNER_TEMP/release-artifacts"
           python -m twine check "$RUNNER_TEMP/release-artifacts/"*.whl \
             "$RUNNER_TEMP/release-artifacts/"*.tar.gz

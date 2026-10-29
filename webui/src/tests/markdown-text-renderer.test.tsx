@@ -118,7 +118,7 @@ describe("MarkdownTextRenderer", () => {
     const onOpenFilePreview = vi.fn();
     render(
       <MarkdownTextRenderer onOpenFilePreview={onOpenFilePreview}>
-        {"Edited [hook.py](/Users/test/project/nanobot/agent/hook.py:12)"}
+        {"Edited [hook.py](/Users/test/project/babo/agent/hook.py:12)"}
       </MarkdownTextRenderer>,
     );
 
@@ -126,13 +126,13 @@ describe("MarkdownTextRenderer", () => {
     expect(reference).toHaveTextContent("hook.py");
     expect(reference).toHaveAttribute(
       "aria-label",
-      "/Users/test/project/nanobot/agent/hook.py",
+      "/Users/test/project/babo/agent/hook.py",
     );
 
     fireEvent.click(reference);
 
     expect(onOpenFilePreview).toHaveBeenCalledWith(
-      "/Users/test/project/nanobot/agent/hook.py",
+      "/Users/test/project/babo/agent/hook.py",
     );
   });
 
@@ -263,11 +263,11 @@ describe("MarkdownTextRenderer", () => {
   ])("renders a %s fenced code block in one shell", (_state, closingFence) => {
     const { container } = render(
       <MarkdownTextRenderer highlightCode={false}>
-        {"当前目录:\n\n```text\n/Users/renxubin/.nanobot/workspace" + closingFence}
+        {"当前目录:\n\n```text\n/Users/renxubin/.babo/workspace" + closingFence}
       </MarkdownTextRenderer>,
     );
 
-    expect(screen.getByText("/Users/renxubin/.nanobot/workspace")).toBeInTheDocument();
+    expect(screen.getByText("/Users/renxubin/.babo/workspace")).toBeInTheDocument();
     expect(container.querySelectorAll("pre")).toHaveLength(1);
     expect(container.querySelector("pre div")).toBeNull();
   });
@@ -295,13 +295,13 @@ describe("MarkdownTextRenderer", () => {
   });
 
   it("renders markdown videos as inline players", () => {
-    render(<MarkdownTextRenderer>![nanobot-intro.mp4](/api/media/sig/video)</MarkdownTextRenderer>);
+    render(<MarkdownTextRenderer>![babo-intro.mp4](/api/media/sig/video)</MarkdownTextRenderer>);
 
-    const video = screen.getByLabelText("Video attachment: nanobot-intro.mp4");
+    const video = screen.getByLabelText("Video attachment: babo-intro.mp4");
     expect(video.tagName).toBe("VIDEO");
     expect(video).toHaveAttribute("src", "/api/media/sig/video");
     expect(video).toHaveAttribute("controls");
-    expect(screen.queryByRole("img", { name: "nanobot-intro.mp4" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "babo-intro.mp4" })).not.toBeInTheDocument();
   });
 
   it("renders markdown links with file-looking names as file attachments", () => {
@@ -415,14 +415,14 @@ describe("MarkdownTextRenderer", () => {
       "已完成：",
       "",
       "- **#6267、#6268、#6271** 已设为 **Draft**，未重写它们的分支。",
-      "- **[#6269](https://github.com/HKUDS/nanobot/pull/6269)** 已单独 rebase 到最新 `main`，PR base 也已改为 `main`，保持非 Draft。",
+      "- **[#6269](https://github.com/bgrimes-me/babo/pull/6269)** 已单独 rebase 到最新 `main`，PR base 也已改为 `main`，保持非 Draft。",
       "  - 新 head：`16128a60a`",
       "  - 仅保留自身一个提交，未带入 #6267、#6268。",
       "  - 已用 `--force-with-lease` 推送，并更新 PR 描述。",
       "",
       "本地验证：**2,441 项通过、1 项跳过**；Ruff、BasedPyright、import boundaries、diff 检查均通过。",
       "",
-      "[新 head 的 CI](https://github.com/HKUDS/nanobot/actions/runs/39046574215) 已启动，目前排队中，尚未出结果。",
+      "[新 head 的 CI](https://github.com/bgrimes-me/babo/actions/runs/39046574215) 已启动，目前排队中，尚未出结果。",
     ].join("\n");
 
     function expectReportedList(container: HTMLElement) {
@@ -435,7 +435,7 @@ describe("MarkdownTextRenderer", () => {
         .toEqual(["main", "main", "16128a60a", "--force-with-lease"]);
       const prLink = topItems[1].querySelector("a");
       expect(prLink).toHaveTextContent(/^#6269$/);
-      expect(prLink).toHaveAttribute("href", "https://github.com/HKUDS/nanobot/pull/6269");
+      expect(prLink).toHaveAttribute("href", "https://github.com/bgrimes-me/babo/pull/6269");
       expect(prLink?.closest("strong")).not.toBeNull();
       expect(topItems[1]).not.toHaveClass("list-none");
       expect(container).toHaveTextContent("已用 --force-with-lease 推送，并更新 PR 描述。");
@@ -728,7 +728,7 @@ describe("MarkdownTextRenderer", () => {
     const { container } = render(
       <MarkdownTextRenderer>
         {
-          "## Models\n\n| Model | Context | Price |\n| --- | ---: | ---: |\n| nanobot | 200k | $1 |\n\n## Notes"
+          "## Models\n\n| Model | Context | Price |\n| --- | ---: | ---: |\n| babo | 200k | $1 |\n\n## Notes"
         }
       </MarkdownTextRenderer>,
     );
@@ -739,7 +739,7 @@ describe("MarkdownTextRenderer", () => {
     expect(surface).toHaveAttribute("tabindex", "0");
     expect(surface).toHaveAccessibleName("Data table");
     const table = screen.getByRole("table");
-    expect(table).toHaveTextContent("nanobot");
+    expect(table).toHaveTextContent("babo");
     expect(table).not.toHaveClass("min-w-max");
     expect(table).toHaveClass(
       "table-fixed",
@@ -782,7 +782,7 @@ describe("MarkdownTextRenderer", () => {
     );
 
     expect(container.querySelector("[data-sd-animate]")).not.toBeInTheDocument();
-    expect(container.querySelector("[data-nanobot-stream-unit]")).not.toBeInTheDocument();
+    expect(container.querySelector("[data-babo-stream-unit]")).not.toBeInTheDocument();
   });
 
   it("stops repairing completed markdown without replacing the streaming layout", () => {
@@ -889,7 +889,7 @@ describe("MarkdownTextRenderer", () => {
   });
 
   it("keeps CJK prose outside a bold bare URL through stream completion", () => {
-    const url = "https://github.com/HKUDS/nanobot";
+    const url = "https://github.com/bgrimes-me/babo";
     const source = `实际跳转到 **${url}**，不是推文页面。`;
     const { container, rerender } = render(<MarkdownTextRenderer>{source}</MarkdownTextRenderer>);
     const assertLink = () => {

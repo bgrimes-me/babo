@@ -1,30 +1,30 @@
-# Build a QQ AI Agent with nanobot
+# Build a QQ AI Agent with babo
 
-This guide connects nanobot to QQ through the official `qq` channel. The official channel uses the botpy SDK and currently focuses on private messages. For QQ group chat and OneBot v11 workflows, use the Napcat section in the full chat-apps reference.
+This guide connects babo to QQ through the official `qq` channel. The official channel uses the botpy SDK and currently focuses on private messages. For QQ group chat and OneBot v11 workflows, use the Napcat section in the full chat-apps reference.
 
 ## What this guide builds
 
 - a QQ bot application
-- the `qq` channel enabled in nanobot
+- the `qq` channel enabled in babo
 - one pairing-approved QQ private sender
-- a running nanobot gateway
+- a running babo gateway
 
 ## Prerequisites
 
-- A normal reply in your existing nanobot WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
+- A normal reply in your existing babo WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
 
 - Access to the QQ Open Platform.
 - A QQ account added to the bot sandbox for testing.
 
 ## Continue from your running instance
 
-If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `nanobot webui` command; there is no need to install nanobot again.
+If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `babo webui` command; there is no need to install babo again.
 
 For terminal or server setup, use the manual configuration section below. Reuse the config/home and executable from your working instance. Docker users should use the [container commands](../deployment.md#docker-compose).
 
 ## Enable the QQ channel
 
-In **Channels → QQ**, scan the QR code with mobile QQ. nanobot saves the AppID and Secret automatically, enables the channel, and follows any installation or restart prompt.
+In **Channels → QQ**, scan the QR code with mobile QQ. babo saves the AppID and Secret automatically, enables the channel, and follows any installation or restart prompt.
 
 Choose **Enter credentials manually** to use existing credentials. **Rebind bot** may interrupt other apps using this QQ bot. If the App Secret is reset, the old secret becomes invalid and those apps need the new secret.
 
@@ -34,10 +34,10 @@ Choose **Enter credentials manually** to use existing credentials. **Rebind bot*
 Install the optional channel dependency:
 
 ```bash
-nanobot plugins enable qq
+babo plugins enable qq
 ```
 
-In the QQ Open Platform, create a bot application and copy the AppID and AppSecret. Add your QQ account to the sandbox test members, then merge this snippet into `~/.nanobot/config.json`:
+In the QQ Open Platform, create a bot application and copy the AppID and AppSecret. Add your QQ account to the sandbox test members, then merge this snippet into `~/.babo/config.json`:
 
 ```json
 {
@@ -60,7 +60,7 @@ Omitting `allowFrom` enables pairing-only mode. A new private sender should get 
 
 In the WebUI, follow any restart prompt and keep the launcher running for the first test. You do not need to start another gateway. For unattended operation afterward, use [background or service mode](../cli-reference.md#gateway).
 
-For manual config changes, restart the existing gateway through its owning terminal, `nanobot gateway restart` for background mode, or its service/container supervisor. If none is running, start `nanobot gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
+For manual config changes, restart the existing gateway through its owning terminal, `babo gateway restart` for background mode, or its service/container supervisor. If none is running, start `babo gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
 
 ## Test a message
 
@@ -72,7 +72,7 @@ Send the QQ bot a private message from a sandbox account. It should return a pai
 In a separate local terminal, using the same instance:
 
 ```bash
-nanobot agent -m "/pairing approve ABCD-EFGH"
+babo agent -m "/pairing approve ABCD-EFGH"
 ```
 
 Replace the example code with your actual code.

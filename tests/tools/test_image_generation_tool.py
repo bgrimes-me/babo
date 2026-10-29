@@ -7,11 +7,11 @@ from typing import Any
 import httpx
 import pytest
 
-from nanobot.agent.tools.image_generation import ImageGenerationTool, ImageGenerationToolConfig
-from nanobot.config.loader import set_config_path
-from nanobot.config.network import NetworkConfig
-from nanobot.config.schema import Config, ProviderConfig
-from nanobot.providers.image_generation import GeneratedImageResponse, image_gen_provider_configs
+from babo.agent.tools.image_generation import ImageGenerationTool, ImageGenerationToolConfig
+from babo.config.loader import set_config_path
+from babo.config.network import NetworkConfig
+from babo.config.schema import Config, ProviderConfig
+from babo.providers.image_generation import GeneratedImageResponse, image_gen_provider_configs
 
 PNG_BYTES = (
     b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
@@ -91,7 +91,7 @@ async def test_generate_image_tool_stores_artifact_and_source_images(
     set_config_path(tmp_path / "config.json")
     FakeImageClient.instances = []
     monkeypatch.setattr(
-        "nanobot.agent.tools.image_generation.get_image_gen_provider",
+        "babo.agent.tools.image_generation.get_image_gen_provider",
         lambda name, connection=None: FakeImageClient if name == "openrouter" else None,
     )
     ref = tmp_path / "ref.png"
@@ -145,7 +145,7 @@ async def test_generate_image_tool_selects_aihubmix_provider(
     set_config_path(tmp_path / "config.json")
     FakeImageClient.instances = []
     monkeypatch.setattr(
-        "nanobot.agent.tools.image_generation.get_image_gen_provider",
+        "babo.agent.tools.image_generation.get_image_gen_provider",
         lambda name, connection=None: FakeImageClient if name == "aihubmix" else None,
     )
     tool = ImageGenerationTool(
@@ -178,7 +178,7 @@ def test_image_generation_tool_passes_provider_proxy_to_client(
 ) -> None:
     FakeImageClient.instances = []
     monkeypatch.setattr(
-        "nanobot.agent.tools.image_generation.get_image_gen_provider",
+        "babo.agent.tools.image_generation.get_image_gen_provider",
         lambda name, connection=None: FakeImageClient if name == "openai_codex" else None,
     )
     proxy = "http://127.0.0.1:23458"
@@ -220,7 +220,7 @@ async def test_generate_image_tool_allows_ollama_without_api_key(
     set_config_path(tmp_path / "config.json")
     FakeImageClient.instances = []
     monkeypatch.setattr(
-        "nanobot.agent.tools.image_generation.get_image_gen_provider",
+        "babo.agent.tools.image_generation.get_image_gen_provider",
         lambda name, connection=None: FakeImageClient if name == "ollama" else None,
     )
     tool = ImageGenerationTool(

@@ -8,11 +8,11 @@ from types import SimpleNamespace
 import pytest
 from aiohttp import web
 
-from nanobot.providers.azure_openai_provider import AzureOpenAIProvider
-from nanobot.providers.base import ProviderCallContext
-from nanobot.providers.github_copilot_provider import GitHubCopilotProvider
-from nanobot.providers.openai_compat_provider import OpenAICompatProvider
-from nanobot.providers.registry import ModelAPICapabilities, find_by_name
+from babo.providers.azure_openai_provider import AzureOpenAIProvider
+from babo.providers.base import ProviderCallContext
+from babo.providers.github_copilot_provider import GitHubCopilotProvider
+from babo.providers.openai_compat_provider import OpenAICompatProvider
+from babo.providers.registry import ModelAPICapabilities, find_by_name
 
 
 @pytest.fixture
@@ -91,10 +91,10 @@ async def test_adapters_replay_tool_results_and_reasoning(responses_peer, monkey
     if adapter == "azure":
         provider = AzureOpenAIProvider(api_key="fixture", api_base=url, default_model="gpt-5.4")
     elif adapter == "copilot":
-        monkeypatch.setenv("NANOBOT_COPILOT_BASE_URL", f"{url}/v1")
-        monkeypatch.setenv("NANOBOT_COPILOT_TOKEN_URL", f"{url}/copilot_token")
+        monkeypatch.setenv("BABO_COPILOT_BASE_URL", f"{url}/v1")
+        monkeypatch.setenv("BABO_COPILOT_TOKEN_URL", f"{url}/copilot_token")
         monkeypatch.setattr(
-            "nanobot.providers.github_copilot_provider._load_github_token",
+            "babo.providers.github_copilot_provider._load_github_token",
             lambda: SimpleNamespace(access="github-fixture"),
         )
         provider = GitHubCopilotProvider(default_model="github-copilot/gpt-5.4-mini")
@@ -116,7 +116,7 @@ async def test_adapters_replay_tool_results_and_reasoning(responses_peer, monkey
 
     call = provider.chat_stream if streaming else provider.chat
     callbacks = {"on_tool_call_delta": on_tool, "on_thinking_delta": on_thinking} if streaming else {}
-    messages = [{"role": "system", "content": "You are nanobot."}, {"role": "user", "content": "Read report.pdf"}]
+    messages = [{"role": "system", "content": "You are babo."}, {"role": "user", "content": "Read report.pdf"}]
     tools = [{"type": "function", "function": {"name": "read_file", "parameters": {"type": "object"}}}]
     try:
         first = await call(messages, tools=tools, **callbacks)
@@ -138,7 +138,7 @@ async def test_adapters_replay_tool_results_and_reasoning(responses_peer, monkey
         assert second.provider_state.provider == first.provider_state.provider
         assert len(requests) == 2
         body = requests[1][2]
-        assert body["instructions"] == "You are nanobot."
+        assert body["instructions"] == "You are babo."
         assert body["store"] is (adapter == "openai")
         assert body["input"][0]["content"][0]["text"] == "Read report.pdf"
         assert body["input"][1]["encrypted_content"] == "opaque-reasoning"

@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from agent.runner_helpers import make_run_spec
-from nanobot.agent.progress_hook import AgentProgressHook
-from nanobot.agent.runner import AgentRunner
-from nanobot.config.schema import AgentDefaults
-from nanobot.providers.base import LLMResponse, ToolCallRequest
-from nanobot.utils.progress_events import output_events
+from babo.agent.progress_hook import AgentProgressHook
+from babo.agent.runner import AgentRunner
+from babo.config.schema import AgentDefaults
+from babo.providers.base import LLMResponse, ToolCallRequest
+from babo.utils.progress_events import output_events
 
 _DEFAULTS = AgentDefaults()
 

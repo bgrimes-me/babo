@@ -12,7 +12,7 @@ from zipfile import ZipFile
 import pytest
 from pydantic import ValidationError
 
-from nanobot.webui.mcp_presets import _parse_presets
+from babo.webui.mcp_presets import _parse_presets
 
 
 @pytest.fixture
@@ -65,15 +65,15 @@ def test_distributions_bundle_webui_and_channel_resources(tmp_path: Path, target
     repository = Path(__file__).resolve().parents[2]
     for name in ("pyproject.toml", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"):
         shutil.copyfile(repository / name, tmp_path / name)
-    package = tmp_path / "nanobot/webui"
+    package = tmp_path / "babo/webui"
     package.mkdir(parents=True)
-    (tmp_path / "nanobot/__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / "babo/__init__.py").write_text("", encoding="utf-8")
     (package / "__init__.py").write_text("", encoding="utf-8")
-    resource = "nanobot/webui/mcp_presets.json"
+    resource = "babo/webui/mcp_presets.json"
     resources = {
         resource: (repository / resource).read_bytes(),
-        "nanobot/channels/example/webui/index.tsx": b"export const channel = 'example';\n",
-        "nanobot/channels/example/webui/assets/icon.svg": b'<svg id="channel-icon"/>\n',
+        "babo/channels/example/webui/index.tsx": b"export const channel = 'example';\n",
+        "babo/channels/example/webui/assets/icon.svg": b'<svg id="channel-icon"/>\n',
     }
     for name, content in resources.items():
         destination = tmp_path / name

@@ -7,26 +7,26 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from agent.session_helpers import run_session, stop_loop
-from nanobot.agent.automation_turns import AutomationTurnError
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import current_request_context
-from nanobot.agent.tools.cron import CronTool
-from nanobot.bus.events import InboundMessage, OutboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.cron.service import CronService
-from nanobot.cron.session_turns import CRON_DEFER_UNTIL_IDLE_META, CRON_TRIGGER_META
-from nanobot.providers.base import GenerationSettings, LLMResponse, ToolCallRequest
-from nanobot.runtime_context import public_history_messages
-from nanobot.session.automation_turns import AUTOMATION_HISTORY_META
-from nanobot.session.goal_state import GOAL_STATE_KEY
-from nanobot.session.manager import SessionManager
-from nanobot.session.recovery import (
+from babo.agent.automation_turns import AutomationTurnError
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import current_request_context
+from babo.agent.tools.cron import CronTool
+from babo.bus.events import InboundMessage, OutboundMessage
+from babo.bus.queue import MessageBus
+from babo.cron.service import CronService
+from babo.cron.session_turns import CRON_DEFER_UNTIL_IDLE_META, CRON_TRIGGER_META
+from babo.providers.base import GenerationSettings, LLMResponse, ToolCallRequest
+from babo.runtime_context import public_history_messages
+from babo.session.automation_turns import AUTOMATION_HISTORY_META
+from babo.session.goal_state import GOAL_STATE_KEY
+from babo.session.manager import SessionManager
+from babo.session.recovery import (
     PENDING_FOLLOWUPS_KEY,
     REQUEST_ORIGIN_METADATA_KEY,
     pending_followups,
 )
-from nanobot.triggers.local_session_turns import LOCAL_TRIGGER_META
-from nanobot.webui.recovery import RecoveryCoordinator
+from babo.triggers.local_session_turns import LOCAL_TRIGGER_META
+from babo.webui.recovery import RecoveryCoordinator
 
 
 @pytest.fixture

@@ -8,13 +8,13 @@ from typing import Any
 
 import pytest
 
+from babo.baton.baton_file import iter_checkpoints
+from babo.baton.inbox import items, unread
+from babo.baton.night import Night, NightInterruptedError, mismatch_hints
+from babo.baton.notes import split_frontmatter, write_note
+from babo.baton.tooltest import run_tool_test
+from babo.baton.town import Town
 from baton.mock_llama import MockLlama, malformed, schema, text, tool_call
-from nanobot.baton.baton_file import iter_checkpoints
-from nanobot.baton.inbox import items, unread
-from nanobot.baton.night import Night, NightInterruptedError, mismatch_hints
-from nanobot.baton.notes import split_frontmatter, write_note
-from nanobot.baton.tooltest import run_tool_test
-from nanobot.baton.town import Town
 
 FOLD = {
     "thread": "garden", "doing": "resting after planning beds", "done": ["planned beds"], "learned": ["east drainage"],
@@ -173,11 +173,11 @@ def test_mismatch_hints() -> None:
 
 
 def test_units_render_for_the_host() -> None:
-    from nanobot.baton.config import BatonConfig
-    from nanobot.baton.units import render_units
+    from babo.baton.config import BatonConfig
+    from babo.baton.units import render_units
 
-    cfg = BatonConfig.model_validate({"box": "Agent", "nanobotPath": "/home/squid/.local/bin/nanobot", "night": {"time": "03:30"}})
+    cfg = BatonConfig.model_validate({"box": "Agent", "baboPath": "/home/squid/.local/bin/babo", "night": {"time": "03:30"}})
     units = render_units(cfg)
-    assert "ExecStart=/usr/bin/distrobox enter Agent -- /home/squid/.local/bin/nanobot baton night" in units["baton-night.service"]
-    assert "OnCalendar=*-*-* 03:30:00" in units["baton-night.timer"]
-    assert "baton queue" in units["baton-queue.service"] and "gateway --foreground" in units["baton-gateway.service"]
+    assert "ExecStart=/usr/bin/distrobox enter Agent -- /home/squid/.local/bin/babo night" in units["babo-night.service"]
+    assert "OnCalendar=*-*-* 03:30:00" in units["babo-night.timer"]
+    assert "babo queue" in units["babo-queue.service"] and "gateway --foreground" in units["babo-gateway.service"]

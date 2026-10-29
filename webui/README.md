@@ -1,6 +1,6 @@
-# nanobot WebUI Source
+# babo WebUI Source
 
-This directory contains the React/TypeScript source for the nanobot WebUI. If you installed `nanobot-ai` from PyPI and only want to use the bundled browser UI, read the user guide in [`docs/webui.md`](../docs/webui.md). You do not need Node.js, Bun, Vite, or anything in this directory unless you are changing the frontend.
+This directory contains the React/TypeScript source for the babo WebUI. If you installed `babo` from PyPI and only want to use the bundled browser UI, read the user guide in [`docs/webui.md`](../docs/webui.md). You do not need Node.js, Bun, Vite, or anything in this directory unless you are changing the frontend.
 
 For the project overview, install guide, and general docs map, see the root [`README.md`](../README.md) and [`docs/README.md`](../docs/README.md).
 
@@ -21,17 +21,17 @@ For existing components, ownership boundaries, and interactive examples, see the
 
 ```text
 webui/                 source tree (this directory)
-nanobot/web/dist/      build output served by the gateway
+babo/web/dist/      build output served by the gateway
 webui/src/components/settings/   model, capability, and system settings
 webui/src/lib/                   transport, API clients, and shared types
 webui/src/tests/                 frontend test setup and integration tests
-nanobot/channels/*/webui/        channel-owned interface code
-nanobot/channels/*/tests/webui/  channel interface tests
+babo/channels/*/webui/        channel-owned interface code
+babo/channels/*/tests/webui/  channel interface tests
 ```
 
 ## Develop the WebUI (Vite HMR)
 
-### 1. Install nanobot from source
+### 1. Install babo from source
 
 From the repository root:
 
@@ -46,7 +46,7 @@ python -m pip install -e .
 From the repository root:
 
 ```bash
-nanobot webui --dev
+babo webui --dev
 ```
 
 The command safely prepares the local WebSocket channel, starts both the gateway and Vite, and opens `http://127.0.0.1:5173`. Vite proxies HTTP requests to the gateway and applies frontend changes with HMR; the application WebSocket connects directly to the gateway. Ctrl+C stops Vite and releases this gateway client. An on-demand gateway stops when its last interactive client exits; a persistent gateway keeps running.
@@ -59,7 +59,7 @@ The two-terminal workflow remains available when you want to manage each process
 
 ### 1. Enable the WebSocket channel
 
-In `~/.nanobot/config.json`, merge:
+In `~/.babo/config.json`, merge:
 
 ```json
 { "channels": { "websocket": { "enabled": true } } }
@@ -70,7 +70,7 @@ In `~/.nanobot/config.json`, merge:
 In one terminal:
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 ### 3. Start the WebUI dev server
@@ -90,7 +90,7 @@ By default Vite proxies the HTTP paths `/api`, `/webui`, and `/auth` to `http://
 If your gateway listens on a non-default port, point the dev server at it:
 
 ```bash
-NANOBOT_API_URL=http://127.0.0.1:9000 bun run dev
+BABO_API_URL=http://127.0.0.1:9000 bun run dev
 ```
 
 This variable sets the HTTP target. Check the bootstrap response's `ws_url` when HTTP works but chat cannot connect: that address must be reachable by the browser. For a reverse proxy, configure the gateway's `channels.websocket.publicWsUrl` as described in [WebSocket deployment](../docs/websocket.md), rather than adding a Vite WebSocket proxy. If authentication is enabled, use the launcher's full login link or sign in with the configured bootstrap secret.
@@ -103,7 +103,7 @@ If you want to preview the production bundle locally without rebuilding the whee
 
 ```bash
 cd webui
-bun run build          # writes to ../nanobot/web/dist
+bun run build          # writes to ../babo/web/dist
 ```
 
 The gateway picks up the new bundle on the next restart.

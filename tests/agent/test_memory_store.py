@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.agent.memory import _HISTORY_ENTRY_HARD_CAP, MemoryStore
+from babo.agent.memory import _HISTORY_ENTRY_HARD_CAP, MemoryStore
 
 
 @pytest.fixture
@@ -225,7 +225,7 @@ class TestHistoryWithCursor:
         def failing_replace(*args, **kwargs):
             raise RuntimeError("Simulated failure")
 
-        monkeypatch.setattr('nanobot.utils.atomic_file.replace_atomic', failing_replace)
+        monkeypatch.setattr('babo.utils.atomic_file.replace_atomic', failing_replace)
 
         with pytest.raises(RuntimeError):
             store._write_entries(entries)
@@ -253,7 +253,7 @@ class TestAppendHistoryHardCap:
         """Repeated oversized writes should warn only on the first occurrence."""
         records: list[str] = []
         monkeypatch.setattr(
-            "nanobot.agent.memory.logger.warning",
+            "babo.agent.memory.logger.warning",
             lambda message, *args: records.append(message.format(*args)),
         )
         huge = "x" * (_HISTORY_ENTRY_HARD_CAP + 1)

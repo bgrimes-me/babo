@@ -9,9 +9,9 @@ from zipfile import ZipFile
 
 import pytest
 
-from nanobot import update_backup
-from nanobot.data_access import profile_data_paths
-from nanobot.update_backup import (
+from babo import update_backup
+from babo.data_access import profile_data_paths
+from babo.update_backup import (
     BackupSource,
     ensure_backup,
     unique_sources,
@@ -32,7 +32,7 @@ def scoped_data(tmp_path):
         data / "auth/mcp.json": '{"fixture":"secret"}',
         data / "cli-apps/installed.json": '{"apps":[]}',
         workspace / "memory/history.jsonl": '{"memory":"original"}\n',
-        workspace / ".nanobot/workspace-id": "namespace",
+        workspace / ".babo/workspace-id": "namespace",
         workspace / "cron/jobs.json": '{"jobs":[]}',
         workspace / "skills/custom/SKILL.md": "user skill",
         home / "sessions/legacy.jsonl": "legacy conversation",
@@ -133,9 +133,9 @@ def test_no_space_and_missing_original_backup_block_before_snapshot(scoped_data,
 
 
 def test_scheduled_delivery_is_backed_up_and_changes_block_program_rollback(tmp_path):
-    from nanobot.bus.delivery import DeliveryRequest
-    from nanobot.bus.events import OutboundMessage
-    from nanobot.channels.outbox import DeliveryOutbox
+    from babo.bus.delivery import DeliveryRequest
+    from babo.bus.events import OutboundMessage
+    from babo.channels.outbox import DeliveryOutbox
 
     data, job = tmp_path / "data", tmp_path / "job"
     job.mkdir()
@@ -169,7 +169,7 @@ def test_scope_cannot_include_its_own_job(tmp_path):
 
 
 async def test_scoped_backup_reopens_sqlite_history_after_runtime_drain(tmp_path):
-    from nanobot.session.manager import SessionManager
+    from babo.session.manager import SessionManager
 
     data, workspace, job = (tmp_path / name for name in ("data", "workspace", "job"))
     job.mkdir()

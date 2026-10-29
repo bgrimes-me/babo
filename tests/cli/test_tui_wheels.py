@@ -16,7 +16,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from nanobot.cli import tui_launcher
+from babo.cli import tui_launcher
 from scripts import build_tui_wheels as packager
 from scripts import release_candidate
 from scripts.release_candidate import (
@@ -30,10 +30,10 @@ from scripts.release_candidate import (
 @pytest.fixture
 def candidate(tmp_path):
     version = tomllib.loads((packager.ROOT / "pyproject.toml").read_text())["project"]["version"]
-    info = f"nanobot_ai-{version}.dist-info"
+    info = f"babo-{version}.dist-info"
     files = {
-        "nanobot/__init__.py": f"__version__ = '{version}'\n".encode(),
-        f"{info}/METADATA": f"Metadata-Version: 2.4\nName: nanobot-ai\nVersion: {version}\n".encode(),
+        "babo/__init__.py": f"__version__ = '{version}'\n".encode(),
+        f"{info}/METADATA": f"Metadata-Version: 2.4\nName: babo\nVersion: {version}\n".encode(),
         f"{info}/WHEEL": b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
     }
     record = io.StringIO(newline="")
@@ -42,7 +42,7 @@ def candidate(tmp_path):
         writer.writerow((name, packager._digest(content), len(content)))
     writer.writerow((f"{info}/RECORD", "", ""))
     files[f"{info}/RECORD"] = record.getvalue().encode()
-    wheel = tmp_path / f"nanobot_ai-{version}-py3-none-any.whl"
+    wheel = tmp_path / f"babo-{version}-py3-none-any.whl"
     with zipfile.ZipFile(wheel, "w") as archive:
         for name, content in files.items():
             archive.writestr(name, content)
@@ -50,7 +50,7 @@ def candidate(tmp_path):
 
 
 def make_bundle(directory, target, *, stale_source=False, wrong_architecture=False, omit=None):
-    asset = f"nanobot-tui-{target}" + (".exe" if target.startswith("win32-") else "")
+    asset = f"babo-tui-{target}" + (".exe" if target.startswith("win32-") else "")
     binary = bytearray(128)
     if target.startswith("linux-"):
         binary[:6] = b"\x7fELF\x02\x01"
@@ -65,12 +65,12 @@ def make_bundle(directory, target, *, stale_source=False, wrong_architecture=Fal
     files = {name: b"license material\n" for name in tui_launcher._TUI_RELEASE_FILES}
     files[asset] = b"wrong executable" if wrong_architecture else bytes(binary)
     source = runpy.run_path(str(packager.ROOT / "tui/scripts/package-release.py"))
-    files["nanobot-tui-source.tar.gz"] = source["_source_archive"](packager.ROOT / "tui")
+    files["babo-tui-source.tar.gz"] = source["_source_archive"](packager.ROOT / "tui")
     if stale_source:
         output = io.BytesIO()
         with tarfile.open(fileobj=output, mode="w:gz"):
             pass
-        files["nanobot-tui-source.tar.gz"] = output.getvalue()
+        files["babo-tui-source.tar.gz"] = output.getvalue()
     version = json.loads((packager.ROOT / "tui/package.json").read_text())["dependencies"]["@opentui/core"]
     files["THIRD_PARTY_NOTICES.txt"] = (
         f"Target: {target}\n===== @opentui/core {version} (MIT) =====\n"
@@ -101,11 +101,11 @@ def test_platform_wheel_record_permissions_and_complete_bundle(tmp_path, candida
         assert metadata["Root-Is-Purelib"] == "false"
         assert metadata.get_all("Tag") == [f"py3-none-{packager.PLATFORMS[target]}"]
         for name, content in bundle.items():
-            path = f"nanobot/tui/bin/{name}"
+            path = f"babo/tui/bin/{name}"
             assert archive.read(path) == content
             mode = archive.getinfo(path).external_attr >> 16
             assert stat.S_ISREG(mode)
-            assert stat.S_IMODE(mode) == (0o755 if name.startswith(f"nanobot-tui-{target}") else 0o644)
+            assert stat.S_IMODE(mode) == (0o755 if name.startswith(f"babo-tui-{target}") else 0o644)
         rows = list(csv.reader(io.StringIO(archive.read(f"{info}/RECORD").decode())))
         assert len(rows) == len(archive.namelist())
         for name, digest, size in rows:
@@ -146,7 +146,7 @@ def test_rejects_damaged_python_wheel(tmp_path, candidate):
     wheel, _ = candidate
     with zipfile.ZipFile(wheel) as archive:
         files = {name: archive.read(name) for name in archive.namelist()}
-    files["nanobot/__init__.py"] = b"changed after building"
+    files["babo/__init__.py"] = b"changed after building"
     with zipfile.ZipFile(wheel, "w") as archive:
         for name, content in files.items():
             archive.writestr(name, content)
@@ -157,7 +157,7 @@ def test_rejects_damaged_python_wheel(tmp_path, candidate):
 def test_rejects_damaged_archive_checksum(tmp_path, candidate):
     wheel, _ = candidate
     make_bundle(tmp_path, "linux-x64")
-    (tmp_path / "nanobot-tui-linux-x64.zip.sha256").write_text("0" * 64 + "  wrong.zip\n")
+    (tmp_path / "babo-tui-linux-x64.zip.sha256").write_text("0" * 64 + "  wrong.zip\n")
     with pytest.raises(ValueError, match="checksum mismatch"):
         packager.build_wheel(wheel, tmp_path, tmp_path / "wheels", "linux-x64")
 
@@ -169,19 +169,19 @@ def test_rejects_damaged_archive_checksum(tmp_path, candidate):
      ("Windows", "AMD64", "win32-x64")],
 )
 def test_installed_tui_never_downloads_or_requires_bun(tmp_path, monkeypatch, system, machine, target):
-    installed = tmp_path / "site-packages/nanobot"
+    installed = tmp_path / "site-packages/babo"
     launcher = installed / "cli/tui_launcher.py"
     launcher.parent.mkdir(parents=True)
     launcher.touch()
     monkeypatch.setattr(tui_launcher, "__file__", str(launcher))
-    monkeypatch.delenv("NANOBOT_TUI_BIN", raising=False)
-    monkeypatch.setenv("NANOBOT_TUI_NO_DOWNLOAD", "1")
+    monkeypatch.delenv("BABO_TUI_BIN", raising=False)
+    monkeypatch.setenv("BABO_TUI_NO_DOWNLOAD", "1")
     monkeypatch.setattr(tui_launcher.platform, "system", lambda: system)
     monkeypatch.setattr(tui_launcher.platform, "machine", lambda: machine)
     monkeypatch.setattr(tui_launcher, "os", SimpleNamespace(
         environ=tui_launcher.os.environ, name="nt" if system == "Windows" else "posix",
     ))
-    asset = f"nanobot-tui-{target}" + (".exe" if system == "Windows" else "")
+    asset = f"babo-tui-{target}" + (".exe" if system == "Windows" else "")
     binary = installed / "tui/bin" / asset
     binary.parent.mkdir(parents=True)
     binary.write_bytes(b"native")
@@ -209,7 +209,7 @@ def complete_candidate(tmp_path, candidate):
     wheel, info = candidate
     with zipfile.ZipFile(wheel) as archive:
         files = {name: archive.read(name) for name in archive.namelist()}
-    tracked = subprocess.check_output(["git", "ls-files", "-z", "--", "nanobot"], cwd=root).decode().split("\0")
+    tracked = subprocess.check_output(["git", "ls-files", "-z", "--", "babo"], cwd=root).decode().split("\0")
     for name in filter(None, tracked):
         parts = name.split("/")
         if len(parts) > 3 and parts[1] == "channels" and parts[3] == "tests":
@@ -218,15 +218,15 @@ def complete_candidate(tmp_path, candidate):
     hook = WebUIBuildHook(str(root), {}, None, {}, "", "wheel",
                           SimpleNamespace(display_info=lambda message: None))
     hook.initialize("editable", {})
-    references = root / "nanobot/skills/nanobot-document/references"
+    references = root / "babo/skills/babo-document/references"
     documentation = {}
     for reference in references.rglob("*.md"):
         files[reference.relative_to(root).as_posix()] = reference.read_bytes()
         name = "docs/" + reference.relative_to(references).as_posix()
         documentation[name] = (root / name).read_bytes()
     files[f"{info}/METADATA"] += f'Requires-Python: {metadata["requires-python"]}\n'.encode()
-    files["nanobot/_build_commit.txt"] = f"{commit}\n".encode()
-    files["nanobot/web/dist/index.html"] = b"<html>compiled fixture</html>"
+    files["babo/_build_commit.txt"] = f"{commit}\n".encode()
+    files["babo/web/dist/index.html"] = b"<html>compiled fixture</html>"
     record = io.StringIO()
     writer = csv.writer(record)
     for name, content in files.items():
@@ -247,11 +247,11 @@ def complete_candidate(tmp_path, candidate):
         "PKG-INFO": files[f"{info}/METADATA"],
         "pyproject.toml": (root / "pyproject.toml").read_bytes(),
         **documentation,
-        **{name: data for name, data in files.items() if name.startswith("nanobot/")},
+        **{name: data for name, data in files.items() if name.startswith("babo/")},
     }
-    with tarfile.open(artifacts / f"nanobot_ai-{version}.tar.gz", "w:gz") as archive:
+    with tarfile.open(artifacts / f"babo-{version}.tar.gz", "w:gz") as archive:
         for name, data in source_files.items():
-            member = tarfile.TarInfo(f"nanobot_ai-{version}/{name}")
+            member = tarfile.TarInfo(f"babo-{version}/{name}")
             member.size = len(data)
             archive.addfile(member, io.BytesIO(data))
     return root, commit, artifacts
@@ -290,8 +290,8 @@ def test_complete_manifest_binds_wheels_sdist_and_fallback_archives(tmp_path, co
         write_install_guide(root, artifacts, tmp_path / "unverified.md", source_commit=commit)
     assert not (tmp_path / "unverified.md").exists()
     output.write_bytes(original)
-    damaged = artifacts / "nanobot-tui-linux-x64.zip.sha256"
-    damaged.write_text("0" * 64 + "  nanobot-tui-linux-x64.zip\n")
+    damaged = artifacts / "babo-tui-linux-x64.zip.sha256"
+    damaged.write_text("0" * 64 + "  babo-tui-linux-x64.zip\n")
     with pytest.raises(ValueError, match="checksum mismatch"):
         verify_candidate(root, artifacts, source_commit=commit)
     with pytest.raises(ValueError, match="checksum mismatch"):
@@ -348,7 +348,7 @@ def test_complete_candidate_rejects_mixed_or_incomplete_application_payload(tmp_
         with zipfile.ZipFile(wheel) as archive:
             entries = archive.infolist()
             files = {entry.filename: archive.read(entry) for entry in entries}
-        name = "nanobot/__init__.py" if mutation == "wheel-code" else "nanobot/web/dist/index.html"
+        name = "babo/__init__.py" if mutation == "wheel-code" else "babo/web/dist/index.html"
         files[name] += b"\n# stale build\n"
         record_name = next(name for name in files if name.endswith(".dist-info/RECORD"))
         record = io.StringIO()
@@ -360,15 +360,15 @@ def test_complete_candidate_rejects_mixed_or_incomplete_application_payload(tmp_
             for entry in entries:
                 archive.writestr(entry, files[entry.filename])
     else:
-        source = next(artifacts.glob("nanobot_ai-*.tar.gz"))
+        source = next(artifacts.glob("babo-*.tar.gz"))
         files = packager.source_files(source.read_bytes())
-        module = next(name for name in files if name.endswith("/nanobot/agent/loop.py"))
+        module = next(name for name in files if name.endswith("/babo/agent/loop.py"))
         if mutation == "source-code":
             files[module] += b"\n# stale build\n"
         elif mutation == "source-missing":
             del files[module]
         else:
-            files[module.split("/", 1)[0] + "/nanobot/local-settings.json"] = b'{"local": true}'
+            files[module.split("/", 1)[0] + "/babo/local-settings.json"] = b'{"local": true}'
         with tarfile.open(source, "w:gz") as archive:
             for name, data in files.items():
                 member = tarfile.TarInfo(name)

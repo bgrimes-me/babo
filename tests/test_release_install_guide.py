@@ -5,7 +5,7 @@ import shlex
 
 import pytest
 
-from nanobot.releases import PLATFORMS, ReleaseArtifact, ReleaseManifest, release_filenames
+from babo.releases import PLATFORMS, ReleaseArtifact, ReleaseManifest, release_filenames
 from scripts import release_candidate
 from scripts.release_install_guide import install_command, render_install_guide
 

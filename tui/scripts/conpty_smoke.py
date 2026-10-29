@@ -12,7 +12,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 ENTER_ALT_SCREEN = "\x1b[?1049h"
 LEAVE_ALT_SCREEN = "\x1b[?1049l"
-RESUME_COMMAND = "Resume with: nanobot agent --session websocket:resume-chat"
+RESUME_COMMAND = "Resume with: babo agent --session websocket:resume-chat"
 
 
 def _read(process: Any, timeout: float) -> str:
@@ -69,15 +69,15 @@ def smoke(executable: Path | None = None, *, cwd: Path = ROOT) -> float:
     command = [str(executable)] if executable else [bun, str(ROOT / "src/index.ts")]
     env = {
         **os.environ,
-        "NANOBOT_TUI_WS_URL": "ws://127.0.0.1:9/ws",
-        "NANOBOT_TUI_API_URL": "",
-        "NANOBOT_TUI_API_TOKEN": "",
-        "NANOBOT_TUI_CHAT_ID": "resume-chat",
-        "NANOBOT_TUI_MODEL": "test/model",
-        "NANOBOT_TUI_WORKSPACE": r"C:\nanobot-tui-conpty",
-        "NANOBOT_TUI_VERSION": "test",
-        "NANOBOT_TUI_ACCESS": "workspace access",
-        "NANOBOT_TUI_THEME": "dark",
+        "BABO_TUI_WS_URL": "ws://127.0.0.1:9/ws",
+        "BABO_TUI_API_URL": "",
+        "BABO_TUI_API_TOKEN": "",
+        "BABO_TUI_CHAT_ID": "resume-chat",
+        "BABO_TUI_MODEL": "test/model",
+        "BABO_TUI_WORKSPACE": r"C:\babo-tui-conpty",
+        "BABO_TUI_VERSION": "test",
+        "BABO_TUI_ACCESS": "workspace access",
+        "BABO_TUI_THEME": "dark",
         # Headless ConPTY has no terminal emulator to answer optional OSC 66
         # width probes. Keep this smoke test focused on application behavior.
         "OPENTUI_FORCE_EXPLICIT_WIDTH": "false",
@@ -95,7 +95,7 @@ def smoke(executable: Path | None = None, *, cwd: Path = ROOT) -> float:
 
     output: list[str] = []
     try:
-        output.append(_wait_for(process, "Ask nanobot anything", 15))
+        output.append(_wait_for(process, "Ask babo anything", 15))
         first_screen_ms = (time.perf_counter() - started) * 1000
         if ENTER_ALT_SCREEN not in "".join(output):
             raise AssertionError("TUI did not enter its alternate screen")

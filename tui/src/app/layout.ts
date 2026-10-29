@@ -22,7 +22,7 @@ import type { RuntimeControls } from "../views/runtime-controls"
 import type { UsagePanel } from "../views/usage-panel"
 import type { Palette } from "./theme"
 
-export const COMPOSER_PLACEHOLDER = "Ask nanobot anything"
+export const COMPOSER_PLACEHOLDER = "Ask babo anything"
 export const ACTIVE_COMPOSER_PLACEHOLDER = "Enter send now  Tab send next"
 export const COMPACT_ACTIVE_COMPOSER_PLACEHOLDER = "Enter now  Tab next"
 
@@ -75,7 +75,7 @@ export function createAppLayout(
   // only colors occupied cells and turns long output into dark strips.
   renderer.setBackgroundColor(RGBA.defaultBackground())
   const shell = new BoxRenderable(renderer, {
-    id: "nanobot-tui-footer",
+    id: "babo-tui-footer",
     width: "100%",
     height: "100%",
     paddingLeft: 1,
@@ -92,7 +92,7 @@ export function createAppLayout(
     },
   })
   const title = new BoxRenderable(renderer, {
-    id: "nanobot-tui-title",
+    id: "babo-tui-title",
     width: "100%",
     height: 1,
     flexShrink: 0,
@@ -106,7 +106,7 @@ export function createAppLayout(
   title.add(components.runtimeControls.contextText)
 
   const composerFrame = new BoxRenderable(renderer, {
-    id: "nanobot-tui-composer-frame",
+    id: "babo-tui-composer-frame",
     minHeight: 1,
     flexShrink: 0,
     marginLeft: TRANSCRIPT_EDGE_INSET,
@@ -117,7 +117,7 @@ export function createAppLayout(
     backgroundColor: composerSurface,
   })
   const composer = new ComposerTextarea(renderer, {
-    id: "nanobot-tui-composer",
+    id: "babo-tui-composer",
     width: "100%",
     minHeight: 1,
     maxHeight: 8,
@@ -158,7 +158,7 @@ export function createAppLayout(
     onPaste: handlers.onPaste,
   })
   const status = new TextRenderable(renderer, {
-    id: "nanobot-tui-status",
+    id: "babo-tui-status",
     content: "Getting ready…",
     fg: palette.muted,
     height: 1,
@@ -169,7 +169,7 @@ export function createAppLayout(
     selectable: false,
   })
   const meta = new TextRenderable(renderer, {
-    id: "nanobot-tui-meta",
+    id: "babo-tui-meta",
     content: "",
     fg: palette.faint,
     height: 1,
@@ -178,7 +178,7 @@ export function createAppLayout(
     selectable: false,
   })
   const statusRow = new BoxRenderable(renderer, {
-    id: "nanobot-tui-status-row",
+    id: "babo-tui-status-row",
     width: "100%",
     height: 1,
     flexShrink: 0,

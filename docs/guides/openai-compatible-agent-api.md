@@ -1,10 +1,10 @@
-# How to Run an OpenAI-Compatible Agent API with nanobot
+# How to Run an OpenAI-Compatible Agent API with babo
 
-nanobot can expose a local OpenAI-compatible endpoint behind `/v1/chat/completions`. This lets existing OpenAI-style clients talk to a tool-using nanobot agent instead of a raw model.
+babo can expose a local OpenAI-compatible endpoint behind `/v1/chat/completions`. This lets existing OpenAI-style clients talk to a tool-using babo agent instead of a raw model.
 
 ## What you will build
 
-- a working nanobot agent
+- a working babo agent
 - a local API server on `127.0.0.1:8900`
 - a `/v1/chat/completions` request
 - optional session isolation with `session_id`
@@ -15,23 +15,23 @@ Use this when an existing client, another language, or a separate process alread
 
 ## Start from your current setup
 
-If you already get replies in the WebUI, open **Settings → System**, configure the API service, and start it. Keep that gateway running; do not also start `nanobot serve` on the same port.
+If you already get replies in the WebUI, open **Settings → System**, configure the API service, and start it. Keep that gateway running; do not also start `babo serve` on the same port.
 
-If nanobot is not configured yet, complete the [quick start](../quick-start.md) first. For a terminal-managed API using that existing config:
+If babo is not configured yet, complete the [quick start](../quick-start.md) first. For a terminal-managed API using that existing config:
 
 ```bash
-nanobot plugins enable api
-nanobot agent -m "Hello!"
-nanobot serve
+babo plugins enable api
+babo agent -m "Hello!"
+babo serve
 ```
 
 ## Make a request
 
-In another terminal, call the chat endpoint. If you configured an API key, set `NANOBOT_API_KEY` to it first:
+In another terminal, call the chat endpoint. If you configured an API key, set `BABO_API_KEY` to it first:
 
 ```bash
 curl http://127.0.0.1:8900/v1/chat/completions \
-  -H "Authorization: Bearer $NANOBOT_API_KEY" \
+  -H "Authorization: Bearer $BABO_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [{"role": "user", "content": "hi"}],
@@ -55,13 +55,13 @@ curl http://127.0.0.1:8900/v1/chat/completions \
 
 ## Troubleshooting
 
-- If `/v1/chat/completions` fails, test `nanobot agent -m "Hello!"` first.
+- If `/v1/chat/completions` fails, test `babo agent -m "Hello!"` first.
 - If remote clients cannot connect, check `api.host`, `api.port`, firewall, and API key configuration.
 - If sessions mix together, pass a distinct, stable `session_id` for each conversation. Requests without `session_id` all share the `api:default` session. See [session behavior](../openai-api.md#sessions-failures-and-retries) before changing existing IDs.
 
-## Related nanobot docs
+## Related babo docs
 
-- [Nanobot OpenAI-Compatible API](../openai-api.md)
+- [Babo OpenAI-Compatible API](../openai-api.md)
 - [Python SDK](../python-sdk.md)
 - [Configuration](../configuration.md)
 - [Deployment](../deployment.md)

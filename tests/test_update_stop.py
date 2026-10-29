@@ -16,24 +16,24 @@ from zipfile import ZipFile
 
 import pytest
 
-import nanobot
-from nanobot.config.home import get_selected_home_path, set_home_path
-from nanobot.data_access import data_access, profile_data_paths
-from nanobot.gateway.runtime import GatewayInstance, GatewayRuntime
-from nanobot.installation_lock import file_access, installation_access, installation_state_dir
-from nanobot.release_feed import ReleaseTarget
-from nanobot.releases import ReleaseArtifact
-from nanobot.runtime_admission import RuntimeAdmission
-from nanobot.update_backup import BackupSource
-from nanobot.update_jobs import _worker_archive
-from nanobot.update_plan import InstallationSnapshot, UpdatePlan
-from nanobot.update_profiles import ObservedProfile, ProfileLaunch, ProfileReceipt, inspect_profiles
-from nanobot.update_stop import (
+import babo
+from babo.config.home import get_selected_home_path, set_home_path
+from babo.data_access import data_access, profile_data_paths
+from babo.gateway.runtime import GatewayInstance, GatewayRuntime
+from babo.installation_lock import file_access, installation_access, installation_state_dir
+from babo.release_feed import ReleaseTarget
+from babo.releases import ReleaseArtifact
+from babo.runtime_admission import RuntimeAdmission
+from babo.update_backup import BackupSource
+from babo.update_jobs import _worker_archive
+from babo.update_plan import InstallationSnapshot, UpdatePlan
+from babo.update_profiles import ObservedProfile, ProfileLaunch, ProfileReceipt, inspect_profiles
+from babo.update_stop import (
     settle_uncommitted_handoff,
     stop_reviewed_gateways,
     watch_gateway_stop,
 )
-from nanobot.update_worker import (
+from babo.update_worker import (
     EnvironmentSnapshot,
     JobStatus,
     Phase,
@@ -45,23 +45,23 @@ from nanobot.update_worker import (
 
 
 def prepared_job(profiles, *, stop=None):
-    """Synthetic wheel metadata: not an actual nanobot installation fixture."""
+    """Synthetic wheel metadata: not an actual babo installation fixture."""
     identifier = str(uuid4())
     directory = installation_state_dir() / "jobs" / identifier
     directory.mkdir(parents=True)
     snapshot = InstallationSnapshot(
         environment=str(Path(sys.prefix).resolve()), python=sys.executable,
-        installed_version=nanobot.__version__, running_version=nanobot.__version__,
-        package_path=nanobot.__file__, running_package=nanobot.__file__, owner="venv", records={},
+        installed_version=babo.__version__, running_version=babo.__version__,
+        package_path=babo.__file__, running_package=babo.__file__, owner="venv", records={},
     )
     version = "99.0.0"
-    filename = f"nanobot_ai-{version}-py3-none-win_amd64.whl"
+    filename = f"babo-{version}-py3-none-win_amd64.whl"
     wheels = directory / "wheels"
     wheels.mkdir()
     wheel = wheels / filename
     with ZipFile(wheel, "w") as archive:
-        archive.writestr(f"nanobot_ai-{version}.dist-info/METADATA",
-                         f"Metadata-Version: 2.1\nName: nanobot-ai\nVersion: {version}\n")
+        archive.writestr(f"babo-{version}.dist-info/METADATA",
+                         f"Metadata-Version: 2.1\nName: babo\nVersion: {version}\n")
     size, checksum = wheel.stat().st_size, hashlib.sha256(wheel.read_bytes()).hexdigest()
     plan = UpdatePlan(
         id=identifier, installation=snapshot, channel="stable", profiles=profiles,
@@ -75,8 +75,8 @@ def prepared_job(profiles, *, stop=None):
         identifier, hashlib.sha256((directory / "plan.json").read_bytes()).hexdigest(),
         _worker_archive(directory / "worker.pyz"),
         EnvironmentSnapshot(snapshot.environment, sys.executable, sys.executable,
-                            "0" * 64, {}, {}, nanobot.__version__, {}), version,
-        (StagedWheel(filename, "nanobot-ai", version, size, checksum),),
+                            "0" * 64, {}, {}, babo.__version__, {}), version,
+        (StagedWheel(filename, "babo", version, size, checksum),),
         (BackupSource(str(directory / "fixture-data")),),
     )
     spec.save(directory)
@@ -95,7 +95,7 @@ def private_home(tmp_path, monkeypatch):
 
 @pytest.fixture
 def protocol(private_home, monkeypatch):
-    from nanobot import update_stop
+    from babo import update_stop
 
     profiles = []
     for number in range(2):
@@ -103,7 +103,7 @@ def protocol(private_home, monkeypatch):
         receipt = ProfileReceipt(
             id=hashlib.sha256(str(root).encode()).hexdigest(), run_id=uuid4().hex,
             environment=str(Path(sys.prefix).resolve()), python=sys.executable,
-            package=nanobot.__file__, version=nanobot.__version__, home=str(root), data_dir=str(root),
+            package=babo.__file__, version=babo.__version__, home=str(root), data_dir=str(root),
             config=str(root / "config.json"), workspace=str(root / "workspace"),
             state_path=str(root / "runtime.json"), log_path=str(root / "runtime.log"), port=18790 + number,
             launch_mode="background", pid=os.getpid() + 10000 + number, process_identity=f"fixture-{number}",
@@ -138,7 +138,7 @@ async def wait_until(predicate, *, timeout=5):
 async def test_handoff_rejects_approval_before_requesting_gateway_shutdown(protocol, monkeypatch, failure):
     from unittest.mock import AsyncMock
 
-    from nanobot import update_handoff
+    from babo import update_handoff
 
     directory, _, _, stops = protocol
     state = JobStatus.read(directory)
@@ -167,9 +167,9 @@ async def test_handoff_rejects_observed_catalogue_rollback_before_gateway_shutdo
     import httpx
     from packaging.tags import Tag
 
-    from nanobot import update_handoff
-    from nanobot.release_feed import CATALOGUE_URL, ReleaseFeed, ReleaseFeedError
-    from nanobot.releases import (
+    from babo import update_handoff
+    from babo.release_feed import CATALOGUE_URL, ReleaseFeed, ReleaseFeedError
+    from babo.releases import (
         ReleaseCatalogue,
         ReleaseManifest,
         ReleasePointer,
@@ -197,9 +197,9 @@ async def test_handoff_rejects_observed_catalogue_rollback_before_gateway_shutdo
             return httpx.Response(200, content=selected.model_dump_json())
         if str(request.url) == pointer.manifest_url:
             return httpx.Response(200, content=payload)
-        assert request.url.path == f"/pypi/nanobot-ai/{manifest.version}/json"
+        assert request.url.path == f"/pypi/babo/{manifest.version}/json"
         return httpx.Response(200, json={
-            "info": {"name": "nanobot-ai", "version": manifest.version, "requires_python": ">=3.11"},
+            "info": {"name": "babo", "version": manifest.version, "requires_python": ">=3.11"},
             "urls": [{"filename": item.filename, "size": item.size, "yanked": False,
                       "url": f"https://files.pythonhosted.org/packages/{item.filename}",
                       "digests": {"sha256": item.sha256}}
@@ -410,7 +410,7 @@ async def test_changed_staging_refuses_before_closing_task_intake(protocol):
 
 
 async def test_written_commit_is_not_aborted_if_acknowledging_the_write_fails(protocol, monkeypatch):
-    from nanobot import update_stop
+    from babo import update_stop
 
     directory, plan, gates, stops = protocol
     outer = [ExitStack(), ExitStack()]
@@ -444,7 +444,7 @@ async def test_written_commit_is_not_aborted_if_acknowledging_the_write_fails(pr
 
 @pytest.fixture
 def expire_stop_deadline(monkeypatch):
-    from nanobot import update_stop
+    from babo import update_stop
 
     # Drive protocol deadlines from an observed state, not filesystem speed.
     # Tests retain real-time watchdogs to catch stalled coordination.
@@ -459,7 +459,7 @@ def expire_stop_deadline(monkeypatch):
 
 
 async def test_stop_acknowledgement_does_not_prove_process_exit(protocol, monkeypatch, expire_stop_deadline):
-    from nanobot import update_stop
+    from babo import update_stop
 
     directory, plan, gates, stops = protocol
     outer = [ExitStack(), ExitStack()]
@@ -489,7 +489,7 @@ async def test_stop_acknowledgement_does_not_prove_process_exit(protocol, monkey
 
 
 async def test_inactive_unselected_profile_must_also_finish_its_process_exit(protocol, monkeypatch, expire_stop_deadline):
-    from nanobot import update_stop
+    from babo import update_stop
 
     _, original, gates, stops = protocol
     first, second = original.profiles
@@ -552,14 +552,14 @@ async def test_actual_gateway_exits_normally_before_installation_and_data_leases
     source = Path(__file__).resolve().parents[1]
     script = (
         f"import sys; sys.path.insert(0, {str(source)!r})\n"
-        "from nanobot.cli import gateway_runtime\n"
+        "from babo.cli import gateway_runtime\n"
         "gateway_runtime.warmup_token_encoding = lambda: None\n"
-        "from nanobot.cli.entry import main\nmain()\n"
+        "from babo.cli.entry import main\nmain()\n"
     )
     children = []
 
     def spawn(command, **kwargs):
-        assert command[1:3] == ["-m", "nanobot"]
+        assert command[1:3] == ["-m", "babo"]
         child = subprocess.Popen([command[0], "-c", script, *command[3:]], **kwargs)
         children.append(child)
         return child

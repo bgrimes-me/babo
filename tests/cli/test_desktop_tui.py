@@ -8,8 +8,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from nanobot.cli import desktop_target, desktop_tui, tui_launcher
-from nanobot.cli.desktop_target import DesktopReply, DesktopTargetError
+from babo.cli import desktop_target, desktop_tui, tui_launcher
+from babo.cli.desktop_target import DesktopReply, DesktopTargetError
 
 DESKTOP_ID = "d4f6cc96-a3a2-4a68-9a45-cec04b79ab53"
 GATEWAY_ID = "d4f6cc96-a3a2-4a68-9a45-cec04b79ab54"
@@ -63,10 +63,10 @@ def test_launcher_has_no_gateway_ownership_and_no_credentials_in_child_env(monke
     chosen = target()
     monkeypatch.setattr(tui_launcher, "resolve_tui_command", lambda: ["terminal-client"])
     monkeypatch.setattr(tui_launcher, "_ensure_gateway", lambda *a, **k: pytest.fail("must not own gateway"))
-    monkeypatch.setenv("NANOBOT_TUI_GATEWAY_STOP_COMMAND", "forbidden stop")
-    monkeypatch.setenv("NANOBOT_TUI_BOOTSTRAP_SECRET", "unrelated-bootstrap")
-    monkeypatch.setenv("NANOBOT_TUI_WS_URL", "ws://unrelated")
-    monkeypatch.delenv("NANOBOT_DESKTOP_CLIENT_CACHE", raising=False)
+    monkeypatch.setenv("BABO_TUI_GATEWAY_STOP_COMMAND", "forbidden stop")
+    monkeypatch.setenv("BABO_TUI_BOOTSTRAP_SECRET", "unrelated-bootstrap")
+    monkeypatch.setenv("BABO_TUI_WS_URL", "ws://unrelated")
+    monkeypatch.delenv("BABO_DESKTOP_CLIENT_CACHE", raising=False)
     calls = []
     process = MagicMock()
     process.wait.return_value = 90
@@ -74,7 +74,7 @@ def test_launcher_has_no_gateway_ownership_and_no_credentials_in_child_env(monke
     def probe(args, **kw):
         assert args == ["terminal-client", "--desktop-protocol"]
         assert kw["stdin"] == subprocess.DEVNULL
-        assert not any(key.startswith("NANOBOT_TUI_") for key in kw["env"])
+        assert not any(key.startswith("BABO_TUI_") for key in kw["env"])
         assert "unrelated-bootstrap" not in json.dumps((args, kw))
         return subprocess.CompletedProcess(args, 0, b"1\n", b"")
     monkeypatch.setattr(desktop_tui.subprocess, "run", probe)
@@ -86,13 +86,13 @@ def test_launcher_has_no_gateway_ownership_and_no_credentials_in_child_env(monke
     args, options = calls[0]
     assert args == ["terminal-client"]
     env = options["env"]
-    assert set(key for key in env if key.startswith("NANOBOT_TUI_")) == {
-        "NANOBOT_TUI_DESKTOP_TARGET", "NANOBOT_TUI_DESKTOP_RESOLVER",
+    assert set(key for key in env if key.startswith("BABO_TUI_")) == {
+        "BABO_TUI_DESKTOP_TARGET", "BABO_TUI_DESKTOP_RESOLVER",
     }
     assert "synthetic" not in json.dumps((args, options))
     assert "unrelated-bootstrap" not in json.dumps((args, options))
-    assert json.loads(env["NANOBOT_TUI_DESKTOP_TARGET"])["gatewayId"] == GATEWAY_ID
-    resolver = json.loads(env["NANOBOT_TUI_DESKTOP_RESOLVER"])
+    assert json.loads(env["BABO_TUI_DESKTOP_TARGET"])["gatewayId"] == GATEWAY_ID
+    resolver = json.loads(env["BABO_TUI_DESKTOP_RESOLVER"])
     assert resolver[:3] == [sys.executable, "-I", "-S"]
     assert resolver[-1] == "--resolve"
     process.terminate.assert_not_called()
@@ -103,7 +103,7 @@ def test_protocol_probe_is_isolated_in_a_real_child(monkeypatch):
     # Probe them without credentials or terminal input, before allowing launch.
     command = [sys.executable, "-I", "-S", "-c", """
 import os, sys
-keys = {key for key in os.environ if key.startswith('NANOBOT_TUI_')}
+keys = {key for key in os.environ if key.startswith('BABO_TUI_')}
 if sys.argv[-1] == '--desktop-protocol':
     if keys:
         sys.exit(7)
@@ -111,14 +111,14 @@ if sys.argv[-1] == '--desktop-protocol':
         sys.exit(8)
     print(1)
 else:
-    assert keys == {'NANOBOT_TUI_DESKTOP_TARGET', 'NANOBOT_TUI_DESKTOP_RESOLVER'}
+    assert keys == {'BABO_TUI_DESKTOP_TARGET', 'BABO_TUI_DESKTOP_RESOLVER'}
     sys.exit(90)
 """]
     monkeypatch.setattr(tui_launcher, "resolve_tui_command", lambda: command)
-    monkeypatch.delenv("NANOBOT_DESKTOP_CLIENT_CACHE", raising=False)
-    monkeypatch.setenv("NANOBOT_TUI_BOOTSTRAP_URL", "http://127.0.0.1:1/webui/bootstrap")
-    monkeypatch.setenv("NANOBOT_TUI_BOOTSTRAP_SECRET", "unrelated-bootstrap")
-    monkeypatch.setenv("NANOBOT_TUI_DESKTOP_RESOLVER", "unrelated-resolver")
+    monkeypatch.delenv("BABO_DESKTOP_CLIENT_CACHE", raising=False)
+    monkeypatch.setenv("BABO_TUI_BOOTSTRAP_URL", "http://127.0.0.1:1/webui/bootstrap")
+    monkeypatch.setenv("BABO_TUI_BOOTSTRAP_SECRET", "unrelated-bootstrap")
+    monkeypatch.setenv("BABO_TUI_DESKTOP_RESOLVER", "unrelated-resolver")
     assert desktop_tui.launch_desktop_tui(target()) == 0
 
 
@@ -184,7 +184,7 @@ def test_resolver_output_accepts_only_anonymous_ipc(tmp_path):
 
 @pytest.mark.parametrize("args", [["--config", "elsewhere"], ["gateway", "stop"], ["--help"], ["webui"]])
 def test_desktop_only_entry_never_forwards_unknown_commands(args, monkeypatch):
-    monkeypatch.setattr(sys, "argv", ["nanobot-desktop-tui", *args])
+    monkeypatch.setattr(sys, "argv", ["babo-desktop-tui", *args])
     monkeypatch.setattr(desktop_tui, "discover_desktop_target", lambda: pytest.fail("explicit command"))
     with pytest.raises(SystemExit) as error:
         desktop_tui.main()
@@ -192,7 +192,7 @@ def test_desktop_only_entry_never_forwards_unknown_commands(args, monkeypatch):
 
 
 def test_desktop_cache_avoids_default_python_data_root(monkeypatch, tmp_path):
-    monkeypatch.setenv("NANOBOT_DESKTOP_CLIENT_CACHE", str(tmp_path))
+    monkeypatch.setenv("BABO_DESKTOP_CLIENT_CACHE", str(tmp_path))
     observed = []
     def resolve(**kwargs):
         observed.append(kwargs)

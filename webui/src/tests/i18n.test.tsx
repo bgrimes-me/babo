@@ -150,14 +150,14 @@ const LOCALIZED_SETTINGS_COPY_KEYS = [
   "settings.skills.marketplaceInstall",
   "settings.skills.marketplaceNoTrend",
   "settings.skills.marketplaceTrendLabel",
-  "settings.nanobotFeatures.disable",
-  "settings.nanobotFeatures.ready",
-  "settings.nanobotFeatures.missingDependency",
-  "settings.nanobotFeatures.installConfirmTitle",
-  "settings.nanobotFeatures.installConfirmDescription",
-  "settings.nanobotFeatures.installConfirmAction",
-  "settings.nanobotFeatures.channelDisabled",
-  "settings.nanobotFeatures.notEnabled",
+  "settings.baboFeatures.disable",
+  "settings.baboFeatures.ready",
+  "settings.baboFeatures.missingDependency",
+  "settings.baboFeatures.installConfirmTitle",
+  "settings.baboFeatures.installConfirmDescription",
+  "settings.baboFeatures.installConfirmAction",
+  "settings.baboFeatures.channelDisabled",
+  "settings.baboFeatures.notEnabled",
   "settings.sections.about",
   "settings.rows.theme",
   "settings.rows.language",
@@ -518,7 +518,7 @@ describe("webui i18n", () => {
     await waitFor(() => {
       expect(document.documentElement.lang).toBe("zh-CN");
     });
-    expect(localStorage.getItem("nanobot.locale")).toBe("zh-CN");
+    expect(localStorage.getItem("babo.locale")).toBe("zh-CN");
     expect(screen.getByPlaceholderText("输入消息…")).toBeInTheDocument();
   });
 

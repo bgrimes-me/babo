@@ -7,15 +7,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from nanobot.agent.tools.context import RequestContext
-from nanobot.bus.events import InboundMessage
-from nanobot.session.goal_state import (
+from babo.agent.tools.context import RequestContext
+from babo.bus.events import InboundMessage
+from babo.session.goal_state import (
     GOAL_STATE_KEY,
     explicit_goal_requested,
     sustained_goal_turn,
 )
-from nanobot.session.recovery import REQUEST_ORIGIN_METADATA_KEY
-from nanobot.session.turn_continuation import (
+from babo.session.recovery import REQUEST_ORIGIN_METADATA_KEY
+from babo.session.turn_continuation import (
     INTERNAL_CONTINUATION_KIND_META,
     INTERNAL_CONTINUATION_META,
     INTERNAL_CONTINUATION_RUN_STARTED_AT_META,

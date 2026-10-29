@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "@/lib/api";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 import type { ConnectionStatus } from "@/lib/types";
 import { UpdateFlowProvider, useUpdateFlow } from "@/providers/UpdateFlowProvider";
 import { ClientProvider } from "@/providers/ClientProvider";
@@ -17,7 +17,7 @@ vi.mock("@/lib/api", async (original) => ({
 vi.mock("@/lib/clipboard", () => ({ copyTextToClipboard: vi.fn() }));
 const id = "71c91a73-842e-42e9-aeb4-61a5bfe51135";
 let connectionStatus: ConnectionStatus = "open";
-const client = { get status() { return connectionStatus; } } as NanobotClient;
+const client = { get status() { return connectionStatus; } } as BaboClient;
 const review: api.UpdateReviewResponse = {
   plan: { id, installation_id: "installed-a", host: "test Mac", running_version: "0.3.5", target_version: "0.3.6",
     action: "upgrade", validity: "current", execution_blocked_reason: null, profiles: [] },
@@ -26,10 +26,10 @@ const review: api.UpdateReviewResponse = {
 const externalReview: api.UpdateReviewResponse = {
   ...review, execution_available: false,
   plan: { ...review.plan, execution_blocked_reason: "installation_owner", guide: {
-    method: "pipx", host: "remote-server", environment: "/server/pipx/venvs/nanobot-ai-work", shell: "sh", reason: "registry",
+    method: "pipx", host: "remote-server", environment: "/server/pipx/venvs/babo-work", shell: "sh", reason: "registry",
     inspect_command: "env PIPX_HOME=/server/pipx pipx list",
-    update_command: "env PIPX_HOME=/server/pipx pipx upgrade nanobot-ai-work",
-    verify_command: "/server/pipx/venvs/nanobot-ai-work/bin/python -I -m nanobot --version",
+    update_command: "env PIPX_HOME=/server/pipx pipx upgrade babo-work",
+    verify_command: "/server/pipx/venvs/babo-work/bin/python -I -m babo --version",
   } },
 };
 const job = (phase: api.UpdateJobPhase, confirmation: string | null = null): api.UpdateJob => ({
@@ -142,19 +142,19 @@ describe("Real update consent and recovery", () => {
   it("does not send a managed-install user to the terminal during a long reconnect", async () => {
     vi.useFakeTimers();
     connectionStatus = "closed";
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
-    sessionStorage.setItem("nanobot.pending-update-recovery.v1", JSON.stringify({
+    sessionStorage.setItem("babo.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update-recovery.v1", JSON.stringify({
       id, command: "private recovery command", automatic: true,
     }));
     render(view());
     await act(async () => { await vi.advanceTimersByTimeAsync(123_000); });
-    expect(screen.getByText(/nanobot will try to restore service/)).toBeVisible();
+    expect(screen.getByText(/babo will try to restore service/)).toBeVisible();
     expect(screen.queryByDisplayValue("private recovery command")).not.toBeInTheDocument();
     expect(api.executeUpdate).not.toHaveBeenCalled();
     expect(api.readUpdateJob).not.toHaveBeenCalled();
   });
   it("reports a restored service without claiming the update succeeded or asking for terminal repair", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: {
       ...job("failed", "confirmed"), previous_version: "0.3.5", service_restored: true,
       mutation_started: true, recovery_command: "private recovery command",
@@ -167,7 +167,7 @@ describe("Real update consent and recovery", () => {
     expect(api.executeUpdate).not.toHaveBeenCalled();
   });
   it("keeps polling a failed attempt while its independent recovery owner is active", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateJob).mockResolvedValueOnce({ job: {
       ...job("failed", "confirmed"), recovery_active: true, mutation_started: true,
     } }).mockResolvedValue({ job: {
@@ -210,7 +210,7 @@ describe("Real update consent and recovery", () => {
     expect(screen.getByRole("button", { name: "Review update" })).toBeEnabled();
     expect(api.settleUpdate).not.toHaveBeenCalled();
     expect(api.createUpdateReview).toHaveBeenCalledOnce();
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBe(id);
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBe(id);
 
     const nextId = "81c91a73-842e-42e9-aeb4-61a5bfe51135";
     vi.mocked(api.createUpdateReview).mockResolvedValue({ ...review, plan: { ...review.plan, id: nextId, target_version: "0.3.7" } });
@@ -218,22 +218,22 @@ describe("Real update consent and recovery", () => {
     await act(async () => {});
     expect(screen.getByRole("button", { name: "Please wait" })).toBeDisabled();
     expect(api.createUpdateReview).toHaveBeenCalledOnce();
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBe(id);
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBe(id);
     await act(async () => resolveSettlement({ job: job("preparation_failed") }));
     expect(screen.getByText(/Updating to v0.3.7/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Update & restart" })).toBeEnabled();
     expect(api.settleUpdate).toHaveBeenCalledOnce();
     expect(api.settleUpdate).toHaveBeenCalledWith(client, id);
     expect(api.createUpdateReview).toHaveBeenCalledTimes(2);
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBeNull();
-    expect(sessionStorage.getItem("nanobot.pending-update-recovery.v1")).toBeNull();
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBeNull();
+    expect(sessionStorage.getItem("babo.pending-update-recovery.v1")).toBeNull();
     await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
     expect(api.prepareUpdate).toHaveBeenCalledOnce();
     expect(api.executeUpdate).not.toHaveBeenCalled();
   });
   it("keeps an active preparer's refused settlement and retries status read-only", async () => {
     vi.useFakeTimers();
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: job("preparing") });
     vi.mocked(api.settleUpdate).mockRejectedValue(new api.ApiError(409, "Preparation owner still active"));
     render(view("gateway-a", true, false));
@@ -241,7 +241,7 @@ describe("Real update consent and recovery", () => {
     fireEvent.click(screen.getByRole("button", { name: "Review update" }));
     await act(async () => {});
     expect(screen.getByText(/previous update could not be cleared safely/)).toBeVisible();
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBe(id);
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBe(id);
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
     await act(async () => { await vi.advanceTimersByTimeAsync(600); });
     expect(api.readUpdateJob).toHaveBeenCalledTimes(2);
@@ -252,12 +252,12 @@ describe("Real update consent and recovery", () => {
     expect(api.createUpdateReview).not.toHaveBeenCalled();
     expect(api.prepareUpdate).not.toHaveBeenCalled();
     expect(api.executeUpdate).not.toHaveBeenCalled();
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBe(id);
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBe(id);
   });
   it("keeps a lost preparation-settlement response recoverable without creating another job", async () => {
     vi.useFakeTimers();
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
-    sessionStorage.setItem("nanobot.pending-update-recovery.v1", JSON.stringify({ id, command: "saved recovery command" }));
+    sessionStorage.setItem("babo.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update-recovery.v1", JSON.stringify({ id, command: "saved recovery command" }));
     let saved = job("preparing");
     vi.mocked(api.readUpdateJob).mockImplementation(async () => ({ job: saved }));
     vi.mocked(api.settleUpdate).mockImplementation(async () => {
@@ -268,15 +268,15 @@ describe("Real update consent and recovery", () => {
     await act(async () => {});
     fireEvent.click(screen.getByRole("button", { name: "Review update" }));
     await act(async () => {});
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBe(id);
-    expect(sessionStorage.getItem("nanobot.pending-update-recovery.v1")).toContain("saved recovery command");
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBe(id);
+    expect(sessionStorage.getItem("babo.pending-update-recovery.v1")).toContain("saved recovery command");
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
     await act(async () => { await vi.advanceTimersByTimeAsync(600); });
     expect(screen.getByText("Update did not finish")).toBeVisible();
     expect(api.readUpdateJob).toHaveBeenCalledTimes(2);
     expect(api.settleUpdate).toHaveBeenCalledOnce();
     expect(api.createUpdateReview).not.toHaveBeenCalled();
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBe(id);
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBe(id);
     mounted.unmount();
     render(view("gateway-a", true, false));
     await act(async () => {});
@@ -286,7 +286,7 @@ describe("Real update consent and recovery", () => {
     expect(api.executeUpdate).not.toHaveBeenCalled();
   });
   it("retires a restored failed handoff and reviews a fresh plan before new consent", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: job("handoff_failed", "previous") });
     vi.mocked(api.settleUpdate).mockResolvedValue({ job: job("cancelled", "previous") });
     const nextId = "81c91a73-842e-42e9-aeb4-61a5bfe51135";
@@ -298,7 +298,7 @@ describe("Real update consent and recovery", () => {
     expect(api.createUpdateReview).toHaveBeenCalledOnce();
     expect(api.executeUpdate).not.toHaveBeenCalled();
     expect(api.prepareUpdate).not.toHaveBeenCalled();
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBeNull();
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBeNull();
     vi.mocked(api.prepareUpdate).mockResolvedValue({ job: { ...job("preparing"), id: nextId } });
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: { ...job("ready"), id: nextId } });
     fireEvent.click(screen.getByRole("button", { name: "Update & restart" }));
@@ -306,13 +306,13 @@ describe("Real update consent and recovery", () => {
     expect(api.executeUpdate).toHaveBeenCalledOnce();
   });
   it("keeps a refused settlement recoverable and Check again strictly read-only", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: job("handoff_failed", "previous") });
     vi.mocked(api.settleUpdate).mockRejectedValue(new api.ApiError(409, "Worker still active"));
     render(view());
     fireEvent.click(await screen.findByRole("button", { name: "Review update" }));
     await screen.findByText(/previous update could not be cleared safely/);
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBe(id);
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBe(id);
     expect(api.createUpdateReview).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
     await screen.findByRole("button", { name: "Review update" });
@@ -321,7 +321,7 @@ describe("Real update consent and recovery", () => {
     expect(api.executeUpdate).not.toHaveBeenCalled();
   });
   it("can leave an expired READY review without bypassing gateway settlement", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateReview).mockResolvedValue({ ...review, execution_available: false,
       plan: { ...review.plan, validity: "expired", execution_blocked_reason: "review_changed" } });
     vi.mocked(api.settleUpdate).mockResolvedValue({ job: job("cancelled") });
@@ -332,7 +332,7 @@ describe("Real update consent and recovery", () => {
     expect(api.executeUpdate).not.toHaveBeenCalled();
   });
   it("recovers a lost settlement response after reload without restoring consent", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: job("cancelled", "previous") });
     vi.mocked(api.settleUpdate).mockResolvedValue({ job: job("cancelled", "previous") });
     render(view());
@@ -341,7 +341,7 @@ describe("Real update consent and recovery", () => {
     expect(api.executeUpdate).not.toHaveBeenCalled();
   });
   it("does not retry execution or send unsupported settlement to older hosts", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: job("handoff_failed", "previous") });
     render(view("gateway-a", true, false));
     fireEvent.click(await screen.findByRole("button", { name: "Check again" }));
@@ -361,7 +361,7 @@ describe("Real update consent and recovery", () => {
     expect(api.prepareUpdate).toHaveBeenCalledWith(client, id);
   });
   it("reads a restored READY job but never restores installation consent", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     render(view());
     await screen.findByText(/Updating to v0.3.6/);
     expect(api.createUpdateReview).not.toHaveBeenCalled();
@@ -371,7 +371,7 @@ describe("Real update consent and recovery", () => {
     await waitFor(() => expect(api.executeUpdate).toHaveBeenCalledOnce());
   });
   it("waits for the restored review before enabling confirmation", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     let resolveReview!: (value: api.UpdateReviewResponse) => void;
     vi.mocked(api.readUpdateReview).mockImplementation(() => new Promise(resolve => { resolveReview = resolve; }));
     render(view());
@@ -392,7 +392,7 @@ describe("Real update consent and recovery", () => {
     fireEvent.click(screen.getByText("Update entry"));
     fireEvent.click(await screen.findByRole("button", { name: "Update & restart" }));
     await screen.findByText(/No package files were changed. Review the update again/);
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBeNull();
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBeNull();
     const nextId = "81c91a73-842e-42e9-aeb4-61a5bfe51135";
     vi.mocked(api.createUpdateReview).mockResolvedValue({ ...review, plan: { ...review.plan, id: nextId } });
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
@@ -408,7 +408,7 @@ describe("Real update consent and recovery", () => {
     fireEvent.click(screen.getByText("Update entry"));
     fireEvent.click(await screen.findByRole("button", { name: "Update & restart" }));
     await screen.findByText(/Could not read the saved update/);
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBe(id);
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBe(id);
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
     await waitFor(() => expect(api.readUpdateJob).toHaveBeenCalledTimes(2));
     expect(api.createUpdateReview).toHaveBeenCalledOnce();
@@ -422,7 +422,7 @@ describe("Real update consent and recovery", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Update & restart" }));
     await waitFor(() => expect(api.readUpdateJob).toHaveBeenCalled());
     await screen.findByRole("button", { name: "Update & restart" });
-    expect(sessionStorage.getItem("nanobot.pending-update.v1")).toBe(id);
+    expect(sessionStorage.getItem("babo.pending-update.v1")).toBe(id);
     expect(api.createUpdateReview).toHaveBeenCalledOnce();
     expect(api.prepareUpdate).toHaveBeenCalledOnce();
     expect(api.executeUpdate).not.toHaveBeenCalled();
@@ -442,7 +442,7 @@ describe("Real update consent and recovery", () => {
     expect(await screen.findByRole("button", { name: "Please wait" })).toBeDisabled();
   });
   it("does not report completion until the actual running version matches", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: job("succeeded", "confirmed") });
     const mounted = render(view());
     await screen.findByText("Reconnecting…");
@@ -456,7 +456,7 @@ describe("Real update consent and recovery", () => {
   });
   it("waits for authenticated reconnect when a restart invalidates an in-flight journal read", async () => {
     vi.useFakeTimers();
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     let rejectRead!: (reason: unknown) => void;
     vi.mocked(api.readUpdateJob).mockImplementationOnce(() => new Promise((_, reject) => { rejectRead = reject; }));
     const mounted = render(view());
@@ -484,7 +484,7 @@ describe("Real update consent and recovery", () => {
     expect(api.executeUpdate).not.toHaveBeenCalled();
   });
   it("still reports rejected journal access on an authenticated connection", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateJob).mockRejectedValue(new api.ApiError(401, "Unauthorized"));
     render(view());
     expect(await screen.findByText(/Could not read the saved update/)).toBeVisible();
@@ -493,7 +493,7 @@ describe("Real update consent and recovery", () => {
   });
   it("replaces a prolonged reconnect with the actual journal error and allows a read-only retry", async () => {
     vi.useFakeTimers();
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     connectionStatus = "reconnecting";
     render(view());
     await act(async () => { await vi.advanceTimersByTimeAsync(123_000); });
@@ -540,7 +540,7 @@ describe("Real update consent and recovery", () => {
   });
   it("acknowledges a read-only retry even when the same failure returns immediately", async () => {
     vi.useFakeTimers();
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: {
       ...job("restart_failed", "confirmed"), mutation_started: true,
     } });
@@ -560,7 +560,7 @@ describe("Real update consent and recovery", () => {
     expect(api.executeUpdate).not.toHaveBeenCalled();
   });
   it("can reopen a hidden saved update from About even after the new version is installed", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: {
       ...job("restart_failed", "confirmed"), mutation_started: true, running_version: "0.3.6",
     } });
@@ -601,8 +601,8 @@ describe("Real update consent and recovery", () => {
     expect(api.createUpdateReview).not.toHaveBeenCalled();
   });
   it("shows the saved host recovery command after mutation failure without executing it", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
-    const command = `python3 -I -S ~/.nanobot/updates/recover.py ${id} --repair`;
+    sessionStorage.setItem("babo.pending-update.v1", id);
+    const command = `python3 -I -S ~/.babo/updates/recover.py ${id} --repair`;
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: {
       ...job("failed", "confirmed"), mutation_started: true, recovery_command: command,
     } });
@@ -615,10 +615,10 @@ describe("Real update consent and recovery", () => {
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
     expect(await screen.findByText("Update complete")).toBeVisible();
     expect(api.executeUpdate).not.toHaveBeenCalled();
-    expect(JSON.parse(sessionStorage.getItem("nanobot.pending-update-recovery.v1") || "{}").command).toBe(command);
+    expect(JSON.parse(sessionStorage.getItem("babo.pending-update-recovery.v1") || "{}").command).toBe(command);
   });
   it("shows recovery after an admitted job fails during backup before package mutation", async () => {
-    sessionStorage.setItem("nanobot.pending-update.v1", id);
+    sessionStorage.setItem("babo.pending-update.v1", id);
     const command = `python3 -I -S /private/update/recover.py ${id} --repair`;
     vi.mocked(api.readUpdateJob).mockResolvedValue({ job: {
       ...job("failed", "confirmed"), recovery_command: command,

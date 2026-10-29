@@ -2,10 +2,10 @@
 
 import pytest
 
-from nanobot.agent.hook import AgentHookContext
-from nanobot.agent.progress_hook import AgentProgressHook
-from nanobot.bus.outbound_events import ProgressEvent
-from nanobot.events import AgentEvent, EventSink
+from babo.agent.hook import AgentHookContext
+from babo.agent.progress_hook import AgentProgressHook
+from babo.bus.outbound_events import ProgressEvent
+from babo.events import AgentEvent, EventSink
 
 
 @pytest.mark.parametrize("chunks, expected", [

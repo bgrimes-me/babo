@@ -4,7 +4,7 @@ for (const locale of ["en", "zh-CN"]) {
   for (const width of [390, 1280]) {
     test(`idle compaction settings in ${locale} at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      await page.addInitScript((language) => localStorage.setItem("nanobot.locale", language), locale);
+      await page.addInitScript((language) => localStorage.setItem("babo.locale", language), locale);
       await page.goto("/browser/fixture.html?case=idle-compaction");
       const chinese = locale === "zh-CN";
       const input = page.getByRole("textbox", { name: chinese ? "空闲时限" : "Idle timeout" });

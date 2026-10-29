@@ -7,7 +7,7 @@ import pytest
 from packaging.tags import Tag, mac_platforms
 from pydantic import ValidationError
 
-from nanobot.releases import (
+from babo.releases import (
     ReleaseArtifact,
     ReleaseCatalogue,
     ReleaseManifest,
@@ -64,9 +64,9 @@ def test_stable_catalogue_never_accepts_unreleased_or_noncanonical_targets(versi
 def test_target_wheel_and_url_are_owned_by_the_manifest(platform):
     release = manifest()
     artifact = release.wheel_for(python_version="3.11.4", supported_tags=[Tag("py3", "none", platform)])
-    assert artifact.filename == f"nanobot_ai-0.3.6.dev42-py3-none-{platform}.whl"
+    assert artifact.filename == f"babo-0.3.6.dev42-py3-none-{platform}.whl"
     assert release.artifact_url(artifact) == (
-        "https://github.com/HKUDS/nanobot/releases/download/v0.3.6.dev42/"
+        "https://github.com/bgrimes-me/babo/releases/download/v0.3.6.dev42/"
         f"{artifact.filename}#sha256={'c' * 64}"
     )
 
@@ -109,9 +109,9 @@ def test_manifest_rejects_partial_mixed_or_redirected_uploads(change):
     elif change == "duplicate":
         payload["artifacts"][-1] = payload["artifacts"][0]
     elif change == "mixed_version":
-        payload["artifacts"][-1]["filename"] = "nanobot_ai-0.3.5.tar.gz"
+        payload["artifacts"][-1]["filename"] = "babo-0.3.5.tar.gz"
     elif change == "universal":
-        payload["artifacts"][-1]["filename"] = "nanobot_ai-0.3.6.dev42-py3-none-any.whl"
+        payload["artifacts"][-1]["filename"] = "babo-0.3.6.dev42-py3-none-any.whl"
     else:
         payload["artifacts"][0]["url"] = "https://untrusted.example/installer.sh"
     with pytest.raises(ValidationError):

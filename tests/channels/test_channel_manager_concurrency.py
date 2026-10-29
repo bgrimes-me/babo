@@ -3,13 +3,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.bus.events import OutboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.channels import manager as manager_module
-from nanobot.channels.base import BaseChannel
-from nanobot.channels.manager import ChannelManager
-from nanobot.config.schema import Config
-from nanobot.runtime_admission import RuntimeBusyError
+from babo.bus.events import OutboundMessage
+from babo.bus.queue import MessageBus
+from babo.channels import manager as manager_module
+from babo.channels.base import BaseChannel
+from babo.channels.manager import ChannelManager
+from babo.config.schema import Config
+from babo.runtime_admission import RuntimeBusyError
 
 
 def make_manager():

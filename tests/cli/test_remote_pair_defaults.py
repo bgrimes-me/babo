@@ -6,20 +6,20 @@ from unittest.mock import Mock
 
 import pytest
 
-from nanobot.cli import remote
+from babo.cli import remote
 
 
 @pytest.mark.parametrize(
     ("uid", "sudo_user", "expected"),
     [(1001, "other", "ubuntu"), (0, "ubuntu", "ubuntu"),
-     (0, "missing", None), (0, "nanobot", None), (0, "root", None)],
+     (0, "missing", None), (0, "babo", None), (0, "root", None)],
 )
 def test_pair_suggests_existing_login_account(monkeypatch, uid, sudo_user, expected):
     pwd = pytest.importorskip("pwd")
     monkeypatch.setattr(remote, "_cloud_ssh_user", lambda: None)
     users = [SimpleNamespace(pw_name=name, pw_uid=user_uid, pw_shell=shell) for name, user_uid, shell in
              [("root", 0, "/bin/bash"), ("ubuntu", 1001, "/bin/bash"),
-              ("other", 1002, "/bin/bash"), ("nanobot", 1003, "/usr/sbin/nologin")]]
+              ("other", 1002, "/bin/bash"), ("babo", 1003, "/usr/sbin/nologin")]]
     monkeypatch.setattr(remote.os, "getuid", lambda: uid)
     monkeypatch.setattr(pwd, "getpwuid", lambda _: users[1] if uid else users[0])
     monkeypatch.setattr(pwd, "getpwall", lambda: users)
@@ -29,7 +29,7 @@ def test_pair_suggests_existing_login_account(monkeypatch, uid, sudo_user, expec
 
 @pytest.mark.parametrize("configured, expected", [
     ("ubuntu", "ubuntu"), ("lighthouse", "lighthouse"), ("root", None),
-    ("nanobot", None), ("missing", None), ("ubuntu\nlighthouse", None), (None, None),
+    ("babo", None), ("missing", None), ("ubuntu\nlighthouse", None), (None, None),
 ])
 def test_root_cloud_console_uses_only_an_existing_regular_cloud_account(monkeypatch, configured, expected):
     pwd = pytest.importorskip("pwd")

@@ -9,8 +9,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from nanobot.cli import desktop_target
-from nanobot.cli.desktop_target import DesktopTargetError
+from babo.cli import desktop_target
+from babo.cli.desktop_target import DesktopTargetError
 
 
 def _set_pointer(pointer, value, value_type=wintypes.LPVOID):
@@ -128,7 +128,7 @@ def test_windows_owner_sid_is_checked_and_handles_released(monkeypatch, same_use
 def test_native_windows_pipe_roundtrip():
     # _winapi is bundled with CPython on Windows; no test/runtime dependency.
     winapi = pytest.importorskip("_winapi")
-    address = f"nanobot-desktop-v1-{uuid.uuid4()}"
+    address = f"babo-desktop-v1-{uuid.uuid4()}"
     handle = winapi.CreateNamedPipe(
         rf"\\.\pipe\{address}",
         winapi.PIPE_ACCESS_DUPLEX | winapi.FILE_FLAG_OVERLAPPED,

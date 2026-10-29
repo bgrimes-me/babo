@@ -108,8 +108,8 @@ export function RemoteInstances({ children }: { children: ReactNode }) {
     void hosts.connect(id).catch(() => {});
   };
   const picker: HostPicker = {
-    kind: "shell", name: selected?.name || t("remote.localShort"), hostname: selected?.hostname || directory?.machine_name || "nanobot",
-    localName: directory?.machine_name || "nanobot", currentId: selected?.id || null, recentIds: hosts.recentIds,
+    kind: "shell", name: selected?.name || t("remote.localShort"), hostname: selected?.hostname || directory?.machine_name || "babo",
+    localName: directory?.machine_name || "babo", currentId: selected?.id || null, recentIds: hosts.recentIds,
     profiles: groupRemoteProfiles(directory?.profiles || [], selected?.id || null)
       .map(({ profile: { id, name, host } }) => ({ id, name, host, state: hostStates[id] })),
     pending, error: message, offline: !!offline, offlineLabel: compatibilityFailure ? t(recoveryTitle) : undefined,

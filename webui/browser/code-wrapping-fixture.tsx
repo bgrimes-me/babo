@@ -5,7 +5,7 @@ import { MessageBubble } from "@/components/MessageBubble";
 const source = [
   "# Environment",
   "",
-  "- `ncode` 启动器在 `C:\\Users\\reader\\.config\\powershell\\profile.ps1`，使用 `uv run --project D:\\projects\\nanobot`；默认配置在 `C:\\Users\\reader\\.nanobot\\config.json`。",
+  "- `ncode` 启动器在 `C:\\Users\\reader\\.config\\powershell\\profile.ps1`，使用 `uv run --project D:\\projects\\babo`；默认配置在 `C:\\Users\\reader\\.babo\\config.json`。",
   "- 缓存与工具链：npm cache `D:\\cache\\npm`，uv cache `D:\\cache\\uv`，Node/npm 在 `D:\\program\\nodejs`；WezTerm 桌面启动用 `wezterm-gui`。",
   "- 末行：中文与 English 仍保持连续排版。",
 ].join("\n");

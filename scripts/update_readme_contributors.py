@@ -12,7 +12,7 @@ from typing import NotRequired, TypedDict, cast
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-REPOSITORY = "HKUDS/nanobot"
+REPOSITORY = "bgrimes-me/babo"
 README = Path(__file__).resolve().parents[1] / "README.md"
 START = "<!-- contributors:start -->"
 END = "<!-- contributors:end -->"
@@ -44,7 +44,7 @@ class Commit(TypedDict):
 def fetch_pages(endpoint: str, **params: str) -> list[object]:
     headers = {
         "Accept": "application/vnd.github+json",
-        "User-Agent": "nanobot-readme",
+        "User-Agent": "babo-readme",
         "X-GitHub-Api-Version": "2022-11-28",
     }
     if token := os.environ.get("GITHUB_TOKEN"):

@@ -1,24 +1,24 @@
-# Build a Mattermost AI Agent with nanobot
+# Build a Mattermost AI Agent with babo
 
-This guide connects nanobot to Mattermost through the built-in Mattermost channel, using WebSocket events and the Mattermost REST API.
+This guide connects babo to Mattermost through the built-in Mattermost channel, using WebSocket events and the Mattermost REST API.
 
 ## What this guide builds
 
 - a Mattermost bot account or token
-- the `mattermost` channel enabled in nanobot
+- the `mattermost` channel enabled in babo
 - mention-only group behavior for first deployment
 - one pairing-approved DM or mention test
 
 ## Prerequisites
 
-- A normal reply in your existing nanobot WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
+- A normal reply in your existing babo WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
 
 - A Mattermost server URL.
 - A bot token or personal access token for the bot account.
 
 ## Continue from your running instance
 
-If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `nanobot webui` command; there is no need to install nanobot again.
+If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `babo webui` command; there is no need to install babo again.
 
 For terminal or server setup, use the manual configuration section below. Reuse the config/home and executable from your working instance. Docker users should use the [container commands](../deployment.md#docker-compose).
 
@@ -31,7 +31,7 @@ DM approval does not restrict group access. With the mention policy below, any m
 <details>
 <summary>Manual configuration</summary>
 
-Merge this snippet into `~/.nanobot/config.json`:
+Merge this snippet into `~/.babo/config.json`:
 
 ```json
 {
@@ -64,7 +64,7 @@ Mattermost DMs are open by default. Setting `dm.policy` to `"allowlist"` with no
 
 In the WebUI, follow any restart prompt and keep the launcher running for the first test. You do not need to start another gateway. For unattended operation afterward, use [background or service mode](../cli-reference.md#gateway).
 
-For manual config changes, restart the existing gateway through its owning terminal, `nanobot gateway restart` for background mode, or its service/container supervisor. If none is running, start `nanobot gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
+For manual config changes, restart the existing gateway through its owning terminal, `babo gateway restart` for background mode, or its service/container supervisor. If none is running, start `babo gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
 
 ## Test a message
 
@@ -76,7 +76,7 @@ DM the bot account. It should return a pairing code. Return to the WebUI pairing
 In a separate local terminal, using the same instance:
 
 ```bash
-nanobot agent -m "/pairing approve ABCD-EFGH"
+babo agent -m "/pairing approve ABCD-EFGH"
 ```
 
 Replace the example code with your actual code.
@@ -86,7 +86,7 @@ Replace the example code with your actual code.
 Then DM the bot again, or mention it in a channel where the bot has access:
 
 ```text
-@nanobot Hello from Mattermost
+@babo Hello from Mattermost
 ```
 
 ## Security notes

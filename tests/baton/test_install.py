@@ -11,12 +11,12 @@ from typing import Any
 import pytest
 from aiohttp import web
 
+from babo.baton.config import BatonModelConfig
+from babo.baton.doctor import run_doctor
+from babo.baton.queue import ModelQueue
+from babo.baton.setup import town_config, write_town_config
+from babo.baton.town import Town
 from baton.mock_llama import MockLlama, schema, text, tool_call
-from nanobot.baton.config import BatonModelConfig
-from nanobot.baton.doctor import run_doctor
-from nanobot.baton.queue import ModelQueue
-from nanobot.baton.setup import town_config, write_town_config
-from nanobot.baton.town import Town
 
 REPO = Path(__file__).resolve().parents[2]
 CHECKPOINT = {
@@ -35,7 +35,7 @@ def test_town_config_keeps_squids_settings(tmp_path: Path) -> None:
     assert data["tools"]["restrictToWorkspace"] is True and data["tools"]["exec"]["sandbox"] == "bwrap"
     assert data["providers"]["custom"]["apiBase"] == "http://127.0.0.1:8091/v1"
     assert data["baton"]["model"]["upstream"] == "http://127.0.0.1:8080"
-    from nanobot.config.schema import Config
+    from babo.config.schema import Config
 
     cfg = Config.model_validate(data)
     assert cfg.resolve_preset().model == "qwen"
@@ -74,7 +74,7 @@ async def test_doctor_passes_on_a_working_town(town: Town, index_path: Path, moc
         data = town_config({}, town=str(town.root), upstream=mock_llama.base_url, model="mock-model", n_ctx=32768, queue_port=port)
         data["baton"]["indexPath"] = str(index_path)
         path.write_text(json.dumps(data))
-        from nanobot.config.loader import load_config
+        from babo.config.loader import load_config
 
         cfg = load_config(path)
         checks = await run_doctor(cfg, config_path=path, include_timer=False)
@@ -92,7 +92,7 @@ async def test_doctor_passes_on_a_working_town(town: Town, index_path: Path, moc
 
 
 async def test_doctor_fails_clearly_when_the_model_is_down(town: Town, index_path: Path, tmp_path: Path) -> None:
-    from nanobot.config.schema import Config
+    from babo.config.schema import Config
 
     data = town_config({}, town=str(town.root), upstream="http://127.0.0.1:9", model="m", n_ctx=4096, queue_port=9)
     data["baton"]["indexPath"] = str(index_path)

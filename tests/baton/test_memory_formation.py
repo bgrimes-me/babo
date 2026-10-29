@@ -10,18 +10,18 @@ from typing import Any
 
 import pytest
 
+from babo.agent.hook import AgentHookContext, AgentRunHookContext
+from babo.baton.baton_file import current_entry, iter_checkpoints
+from babo.baton.checkpoint import CHECKPOINT_MARK
+from babo.baton.compaction import read_backup, restore_session_backup, write_backup
+from babo.baton.config import BatonConfig, BatonModelConfig
+from babo.baton.events import classify, resident_events
+from babo.baton.hooks import BatonTurnHook
+from babo.baton.queue import ModelQueue, SlotQueue, resident_of
+from babo.baton.runtime_state import CounterStore
+from babo.baton.town import Town
+from babo.providers.base import ToolCallRequest
 from baton.mock_llama import MockLlama, http_error, malformed, schema, text, tool_call
-from nanobot.agent.hook import AgentHookContext, AgentRunHookContext
-from nanobot.baton.baton_file import current_entry, iter_checkpoints
-from nanobot.baton.checkpoint import CHECKPOINT_MARK
-from nanobot.baton.compaction import read_backup, restore_session_backup, write_backup
-from nanobot.baton.config import BatonConfig, BatonModelConfig
-from nanobot.baton.events import classify, resident_events
-from nanobot.baton.hooks import BatonTurnHook
-from nanobot.baton.queue import ModelQueue, SlotQueue, resident_of
-from nanobot.baton.runtime_state import CounterStore
-from nanobot.baton.town import Town
-from nanobot.providers.base import ToolCallRequest
 
 GOOD = {
     "thread": "garden",
@@ -110,7 +110,7 @@ async def test_interval_commit_and_test_flip_triggers(make_loop) -> None:
 
 async def test_checkpoint_tool_requests_a_turn(make_loop) -> None:
     loop, f = _formation(make_loop)
-    from nanobot.agent.tools.context import (
+    from babo.agent.tools.context import (
         RequestContext,
         bind_request_context,
         reset_request_context,
@@ -144,7 +144,7 @@ async def test_authored_checkpoint_is_filed(make_loop, mock_llama: MockLlama, to
     assert all("_sender" not in m for m in request["messages"])
     archived = list((home / "sessions").rglob("*.checkpoints.jsonl"))
     assert archived and "baton-harness" in archived[0].read_text()
-    from nanobot.baton.search import open_index
+    from babo.baton.search import open_index
 
     assert open_index(index_path).search("runoff", owners=("mayor",), k=1)[0].title == "Plot drainage"
 
@@ -245,7 +245,7 @@ async def test_commit_gate_blocks_stale_commit_until_checkpoint(make_loop, mock_
     subprocess.run(["git", "init", "-q"], cwd=project, check=True)
     (project / "a.txt").write_text("a")
     exec_tool = loop.tools.get("exec")
-    from nanobot.agent.tools.shell import ExecTool
+    from babo.agent.tools.shell import ExecTool
 
     assert isinstance(exec_tool, ExecTool)  # still the same tool object
     f.counters.update(calls_since_checkpoint=4)
@@ -327,7 +327,7 @@ async def test_in_turn_compaction_refuses_when_nothing_sound(make_loop, mock_lla
 
 
 def test_backup_hash_is_verified_and_offline_restore(tmp_path: Path, town: Town) -> None:
-    from nanobot.session.manager import Session, SessionManager
+    from babo.session.manager import Session, SessionManager
 
     home = town.resident_dir("mayor")
     manager = SessionManager(home, sessions_root=tmp_path / "sessions")
@@ -391,8 +391,8 @@ def test_resident_identified_from_header_or_bundle() -> None:
 
 
 def test_context_view_prints_last_request(town: Town, index_path: Path) -> None:
-    from nanobot.baton.context_view import last_request_text
-    from nanobot.config.schema import Config
+    from babo.baton.context_view import last_request_text
+    from babo.config.schema import Config
 
     cfg = Config.model_validate({"baton": {"town": str(town.root), "indexPath": str(index_path)}})
     assert last_request_text(cfg, "mayor") is None
@@ -404,7 +404,7 @@ def test_context_view_prints_last_request(town: Town, index_path: Path) -> None:
 
 
 async def test_assemble_next_matches_the_loops_system_prompt(make_config, town: Town) -> None:
-    from nanobot.baton.context_view import assemble_next
+    from babo.baton.context_view import assemble_next
 
     out = json.loads(await assemble_next(make_config("mayor"), "archivist", "hello", raw=True))
     assert out["messages"][0]["role"] == "system" and "resident `archivist`" in out["messages"][0]["content"]

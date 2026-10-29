@@ -8,23 +8,23 @@ import pytest
 from loguru import logger
 
 from agent.session_helpers import run_session, save_completed_subagent, visible_message
-from nanobot.agent.context import ContextBuilder, TranscriptInput
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.runner import AgentRunResult
-from nanobot.agent.tools.context import RequestContext, request_context
-from nanobot.bus.events import InboundMessage
-from nanobot.bus.outbound_events import (
+from babo.agent.context import ContextBuilder, TranscriptInput
+from babo.agent.loop import AgentLoop
+from babo.agent.runner import AgentRunResult
+from babo.agent.tools.context import RequestContext, request_context
+from babo.bus.events import InboundMessage
+from babo.bus.outbound_events import (
     GoalStatusEvent,
     StreamDeltaEvent,
     StreamedResponseEvent,
     StreamEndEvent,
     TurnEndEvent,
 )
-from nanobot.bus.queue import MessageBus
-from nanobot.cron.session_turns import CRON_HISTORY_META, CRON_TRIGGER_META
-from nanobot.providers.base import LLMProvider, LLMResponse, LLMUsage, ProviderConversationState
-from nanobot.providers.factory import ProviderSnapshot
-from nanobot.runtime_context import (
+from babo.bus.queue import MessageBus
+from babo.cron.session_turns import CRON_HISTORY_META, CRON_TRIGGER_META
+from babo.providers.base import LLMProvider, LLMResponse, LLMUsage, ProviderConversationState
+from babo.providers.factory import ProviderSnapshot
+from babo.runtime_context import (
     RUNTIME_CONTEXT_HISTORY_META,
     RUNTIME_CONTEXT_MESSAGE_META,
     RUNTIME_CONTEXT_TAG,
@@ -32,14 +32,14 @@ from nanobot.runtime_context import (
     append_runtime_context,
     public_history_message,
 )
-from nanobot.session.automation_turns import AUTOMATION_HISTORY_META
-from nanobot.session.goal_state import GOAL_STATE_KEY
-from nanobot.session.keys import (
+from babo.session.automation_turns import AUTOMATION_HISTORY_META
+from babo.session.goal_state import GOAL_STATE_KEY
+from babo.session.keys import (
     LAST_CHANNEL_METADATA_KEY,
     UNIFIED_SESSION_KEY,
 )
-from nanobot.session.manager import Session
-from nanobot.session.recovery import (
+from babo.session.manager import Session
+from babo.session.recovery import (
     PENDING_FOLLOWUP_ID_KEY,
     PENDING_FOLLOWUPS_KEY,
     PROVIDER_STATE_CHECKPOINT_VERSION,
@@ -47,14 +47,14 @@ from nanobot.session.recovery import (
     RUNTIME_CHECKPOINT_KEY,
     restore_runtime_checkpoint,
 )
-from nanobot.session.summary import (
+from babo.session.summary import (
     SUMMARY_CONTINUATION_TEXT,
     SessionSummaryCheckpoint,
 )
-from nanobot.session.turn_continuation import (
+from babo.session.turn_continuation import (
     INTERNAL_CONTINUATION_META,
 )
-from nanobot.session.webui_turns import (
+from babo.session.webui_turns import (
     TITLE_GENERATION_MAX_TOKENS,
     WEBUI_SESSION_METADATA_KEY,
     WEBUI_TITLE_METADATA_KEY,
@@ -63,7 +63,7 @@ from nanobot.session.webui_turns import (
     maybe_generate_webui_title,
     maybe_generate_webui_title_after_turn,
 )
-from nanobot.triggers.local_session_turns import LOCAL_TRIGGER_META
+from babo.triggers.local_session_turns import LOCAL_TRIGGER_META
 
 
 def _agent_run_result(
@@ -92,7 +92,7 @@ def _assembled_messages(
 
 def _mk_loop() -> AgentLoop:
     loop = AgentLoop.__new__(AgentLoop)
-    from nanobot.config.schema import AgentDefaults
+    from babo.config.schema import AgentDefaults
 
     loop.max_tool_result_chars = AgentDefaults().max_tool_result_chars
     return loop
@@ -268,7 +268,7 @@ async def test_new_with_bot_suffix_does_not_persist_command(tmp_path: Path) -> N
             channel="websocket",
             sender_id="user",
             chat_id="chat-1",
-            content="/new@nanobot_bot",
+            content="/new@babo_bot",
         )
     )
 
@@ -1573,8 +1573,8 @@ async def test_websocket_internal_continuation_keeps_single_visible_run(
 async def test_stop_after_continuation_queued_ends_visible_run(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content: str,
 ) -> None:
-    from nanobot.command.builtin import cmd_stop
-    from nanobot.command.router import CommandContext
+    from babo.command.builtin import cmd_stop
+    from babo.command.router import CommandContext
 
     loop = _make_full_loop(tmp_path)
     session = loop.sessions.get_or_create("websocket:c-stop-continuation")
@@ -1723,7 +1723,7 @@ async def test_process_message_uses_explicit_session_for_goal_context(
 async def test_run_agent_loop_continuation_reads_latest_goal_metadata(
     tmp_path: Path,
 ) -> None:
-    from nanobot.agent.runner import AgentRunResult
+    from babo.agent.runner import AgentRunResult
 
     loop = _make_full_loop(tmp_path)
     session = await loop.sessions.state.get("websocket:late-goal")
@@ -1866,8 +1866,8 @@ async def test_next_turn_after_crash_closes_pending_user_turn_before_new_input(t
 
 @pytest.mark.asyncio
 async def test_stop_preserves_runtime_checkpoint_for_next_turn(tmp_path: Path) -> None:
-    from nanobot.command.builtin import cmd_stop
-    from nanobot.command.router import CommandContext
+    from babo.command.builtin import cmd_stop
+    from babo.command.router import CommandContext
 
     loop = _make_full_loop(tmp_path)
 

@@ -10,32 +10,32 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import RequestContext, request_context
-from nanobot.agent.tools.cron import CronTool
-from nanobot.agent.tools.message import MessageTool
-from nanobot.bus.delivery import (
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import RequestContext, request_context
+from babo.agent.tools.cron import CronTool
+from babo.agent.tools.message import MessageTool
+from babo.bus.delivery import (
     DELIVERY_RUN_META,
     ChannelNotReadyError,
     DeliveryRejectedError,
     DeliveryRequest,
 )
-from nanobot.bus.events import OutboundMessage
-from nanobot.bus.outbound_events import ProgressEvent
-from nanobot.bus.queue import MessageBus
-from nanobot.channels import outbox as outbox_module
-from nanobot.channels.base import BaseChannel
-from nanobot.channels.manager import ChannelManager
-from nanobot.channels.outbox import DeliveryOutbox
-from nanobot.channels.registry import load_channel_plugin
-from nanobot.channels.whatsapp.runtime import WhatsAppChannel
-from nanobot.config.schema import Config
-from nanobot.cron.bound_runner import run_bound_cron_job
-from nanobot.cron.service import CronService
-from nanobot.cron.types import CronSchedule
-from nanobot.providers.base import GenerationSettings, LLMResponse, ToolCallRequest
-from nanobot.runtime_admission import RuntimeBusyError, RuntimeMaintenanceError
-from nanobot.session.manager import SessionManager
+from babo.bus.events import OutboundMessage
+from babo.bus.outbound_events import ProgressEvent
+from babo.bus.queue import MessageBus
+from babo.channels import outbox as outbox_module
+from babo.channels.base import BaseChannel
+from babo.channels.manager import ChannelManager
+from babo.channels.outbox import DeliveryOutbox
+from babo.channels.registry import load_channel_plugin
+from babo.channels.whatsapp.runtime import WhatsAppChannel
+from babo.config.schema import Config
+from babo.cron.bound_runner import run_bound_cron_job
+from babo.cron.service import CronService
+from babo.cron.types import CronSchedule
+from babo.providers.base import GenerationSettings, LLMResponse, ToolCallRequest
+from babo.runtime_admission import RuntimeBusyError, RuntimeMaintenanceError
+from babo.session.manager import SessionManager
 
 
 def rows(outbox):

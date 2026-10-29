@@ -10,7 +10,7 @@ import pytest
 import tiktoken.load
 from loguru import logger
 
-from nanobot.utils import helpers, token_encoding
+from babo.utils import helpers, token_encoding
 
 
 @pytest.fixture(autouse=True)
@@ -106,7 +106,7 @@ def test_failed_warmup_is_not_retried_per_message(monkeypatch):
 def test_cache_location_respects_configuration(monkeypatch, tmp_path, variable, value):
     monkeypatch.delenv("TIKTOKEN_CACHE_DIR", raising=False)
     monkeypatch.delenv("DATA_GYM_CACHE_DIR", raising=False)
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path)
     if variable:
         monkeypatch.setenv(variable, value)
     token_encoding.warmup_token_encoding()
@@ -146,8 +146,8 @@ def test_completed_download_is_reused_after_reinitialization(monkeypatch, byte_e
 def test_stalled_download_does_not_hold_up_process_exit(tmp_path):
     code = """
 from threading import Event
-from nanobot.utils import token_encoding
-from nanobot.utils.helpers import estimate_message_tokens
+from babo.utils import token_encoding
+from babo.utils.helpers import estimate_message_tokens
 started = Event()
 def blocked(_name):
     started.set()

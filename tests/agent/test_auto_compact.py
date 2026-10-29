@@ -9,19 +9,19 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.subagent_status import SubagentStatus
-from nanobot.agent.tools.context import current_request_context
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.bus.events import InboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.command import CommandContext
-from nanobot.config.schema import AgentDefaults, Config
-from nanobot.events import NO_EVENTS, ContextCompactionEvent
-from nanobot.providers.base import LLMResponse
-from nanobot.runtime_context import public_history_message
-from nanobot.sdk.clients import RuntimeClient
-from nanobot.session.keys import HEARTBEAT_SESSION_KEY, UNIFIED_SESSION_KEY
+from babo.agent.loop import AgentLoop
+from babo.agent.subagent_status import SubagentStatus
+from babo.agent.tools.context import current_request_context
+from babo.agent.tools.registry import ToolRegistry
+from babo.bus.events import InboundMessage
+from babo.bus.queue import MessageBus
+from babo.command import CommandContext
+from babo.config.schema import AgentDefaults, Config
+from babo.events import NO_EVENTS, ContextCompactionEvent
+from babo.providers.base import LLMResponse
+from babo.runtime_context import public_history_message
+from babo.sdk.clients import RuntimeClient
+from babo.session.keys import HEARTBEAT_SESSION_KEY, UNIFIED_SESSION_KEY
 
 
 def _make_loop(
@@ -161,7 +161,7 @@ async def test_idle_compaction_emits_its_real_trigger_for_each_phase(tmp_path, m
         await loop.sessions.state.finish_turn(session)
         clock = MagicMock(wraps=datetime)
         clock.now.return_value = datetime.now() + timedelta(minutes=20)
-        monkeypatch.setattr("nanobot.agent.autocompact.datetime", clock)
+        monkeypatch.setattr("babo.agent.autocompact.datetime", clock)
         if outcome == "succeeded":
             loop.consolidator.archive_session = AsyncMock(return_value="Idle summary.")
         else:
@@ -215,7 +215,7 @@ async def test_idle_compaction_skips_subagent_sessions(tmp_path, monkeypatch, re
 
         clock = MagicMock(wraps=datetime)
         clock.now.return_value = datetime.now() + timedelta(minutes=20)
-        monkeypatch.setattr("nanobot.agent.autocompact.datetime", clock)
+        monkeypatch.setattr("babo.agent.autocompact.datetime", clock)
         loop.consolidator.archive_session = AsyncMock(return_value="Conversation summary.")
         await loop._check_expired_sessions_if_due()
         await _drain_background_tasks(loop)
@@ -234,8 +234,8 @@ async def test_idle_compaction_skips_subagent_sessions(tmp_path, monkeypatch, re
 
 
 async def test_expired_unified_turn_keeps_latest_delivery_route(tmp_path, monkeypatch):
-    monkeypatch.setattr("nanobot.config.home._home_path", tmp_path / "home")
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", tmp_path / "config.json")
+    monkeypatch.setattr("babo.config.home._home_path", tmp_path / "home")
+    monkeypatch.setattr("babo.config.loader._current_config_path", tmp_path / "config.json")
     loop = _make_loop(tmp_path / "workspace", unified_session=True)
     session = loop.sessions.get_or_create(UNIFIED_SESSION_KEY)
     session.metadata["last_channel"] = "telegram:old"
@@ -262,8 +262,8 @@ async def test_expired_unified_turn_keeps_latest_delivery_route(tmp_path, monkey
 
 @pytest.mark.parametrize("compaction", ["idle", "compact_session", "compact_idle_session"])
 async def test_turn_resuming_during_archive_commits_reply(tmp_path, monkeypatch, compaction):
-    monkeypatch.setattr("nanobot.config.home._home_path", tmp_path / "home")
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", tmp_path / "config.json")
+    monkeypatch.setattr("babo.config.home._home_path", tmp_path / "home")
+    monkeypatch.setattr("babo.config.loader._current_config_path", tmp_path / "config.json")
     loop = _make_loop(tmp_path / "workspace")
     session = loop.sessions.get_or_create("cli:idle")
     _add_turns(session, 1, prefix="old")
@@ -380,7 +380,7 @@ class TestIdleScanThrottling:
     async def test_configured_idle_scan_interval_throttles_checks(self, tmp_path, monkeypatch):
         """The configured interval should reach the loop and gate session scans."""
         ticks = iter((1_000.0, 1_000.0, 1_009.999, 1_010.0))
-        monkeypatch.setattr("nanobot.agent.loop.time", SimpleNamespace(time=time.time, monotonic=lambda: next(ticks)))
+        monkeypatch.setattr("babo.agent.loop.time", SimpleNamespace(time=time.time, monotonic=lambda: next(ticks)))
         config = Config.model_validate({
             "agents": {
                 "defaults": {
@@ -408,7 +408,7 @@ class TestIdleScanThrottling:
 
     async def test_zero_idle_scan_interval_checks_every_tick(self, tmp_path, monkeypatch):
         """An explicit zero should leave each idle tick eligible to scan."""
-        monkeypatch.setattr("nanobot.agent.loop.time", SimpleNamespace(time=time.time, monotonic=lambda: 1_000.0))
+        monkeypatch.setattr("babo.agent.loop.time", SimpleNamespace(time=time.time, monotonic=lambda: 1_000.0))
         loop = _make_loop(tmp_path)
         loop.auto_compact.check_expired = AsyncMock()
 
@@ -1271,7 +1271,7 @@ class TestProactiveAutoCompact:
         await loop._process_message(msg)
 
         # New messages have now been idle for a fresh TTL interval.
-        monkeypatch.setattr("nanobot.agent.autocompact.datetime", SimpleNamespace(
+        monkeypatch.setattr("babo.agent.autocompact.datetime", SimpleNamespace(
             now=lambda: datetime.now() + timedelta(minutes=20),
             fromisoformat=datetime.fromisoformat,
         ))
@@ -1401,7 +1401,7 @@ class TestSummaryPersistence:
             loop, summary="Second summary.",
         )
         # New messages have now been idle for a fresh TTL interval.
-        monkeypatch.setattr("nanobot.agent.autocompact.datetime", SimpleNamespace(
+        monkeypatch.setattr("babo.agent.autocompact.datetime", SimpleNamespace(
             now=lambda: datetime.now() + timedelta(minutes=20),
             fromisoformat=datetime.fromisoformat,
         ))
@@ -1446,8 +1446,8 @@ class TestSummaryPersistence:
 
 @pytest.mark.parametrize("ordering", ["scan_during_turn", "archive_queued_before_turn"])
 async def test_idle_compaction_rechecks_settled_activity(tmp_path, monkeypatch, ordering):
-    monkeypatch.setattr("nanobot.config.home._home_path", tmp_path / "home")
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", tmp_path / "config.json")
+    monkeypatch.setattr("babo.config.home._home_path", tmp_path / "home")
+    monkeypatch.setattr("babo.config.loader._current_config_path", tmp_path / "config.json")
     now = [datetime.now()]
 
     class Clock(datetime):
@@ -1456,7 +1456,7 @@ async def test_idle_compaction_rechecks_settled_activity(tmp_path, monkeypatch, 
             return now[0] if tz is None else now[0].replace(tzinfo=tz)
 
     # The scanner and settled-turn/summary writers must share the same clock.
-    for module in ("nanobot.agent.autocompact", "nanobot.agent.loop", "nanobot.session.manager"):
+    for module in ("babo.agent.autocompact", "babo.agent.loop", "babo.session.manager"):
         monkeypatch.setattr(f"{module}.datetime", Clock)
     loop = _make_loop(tmp_path / "workspace")
     key = HEARTBEAT_SESSION_KEY

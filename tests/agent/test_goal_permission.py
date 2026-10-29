@@ -2,13 +2,13 @@ import asyncio
 
 import pytest
 
-from nanobot.agent.goal_permission import (
+from babo.agent.goal_permission import (
     GoalInputScope,
     goal_mutation_allowed,
     goal_mutation_permission,
     revoke_goal_mutation_permission,
 )
-from nanobot.bus.events import InboundMessage
+from babo.bus.events import InboundMessage
 
 
 def goal_message(**overrides):

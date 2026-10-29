@@ -7,16 +7,16 @@ import pytest
 from websockets.datastructures import Headers
 from websockets.http11 import Request
 
-from nanobot.bus.queue import MessageBus
-from nanobot.channels.websocket.runtime import WebSocketConfig
-from nanobot.session.manager import SessionManager
-from nanobot.webui import transcript
-from nanobot.webui.client_contract import webui_contract
-from nanobot.webui.gateway_services import build_gateway_services
+from babo.bus.queue import MessageBus
+from babo.channels.websocket.runtime import WebSocketConfig
+from babo.session.manager import SessionManager
+from babo.webui import transcript
+from babo.webui.client_contract import webui_contract
+from babo.webui.gateway_services import build_gateway_services
 
 
 def test_complete_index_and_bidirectional_pages_without_loading_model_messages(history, tmp_path, monkeypatch):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path)
     key = "websocket:navigation"
     for i in range(120):
         history.append(key, {"event": "user", "chat_id": "navigation", "text": f"question {i}", "turn_id": f"t{i}"})
@@ -39,14 +39,14 @@ def test_complete_index_and_bidirectional_pages_without_loading_model_messages(h
     assert older["events"] == page["events"]
     # Warm navigation uses the committed revision and cached summaries.
     with monkeypatch.context() as patch:
-        patch.setattr("nanobot.session.display_history.HistoryReader.navigation", lambda _: (_ for _ in ()).throw(AssertionError("replayed history")))
+        patch.setattr("babo.session.display_history.HistoryReader.navigation", lambda _: (_ for _ in ()).throw(AssertionError("replayed history")))
         assert history.prompts(key) == index
     history.append(key, {"event": "user", "chat_id": "navigation", "text": "new question"})
     assert len(history.prompts(key)) == 121
 
 
 def test_oversized_turn_keeps_matching_navigation_identity(history, tmp_path, monkeypatch):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path)
     monkeypatch.setattr(transcript, "_MAX_TRANSCRIPT_PAGE_RECORDS", 6)
     key = "websocket:large-turn"
     history.append(key, {"event": "user", "chat_id": "large-turn", "text": "target"})
@@ -63,7 +63,7 @@ def test_oversized_turn_keeps_matching_navigation_identity(history, tmp_path, mo
 
 @pytest.mark.asyncio
 async def test_navigation_public_routes_auth_validation_and_old_reads(history, tmp_path, monkeypatch):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path)
     gateway = build_gateway_services(
         config=WebSocketConfig(), bus=MessageBus(), session_manager=history.sessions,
         static_dist_path=None, workspace_path=tmp_path, config_path=tmp_path / "config.json",
@@ -94,7 +94,7 @@ async def test_navigation_public_routes_auth_validation_and_old_reads(history, t
 
 
 def test_summary_deltas_rebuild_after_append_rewrite_eviction_and_delete(history, tmp_path, monkeypatch):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path)
     key = "websocket:index-delta"
     for i in range(100):
         history.append(key, {"event": "user", "text": f"question {i}", "turn_id": f"t{i}"})
@@ -124,7 +124,7 @@ def test_summary_deltas_rebuild_after_append_rewrite_eviction_and_delete(history
 
 @pytest.mark.parametrize("input_id", [None, "injected-guidance"])
 def test_recovered_prompt_identity_time_and_cursor_survive_pages(history, tmp_path, monkeypatch, input_id):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path)
     key = "websocket:recovered-navigation"
     messages = [{"role": "system", "content": "context"}]
     for i in range(2):
@@ -154,7 +154,7 @@ def test_recovered_prompt_identity_time_and_cursor_survive_pages(history, tmp_pa
 
 @pytest.mark.asyncio
 async def test_recovered_public_index_and_page_validators_include_canonical_timestamp(history, tmp_path, monkeypatch):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path)
     key = "websocket:canonical-revision"
     manager = history.sessions
     session = manager.get_or_create(key)
@@ -207,7 +207,7 @@ async def test_recovered_public_index_and_page_validators_include_canonical_time
 @pytest.mark.asyncio
 @pytest.mark.parametrize("missing_user", [False, True])
 async def test_cached_history_routes_skip_replay_and_canonical_reads(history, tmp_path, monkeypatch, missing_user):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path)
     key = "websocket:cached-history"
     manager = history.sessions
     session = manager.get_or_create(key)
@@ -243,9 +243,9 @@ async def test_cached_history_routes_skip_replay_and_canonical_reads(history, tm
         pytest.fail("unchanged history was rebuilt")
 
     monkeypatch.setattr(transcript, "_build_prompt_view", unexpected_work)
-    monkeypatch.setattr("nanobot.session.display_history.HistoryReader.navigation", unexpected_work)
+    monkeypatch.setattr("babo.session.display_history.HistoryReader.navigation", unexpected_work)
     monkeypatch.setattr(manager, "read_session_file", unexpected_work)
-    monkeypatch.setattr("nanobot.webui.ws_http.build_webui_thread_response", unexpected_work)
+    monkeypatch.setattr("babo.webui.ws_http.build_webui_thread_response", unexpected_work)
     for path, previous in initial.items():
         conditional = path + ("&" if "?" in path else "?") + "since=" + json.loads(previous.body)["revision"]
         response = await gateway.http._dispatch_session_routes(
@@ -271,7 +271,7 @@ async def test_cached_history_routes_skip_replay_and_canonical_reads(history, tm
 @pytest.mark.asyncio
 @pytest.mark.parametrize("endpoint", ["", "/prompts"])
 async def test_canonical_change_during_recovery_keeps_a_consistent_snapshot(history, tmp_path, monkeypatch, endpoint):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path)
     key = "websocket:racing-history"
     manager = history.sessions
     session = manager.get_or_create(key)
@@ -321,7 +321,7 @@ async def test_canonical_change_during_recovery_keeps_a_consistent_snapshot(hist
 
 @pytest.mark.parametrize("with_anchor", [False, True])
 def test_indexed_backfill_preserves_unique_in_suffix_matching(history, tmp_path, monkeypatch, with_anchor):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path)
     key = "websocket:repeated-answers"
     answers = ["same answer", "anchor answer", "same answer"] if with_anchor else ["same answer"] * 2
     messages = []

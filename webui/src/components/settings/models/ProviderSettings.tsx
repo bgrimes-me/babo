@@ -60,7 +60,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import type {
-  NanobotFeaturesPayload,
+  BaboFeaturesPayload,
   ModelAPIConfig,
   ProviderOAuthAuthorizationRequired,
   SettingsPayload,
@@ -535,7 +535,7 @@ export function ProvidersSettings({
   onCloseAutoFocus,
   onProviderAdded,
   settings,
-  nanobotFeatures,
+  baboFeatures,
   featureAction,
   capabilityError,
   providerForms,
@@ -560,7 +560,7 @@ export function ProvidersSettings({
   onCloseAutoFocus: (event: Event) => void;
   onProviderAdded?: (provider: string) => void;
   settings: SettingsPayload;
-  nanobotFeatures: NanobotFeaturesPayload | null;
+  baboFeatures: BaboFeaturesPayload | null;
   featureAction: string | null;
   capabilityError: string | null;
   providerForms: Record<string, ProviderForm>;
@@ -695,7 +695,7 @@ export function ProvidersSettings({
         ? "azure"
         : null;
     const supportFeature = supportName
-      ? (nanobotFeatures?.features ?? []).find((feature) => feature.name === supportName)
+      ? (baboFeatures?.features ?? []).find((feature) => feature.name === supportName)
       : null;
     return (
       <>
@@ -727,7 +727,7 @@ export function ProvidersSettings({
                         : provider.name === "openai_codex" && remoteBrowserAccess
                           ? tx(
                               "settings.oauth.codexRemoteSignInHelp",
-                              "Sign in through this browser, then paste the full localhost callback URL back into nanobot.",
+                              "Sign in through this browser, then paste the full localhost callback URL back into babo.",
                             )
                           : provider.name === "xai_grok" && remoteBrowserAccess
                           ? tx(

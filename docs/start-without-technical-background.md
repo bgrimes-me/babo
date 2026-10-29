@@ -1,6 +1,6 @@
 # Start Without Technical Background
 
-This walkthrough is for people who have not used a terminal, API key, or JSON config file before. The goal is only to get one reply in a browser. You do not need to understand nanobot's architecture or edit its config by hand.
+This walkthrough is for people who have not used a terminal, API key, or JSON config file before. The goal is only to get one reply in a browser. You do not need to understand babo's architecture or edit its config by hand.
 
 ## What You Will Need
 
@@ -21,7 +21,7 @@ An API key is password-like. Do not post it in an issue, screenshot, chat, or pu
 | Model ID | The exact model name expected by that provider |
 | API key | A secret credential that lets software call the provider |
 | Wizard | A question-and-answer setup menu |
-| WebUI | The local browser page where you use nanobot |
+| WebUI | The local browser page where you use babo |
 
 ## 1. Install Python
 
@@ -45,12 +45,12 @@ The result should start with `Python 3.11` or a newer number. If the command is 
 
 ## 2. Prepare Your Model Details
 
-An account on a chat website does not automatically let nanobot use that service. Before you start, find out which AI service you will use, how nanobot can sign in (usually with an API key, sometimes with a supported sign-in flow), and the exact model name the service requires. Check the service's pricing and available models. Some services also require a URL; use it only if that service provides one.
+An account on a chat website does not automatically let babo use that service. Before you start, find out which AI service you will use, how babo can sign in (usually with an API key, sometimes with a supported sign-in flow), and the exact model name the service requires. Check the service's pricing and available models. Some services also require a URL; use it only if that service provides one.
 
 If you do not have a provider yet, here is one API-based example:
 
 1. Create an account at [OpenRouter](https://openrouter.ai/).
-2. Open its [API keys page](https://openrouter.ai/settings/keys) and create a key. Keep it private; you will paste it into nanobot's provider form.
+2. Open its [API keys page](https://openrouter.ai/settings/keys) and create a key. Keep it private; you will paste it into babo's provider form.
 3. Choose a model from the [model catalog](https://openrouter.ai/models), check its price and account requirements, and copy its model ID. For file/tool tasks, choose a model that supports tool calling. See the [official quickstart](https://openrouter.ai/docs/quickstart).
 4. In step 4 below, add the built-in **OpenRouter** provider with that key, keep its default endpoint, and select the model you chose. This is one option, not a required provider.
 
@@ -65,23 +65,23 @@ If you already have a provider, have these details nearby:
 
 The provider, credential, endpoint, and model must belong together. For example, an API key from one provider usually cannot call a model name copied from a different provider.
 
-## 3. Install nanobot
+## 3. Install babo
 
 Copy the command for your system, paste it into the terminal, and press Enter. Copy only the text inside the code block.
 
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/HKUDS/nanobot/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/bgrimes-me/babo/main/scripts/install.sh | sh
 ```
 
 **Windows PowerShell**
 
 ```powershell
-irm https://raw.githubusercontent.com/HKUDS/nanobot/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/bgrimes-me/babo/main/scripts/install.ps1 | iex
 ```
 
-The installer downloads the stable nanobot package into an isolated Python environment. On a fresh local desktop, it then starts the WebUI and opens your browser. This can take a few minutes on the first run. Keep the terminal open. It prints the exact command used to run nanobot; if `nanobot` is not found later, reuse that whole command instead of switching to a different Python command.
+The installer downloads the stable babo package into an isolated Python environment. On a fresh local desktop, it then starts the WebUI and opens your browser. This can take a few minutes on the first run. Keep the terminal open. It prints the exact command used to run babo; if `babo` is not found later, reuse that whole command instead of switching to a different Python command.
 
 If your organization blocks downloaded install scripts, use the [alternative install methods](./quick-start.md#other-install-methods) or ask your administrator to review the scripts first.
 
@@ -96,15 +96,15 @@ In the browser, open **Settings → Models**. Then:
 
 Treat every API key like a password. Do not include it in screenshots or support requests.
 
-If the installer finishes without opening the browser and `nanobot` is available, run:
+If the installer finishes without opening the browser and `babo` is available, run:
 
 ```bash
-nanobot webui
+babo webui
 ```
 
-If the terminal cannot find `nanobot`, take the exact command printed by the installer and replace its final arguments with `webui`. It uses the Python executable from the persistent installation, not a temporary tool environment.
+If the terminal cannot find `babo`, take the exact command printed by the installer and replace its final arguments with `webui`. It uses the Python executable from the persistent installation, not a temporary tool environment.
 
-On SSH, a computer without a desktop, an existing configuration, or an older nanobot release, the installer may open the terminal wizard instead. Choose **Quick Start** there and follow its prompts.
+On SSH, a computer without a desktop, an existing configuration, or an older babo release, the installer may open the terminal wizard instead. Choose **Quick Start** there and follow its prompts.
 
 ## 5. Get the First Reply
 
@@ -122,7 +122,7 @@ The first-run address is local to your computer. It is not automatically availab
 
 ## 6. Add One Thing at a Time
 
-Choose one next goal and ask nanobot in your current chat. For example: "I am already using the WebUI. Help me connect Telegram and allow only my account." When the built-in `nanobot-document` skill is available and enabled, nanobot can use its bundled documentation to guide you. See [Continue with nanobot](./quick-start.md#continue-with-nanobot) for how to request the skill directly.
+Choose one next goal and ask babo in your current chat. For example: "I am already using the WebUI. Help me connect Telegram and allow only my account." When the built-in `babo-document` skill is available and enabled, babo can use its bundled documentation to guide you. See [Continue with babo](./quick-start.md#continue-with-babo) for how to request the skill directly.
 
 You can also follow the steps yourself using the controls and guides below. Add one capability and test it before moving on:
 
@@ -132,22 +132,22 @@ You can also follow the steps yourself using the controls and guides below. Add 
 | Add a provider credential | Open **Settings → Models → Provider → Add provider** |
 | Connect Telegram, Discord, Slack, Feishu, WeChat, or another chat app | Open **Channels**, choose the platform, and follow its connection steps |
 | Add a tool integration | Open **Apps** and choose an App or MCP integration |
-| Schedule a reminder or recurring task | Ask nanobot in the target chat, then manage it in **Automations** |
+| Schedule a reminder or recurring task | Ask babo in the target chat, then manage it in **Automations** |
 | Work with project files | Follow [Your first file task](#your-first-file-task), then see [Workspace and Access](./webui.md#workspace-and-access) |
 
 Repository docs show the current development version. If your stable package does not yet show **Channels**, use the [Chat Apps guide](./chat-apps.md) or update to a release that includes it.
 
-Some runtime changes ask you to restart nanobot. Use the restart action shown by the WebUI or `nanobot gateway restart` for a background gateway. For an attached on-demand launcher, press `Ctrl+C` and run `nanobot webui` again.
+Some runtime changes ask you to restart babo. Use the restart action shown by the WebUI or `babo gateway restart` for a background gateway. For an attached on-demand launcher, press `Ctrl+C` and run `babo webui` again.
 
 For a chat platform's account, bot, token, or permission prerequisites, use the [Chat Apps guide](./chat-apps.md). For local models and provider-specific recipes, use the [Provider Cookbook](./provider-cookbook.md).
 
 ## Your First File Task
 
-1. Create a practice folder, for example `Documents/nanobot-practice`, and put a copy of a short text file in it. Keep originals elsewhere for this first task.
+1. Create a practice folder, for example `Documents/babo-practice`, and put a copy of a short text file in it. Keep originals elsewhere for this first task.
 2. Start a new topic in the WebUI. Open the workspace folder selector, choose that folder, and select **Confirm**. Choose **Restricted** access.
 3. Ask: "Read notes.txt and write a short summary to summary.md in this folder." Replace `notes.txt` with your file's name, then open `summary.md` in the selected folder.
 
-The workspace selects the folder the agent works in on the machine running nanobot. Attaching a file sends that file to the conversation; it does not change the workspace. For PDF and Office files, see [File tools](./webui.md#apps).
+The workspace selects the folder the agent works in on the machine running babo. Attaching a file sends that file to the conversation; it does not change the workspace. For PDF and Office files, see [File tools](./webui.md#apps).
 
 Return to the saved topic to continue later. A new topic or a different project folder does not create separate long-term memory. For clients whose preferences must stay separate, use [separate instances](./multiple-instances.md).
 
@@ -156,30 +156,30 @@ Return to the saved topic to continue later. A new topic or a different project 
 Run these commands one at a time:
 
 ```bash
-nanobot --version
-nanobot status
-nanobot agent -m "Hello!"
+babo --version
+babo status
+babo agent -m "Hello!"
 ```
 
 | What you see | What it usually means |
 |---|---|
-| `nanobot: command not found` | Reuse the exact nanobot command printed by the installer; it points to the isolated environment that contains the package |
+| `babo: command not found` | Reuse the exact babo command printed by the installer; it points to the isolated environment that contains the package |
 | `401`, unauthorized, or invalid API key | The key is wrong, expired, or belongs to a different provider |
 | Model not found | The model ID is misspelled or unavailable to your provider account |
 | Browser does not open | Copy the complete login link printed by the launcher, including the fragment after `#`; keep the terminal open if the launcher is attached |
-| Browser opens but messages fail | Test `nanobot agent -m "Hello!"` to separate a model problem from a WebUI problem |
-| A change was saved but nothing changed | Restart nanobot so the running process reloads the config |
+| Browser opens but messages fail | Test `babo agent -m "Hello!"` to separate a model problem from a WebUI problem |
+| A change was saved but nothing changed | Restart babo so the running process reloads the config |
 
-If you ask for help, include your operating system, `nanobot --version`, `nanobot status`, the exact command, and the exact error. Remove every API key, bot token, password, OAuth token, and private account ID first.
+If you ask for help, include your operating system, `babo --version`, `babo status`, the exact command, and the exact error. Remove every API key, bot token, password, OAuth token, and private account ID first.
 
 Continue with the full [Troubleshooting guide](./troubleshooting.md) for an ordered diagnosis.
 
-## Open nanobot Later
+## Open babo Later
 
 Run:
 
 ```bash
-nanobot webui
+babo webui
 ```
 
-A fresh official-installer environment starts a background gateway and returns control to the terminal. Closing the browser does not stop it. Manage it with `nanobot gateway status`, `logs`, `restart`, and `stop`; use the exact commands printed for your instance. Other installation methods keep their attached on-demand launch: leave that launcher open, or explicitly use `nanobot webui --detach` after setup. The last attached client stops an on-demand gateway, not a background gateway. See [updates and recovery](./updating.md) for the matching installation method.
+A fresh official-installer environment starts a background gateway and returns control to the terminal. Closing the browser does not stop it. Manage it with `babo gateway status`, `logs`, `restart`, and `stop`; use the exact commands printed for your instance. Other installation methods keep their attached on-demand launch: leave that launcher open, or explicitly use `babo webui --detach` after setup. The last attached client stops an on-demand gateway, not a background gateway. See [updates and recovery](./updating.md) for the matching installation method.

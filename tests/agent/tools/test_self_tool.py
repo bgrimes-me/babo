@@ -9,13 +9,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from nanobot.agent.tools.context import RequestContext, request_context
-from nanobot.agent.tools.runtime_control import AgentRuntimeControl
-from nanobot.agent.tools.self import MyTool
-from nanobot.agent.tools.shell import ExecToolConfig
-from nanobot.agent.tools.web import WebSearchConfig, WebToolsConfig
-from nanobot.config.schema import ModelPresetConfig
-from nanobot.providers.base import LLMUsage
+from babo.agent.tools.context import RequestContext, request_context
+from babo.agent.tools.runtime_control import AgentRuntimeControl
+from babo.agent.tools.self import MyTool
+from babo.agent.tools.shell import ExecToolConfig
+from babo.agent.tools.web import WebSearchConfig, WebToolsConfig
+from babo.config.schema import ModelPresetConfig
+from babo.providers.base import LLMUsage
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -581,8 +581,8 @@ class TestSubagentHookStatus:
     @pytest.mark.asyncio
     async def test_after_iteration_updates_status(self):
         """after_iteration should copy iteration, tool_events, usage to status."""
-        from nanobot.agent.hook import AgentHookContext
-        from nanobot.agent.subagent import SubagentStatus, _SubagentHook
+        from babo.agent.hook import AgentHookContext
+        from babo.agent.subagent import SubagentStatus, _SubagentHook
 
         status = SubagentStatus(
             task_id="test",
@@ -608,8 +608,8 @@ class TestSubagentHookStatus:
     @pytest.mark.asyncio
     async def test_after_iteration_with_error(self):
         """after_iteration should set status.error when context has an error."""
-        from nanobot.agent.hook import AgentHookContext
-        from nanobot.agent.subagent import SubagentStatus, _SubagentHook
+        from babo.agent.hook import AgentHookContext
+        from babo.agent.subagent import SubagentStatus, _SubagentHook
 
         status = SubagentStatus(
             task_id="test",
@@ -676,9 +676,9 @@ class TestScratchpadInspection:
     @pytest.mark.asyncio
     async def test_inspect_scratchpad_string(self):
         tool = _make_tool()
-        await tool.execute(action="set", key="current_project", value="nanobot")
+        await tool.execute(action="set", key="current_project", value="babo")
         result = await tool.execute(action="check", key="current_project")
-        assert "nanobot" in result
+        assert "babo" in result
 
     @pytest.mark.asyncio
     async def test_inspect_scratchpad_dict(self):
@@ -899,7 +899,7 @@ class TestRequestContext:
             session_key="feishu:oc_abc123",
         )
 
-        with patch("nanobot.agent.tools.self.logger.info") as info:
+        with patch("babo.agent.tools.self.logger.info") as info:
             with request_context(ctx):
                 tool._audit("modify", "temperature = 0.2")
 

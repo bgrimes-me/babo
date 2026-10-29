@@ -22,8 +22,8 @@ export default tseslint.config(
     files: [
       "webui/src/**/*.{ts,tsx}",
       "webui/browser/**/*.{ts,tsx}",
-      "nanobot/channels/*/webui/**/*.{ts,tsx}",
-      "nanobot/channels/*/tests/webui/**/*.{ts,tsx}",
+      "babo/channels/*/webui/**/*.{ts,tsx}",
+      "babo/channels/*/tests/webui/**/*.{ts,tsx}",
     ],
     languageOptions: {
       ecmaVersion: 2020,

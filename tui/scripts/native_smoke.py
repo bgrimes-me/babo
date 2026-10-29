@@ -97,19 +97,19 @@ def main() -> None:
     report_path = args.report.resolve()
     if report_path.exists():
         raise ValueError("Do not overwrite prior native evidence")
-    with tempfile.TemporaryDirectory(prefix="nanobot-native-tui-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="babo-native-tui-") as temporary:
         root = Path(temporary)
         with ZipFile(wheel) as archive:
             members = [name for name in archive.namelist()
-                       if name.startswith("nanobot/tui/bin/nanobot-tui-")
-                       and "/" not in name.removeprefix("nanobot/tui/bin/")
+                       if name.startswith("babo/tui/bin/babo-tui-")
+                       and "/" not in name.removeprefix("babo/tui/bin/")
                        and not name.endswith((".tar.gz", ".json", ".txt"))]
             if len(members) != 1:
                 raise ValueError("Expected one packaged native executable")
             binary = root / Path(members[0]).name
             binary.write_bytes(archive.read(members[0]))
             binary.chmod(0o700)
-            commit = archive.read("nanobot/_build_commit.txt").decode().strip()
+            commit = archive.read("babo/_build_commit.txt").decode().strip()
         # Keep only platform identity. Never inherit daily gateway credentials,
         # desktop attachment variables, config or the frontend toolchain PATH.
         host = {key: value for key, value in os.environ.items()

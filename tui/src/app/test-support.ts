@@ -1,7 +1,7 @@
 import { MockTreeSitterClient, type TestRendererSetup } from "@opentui/core/testing"
 
 import type { MessageOptions, RecoveryState, WorkspaceScopePayload } from "../client"
-import { NanobotTui, type AppOptions } from "./app"
+import { BaboTui, type AppOptions } from "./app"
 
 export const options: AppOptions = {
   wsUrl: "ws://localhost.invalid/ws",
@@ -9,7 +9,7 @@ export const options: AppOptions = {
   apiToken: "",
   model: "test/model",
   modelPreset: "default",
-  workspace: "/tmp/nanobot-workspace",
+  workspace: "/tmp/babo-workspace",
   version: "test",
   access: "workspace access",
   theme: "auto",
@@ -94,7 +94,7 @@ export function client(
   }
 }
 
-export const mount = (setup: TestRendererSetup, sent: string[] = []) => NanobotTui.mount(
+export const mount = (setup: TestRendererSetup, sent: string[] = []) => BaboTui.mount(
   setup.renderer,
   options,
   client(sent),

@@ -1,24 +1,24 @@
-# Build a Discord AI Agent with nanobot
+# Build a Discord AI Agent with babo
 
-This guide connects nanobot to Discord so a Discord user or server channel can talk to your self-hosted AI agent through the nanobot gateway.
+This guide connects babo to Discord so a Discord user or server channel can talk to your self-hosted AI agent through the babo gateway.
 
 ## What this guide builds
 
 - a Discord bot application
 - Message Content intent enabled
-- the `discord` channel enabled in nanobot
+- the `discord` channel enabled in babo
 - one direct message or mention test
 
 ## Prerequisites
 
-- A normal reply in your existing nanobot WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
+- A normal reply in your existing babo WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
 
 - Access to the Discord Developer Portal.
 - A Discord server where you can invite a bot.
 
 ## Continue from your running instance
 
-If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `nanobot webui` command; there is no need to install nanobot again.
+If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `babo webui` command; there is no need to install babo again.
 
 For terminal or server setup, use the manual configuration section below. Reuse the config/home and executable from your working instance. Docker users should use the [container commands](../deployment.md#docker-compose).
 
@@ -32,12 +32,12 @@ Create a Discord application and bot, enable **Message Content Intent**, and inv
 Install the optional channel dependency:
 
 ```bash
-nanobot plugins enable discord
+babo plugins enable discord
 ```
 
 Create a Discord application, add a bot, copy the token, and enable `MESSAGE CONTENT INTENT` in the bot settings.
 
-Merge this snippet into `~/.nanobot/config.json`:
+Merge this snippet into `~/.babo/config.json`:
 
 ```json
 {
@@ -66,7 +66,7 @@ Set `replyToMessage` to `true` to make responses use Discord's native reply UI. 
 
 In the WebUI, follow any restart prompt and keep the launcher running for the first test. You do not need to start another gateway. For unattended operation afterward, use [background or service mode](../cli-reference.md#gateway).
 
-For manual config changes, restart the existing gateway through its owning terminal, `nanobot gateway restart` for background mode, or its service/container supervisor. If none is running, start `nanobot gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
+For manual config changes, restart the existing gateway through its owning terminal, `babo gateway restart` for background mode, or its service/container supervisor. If none is running, start `babo gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
 
 ## Test a message
 
@@ -78,7 +78,7 @@ Send the bot a DM first. It should return a pairing code. Return to the WebUI pa
 In a separate local terminal, using the same instance:
 
 ```bash
-nanobot agent -m "/pairing approve ABCD-EFGH"
+babo agent -m "/pairing approve ABCD-EFGH"
 ```
 
 Replace the example code with your actual code.

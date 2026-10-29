@@ -1,10 +1,10 @@
-# Connect nanobot to WhatsApp Agent Platform
+# Connect babo to WhatsApp Agent Platform
 
-This guide connects nanobot to WhatsApp through the `whatsapp_agent` channel, which uses the **official WhatsApp Agent Platform** API. The agent appears as its own chat inside WhatsApp and talks only to you.
+This guide connects babo to WhatsApp through the `whatsapp_agent` channel, which uses the **official WhatsApp Agent Platform** API. The agent appears as its own chat inside WhatsApp and talks only to you.
 
-nanobot is an independent third-party project, not a WhatsApp product. Using this API does not imply endorsement by WhatsApp.
+babo is an independent third-party project, not a WhatsApp product. Using this API does not imply endorsement by WhatsApp.
 
-**Before connecting:** agent chats are not end-to-end encrypted. nanobot and your configured model provider process these messages. Review the [WhatsApp third-party agent terms](https://www.whatsapp.com/legal/third-party-agents-terms) and your provider's data policies before sharing sensitive information.
+**Before connecting:** agent chats are not end-to-end encrypted. babo and your configured model provider process these messages. Review the [WhatsApp third-party agent terms](https://www.whatsapp.com/legal/third-party-agents-terms) and your provider's data policies before sharing sensitive information.
 
 This is a different product from the [`whatsapp`](./whatsapp-ai-agent.md) channel.
 
@@ -21,7 +21,7 @@ This is a different product from the [`whatsapp`](./whatsapp-ai-agent.md) channe
 | Availability | Limited countries, per account | Wherever WhatsApp can link a device |
 | Account risk | Officially supported interface | Uses an unofficial linked-device protocol |
 
-Choose `whatsapp_agent` when you want to connect your own nanobot through WhatsApp's agent API and do not need group access. This limits which WhatsApp chats the channel can access; it does not sandbox nanobot's tools. Keep `whatsapp` when you need groups, media breadth, or availability in a country where the Agent Platform has not rolled out.
+Choose `whatsapp_agent` when you want to connect your own babo through WhatsApp's agent API and do not need group access. This limits which WhatsApp chats the channel can access; it does not sandbox babo's tools. Keep `whatsapp` when you need groups, media breadth, or availability in a country where the Agent Platform has not rolled out.
 
 Both channels can be enabled at once with different names and different access rules.
 
@@ -29,19 +29,19 @@ Both channels can be enabled at once with different names and different access r
 
 - the `whatsapp_agent` channel enabled in `config.json`
 - a WhatsApp agent created from WhatsApp Settings
-- the agent's API token stored in nanobot
+- the agent's API token stored in babo
 - one approved sender
 
 ## Prerequisites
 
-- A working local nanobot reply:
+- A working local babo reply:
 
 ```bash
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
 - A WhatsApp account with **Settings → Agents** available. This experience is available only in limited countries and might not appear in your account yet.
-- A machine that can keep `nanobot gateway` running. Outbound connections are enough; no inbound webhook or public URL is required.
+- A machine that can keep `babo gateway` running. Outbound connections are enough; no inbound webhook or public URL is required.
 
 ## Step 1: Create the agent in WhatsApp
 
@@ -54,13 +54,13 @@ You can connect up to five agents to one WhatsApp account. The token is shown ag
 
 ## Step 2: Enable the channel
 
-The channel uses only nanobot core dependencies, so no optional install is required:
+The channel uses only babo core dependencies, so no optional install is required:
 
 ```bash
-nanobot plugins enable whatsapp_agent
+babo plugins enable whatsapp_agent
 ```
 
-Or edit `~/.nanobot/config.json` directly:
+Or edit `~/.babo/config.json` directly:
 
 ```json
 {
@@ -89,7 +89,7 @@ Keep the token in an environment variable instead of the file when you can, and 
 ## Step 3: Run and test
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 Open the agent's chat in WhatsApp and send a message. The agent replies in the same chat using the same model, workspace, memory, and tools as the CLI and WebUI.
@@ -101,10 +101,10 @@ The Agent Platform already restricts the conversation to you, the agent's creato
 When `allowFrom` is empty, an unapproved sender receives a pairing code. Approve it from a trusted local surface:
 
 ```bash
-nanobot agent -m "/pairing approve ABCD-EFGH"
+babo agent -m "/pairing approve ABCD-EFGH"
 ```
 
-The sender identifier has the form `user:<id>`. Treat it as opaque, never share it, and prefer pairing over hardcoding it, because the identifier can change if you change your phone number or re-register your account. nanobot stores the most recent identifier and uses it for replies.
+The sender identifier has the form `user:<id>`. Treat it as opaque, never share it, and prefer pairing over hardcoding it, because the identifier can change if you change your phone number or re-register your account. babo stores the most recent identifier and uses it for replies.
 
 ## Configuration reference
 
@@ -113,7 +113,7 @@ The sender identifier has the form `user:<id>`. Treat it as opaque, never share 
 | `enabled` | `false` | Load the channel at gateway start. |
 | `token` | — | The agent's API token. Required. |
 | `allowFrom` | `[]` | Extra local allowlist of `user:<id>` values, or `["*"]`. Empty means pairing-only. |
-| `stateDir` | `~/.nanobot/whatsapp-agent` | Where the durable poll cursor and dedup state are stored. |
+| `stateDir` | `~/.babo/whatsapp-agent` | Where the durable poll cursor and dedup state are stored. |
 | `pollTimeout` | `25` | Long-poll hold time in seconds (0–25). |
 | `markRead` | `true` | Send read receipts for inbound messages. |
 | `typingIndicator` | `true` | Show "typing…" while the agent works. |
@@ -137,27 +137,27 @@ Outbound media is uploaded first, then sent as the matching message type. Files 
 
 Note that audio the agent sends arrives as a normal file attachment, not as a WhatsApp voice-note bubble.
 
-Reactions are receive-only on this platform: the API rejects sending them. nanobot reads an inbound reaction (including an empty emoji, which means the reaction was removed) but does not forward it as a turn, so a reaction never triggers a reply. Media on both sides expires 30 days after it is stored; nanobot holds downloaded files locally and can delete the server copy with `deleteMediaAfterDownload`.
+Reactions are receive-only on this platform: the API rejects sending them. babo reads an inbound reaction (including an empty emoji, which means the reaction was removed) but does not forward it as a turn, so a reaction never triggers a reply. Media on both sides expires 30 days after it is stored; babo holds downloaded files locally and can delete the server copy with `deleteMediaAfterDownload`.
 
 ## Delivery semantics
 
 The platform's send result determines whether a retry is safe:
 
-- **Rate limit or "not accepted for delivery"** (`429`, `503`): the message was not sent, so nanobot retries with backoff.
-- **A plain `500`, a dropped connection, or a read timeout**: WhatsApp cannot say whether the message was delivered. nanobot does **not** retry by default, because a duplicate is more disruptive than a missed reply. Set `retryAmbiguousSends` to `true` if you prefer a chance of duplicates over a chance of loss.
+- **Rate limit or "not accepted for delivery"** (`429`, `503`): the message was not sent, so babo retries with backoff.
+- **A plain `500`, a dropped connection, or a read timeout**: WhatsApp cannot say whether the message was delivered. babo does **not** retry by default, because a duplicate is more disruptive than a missed reply. Set `retryAmbiguousSends` to `true` if you prefer a chance of duplicates over a chance of loss.
 
-Replies longer than 4096 characters are split into multiple messages and sent in order. The first chunk quotes the message being answered. During a retry, nanobot resumes at the failed chunk or attachment; it does not send earlier accepted parts again. This progress is kept in memory for the current delivery, not as a persistent outbound queue.
+Replies longer than 4096 characters are split into multiple messages and sent in order. The first chunk quotes the message being answered. During a retry, babo resumes at the failed chunk or attachment; it does not send earlier accepted parts again. This progress is kept in memory for the current delivery, not as a persistent outbound queue.
 
-At most one poller may run per agent token. If you start a second gateway against the same token, the older poll fails with `409`; nanobot logs this clearly and backs off. Run one gateway instance per agent.
+At most one poller may run per agent token. If you start a second gateway against the same token, the older poll fails with `409`; babo logs this clearly and backs off. Run one gateway instance per agent.
 
 ## Operational notes
 
-- **Rate limits.** WhatsApp allows 12 sends, 12 read receipts, 15 polls, and 12 media requests per minute per agent. nanobot paces each method below its own limit and counts retries against the same budget, which is why progress messages are off by default.
-- **Durable cursor.** nanobot records message ids before handling them and saves the server cursor after each batch. A restart deduplicates recorded ids. A crash between recording and dispatch can lose that message; this is not exactly-once delivery. If state cannot be saved, the channel stops instead of acknowledging more traffic.
-- **Retention.** WhatsApp keeps updates for 30 days. On first run, nanobot saves the current time and reads from `offset=0`, discarding messages older than that time or without a timestamp. This avoids gaps after empty polls. Keep the gateway clock synchronized. Timestamps have one-second precision, so messages from the startup second are included. Reading a large backlog can delay the first reply. Restarts retain the original boundary and cursor; changing the token starts a new boundary.
+- **Rate limits.** WhatsApp allows 12 sends, 12 read receipts, 15 polls, and 12 media requests per minute per agent. babo paces each method below its own limit and counts retries against the same budget, which is why progress messages are off by default.
+- **Durable cursor.** babo records message ids before handling them and saves the server cursor after each batch. A restart deduplicates recorded ids. A crash between recording and dispatch can lose that message; this is not exactly-once delivery. If state cannot be saved, the channel stops instead of acknowledging more traffic.
+- **Retention.** WhatsApp keeps updates for 30 days. On first run, babo saves the current time and reads from `offset=0`, discarding messages older than that time or without a timestamp. This avoids gaps after empty polls. Keep the gateway clock synchronized. Timestamps have one-second precision, so messages from the startup second are included. Reading a large backlog can delay the first reply. Restarts retain the original boundary and cursor; changing the token starts a new boundary.
 - **Invalid token.** If WhatsApp rejects the token, the channel stops and logs an actionable message instead of retrying forever.
 - **Scheduled results.** A result that reaches the channel before it connects or learns the creator identifier remains in the gateway's pending-delivery queue. After connection, the gateway can send the saved result without running the task again. A connection loss after any part is sent is recorded as an unknown outcome and is not automatically replayed.
-- **Privacy.** Agent conversations are not end-to-end encrypted. nanobot processes these messages and sends them to your configured model provider. Downloaded attachments and session history may remain on the nanobot host. Your other WhatsApp chats are unaffected. Do not use this channel for data that requires end-to-end encryption.
+- **Privacy.** Agent conversations are not end-to-end encrypted. babo processes these messages and sends them to your configured model provider. Downloaded attachments and session history may remain on the babo host. Your other WhatsApp chats are unaffected. Do not use this channel for data that requires end-to-end encryption.
 
 ## Troubleshooting
 

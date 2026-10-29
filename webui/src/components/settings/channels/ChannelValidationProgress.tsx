@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { channelUiPresentation } from "@/channel-plugins/registry";
 import { channelValidationMessage } from "@/components/settings/channels/validationMessages";
-import type { ChannelValidationPayload, NanobotFeatureInfo } from "@/lib/types";
+import type { ChannelValidationPayload, BaboFeatureInfo } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function channelValidationStatusLabel(
@@ -73,7 +73,7 @@ export function ChannelValidationProgress({
 }: {
   validation: ChannelValidationPayload | null;
   validating: boolean;
-  feature: NanobotFeatureInfo;
+  feature: BaboFeatureInfo;
 }) {
   const { t } = useTranslation();
   const checks = useMemo(() => visibleValidationChecks(validation), [validation]);

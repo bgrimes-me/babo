@@ -15,7 +15,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export type ThemePreference = "system" | "light" | "dark";
 type Theme = "light" | "dark";
-const STORAGE_KEY = "nanobot-webui.theme";
+const STORAGE_KEY = "babo-webui.theme";
 const ThemeContext = createContext<Theme>("light");
 
 function readStored(): ThemePreference {

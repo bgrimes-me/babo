@@ -8,12 +8,12 @@ from typing import Any
 import httpx
 import pytest
 
-from nanobot.config.schema import Config
-from nanobot.providers.base import LLMUsage
-from nanobot.providers.factory import make_provider
-from nanobot.providers.oauth_model_catalog import OAuthModelCatalogSnapshot
-from nanobot.providers.registry import ProviderModelSpec, find_by_name
-from nanobot.providers.xai_grok_provider import (
+from babo.config.schema import Config
+from babo.providers.base import LLMUsage
+from babo.providers.factory import make_provider
+from babo.providers.oauth_model_catalog import OAuthModelCatalogSnapshot
+from babo.providers.registry import ProviderModelSpec, find_by_name
+from babo.providers.xai_grok_provider import (
     DEFAULT_XAI_GROK_MODEL,
     XAIGrokProvider,
     _bounded_error_body,
@@ -38,7 +38,7 @@ def _token(access: str = "subscription-token") -> SimpleNamespace:
 
 def _mock_token(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "nanobot.providers.xai_grok_provider.get_xai_oauth_token",
+        "babo.providers.xai_grok_provider.get_xai_oauth_token",
         lambda **_kwargs: _token(),
     )
 
@@ -67,7 +67,7 @@ def _mock_model_capabilities(
         )
 
     monkeypatch.setattr(
-        "nanobot.providers.xai_grok_provider.get_xai_grok_model_catalog",
+        "babo.providers.xai_grok_provider.get_xai_grok_model_catalog",
         fake_catalog,
     )
 
@@ -104,7 +104,7 @@ async def test_provider_retries_stream_eof_before_returning_content(monkeypatch)
             raise ConnectionError("stream ended early")
         return "complete answer", [], "stop", None, None
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider._request_xai", fake_request)
+    monkeypatch.setattr("babo.providers.xai_grok_provider._request_xai", fake_request)
     provider = XAIGrokProvider()
     provider._CHAT_RETRY_DELAYS = (0,)
 
@@ -125,7 +125,7 @@ async def test_provider_injects_hosted_x_search_and_required_proxy_headers(monke
         calls.append((url, headers, body))
         return "answer [[1]](https://x.com/example/status/1)", [], "stop", {}, None
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider._request_xai", fake_request)
+    monkeypatch.setattr("babo.providers.xai_grok_provider._request_xai", fake_request)
     provider = XAIGrokProvider()
     tools = [
         {
@@ -177,7 +177,7 @@ async def test_provider_injects_hosted_x_search_and_required_proxy_headers(monke
     assert headers["Authorization"] == "Bearer subscription-token"
     assert headers["X-XAI-Token-Auth"] == "xai-grok-cli"
     assert headers["x-authenticateresponse"] == "authenticate-response"
-    assert headers["x-grok-client-identifier"] == "nanobot"
+    assert headers["x-grok-client-identifier"] == "babo"
     assert headers["x-grok-client-mode"] == "headless"
     assert headers["x-grok-model-override"] == "grok-4.6"
 
@@ -197,13 +197,13 @@ async def test_explicit_parameterized_x_search_is_preserved_without_catalog_look
         return "ok", [], "stop", {}, None
 
     monkeypatch.setattr(
-        "nanobot.providers.xai_grok_provider.get_xai_grok_model_catalog",
+        "babo.providers.xai_grok_provider.get_xai_grok_model_catalog",
         unexpected_catalog_lookup,
     )
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider._request_xai", fake_request)
+    monkeypatch.setattr("babo.providers.xai_grok_provider._request_xai", fake_request)
     hosted_tool = {
         "type": "x_search",
-        "allowed_x_handles": ["nanobot_ai"],
+        "allowed_x_handles": ["babo"],
         "from_date": "2026-01-01",
     }
     provider = XAIGrokProvider(
@@ -263,10 +263,10 @@ async def test_explicit_empty_tools_disables_catalog_lookup_and_hosted_tool(monk
         return "ok", [], "stop", {}, None
 
     monkeypatch.setattr(
-        "nanobot.providers.xai_grok_provider.get_xai_grok_model_catalog",
+        "babo.providers.xai_grok_provider.get_xai_grok_model_catalog",
         unexpected_catalog_lookup,
     )
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider._request_xai", fake_request)
+    monkeypatch.setattr("babo.providers.xai_grok_provider._request_xai", fake_request)
     provider = XAIGrokProvider(extra_body={"tools": []})
 
     response = await provider.chat(
@@ -308,7 +308,7 @@ async def test_provider_keeps_local_x_search_when_model_does_not_support_hosted_
         bodies.append(body)
         return "ok", [], "stop", {}, None
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider._request_xai", fake_request)
+    monkeypatch.setattr("babo.providers.xai_grok_provider._request_xai", fake_request)
     provider = XAIGrokProvider()
     tools = [
         {
@@ -347,7 +347,7 @@ async def test_provider_refreshes_and_retries_exactly_once_after_401(monkeypatch
         return _token("fresh-token" if force_refresh else "stale-token")
 
     monkeypatch.setattr(
-        "nanobot.providers.xai_grok_provider.get_xai_oauth_token",
+        "babo.providers.xai_grok_provider.get_xai_oauth_token",
         fake_token,
     )
     request_tokens: list[str] = []
@@ -358,7 +358,7 @@ async def test_provider_refreshes_and_retries_exactly_once_after_401(monkeypatch
             raise _XAIHTTPError("unauthorized", status_code=401, should_retry=False)
         return "ok", [], "stop", {}, None
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider._request_xai", fake_request)
+    monkeypatch.setattr("babo.providers.xai_grok_provider._request_xai", fake_request)
     provider = XAIGrokProvider(proxy="http://127.0.0.1:7890")
 
     response = await provider.chat([{"role": "user", "content": "hello"}])
@@ -378,13 +378,13 @@ async def test_second_401_is_non_retryable_and_prompts_reauthentication(monkeypa
 
     async def always_unauthorized(*_args, **_kwargs):
         raise _XAIHTTPError(
-            "xAI rejected the login. Sign in again with `nanobot provider login xai-grok`.",
+            "xAI rejected the login. Sign in again with `babo provider login xai-grok`.",
             status_code=401,
             should_retry=False,
         )
 
     monkeypatch.setattr(
-        "nanobot.providers.xai_grok_provider._request_xai",
+        "babo.providers.xai_grok_provider._request_xai",
         always_unauthorized,
     )
     provider = XAIGrokProvider()
@@ -395,7 +395,7 @@ async def test_second_401_is_non_retryable_and_prompts_reauthentication(monkeypa
     assert response.error_status_code == 401
     assert response.error_kind == "http"
     assert response.error_should_retry is False
-    assert "nanobot provider login xai-grok" in (response.content or "")
+    assert "babo provider login xai-grok" in (response.content or "")
 
 
 @pytest.mark.asyncio
@@ -408,7 +408,7 @@ async def test_factory_builds_xai_provider_and_applies_explicit_body_overrides(m
         bodies.append(body)
         return "ok", [], "stop", {}, None
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider._request_xai", fake_request)
+    monkeypatch.setattr("babo.providers.xai_grok_provider._request_xai", fake_request)
     config = Config.model_validate(
         {
             "agents": {
@@ -473,7 +473,7 @@ async def test_raw_response_request_streams_text_usage_and_inline_citations(monk
             timeout=kwargs["timeout"],
         )
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider.httpx.AsyncClient", fake_client)
+    monkeypatch.setattr("babo.providers.xai_grok_provider.httpx.AsyncClient", fake_client)
     deltas: list[str] = []
 
     result = await _request_xai(
@@ -497,7 +497,7 @@ async def test_raw_response_request_streams_hosted_x_search_lifecycle(monkeypatc
         {
             "type": "response.custom_tool_call_input.done",
             "item_id": "x-search-1",
-            "input": '{"query":"nanobot oauth"}',
+            "input": '{"query":"babo oauth"}',
         },
         {
             "type": "response.output_item.done",
@@ -505,7 +505,7 @@ async def test_raw_response_request_streams_hosted_x_search_lifecycle(monkeypatc
                 "type": "custom_tool_call",
                 "id": "x-search-1",
                 "name": "x_semantic_search",
-                "input": '{"query":"nanobot oauth"}',
+                "input": '{"query":"babo oauth"}',
                 "output": [{"text": "large hosted result must not enter activity events"}],
             },
         },
@@ -525,7 +525,7 @@ async def test_raw_response_request_streams_hosted_x_search_lifecycle(monkeypatc
             timeout=kwargs["timeout"],
         )
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider.httpx.AsyncClient", fake_client)
+    monkeypatch.setattr("babo.providers.xai_grok_provider.httpx.AsyncClient", fake_client)
     tool_events: list[dict[str, Any]] = []
 
     result = await _request_xai(
@@ -542,7 +542,7 @@ async def test_raw_response_request_streams_hosted_x_search_lifecycle(monkeypatc
             "phase": "start",
             "call_id": "x-search-1",
             "name": "x_search",
-            "arguments": {"query": "nanobot oauth"},
+            "arguments": {"query": "babo oauth"},
             "result": None,
         },
         {
@@ -550,7 +550,7 @@ async def test_raw_response_request_streams_hosted_x_search_lifecycle(monkeypatc
             "phase": "end",
             "call_id": "x-search-1",
             "name": "x_search",
-            "arguments": {"query": "nanobot oauth"},
+            "arguments": {"query": "babo oauth"},
             "result": {"name": "x_semantic_search"},
         },
     ]
@@ -567,7 +567,7 @@ async def test_raw_response_request_streams_official_x_search_lifecycle(monkeypa
                 "type": "x_search_call",
                 "id": "x-search-1",
                 "status": "in_progress",
-                "action": {"query": "nanobot oauth"},
+                "action": {"query": "babo oauth"},
             },
         },
         {
@@ -576,7 +576,7 @@ async def test_raw_response_request_streams_official_x_search_lifecycle(monkeypa
                 "type": "x_search_call",
                 "id": "x-search-1",
                 "status": "completed",
-                "action": {"query": "nanobot oauth"},
+                "action": {"query": "babo oauth"},
             },
         },
         {
@@ -595,7 +595,7 @@ async def test_raw_response_request_streams_official_x_search_lifecycle(monkeypa
             timeout=kwargs["timeout"],
         )
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider.httpx.AsyncClient", fake_client)
+    monkeypatch.setattr("babo.providers.xai_grok_provider.httpx.AsyncClient", fake_client)
     tool_events: list[dict[str, Any]] = []
 
     await _request_xai(
@@ -621,7 +621,7 @@ async def test_raw_response_rejects_unfinished_hosted_tool_and_closes_progress(
         {
             "type": "response.custom_tool_call_input.done",
             "item_id": "x-search-1",
-            "input": '{"query":"nanobot oauth"}',
+            "input": '{"query":"babo oauth"}',
         },
         {"type": "response.output_text.delta", "delta": "I will keep searching."},
         {
@@ -643,7 +643,7 @@ async def test_raw_response_rejects_unfinished_hosted_tool_and_closes_progress(
             timeout=kwargs["timeout"],
         )
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider.httpx.AsyncClient", fake_client)
+    monkeypatch.setattr("babo.providers.xai_grok_provider.httpx.AsyncClient", fake_client)
     tool_events: list[dict[str, Any]] = []
 
     with pytest.raises(_XAIIncompleteHostedToolError) as caught:
@@ -689,7 +689,7 @@ async def test_provider_recovers_unfinished_hosted_tool_once_and_preserves_usage
     async def on_recover() -> None:
         recovered.append(True)
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider._request_xai", fake_request)
+    monkeypatch.setattr("babo.providers.xai_grok_provider._request_xai", fake_request)
     provider = XAIGrokProvider()
 
     response = await provider.chat_stream_with_retry(
@@ -723,7 +723,7 @@ async def test_provider_preserves_usage_when_hosted_tool_recovery_also_fails(
             usage=usage,
         )
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider._request_xai", fake_request)
+    monkeypatch.setattr("babo.providers.xai_grok_provider._request_xai", fake_request)
     provider = XAIGrokProvider()
 
     response = await provider.chat_stream_with_retry(
@@ -756,7 +756,7 @@ async def test_raw_response_error_preserves_bounded_redacted_body(monkeypatch) -
             timeout=kwargs["timeout"],
         )
 
-    monkeypatch.setattr("nanobot.providers.xai_grok_provider.httpx.AsyncClient", fake_client)
+    monkeypatch.setattr("babo.providers.xai_grok_provider.httpx.AsyncClient", fake_client)
 
     with pytest.raises(_XAIHTTPError) as caught:
         await _request_xai(
@@ -807,7 +807,7 @@ def test_client_version_rejection_explains_update_and_preserves_body() -> None:
     assert error.response_body == (
         '{"code":"upgrade-required","message":"Client version 0.2.109 is no longer supported"}'
     )
-    assert "xAI requires a newer Grok client version. Update nanobot and try again." in str(error)
+    assert "xAI requires a newer Grok client version. Update babo and try again." in str(error)
     assert error.response_body in str(error)
     assert response.error_status_code == 426
     assert error.response_body in (response.content or "")

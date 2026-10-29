@@ -6,7 +6,7 @@ import {
 } from "@/lib/runtime";
 
 afterEach(() => {
-  Reflect.deleteProperty(window, "nanobotHost");
+  Reflect.deleteProperty(window, "baboHost");
 });
 
 describe("runtime host facade", () => {
@@ -22,7 +22,7 @@ describe("runtime host facade", () => {
     const restartEngine = vi.fn(async () => undefined);
     const openLogs = vi.fn(async () => undefined);
     const exportDiagnostics = vi.fn(async () => "/tmp/diagnostics.txt");
-    Object.defineProperty(window, "nanobotHost", {
+    Object.defineProperty(window, "baboHost", {
       configurable: true,
       value: {
         getRuntimeInfo: vi.fn(),

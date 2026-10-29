@@ -1,7 +1,7 @@
 import { SettingsPage } from "@/components/settings/SettingsPage";
 import type { SettingsExitGuard, SettingsSectionKey } from "@/components/settings/contracts";
 import { useSettingsController } from "@/components/settings/useSettingsController";
-import type { SendAttachment, SendOptions } from "@/hooks/useNanobotStream";
+import type { SendAttachment, SendOptions } from "@/hooks/useBaboStream";
 import type { ThemePreference } from "@/hooks/useTheme";
 import type { ChatSummary, SettingsPayload, SkillSummary } from "@/lib/types";
 

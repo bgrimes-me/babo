@@ -13,22 +13,22 @@ from zipfile import ZipFile
 
 import pytest
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.memory import Consolidator
-from nanobot.agent.subagent import SubagentManager
-from nanobot.agent.tools.registry import is_tool_error_result
-from nanobot.agent.tools.search import FindFilesTool, GrepTool
-from nanobot.agent.tools.web import WebSearchTool
-from nanobot.bus.queue import MessageBus
-from nanobot.config.schema import WebSearchConfig
-from nanobot.providers.base import GenerationSettings
-from nanobot.security.workspace_access import (
+from babo.agent.loop import AgentLoop
+from babo.agent.memory import Consolidator
+from babo.agent.subagent import SubagentManager
+from babo.agent.tools.registry import is_tool_error_result
+from babo.agent.tools.search import FindFilesTool, GrepTool
+from babo.agent.tools.web import WebSearchTool
+from babo.bus.queue import MessageBus
+from babo.config.schema import WebSearchConfig
+from babo.providers.base import GenerationSettings
+from babo.security.workspace_access import (
     bind_workspace_scope,
     default_workspace_scope,
     reset_workspace_scope,
 )
-from nanobot.utils.document import extract_text
-from nanobot.utils.llm_runtime import LLMRuntime
+from babo.utils.document import extract_text
+from babo.utils.llm_runtime import LLMRuntime
 
 
 @pytest.mark.asyncio
@@ -43,7 +43,7 @@ async def test_web_search_tool_refreshes_dynamic_config_loader(monkeypatch) -> N
 
     monkeypatch.setattr(WebSearchTool, "_search_duckduckgo", fake_duckduckgo)
 
-    assert await tool.execute("nanobot") == "duckduckgo:nanobot:3"
+    assert await tool.execute("babo") == "duckduckgo:babo:3"
 
 
 @pytest.mark.asyncio
@@ -343,7 +343,7 @@ async def test_grep_searches_xlsx_with_sheet_cell_locator(
 ) -> None:
     from openpyxl import Workbook
 
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", tmp_path / "config.json")
+    monkeypatch.setattr("babo.config.loader._current_config_path", tmp_path / "config.json")
     workbook_path = tmp_path / "people.xlsx"
     workbook = Workbook()
     sheet = workbook.active
@@ -452,7 +452,7 @@ async def test_grep_searches_xlsx_beyond_attachment_preview_limit(
 ) -> None:
     from openpyxl import Workbook
 
-    from nanobot.utils import document as document_utils
+    from babo.utils import document as document_utils
 
     workbook_path = tmp_path / "long.xlsx"
     workbook = Workbook()
@@ -778,7 +778,7 @@ async def test_search_tools_reject_paths_outside_workspace(tmp_path: Path) -> No
 
 @pytest.mark.parametrize("use_rg", [True, False])
 def test_agent_loop_registers_search_backend(tmp_path: Path, monkeypatch, use_rg) -> None:
-    monkeypatch.setattr("nanobot.agent.tools.rg.RgTool.enabled", lambda ctx: use_rg)
+    monkeypatch.setattr("babo.agent.tools.rg.RgTool.enabled", lambda ctx: use_rg)
     bus = MessageBus()
     provider = MagicMock()
     provider.get_default_model.return_value = "test-model"
@@ -793,7 +793,7 @@ def test_agent_loop_registers_search_backend(tmp_path: Path, monkeypatch, use_rg
 @pytest.mark.asyncio
 @pytest.mark.parametrize("use_rg", [True, False])
 async def test_subagent_registers_search_backend(tmp_path: Path, monkeypatch, use_rg) -> None:
-    monkeypatch.setattr("nanobot.agent.tools.rg.RgTool.enabled", lambda ctx: use_rg)
+    monkeypatch.setattr("babo.agent.tools.rg.RgTool.enabled", lambda ctx: use_rg)
     bus = MessageBus()
     provider = MagicMock()
     provider.get_default_model.return_value = "test-model"
@@ -883,7 +883,7 @@ async def test_search_invalid_glob_is_an_error_even_in_empty_directory(tmp_path,
 
 @pytest.mark.parametrize("tool_class", [FindFilesTool, GrepTool])
 async def test_search_skips_generated_directories_but_allows_explicit_roots(tmp_path, tool_class):
-    excluded = [".worktrees/other", ".worktree/other", ".nanobot/tool-results", "webui/.verify-run"]
+    excluded = [".worktrees/other", ".worktree/other", ".babo/tool-results", "webui/.verify-run"]
     for name in ["src", ".agent", *excluded]:
         directory = tmp_path / name
         directory.mkdir(parents=True)
@@ -1048,7 +1048,7 @@ async def test_grep_marks_a_long_line_already_present_as_context(tmp_path):
 
 @pytest.mark.parametrize("mode", ["content", "count", "files_with_matches"])
 async def test_grep_closes_document_stream_and_preserves_locators(tmp_path, monkeypatch, mode):
-    from nanobot.utils.document import DocumentLineSource, LocatedDocumentLine
+    from babo.utils.document import DocumentLineSource, LocatedDocumentLine
 
     (tmp_path / "source.pdf").write_bytes(b"placeholder")
     visited = []
@@ -1064,7 +1064,7 @@ async def test_grep_closes_document_stream_and_preserves_locators(tmp_path, monk
             closed.append(True)
 
     monkeypatch.setattr(
-        "nanobot.agent.tools.search.open_document_line_source",
+        "babo.agent.tools.search.open_document_line_source",
         lambda *_args, **_kwargs: DocumentLineSource(document_lines(), "pages=2-3"),
     )
     result = await GrepTool(workspace=tmp_path).execute(

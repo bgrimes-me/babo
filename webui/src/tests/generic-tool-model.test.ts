@@ -75,10 +75,10 @@ describe("generic tool activity semantics", () => {
 
   it("groups searches over collected sources without exposing absolute paths", () => {
     const first = parseGenericToolTrace(
-      'grep({"pattern":"July","path":"/Users/test/.nanobot/tool-results/session/call_first.txt"})',
+      'grep({"pattern":"July","path":"/Users/test/.babo/tool-results/session/call_first.txt"})',
     )!;
     const second = parseGenericToolTrace(
-      'grep({"pattern":"OpenAI","path":"/Users/test/.nanobot/tool-results/session/call_second.txt"})',
+      'grep({"pattern":"OpenAI","path":"/Users/test/.babo/tool-results/session/call_second.txt"})',
     )!;
     const presentation = describeGenericToolRun([
       { trace: first, status: "done" },
@@ -91,7 +91,7 @@ describe("generic tool activity semantics", () => {
 
   it("leaves specialized tools to their dedicated activity surfaces", () => {
     for (const line of [
-      'web_search({"query":"nanobot"})',
+      'web_search({"query":"babo"})',
       'web_fetch({"url":"https://example.com"})',
       'exec({"command":"date"})',
       'write_file({"path":"README.md"})',

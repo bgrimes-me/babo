@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.installation_lock import (
+from babo.installation_lock import (
     InstallationBusyError,
     installation_access,
     installation_state_dir,
@@ -18,7 +18,7 @@ _CHILD = """
 import os, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[4])
-from nanobot.installation_lock import installation_access
+from babo.installation_lock import installation_access
 Path.home = classmethod(lambda cls: Path(sys.argv[1]))
 sys.prefix = sys.argv[2]
 with installation_access(updating=sys.argv[3] == 'update'):
@@ -74,7 +74,7 @@ def test_multiple_runtimes_block_update_until_last_process_exits(isolated_instal
         with child_lease(isolated_installation, sys.prefix):
             with installation_access():
                 pass  # Shared leases do not prevent normal multi-profile use.
-            with pytest.raises(InstallationBusyError, match="Stop its nanobot gateways"):
+            with pytest.raises(InstallationBusyError, match="Stop its babo gateways"):
                 with installation_access(updating=True):
                     pytest.fail("Update entered a busy installation")
             first.kill()
@@ -105,7 +105,7 @@ def test_other_installation_does_not_block_runtime(isolated_installation):
 
 
 def test_interrupted_installation_refuses_startup_but_allows_repair(isolated_installation):
-    pending = isolated_installation / ".nanobot/run" / f"update-{installation_state_dir().name[:16]}.pending"
+    pending = isolated_installation / ".babo/run" / f"update-{installation_state_dir().name[:16]}.pending"
     pending.parent.mkdir(parents=True)
     pending.write_text("An older updater was interrupted")
     with pytest.raises(InstallationBusyError, match="previous update did not finish"):

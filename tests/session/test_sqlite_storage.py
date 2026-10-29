@@ -14,11 +14,11 @@ from pathlib import Path
 import pytest
 from packaging.version import Version
 
-import nanobot.session.jsonl_migration as jsonl_migration
-from nanobot.session.jsonl_migration import SUNSET_VERSION, WORKSPACE_BACKUP_DIR
-from nanobot.session.location import SessionLocation
-from nanobot.session.manager import Session, SessionManager
-from nanobot.session.sqlite_store import SessionConflictError
+import babo.session.jsonl_migration as jsonl_migration
+from babo.session.jsonl_migration import SUNSET_VERSION, WORKSPACE_BACKUP_DIR
+from babo.session.location import SessionLocation
+from babo.session.manager import Session, SessionManager
+from babo.session.sqlite_store import SessionConflictError
 
 
 def legacy(workspace: Path, key: str = "websocket:old", *, content: str = "hello") -> Path:
@@ -115,9 +115,9 @@ def test_migration_preserves_checkpoint_and_pending_inputs(tmp_path):
 
 
 async def test_workspace_migration_isolates_raw_private_records(tmp_path):
-    from nanobot.agent.tools.filesystem import ReadFileTool
-    from nanobot.agent.tools.sessions import ReadSessionTool
-    from nanobot.providers.base import ProviderConversationState
+    from babo.agent.tools.filesystem import ReadFileTool
+    from babo.agent.tools.sessions import ReadSessionTool
+    from babo.providers.base import ProviderConversationState
 
     workspace = tmp_path / "workspace"
     path = legacy(workspace)
@@ -400,7 +400,7 @@ async def test_existing_reads_do_not_wait_for_another_sessions_write_lock(tmp_pa
 
 
 async def test_closing_one_owner_preserves_another_owners_connections(tmp_path):
-    from nanobot.session.state import SessionState
+    from babo.session.state import SessionState
 
     manager = SessionManager(tmp_path)
     first = SessionState(manager._store)
@@ -446,7 +446,7 @@ def test_committed_checkpoint_survives_process_exit(tmp_path):
     script = '''
 import asyncio, os, sys
 from pathlib import Path
-from nanobot.session.manager import SessionManager
+from babo.session.manager import SessionManager
 async def main():
     state = SessionManager(Path(sys.argv[1]), sessions_root=Path(sys.argv[2])).state
     draft = await state.get("chat:a")
@@ -480,7 +480,7 @@ async def test_late_metadata_and_summary_cannot_resurrect_deleted_session(tmp_pa
 
 
 async def test_large_draft_copy_and_publication_run_on_owner_worker(tmp_path, monkeypatch):
-    import nanobot.session.state as owner
+    import babo.session.state as owner
 
     state = SessionManager(tmp_path).state
     draft = await state.get("chat:copy")
@@ -787,5 +787,5 @@ def test_committed_version_tracks_history_and_session_replacement(tmp_path, monk
     def unexpected_decode(*args, **kwargs):
         pytest.fail("version read decoded history or metadata")
 
-    monkeypatch.setattr("nanobot.session.sqlite_store._object", unexpected_decode)
+    monkeypatch.setattr("babo.session.sqlite_store._object", unexpected_decode)
     assert manager.read_session_version(key) == (replacement.generation, replacement.revision)

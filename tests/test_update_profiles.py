@@ -14,17 +14,17 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from nanobot.data_access import data_access
-from nanobot.installation_lock import (
+from babo.data_access import data_access
+from babo.installation_lock import (
     InstallationBusyError,
     installation_access,
     installation_state_dir,
     pending_update_path,
 )
-from nanobot.release_feed import ReleaseTarget
-from nanobot.releases import ReleaseArtifact
-from nanobot.update_plan import InstallationSnapshot, UpdatePlans, describe_plan
-from nanobot.update_profiles import (
+from babo.release_feed import ReleaseTarget
+from babo.releases import ReleaseArtifact
+from babo.update_plan import InstallationSnapshot, UpdatePlans, describe_plan
+from babo.update_profiles import (
     inspect_profiles,
     require_stopped_profiles,
     verify_restarted_profile,
@@ -33,10 +33,10 @@ from nanobot.update_profiles import (
 _CHILD = """
 import os, sys
 from pathlib import Path
-from nanobot.config.home import set_home_path
-from nanobot.gateway.runtime import GatewayInstance, GatewayRuntime
-from nanobot.installation_lock import installation_access
-from nanobot.update_profiles import record_gateway_profile
+from babo.config.home import set_home_path
+from babo.gateway.runtime import GatewayInstance, GatewayRuntime
+from babo.installation_lock import installation_access
+from babo.update_profiles import record_gateway_profile
 
 profile, environment, marker, workspace = map(Path, sys.argv[1:])
 sys.prefix = str(environment)
@@ -177,11 +177,11 @@ def test_separate_profile_and_environment_cannot_hide_a_shared_workspace_writer(
 
 @pytest.fixture
 def startup_profile(private_home, tmp_path, monkeypatch):
-    from nanobot.config.schema import Config
+    from babo.config.schema import Config
 
     profile = tmp_path / "startup profile"
-    monkeypatch.setattr("nanobot.config.home._home_path", profile)
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", profile / "config.json")
+    monkeypatch.setattr("babo.config.home._home_path", profile)
+    monkeypatch.setattr("babo.config.loader._current_config_path", profile / "config.json")
     config = Config.model_validate({
         "agents": {"defaults": {"workspace": str(profile / "workspace"),
                                 "dream": {"enabled": False}}},
@@ -191,8 +191,8 @@ def startup_profile(private_home, tmp_path, monkeypatch):
 
 
 def test_startup_is_visible_and_protected_before_workspace_writes(startup_profile, monkeypatch):
-    from nanobot.cli import gateway_runtime
-    from nanobot.gateway.runtime import GatewayInstance, GatewayRuntime
+    from babo.cli import gateway_runtime
+    from babo.gateway.runtime import GatewayInstance, GatewayRuntime
 
     profile, config = startup_profile
     seen = []
@@ -228,8 +228,8 @@ def test_startup_is_visible_and_protected_before_workspace_writes(startup_profil
 
 
 def test_duplicate_gateway_cannot_initialize_workspace_before_claim(startup_profile, monkeypatch):
-    from nanobot.cli import gateway_runtime
-    from nanobot.gateway.runtime import GatewayAlreadyRunningError
+    from babo.cli import gateway_runtime
+    from babo.gateway.runtime import GatewayAlreadyRunningError
 
     profile, config = startup_profile
     monkeypatch.setattr(gateway_runtime, "sync_workspace_templates",
@@ -244,7 +244,7 @@ def test_duplicate_gateway_cannot_initialize_workspace_before_claim(startup_prof
 
 @pytest.mark.parametrize("interrupted", [False, True])
 def test_gateway_entrypoint_refuses_installation_before_initialization(startup_profile, monkeypatch, interrupted):
-    from nanobot.cli import gateway_runtime
+    from babo.cli import gateway_runtime
 
     profile, config = startup_profile
     monkeypatch.setattr(gateway_runtime, "sync_workspace_templates",
@@ -262,7 +262,7 @@ def test_gateway_entrypoint_refuses_installation_before_initialization(startup_p
 
 
 def test_gateway_refuses_shared_data_maintenance_before_initializing_writers(startup_profile, monkeypatch):
-    from nanobot.cli import gateway_runtime
+    from babo.cli import gateway_runtime
 
     profile, config = startup_profile
     monkeypatch.setattr(gateway_runtime, "sync_workspace_templates",
@@ -275,7 +275,7 @@ def test_gateway_refuses_shared_data_maintenance_before_initializing_writers(sta
 
 
 def test_classic_cli_holds_data_lease_before_writers_and_through_exit(startup_profile, monkeypatch):
-    from nanobot.cli import agent as cli_agent
+    from babo.cli import agent as cli_agent
 
     _, config = startup_profile
     monkeypatch.setattr(cli_agent, "_load_runtime_config", lambda *_args: config)
@@ -309,12 +309,12 @@ def test_actual_gateway_startup_records_custom_home_and_graceful_exit(private_ho
     source = """
 import sys
 from pathlib import Path
-from nanobot.config.home import set_home_path
-from nanobot.config.loader import set_config_path
-from nanobot.config.schema import Config
-from nanobot.installation_lock import installation_access
-from nanobot.cli import gateway_runtime
-from nanobot.agent.loop import AgentLoop
+from babo.config.home import set_home_path
+from babo.config.loader import set_config_path
+from babo.config.schema import Config
+from babo.installation_lock import installation_access
+from babo.cli import gateway_runtime
+from babo.agent.loop import AgentLoop
 original_from_config = AgentLoop.from_config
 def create_agent(config, bus, **kwargs):
     assert kwargs['cron_service'].admission is bus.admission
@@ -377,10 +377,10 @@ with installation_access():
 @pytest.mark.parametrize("selected_home,explicit_workspace", [(False, False), (True, False), (True, True)])
 def test_recorded_launch_restarts_same_actual_gateway(private_home, tmp_path, monkeypatch,
                                                      selected_home, explicit_workspace):
-    from nanobot.config.home import set_home_path
-    from nanobot.gateway.runtime import GatewayInstance, GatewayRuntime
+    from babo.config.home import set_home_path
+    from babo.gateway.runtime import GatewayInstance, GatewayRuntime
 
-    profile = tmp_path / "gateway home" if selected_home else private_home / ".nanobot"
+    profile = tmp_path / "gateway home" if selected_home else private_home / ".babo"
     workspace = tmp_path / "中文 user project"
     config_path = profile / "config data/config.json" if selected_home else profile / "config.json"
     working_directory = tmp_path / "original working directory"
@@ -396,7 +396,7 @@ def test_recorded_launch_restarts_same_actual_gateway(private_home, tmp_path, mo
         "gateway": {"host": "127.0.0.1", "port": port, "heartbeat": {"enabled": False}},
         "channels": {"websocket": {"enabled": False}},
     }))
-    monkeypatch.setattr("nanobot.config.home._home_path", None)
+    monkeypatch.setattr("babo.config.home._home_path", None)
     if selected_home:
         set_home_path(profile)
     instance = GatewayInstance.resolve(config_path=config_path,
@@ -406,9 +406,9 @@ def test_recorded_launch_restarts_same_actual_gateway(private_home, tmp_path, mo
     source_root = str(Path(__file__).resolve().parents[1])
     bootstrap = (
         f"import sys; sys.path.insert(0, {source_root!r})\n"
-        "from nanobot.cli import gateway_runtime\n"
+        "from babo.cli import gateway_runtime\n"
         "gateway_runtime.warmup_token_encoding = lambda: None\n"
-        "from nanobot.cli.entry import main\nmain()\n"
+        "from babo.cli.entry import main\nmain()\n"
     )
     processes = []
     launch_directory = working_directory
@@ -483,10 +483,10 @@ async def test_plan_lists_profiles_and_rejects_new_instance_before_confirmation(
     environment = tmp_path / "environment"
     snapshot = InstallationSnapshot(
         environment=str(environment), python=str(environment / "python"), installed_version="0.3.4",
-        package_path=str(environment / "nanobot/__init__.py"), running_version="0.3.4",
-        running_package=str(environment / "nanobot/__init__.py"), owner="venv", records={},
+        package_path=str(environment / "babo/__init__.py"), running_version="0.3.4",
+        running_package=str(environment / "babo/__init__.py"), owner="venv", records={},
     )
-    filename = "nanobot_ai-0.3.5-py3-none-win_amd64.whl"
+    filename = "babo-0.3.5-py3-none-win_amd64.whl"
     target = ReleaseTarget(version="0.3.5", source="pypi", url=f"https://files.pythonhosted.org/packages/{filename}",
                            artifact=ReleaseArtifact(filename=filename, size=123, sha256="a" * 64))
     feed = SimpleNamespace(latest=AsyncMock(return_value=target), revalidate=AsyncMock())

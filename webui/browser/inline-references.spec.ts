@@ -94,7 +94,7 @@ async function minimumHandleContrast(handle: Locator): Promise<number> {
 
 test("keeps a long app name readable in a minimum-width pane", async ({ page }) => {
   await page.setViewportSize({ width: 200, height: 844 });
-  await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+  await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
   await page.goto("/browser/fixture.html?case=inline-references");
   const input = page.getByRole("textbox", { name: "Message input", exact: true });
   await input.fill("@adobe");
@@ -112,8 +112,8 @@ for (const narrow of [false, true]) {
     test(`mention choices show colored session handles and retain app icons: ${narrow ? "narrow" : "desktop"}, ${theme}`, async ({ page }, info) => {
       await page.setViewportSize(narrow ? { width: 320, height: 844 } : { width: 1440, height: 1000 });
       await page.addInitScript(theme => {
-        localStorage.setItem("nanobot.locale", "en");
-        localStorage.setItem("nanobot-webui.theme", theme);
+        localStorage.setItem("babo.locale", "en");
+        localStorage.setItem("babo-webui.theme", theme);
       }, theme);
       await page.goto("/browser/fixture.html?case=inline-references");
       const input = page.getByRole("textbox", { name: "Message input", exact: true });
@@ -161,8 +161,8 @@ for (const narrow of [false, true]) {
       await page.setViewportSize(narrow ? { width: 390, height: 844 } : { width: 1440, height: 1000 });
       await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
       await page.addInitScript(theme => {
-        localStorage.setItem("nanobot.locale", "en");
-        localStorage.setItem("nanobot-webui.theme", theme);
+        localStorage.setItem("babo.locale", "en");
+        localStorage.setItem("babo-webui.theme", theme);
       }, theme);
       const errors: string[] = [];
       page.on("pageerror", error => errors.push(error.message));

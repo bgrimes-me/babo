@@ -12,10 +12,10 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from nanobot.agent import plugins as agent_plugins
-from nanobot.agent.skills import SkillsLoader
-from nanobot.apps.cli import service as cli_service
-from nanobot.apps.cli.service import CliAppError, CliAppManager, CliAppsRuntimeConfig
+from babo.agent import plugins as agent_plugins
+from babo.agent.skills import SkillsLoader
+from babo.apps.cli import service as cli_service
+from babo.apps.cli.service import CliAppError, CliAppManager, CliAppsRuntimeConfig
 
 
 @pytest.fixture(autouse=True)
@@ -248,7 +248,7 @@ def test_installed_payload_enriches_apps_from_cached_catalog(
         }
     })
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.shutil.which",
+        "babo.apps.cli.service.shutil.which",
         lambda entry_point: "/bin/installed-gimp" if entry_point == "installed-gimp" else None,
     )
 
@@ -265,7 +265,7 @@ def test_installed_payload_enriches_apps_from_cached_catalog(
     assert app["logo_url"] == "https://cdn.simpleicons.org/gimp/5C5543"
 
 
-def test_payload_includes_nanobot_extension_registry(tmp_path: Path) -> None:
+def test_payload_includes_babo_extension_registry(tmp_path: Path) -> None:
     manager = _manager(tmp_path)
     _write_cache(manager._cache_path("harness"), {"meta": {"updated": "2026-04-16"}, "clis": []})
     _write_cache(manager._cache_path("public"), {"meta": {"updated": "2026-04-18"}, "clis": []})
@@ -301,8 +301,8 @@ def test_payload_includes_nanobot_extension_registry(tmp_path: Path) -> None:
     assert app["logo_url"] == "https://raw.githubusercontent.com/heygen-com/hyperframes/main/assets/logo.png"
     assert app["brand_color"] == "#111827"
     assert app["install_supported"] is True
-    assert app["manifest"]["source"] == "nanobot-extension"
-    assert app["manifest"]["trust"]["registry"] == "nanobot-extension"
+    assert app["manifest"]["source"] == "babo-extension"
+    assert app["manifest"]["trust"]["registry"] == "babo-extension"
 
 
 def test_optional_extension_registry_failure_does_not_break_payload(
@@ -330,7 +330,7 @@ def test_optional_extension_registry_failure_does_not_break_payload(
     def fail_get(*args, **kwargs):
         raise RuntimeError("network unavailable")
 
-    monkeypatch.setattr("nanobot.apps.cli.service.httpx.get", fail_get)
+    monkeypatch.setattr("babo.apps.cli.service.httpx.get", fail_get)
 
     payload = manager.payload()
 
@@ -345,7 +345,7 @@ def test_payload_cache_only_does_not_fetch_catalog(tmp_path: Path, monkeypatch: 
     def fail_get(*args, **kwargs):
         raise AssertionError("network should not be used")
 
-    monkeypatch.setattr("nanobot.apps.cli.service.httpx.get", fail_get)
+    monkeypatch.setattr("babo.apps.cli.service.httpx.get", fail_get)
 
     payload = manager.payload(cache_only=True)
 
@@ -433,7 +433,7 @@ def test_payload_cache_only_without_cache_returns_empty(tmp_path: Path, monkeypa
     def fail_get(*args, **kwargs):
         raise AssertionError("network should not be used")
 
-    monkeypatch.setattr("nanobot.apps.cli.service.httpx.get", fail_get)
+    monkeypatch.setattr("babo.apps.cli.service.httpx.get", fail_get)
 
     payload = manager.payload(cache_only=True)
 
@@ -487,7 +487,7 @@ def test_run_argv_logs_command_exit_and_output(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from nanobot.apps.cli import service as cli_service
+    from babo.apps.cli import service as cli_service
 
     manager = _manager(tmp_path)
     records: list[str] = []
@@ -557,7 +557,7 @@ def test_install_records_available_cli_without_reinstalling(
 
     monkeypatch.setattr(manager, "_run_argv", fail_run)
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.shutil.which",
+        "babo.apps.cli.service.shutil.which",
         lambda command: str(resolved) if command == "lark-cli" else None,
     )
 
@@ -623,7 +623,7 @@ def test_install_recovers_stale_npm_global_directory(
 
     monkeypatch.setattr(manager, "_run_argv", fake_run)
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.shutil.which",
+        "babo.apps.cli.service.shutil.which",
         lambda command: npm if command == "npm" else None,
     )
 
@@ -658,11 +658,11 @@ def test_install_records_entry_point_path_and_pip_distribution(
         lambda app: "---\nname: cli-anything-gimp\ndescription: GIMP\n---\n# GIMP\n",
     )
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.shutil.which",
+        "babo.apps.cli.service.shutil.which",
         lambda command: str(resolved) if command == "cli-anything-gimp" else None,
     )
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.importlib_metadata.distributions",
+        "babo.apps.cli.service.importlib_metadata.distributions",
         lambda: [
             SimpleNamespace(
                 entry_points=[
@@ -703,7 +703,7 @@ def test_fetch_skill_content_rejects_untrusted_urls(
     def fail_get(*args, **kwargs):
         raise AssertionError("untrusted skill URL should not be fetched")
 
-    monkeypatch.setattr("nanobot.apps.cli.service.httpx.get", fail_get)
+    monkeypatch.setattr("babo.apps.cli.service.httpx.get", fail_get)
 
     assert manager._fetch_skill_content({
         "name": "evil",
@@ -733,7 +733,7 @@ def test_fetch_skill_content_allows_cli_anything_raw_skill_url(
         seen.append(url)
         return Response()
 
-    monkeypatch.setattr("nanobot.apps.cli.service.httpx.get", fake_get)
+    monkeypatch.setattr("babo.apps.cli.service.httpx.get", fake_get)
 
     content = manager._fetch_skill_content({
         "name": "gimp",
@@ -764,7 +764,7 @@ def test_fetch_skill_content_uses_extension_raw_base_for_relative_skills(
         seen.append(url)
         return Response()
 
-    monkeypatch.setattr("nanobot.apps.cli.service.httpx.get", fake_get)
+    monkeypatch.setattr("babo.apps.cli.service.httpx.get", fake_get)
 
     content = manager._fetch_skill_content({
         "name": "hyperframes",
@@ -869,7 +869,7 @@ def test_uninstall_keeps_state_when_entry_point_still_available(
     )
     monkeypatch.setattr(manager, "_pip_available", staticmethod(lambda: True))
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.shutil.which",
+        "babo.apps.cli.service.shutil.which",
         lambda command: "/usr/local/bin/cli-anything-gimp" if command == "cli-anything-gimp" else None,
     )
 
@@ -957,7 +957,7 @@ def test_migrated_cli_app_skill_keeps_legacy_identity_alias(
 ) -> None:
     data_dir = tmp_path / "data"
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.get_runtime_subdir",
+        "babo.apps.cli.service.get_runtime_subdir",
         lambda _name: data_dir,
     )
     workspace = tmp_path / "workspace"
@@ -1002,7 +1002,7 @@ def test_run_installed_cli_uses_argv_without_shell(
     _seed_catalog(manager)
     resolved = str(tmp_path / "bin" / "cli-anything-gimp")
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.shutil.which",
+        "babo.apps.cli.service.shutil.which",
         lambda entry: resolved if entry == "cli-anything-gimp" else None,
     )
 
@@ -1018,7 +1018,7 @@ def test_run_installed_cli_uses_argv_without_shell(
             stderr="",
         )
 
-    monkeypatch.setattr("nanobot.apps.cli.service.subprocess.run", fake_run)
+    monkeypatch.setattr("babo.apps.cli.service.subprocess.run", fake_run)
     manager._save_installed(
         {
             "gimp": {
@@ -1044,7 +1044,7 @@ def test_run_reports_created_artifacts(
     _seed_catalog(manager)
     resolved = str(tmp_path / "bin" / "cli-anything-gimp")
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.shutil.which",
+        "babo.apps.cli.service.shutil.which",
         lambda entry: resolved if entry == "cli-anything-gimp" else None,
     )
 
@@ -1053,7 +1053,7 @@ def test_run_reports_created_artifacts(
         (cwd / "diagram.png").write_bytes(b"\x89PNG\r\n\x1a\nimage")
         return subprocess.CompletedProcess(argv, 0, stdout="done", stderr="")
 
-    monkeypatch.setattr("nanobot.apps.cli.service.subprocess.run", fake_run)
+    monkeypatch.setattr("babo.apps.cli.service.subprocess.run", fake_run)
     manager._save_installed({"gimp": {"entry_point": "cli-anything-gimp"}})
 
     result = manager.run("gimp", ["render"])
@@ -1086,7 +1086,7 @@ def test_install_uses_uv_pip_when_pip_unavailable(
 
     monkeypatch.setattr(CliAppManager, "_pip_available", staticmethod(lambda: False))
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.shutil.which",
+        "babo.apps.cli.service.shutil.which",
         lambda command: "/usr/bin/uv" if command == "uv" else None,
     )
     monkeypatch.setattr(manager, "_run_argv", fake_run)
@@ -1111,7 +1111,7 @@ def test_update_uses_uv_pip_reinstall_when_pip_unavailable(
     manager = _manager(tmp_path)
     monkeypatch.setattr(CliAppManager, "_pip_available", staticmethod(lambda: False))
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.shutil.which",
+        "babo.apps.cli.service.shutil.which",
         lambda command: "/usr/bin/uv" if command == "uv" else None,
     )
 
@@ -1147,7 +1147,7 @@ def test_uninstall_uses_uv_pip_when_pip_unavailable(
 
     monkeypatch.setattr(CliAppManager, "_pip_available", staticmethod(lambda: False))
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.shutil.which",
+        "babo.apps.cli.service.shutil.which",
         lambda command: "/usr/bin/uv" if command == "uv" else None,
     )
     monkeypatch.setattr(manager, "_run_argv", fake_run)

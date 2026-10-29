@@ -1,22 +1,22 @@
-# How to Configure an OpenAI-Compatible Provider in nanobot
+# How to Configure an OpenAI-Compatible Provider in babo
 
-nanobot can call OpenAI-compatible model providers by configuring an `apiBase`, optional `apiKey`, and a model preset that references that provider name.
+babo can call OpenAI-compatible model providers by configuring an `apiBase`, optional `apiKey`, and a model preset that references that provider name.
 
 ## What you will build
 
 - a custom provider entry
 - a model preset pointing at that provider
-- one successful `nanobot agent` run
+- one successful `babo agent` run
 
 ## When to use this
 
-Use this for local or hosted services that expose OpenAI-compatible endpoints, including internal gateways, local model servers, and provider proxies that are not already named in nanobot.
+Use this for local or hosted services that expose OpenAI-compatible endpoints, including internal gateways, local model servers, and provider proxies that are not already named in babo.
 
 ## Before you start
 
-Complete [Quick Start](../quick-start.md) if nanobot is not installed or cannot reply yet. If you already have a working WebUI or CLI session, continue here using that instance; no reinstall or second gateway is needed.
+Complete [Quick Start](../quick-start.md) if babo is not installed or cannot reply yet. If you already have a working WebUI or CLI session, continue here using that instance; no reinstall or second gateway is needed.
 
-Verify the endpoint responds before debugging nanobot:
+Verify the endpoint responds before debugging babo:
 
 ```bash
 curl -sS https://api.example.com/v1/models
@@ -32,7 +32,7 @@ curl -sS https://api.example.com/v1/models
 <details>
 <summary>Manual configuration</summary>
 
-Merge this into `~/.nanobot/config.json`:
+Merge this into `~/.babo/config.json`:
 
 ```json
 {
@@ -61,7 +61,7 @@ Merge this into `~/.nanobot/config.json`:
 
 </details>
 
-Verify in the WebUI with the new preset selected. For the manual snippet above, which sets the global default, you can instead run `nanobot agent -m "Hello!"` from the same instance. A different CLI session does not inherit a WebUI topic's model selection.
+Verify in the WebUI with the new preset selected. For the manual snippet above, which sets the global default, you can instead run `babo agent -m "Hello!"` from the same instance. A different CLI session does not inherit a WebUI topic's model selection.
 
 ## Production notes
 
@@ -75,15 +75,15 @@ Verify in the WebUI with the new preset selected. For the manual snippet above, 
 
 - Keep provider keys in environment variables.
 - Treat internal model gateways as sensitive network services.
-- Do not point nanobot at untrusted proxy endpoints for private workspaces.
+- Do not point babo at untrusted proxy endpoints for private workspaces.
 
 ## Troubleshooting
 
-- If `curl /models` fails, fix the provider endpoint before changing nanobot.
-- If nanobot says the model is unknown, check the model ID expected by the provider.
-- If auth fails, confirm whether the provider wants Bearer auth and whether the key is present in the environment that starts nanobot.
+- If `curl /models` fails, fix the provider endpoint before changing babo.
+- If babo says the model is unknown, check the model ID expected by the provider.
+- If auth fails, confirm whether the provider wants Bearer auth and whether the key is present in the environment that starts babo.
 
-## Related nanobot docs
+## Related babo docs
 
 - [Provider Cookbook: Custom OpenAI-Compatible Provider](../provider-cookbook.md#recipe-custom-openai-compatible-provider)
 - [Providers: Custom OpenAI-Compatible Endpoint](../providers.md#custom-openai-compatible-endpoint)

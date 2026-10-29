@@ -14,7 +14,7 @@ function sourceFiles(directory: string): string[] {
 }
 
 function groupFor(file: string): string {
-  if (file.startsWith("nanobot/channels/")) return `Channels / ${file.split("/")[2]}`;
+  if (file.startsWith("babo/channels/")) return `Channels / ${file.split("/")[2]}`;
   if (file.startsWith(foundationPath)) return "Foundations";
   if (file.includes("/settings/shared/")) return "Settings / shared";
   if (file.includes("/settings/")) return "Settings";
@@ -28,7 +28,7 @@ function groupFor(file: string): string {
 /** Index source modules and direct imports without executing application code. */
 export function componentInventory(repo: string): ComponentSource[] {
   const frontend = path.join(repo, "webui/src");
-  const channels = path.join(repo, "nanobot/channels");
+  const channels = path.join(repo, "babo/channels");
   const channelRoots = readdirSync(channels, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .flatMap((entry) => {
@@ -112,10 +112,10 @@ export function componentInventory(repo: string): ComponentSource[] {
 /** Only Vite's development server exposes the source inventory. */
 export function componentGallery(repo: string): Plugin {
   return {
-    name: "nanobot-component-gallery",
+    name: "babo-component-gallery",
     apply: "serve",
     configureServer(server) {
-      server.middlewares.use("/__nanobot_components", (_request, response) => {
+      server.middlewares.use("/__babo_components", (_request, response) => {
         try {
           response.setHeader("Content-Type", "application/json; charset=utf-8");
           response.setHeader("Cache-Control", "no-store");

@@ -10,7 +10,7 @@ import argparse
 import hashlib
 from pathlib import Path
 
-from nanobot.releases import ReleaseManifest
+from babo.releases import ReleaseManifest
 
 
 def verify_manifest(path: Path, *, sha256: str, version: str,

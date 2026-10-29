@@ -1,5 +1,5 @@
 import { fetchWebuiThread } from "./api";
-import type { NanobotClient } from "./nanobot-client";
+import type { BaboClient } from "./babo-client";
 import type { WebuiThreadPersistedPayload } from "./types";
 import { webuiThreadCache } from "./webui-thread-cache";
 
@@ -12,7 +12,7 @@ interface LatestThreadRequest {
   shareable: boolean;
 }
 
-const requestsByClient = new WeakMap<NanobotClient, Map<string, LatestThreadRequest>>();
+const requestsByClient = new WeakMap<BaboClient, Map<string, LatestThreadRequest>>();
 const INVALIDATED_THREAD_READ = Symbol("invalidated thread read");
 
 function abortedRequest(): DOMException {
@@ -21,7 +21,7 @@ function abortedRequest(): DOMException {
 
 /** Share only the canonical latest 40-event page within one authenticated host. */
 export function fetchLatestWebuiThread(
-  client: NanobotClient,
+  client: BaboClient,
   token: string,
   key: string,
   signal?: AbortSignal,

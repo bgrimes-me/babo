@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 00-recon.sh — read-only reconnaissance of Squid's machine for the Baton install.
 #
-# Run on: HOST (Bazzite), from the root of the nanobot checkout.
+# Run on: HOST (Bazzite), from the root of the babo checkout.
 # Changes nothing on the system. It only reads, sends a few small test requests
 # to llama-server, and writes one report file:
 #   install/reports/00-recon-<date>.md
@@ -23,7 +23,7 @@ BOX="${BATON_BOX:-Agent}"
 fail() { echo "FAIL: $*"; exit 1; }
 
 # --- preconditions -----------------------------------------------------------
-[ -f "$REPO_DIR/pyproject.toml" ] || fail "run this from the nanobot checkout (pyproject.toml not found)"
+[ -f "$REPO_DIR/pyproject.toml" ] || fail "run this from the babo checkout (pyproject.toml not found)"
 if [ -f /run/.containerenv ] || [ -n "${DISTROBOX_ENTER_PATH:-}" ]; then
   fail "this step runs on the HOST, not inside the distrobox. Open a host terminal and run it again."
 fi
@@ -303,7 +303,7 @@ echo "gitleaks=$(command -v gitleaks || echo missing)"
 echo "fts5=$(python3 -c "import sqlite3;c=sqlite3.connect(':memory:');c.execute('create virtual table t using fts5(x)');print('yes')" 2>&1 | tail -1)"
 echo "hostexec=$(command -v distrobox-host-exec || echo missing)"
 echo "hostpodman=$(distrobox-host-exec podman --version 2>&1 | tail -1 || echo failed)"
-echo "nanobot=$(command -v nanobot || echo missing)"
+echo "babo=$(command -v babo || echo missing)"
 if command -v bwrap >/dev/null 2>&1; then
   if bwrap --ro-bind / / --dev /dev --proc /proc true 2>/dev/null; then echo "bwrap_works=yes"; else echo "bwrap_works=no"; fi
 else echo "bwrap_works=n/a"; fi
@@ -326,7 +326,7 @@ else echo "bwrap_works=n/a"; fi
     hp = vals.get("hostpodman", "")
     add("distrobox-host-exec podman", "PASS" if "podman version" in hp.lower() else "WARN",
         (hp or "failed") + " (needed for isolated tool tests; subprocess fallback otherwise)")
-    add("nanobot in box", "INFO", vals.get("nanobot", "missing"))
+    add("babo in box", "INFO", vals.get("babo", "missing"))
 
 # --- systemd / linger ------------------------------------------------------------
 rc, out, err = run(["loginctl", "show-user", USER, "-p", "Linger"])

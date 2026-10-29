@@ -25,7 +25,7 @@ function within(value, prefix) {
 }
 
 function channelUi(value) {
-  return /^nanobot\/channels\/[^/]+\/webui\//.test(process.platform === "win32" ? value.toLowerCase() : value);
+  return /^babo\/channels\/[^/]+\/webui\//.test(process.platform === "win32" ? value.toLowerCase() : value);
 }
 
 function sourcePath(root, file) {
@@ -284,7 +284,7 @@ export function checkRepository(compiler, root, project) {
     ...productionSources(path.join(root, "packages/client-events")),
   ];
   if (project === "webui") {
-    const channels = path.join(root, "nanobot/channels");
+    const channels = path.join(root, "babo/channels");
     for (const entry of readdirSync(channels, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
       const channelRoot = path.join(channels, entry.name);

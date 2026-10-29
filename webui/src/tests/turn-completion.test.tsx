@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ThreadComposer } from "@/components/thread/ThreadComposer";
-import { useNanobotStream } from "@/hooks/useNanobotStream";
-import { NanobotClient } from "@/lib/nanobot-client";
+import { useBaboStream } from "@/hooks/useBaboStream";
+import { BaboClient } from "@/lib/babo-client";
 import type { InboundEvent, UIMessage } from "@/lib/types";
 import { ClientProvider } from "@/providers/ClientProvider";
 
@@ -28,7 +28,7 @@ const TURN_ID = "turn-1";
 
 function setup() {
   const socket = new TestSocket();
-  const client = new NanobotClient({
+  const client = new BaboClient({
     url: "ws://test", reconnect: false,
     socketFactory: () => socket as unknown as WebSocket,
   });
@@ -52,7 +52,7 @@ describe("completed turn event ordering", () => {
     }];
     const { result, rerender, unmount } = renderHook(
       ({ pending, history, active }: { pending: boolean; history: UIMessage[]; active: string | null }) =>
-        useNanobotStream(CHAT_ID, history, pending, undefined, undefined, [], undefined, active),
+        useBaboStream(CHAT_ID, history, pending, undefined, undefined, [], undefined, active),
       { wrapper, initialProps: { pending: false, history: EMPTY_MESSAGES, active: null as string | null } },
     );
     act(() => {
@@ -79,7 +79,7 @@ describe("completed turn event ordering", () => {
     const status = vi.fn();
     client.onRunStatus(status);
     const { result, unmount } = renderHook(
-      () => useNanobotStream(CHAT_ID, EMPTY_MESSAGES), { wrapper },
+      () => useBaboStream(CHAT_ID, EMPTY_MESSAGES), { wrapper },
     );
     act(() => { result.current.send("new request"); });
     expect(result.current.isStreaming).toBe(true);
@@ -103,7 +103,7 @@ describe("completed turn event ordering", () => {
       id: "steering", role: "user", content: "additional guidance", turnId: "input-2", createdAt: Date.now(),
     }];
     const { result, unmount } = renderHook(
-      () => useNanobotStream(CHAT_ID, initial, true, undefined, undefined, [], undefined, TURN_ID), { wrapper },
+      () => useBaboStream(CHAT_ID, initial, true, undefined, undefined, [], undefined, TURN_ID), { wrapper },
     );
     expect(result.current.isStreaming).toBe(true);
     expect(client.getRunTurnId(CHAT_ID)).toBe(TURN_ID);
@@ -119,7 +119,7 @@ describe("completed turn event ordering", () => {
     (terminal) => {
       const { socket, client, wrapper, running } = setup();
       const { result, unmount } = renderHook(
-        () => useNanobotStream(CHAT_ID, EMPTY_MESSAGES), { wrapper },
+        () => useBaboStream(CHAT_ID, EMPTY_MESSAGES), { wrapper },
       );
       act(() => socket.receive(running));
       act(() => {
@@ -181,7 +181,7 @@ describe("completed turn event ordering", () => {
   it("settles a local new-run guess admitted as steering of an already completed owner", () => {
     const { socket, client, wrapper, running } = setup();
     const { result, unmount } = renderHook(
-      () => useNanobotStream(CHAT_ID, EMPTY_MESSAGES), { wrapper },
+      () => useBaboStream(CHAT_ID, EMPTY_MESSAGES), { wrapper },
     );
     act(() => {
       socket.receive(running);
@@ -206,7 +206,7 @@ describe("completed turn event ordering", () => {
     const { socket, client, wrapper, running } = setup();
     const onTurnEnd = vi.fn();
     const { result, unmount } = renderHook(
-      () => useNanobotStream(CHAT_ID, EMPTY_MESSAGES, false, onTurnEnd), { wrapper },
+      () => useBaboStream(CHAT_ID, EMPTY_MESSAGES, false, onTurnEnd), { wrapper },
     );
     act(() => {
       socket.receive(running);
@@ -226,7 +226,7 @@ describe("completed turn event ordering", () => {
     const { socket, client, running } = setup();
     const onSend = vi.fn();
     function Composer() {
-      const stream = useNanobotStream(CHAT_ID, EMPTY_MESSAGES);
+      const stream = useBaboStream(CHAT_ID, EMPTY_MESSAGES);
       return <ThreadComposer onSend={onSend} onStop={stream.stop}
         isStreaming={stream.isStreaming || stream.runStartedAt !== null} />;
     }

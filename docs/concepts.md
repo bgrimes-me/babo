@@ -1,12 +1,12 @@
 # Concepts
 
-Use this page when you want to understand nanobot before changing advanced settings. It explains the moving parts without requiring you to read the source first.
+Use this page when you want to understand babo before changing advanced settings. It explains the moving parts without requiring you to read the source first.
 
 If you want source-file ownership and extension points, read [`architecture.md`](./architecture.md) after this page.
 
 ## Runtime Shape
 
-nanobot has one small core loop and several ways to enter it:
+babo has one small core loop and several ways to enter it:
 
 | Part | What it does |
 |---|---|
@@ -17,27 +17,27 @@ nanobot has one small core loop and several ways to enter it:
 | Memory | Workspace files and session history that keep useful context across turns |
 | Gateway | Long-running process that connects enabled channels and serves the health endpoint |
 
-To test nanobot once, run `nanobot agent -m "Hello!"`; it prints a reply in your terminal. To keep nanobot running, start `nanobot gateway`. It receives messages from enabled chat apps or the WebUI and sends replies back to the same conversation.
+To test babo once, run `babo agent -m "Hello!"`; it prints a reply in your terminal. To keep babo running, start `babo gateway`. It receives messages from enabled chat apps or the WebUI and sends replies back to the same conversation.
 
 ## Config vs Workspace
 
-The default instance lives under `~/.nanobot/`:
+The default instance lives under `~/.babo/`:
 
 | Path | Meaning |
 |---|---|
-| `~/.nanobot/config.json` | Instance configuration: providers, model defaults, channels, tools, gateway, API, and runtime options |
-| `~/.nanobot/workspace/` | Agent workspace: memory, heartbeat tasks, cron jobs, skills, and generated artifacts |
-| `~/.nanobot/sessions/<workspace-id>/` | Session history stored outside the agent-accessible workspace; the opaque ID follows workspace moves |
+| `~/.babo/config.json` | Instance configuration: providers, model defaults, channels, tools, gateway, API, and runtime options |
+| `~/.babo/workspace/` | Agent workspace: memory, heartbeat tasks, cron jobs, skills, and generated artifacts |
+| `~/.babo/sessions/<workspace-id>/` | Session history stored outside the agent-accessible workspace; the opaque ID follows workspace moves |
 
 You can override both with command flags:
 
 ```bash
-nanobot onboard --config ./bot-a/config.json --workspace ./bot-a/workspace
-nanobot agent --config ./bot-a/config.json --workspace ./bot-a/workspace -m "Hello"
-nanobot gateway --config ./bot-a/config.json --workspace ./bot-a/workspace
+babo onboard --config ./bot-a/config.json --workspace ./bot-a/workspace
+babo agent --config ./bot-a/config.json --workspace ./bot-a/workspace -m "Hello"
+babo gateway --config ./bot-a/config.json --workspace ./bot-a/workspace
 ```
 
-The config file controls what nanobot may use. The workspace is where nanobot keeps state for that instance.
+The config file controls what babo may use. The workspace is where babo keeps state for that instance.
 
 ### Agent Workspace and Project Workspace
 
@@ -54,18 +54,18 @@ When no separate project is selected, one directory normally serves both roles. 
 
 ## Config Format
 
-`config.json` accepts both camelCase and snake_case keys. The docs use camelCase because nanobot writes config back to disk with camelCase aliases, for example `apiKey`, `modelPresets`, `intervalS`, and `maxToolResultChars`.
+`config.json` accepts both camelCase and snake_case keys. The docs use camelCase because babo writes config back to disk with camelCase aliases, for example `apiKey`, `modelPresets`, `intervalS`, and `maxToolResultChars`.
 
-Most examples are partial snippets. Merge them into the existing file created by `nanobot onboard`; do not replace the whole file unless you want to reset the instance.
+Most examples are partial snippets. Merge them into the existing file created by `babo onboard`; do not replace the whole file unless you want to reset the instance.
 
 ## One Agent Turn
 
 A normal turn follows this flow:
 
 1. The CLI, WebUI, or a connected chat app receives your message.
-2. nanobot uses the conversation's history and the files available to that chat to prepare the request.
-3. Your selected AI service generates a response. If it needs an enabled tool, nanobot runs that tool and returns the result to the model.
-4. nanobot saves the reply in the conversation and shows or sends it through the same app or channel.
+2. babo uses the conversation's history and the files available to that chat to prepare the request.
+3. Your selected AI service generates a response. If it needs an enabled tool, babo runs that tool and returns the result to the model.
+4. babo saves the reply in the conversation and shows or sends it through the same app or channel.
 
 That flow is the same whether the message starts in the CLI, WebUI, Telegram, Discord, or another channel.
 
@@ -73,11 +73,11 @@ That flow is the same whether the message starts in the CLI, WebUI, Telegram, Di
 
 | Entry point | Command | Use it for |
 |---|---|---|
-| CLI one-shot | `nanobot agent -m "..."` | First-run checks, scripts, and quick local questions |
-| CLI interactive | `nanobot agent` | Terminal chat with persistent session history |
-| Gateway | `nanobot gateway` | Chat apps, WebUI, heartbeat, Dream, and long-running service mode |
-| OpenAI-compatible API | `nanobot serve` | Programmatic access through `/v1/chat/completions` |
-| WebUI | `nanobot webui` | Prepare the local WebUI, start the gateway, and open the browser workbench |
+| CLI one-shot | `babo agent -m "..."` | First-run checks, scripts, and quick local questions |
+| CLI interactive | `babo agent` | Terminal chat with persistent session history |
+| Gateway | `babo gateway` | Chat apps, WebUI, heartbeat, Dream, and long-running service mode |
+| OpenAI-compatible API | `babo serve` | Programmatic access through `/v1/chat/completions` |
+| WebUI | `babo webui` | Prepare the local WebUI, start the gateway, and open the browser workbench |
 
 The WebUI launcher is the normal browser entry point. Underneath, the gateway keeps the WebSocket channel and other long-running services alive. The gateway health endpoint is on `gateway.port` (`18790` by default); the browser WebUI is served on `8765` by default, not by the health endpoint.
 
@@ -87,8 +87,8 @@ Choose and configure the primary model in **Settings → Models**, then select i
 
 The active model should normally come from a named `modelPresets` entry selected by `agents.defaults.modelPreset`. Direct `agents.defaults.provider` and `agents.defaults.model` still form the implicit `default` preset for older or minimal configs. The active provider is resolved in this order:
 
-1. If the active preset provider or implicit default provider is not `"auto"`, nanobot uses that provider.
-2. If provider is `"auto"`, nanobot tries to infer the provider from the model name, configured API keys, local provider base URLs, or gateway providers.
+1. If the active preset provider or implicit default provider is not `"auto"`, babo uses that provider.
+2. If provider is `"auto"`, babo tries to infer the provider from the model name, configured API keys, local provider base URLs, or gateway providers.
 3. OAuth providers such as OpenAI Codex and GitHub Copilot require explicit login and explicit provider/model selection inside the active preset.
 
 Pin the provider inside the preset when setting up for the first time. It is easier to debug:
@@ -124,7 +124,7 @@ Each channel maps inbound messages to a session key. That lets independent conve
 
 ## Memory, Sessions, and Dream
 
-nanobot uses two related stores:
+babo uses two related stores:
 
 | Store | Location | Purpose |
 |---|---|---|
@@ -133,13 +133,13 @@ nanobot uses two related stores:
 
 Dream is a periodic consolidation job. It reads accumulated history and updates workspace memory so useful context can survive beyond short session replay.
 
-The configured workspace contains a `.nanobot/workspace-id` file. It contains only an opaque random identifier—never conversation content or credentials. Keep it with workspace backups: it lets nanobot find the same external session namespace after the workspace is renamed, moved, or restored. A live copy opened alongside the original receives a new ID so the two workspaces do not share conversations accidentally.
+The configured workspace contains a `.babo/workspace-id` file. It contains only an opaque random identifier—never conversation content or credentials. Keep it with workspace backups: it lets babo find the same external session namespace after the workspace is renamed, moved, or restored. A live copy opened alongside the original receives a new ID so the two workspaces do not share conversations accidentally.
 
 See [`memory.md`](./memory.md) for the detailed design.
 
 ## Apps and Agent Plugins
 
-Agent Plugins are installable packages that help you add and manage capabilities in nanobot. A package can include one or more of these:
+Agent Plugins are installable packages that help you add and manage capabilities in babo. A package can include one or more of these:
 
 | Part | Role |
 |---|---|
@@ -153,7 +153,7 @@ Native providers, channels, built-in tools, standalone workspace skills, and dir
 
 ## Tools and Safety
 
-nanobot can use built-in tools and tools enabled through Apps. Common tool groups include:
+babo can use built-in tools and tools enabled through Apps. Common tool groups include:
 
 - file read/write/edit and patching;
 - shell execution with configurable sandboxing;
@@ -167,7 +167,7 @@ Security-sensitive controls live in [`configuration.md#security`](./configuratio
 
 ## Subagents
 
-Nanobot can delegate parts of a request to subagents while remaining responsible for the final answer. In the conversation that started the work, you can ask it to check progress, send follow-up instructions, wait for results, or cancel a task. Cancelling one task leaves the others running. A delivered instruction means the subagent received it, not that it has acted on it yet.
+Babo can delegate parts of a request to subagents while remaining responsible for the final answer. In the conversation that started the work, you can ask it to check progress, send follow-up instructions, wait for results, or cancel a task. Cancelling one task leaves the others running. A delivered instruction means the subagent received it, not that it has acted on it yet.
 
 Background tasks return their results to the conversation that started them. Single-turn CLI and SDK calls wait for results when background delivery is unavailable. Tasks that reach their iteration limit are marked incomplete; cancelled, failed, and incomplete tasks retain available partial results.
 
@@ -175,22 +175,22 @@ Use `/stop` to stop the current session and its subagents. Other sessions are un
 
 Subagents belong to their original conversation. They do not appear as separate topics or in general conversation searches. Deleting the conversation stops its subagents and removes their saved history; forking it does not copy them.
 
-Saved task history and results remain available after a gateway restart. Unfinished tasks are marked interrupted, with saved partial results when available. Nanobot does not automatically resume them or resend completion notifications; ask it to start a new task to continue the work.
+Saved task history and results remain available after a gateway restart. Unfinished tasks are marked interrupted, with saved partial results when available. Babo does not automatically resume them or resend completion notifications; ask it to start a new task to continue the work.
 
 See [Delegated work in the WebUI](./webui.md#delegated-work) for progress and task details. WebUI temporary chats do not support subagents. SDK calls with `ephemeral=True` wait for delegated results without saving the temporary conversation or its subagent history.
 
 ## Background Jobs
 
-When `nanobot gateway` starts, it runs workspace-scoped automations and registers system jobs:
+When `babo gateway` starts, it runs workspace-scoped automations and registers system jobs:
 
 - `dream`, when `agents.defaults.dream.enabled` is true;
 - `heartbeat`, when `gateway.heartbeat.enabled` is true.
 
-Heartbeat reads `<workspace>/HEARTBEAT.md`. If the file has tasks under `## Active Tasks`, nanobot executes them and sends only useful/actionable results to the most recently active chat target. Routine "nothing changed" results are suppressed.
+Heartbeat reads `<workspace>/HEARTBEAT.md`. If the file has tasks under `## Active Tasks`, babo executes them and sends only useful/actionable results to the most recently active chat target. Routine "nothing changed" results are suppressed.
 
 User-created reminders use the same cron service but are not the same as the protected heartbeat system job. They run as scheduled turns in their origin chat/session and normally deliver the result back to that channel.
 
-Local triggers are also session-bound, but they do not have their own schedule. Create one from the target chat with `/trigger <name>`, then call `nanobot trigger <id> "<message>"` when a local script or external service wants nanobot to respond in that session. Webhook servers, third-party auth, and event-to-message formatting stay outside nanobot. Trigger deliveries are stored in the workspace until the linked agent turn finishes successfully. If the target session is busy, the trigger waits until that session is idle instead of being injected into the active turn. The message is recorded as an automation turn in that session. Delivery is at-least-once, so external systems should tolerate repeated trigger messages; a delivery that reaches the agent but fails is marked failed rather than retried forever.
+Local triggers are also session-bound, but they do not have their own schedule. Create one from the target chat with `/trigger <name>`, then call `babo trigger <id> "<message>"` when a local script or external service wants babo to respond in that session. Webhook servers, third-party auth, and event-to-message formatting stay outside babo. Trigger deliveries are stored in the workspace until the linked agent turn finishes successfully. If the target session is busy, the trigger waits until that session is idle instead of being injected into the active turn. The message is recorded as an automation turn in that session. Delivery is at-least-once, so external systems should tolerate repeated trigger messages; a delivery that reaches the agent but fails is marked failed rather than retried forever.
 
 ## Where to Go Next
 

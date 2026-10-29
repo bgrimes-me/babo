@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.cli import entry
-from nanobot.cli.entry import _agent_invocation_args, _native_tui_candidate
-from nanobot.installation_lock import InstallationBusyError, installation_access, installation_id
+from babo.cli import entry
+from babo.cli.entry import _agent_invocation_args, _native_tui_candidate
+from babo.installation_lock import InstallationBusyError, installation_access, installation_id
 
 
 def test_root_command_routes_to_agent_without_copying_agent_options() -> None:
@@ -37,15 +37,15 @@ def test_root_shell_completion_keeps_root_subcommands() -> None:
     env = os.environ.copy()
     env.update(
         {
-            "_NANOBOT_COMPLETE": "complete_bash",
-            "COMP_WORDS": "nanobot ",
+            "_BABO_COMPLETE": "complete_bash",
+            "COMP_WORDS": "babo ",
             "COMP_CWORD": "1",
         }
     )
     script = (
         "import sys; "
-        "from nanobot.cli.entry import main; "
-        "sys.argv = ['nanobot']; "
+        "from babo.cli.entry import main; "
+        "sys.argv = ['babo']; "
         "main()"
     )
 
@@ -65,7 +65,7 @@ def test_root_shell_completion_keeps_root_subcommands() -> None:
 
 def test_root_alias_dispatches_the_shared_agent_command(monkeypatch) -> None:
     calls: dict[str, object] = {}
-    monkeypatch.setattr(entry.sys, "argv", ["nanobot", "-m", "hello"])
+    monkeypatch.setattr(entry.sys, "argv", ["babo", "-m", "hello"])
     monkeypatch.setattr(
         entry,
         "set_cli_process_identity",
@@ -83,14 +83,14 @@ def test_root_alias_dispatches_the_shared_agent_command(monkeypatch) -> None:
     assert calls == {
         "identity": ["agent", "-m", "hello"],
         "args": ["-m", "hello"],
-        "prog_name": "nanobot",
+        "prog_name": "babo",
     }
 
 
 def test_desktop_handled_bare_invocation_does_not_start_python(monkeypatch) -> None:
-    from nanobot.cli import desktop_target
+    from babo.cli import desktop_target
 
-    monkeypatch.setattr(entry.sys, "argv", ["nanobot"])
+    monkeypatch.setattr(entry.sys, "argv", ["babo"])
     monkeypatch.setattr(entry, "set_cli_process_identity", lambda _args: None)
     monkeypatch.setattr(entry, "configure_windows_console", lambda: None)
     monkeypatch.setattr(desktop_target, "dispatch_bare_desktop_target", lambda _args: 0)
@@ -120,7 +120,7 @@ def test_classic_and_one_shot_agent_invocations_keep_the_full_cli_entrypoint() -
 def test_entry_refuses_dispatch_during_update(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     monkeypatch.setattr(sys, "prefix", str(tmp_path / "environment"))
-    monkeypatch.setattr(sys, "argv", ["nanobot", "gateway"])
+    monkeypatch.setattr(sys, "argv", ["babo", "gateway"])
     monkeypatch.setattr(entry, "_dispatch", lambda: pytest.fail("Runtime dispatched during update"))
     with installation_access(updating=True):
         with pytest.raises(SystemExit) as result:
@@ -133,7 +133,7 @@ def test_entry_refuses_dispatch_during_update(tmp_path, monkeypatch, capsys):
 def test_update_command_can_reach_its_own_lease_and_recovery(tmp_path, monkeypatch, args):
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     monkeypatch.setattr(sys, "prefix", str(tmp_path / "environment"))
-    monkeypatch.setattr(sys, "argv", ["nanobot", *args])
+    monkeypatch.setattr(sys, "argv", ["babo", *args])
     called = []
     monkeypatch.setattr(entry, "_dispatch", lambda: called.append(True))
     with installation_access(updating=True):
@@ -146,7 +146,7 @@ def test_update_command_can_reach_its_own_lease_and_recovery(tmp_path, monkeypat
 def test_saved_update_recovery_owns_runtime_before_application_imports(tmp_path, monkeypatch, args):
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     monkeypatch.setattr(sys, "prefix", str(tmp_path / "environment"))
-    monkeypatch.setattr(sys, "argv", ["nanobot", *args])
+    monkeypatch.setattr(sys, "argv", ["babo", *args])
     entered = []
 
     def dispatch():
@@ -168,10 +168,10 @@ def test_saved_update_recovery_owns_runtime_before_application_imports(tmp_path,
 def test_interrupted_installation_keeps_stop_commands_usable(tmp_path, monkeypatch, action, allowed):
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     monkeypatch.setattr(sys, "prefix", str(tmp_path / "environment"))
-    pending = tmp_path / ".nanobot/run" / f"update-{installation_id()[:16]}.pending"
+    pending = tmp_path / ".babo/run" / f"update-{installation_id()[:16]}.pending"
     pending.parent.mkdir(parents=True)
     pending.write_text("incomplete")
-    monkeypatch.setattr(sys, "argv", ["nanobot", "--home", str(tmp_path / "profile"), "gateway", action])
+    monkeypatch.setattr(sys, "argv", ["babo", "--home", str(tmp_path / "profile"), "gateway", action])
     called = []
     monkeypatch.setattr(entry, "_dispatch", lambda: called.append(True))
     if allowed:

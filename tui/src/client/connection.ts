@@ -16,7 +16,7 @@ export async function fetchGatewayConnection(
   clientId: string,
 ): Promise<GatewayConnection> {
   const response = await fetch(bootstrapUrl, {
-    headers: bootstrapSecret ? { "X-Nanobot-Auth": bootstrapSecret } : {},
+    headers: bootstrapSecret ? { "X-Babo-Auth": bootstrapSecret } : {},
   })
   if (!response.ok) {
     const retryable = response.status === 408 || response.status === 429 || response.status >= 500

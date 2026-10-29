@@ -13,7 +13,7 @@ Apply this checklist to changes to WebUI HTTP, WebSocket events/mutations, boots
 
 ## Required proof for a changed contract
 
-- Current client/current host, current client/oldest supported host, and oldest supported client/current host. State the supported protocol range explicitly; never claim every historical nanobot release is supported.
+- Current client/current host, current client/oldest supported host, and oldest supported client/current host. State the supported protocol range explicitly; never claim every historical babo release is supported.
 - Unknown, missing, malformed and future metadata; overlapping and disjoint protocol ranges; unknown optional capabilities; missing required capability.
 - Assert the actual public bootstrap/read/mutation/event behavior, not only a version-comparison helper. Keep an older client/host fixture independent of the implementation under test. Test the affected optional feature's fallback.
 - Reconnect after a host restart or upgrade. Previously issued credentials and stale cached compatibility must not bypass a changed host contract.
@@ -27,9 +27,9 @@ Apply this checklist to changes to WebUI HTTP, WebSocket events/mutations, boots
 - Keep compatible version differences quiet. Show missing optional capabilities at the affected control. Block only unsupported core sessions or operations.
 - Reuse the application's settings rows, menus and dialogs. Do not introduce a second settings drawer or a persistent global warning for an optional update.
 - Explain that updating this computer does not update its hosts. Use the installation environment that owns the running process: installer/uv/pipx/pip, checkout, container, and service-managed deployments are not interchangeable.
-- Never silently install, restart, downgrade, revoke credentials, or reset configuration. Back up configuration/data and consider active tasks before an explicitly requested update. Verify the running process after restart, not merely whichever `nanobot` executable happens to be on PATH.
+- Never silently install, restart, downgrade, revoke credentials, or reset configuration. Back up configuration/data and consider active tasks before an explicitly requested update. Verify the running process after restart, not merely whichever `babo` executable happens to be on PATH.
 - Update user documentation with the change. Do not present planned support or fixture-only tests as a completed real-server acceptance test.
 
 ## Current baseline
 
-WebUI protocol **1** with capability **`webui.core.v1`** is the initial explicit client/host contract. It covers the existing authenticated WebUI read, mutation, event, and media interfaces. Hosts predating this declaration are unconfirmed; the local-client mode requires updating them to a build that declares support. Their independent server WebUI remains a separate way to use that installation. This is an intentional prerequisite for local-client mode, not a blanket claim that legacy nanobot installations no longer function.
+WebUI protocol **1** with capability **`webui.core.v1`** is the initial explicit client/host contract. It covers the existing authenticated WebUI read, mutation, event, and media interfaces. Hosts predating this declaration are unconfirmed; the local-client mode requires updating them to a build that declares support. Their independent server WebUI remains a separate way to use that installation. This is an intentional prerequisite for local-client mode, not a blanket claim that legacy babo installations no longer function.

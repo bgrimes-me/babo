@@ -25,8 +25,8 @@ for (const narrow of [false, true]) {
   test(`reading hierarchy and stable controls: ${narrow ? "narrow" : "desktop"}`, async ({ page }, info) => {
     await page.setViewportSize(narrow ? { width: 390, height: 844 } : { width: 1440, height: 1000 });
     await page.addInitScript(() => {
-      localStorage.setItem("nanobot.locale", "zh-CN");
-      localStorage.setItem("nanobot-webui.theme", "light");
+      localStorage.setItem("babo.locale", "zh-CN");
+      localStorage.setItem("babo-webui.theme", "light");
     });
     await page.goto("/browser/fixture.html?case=typography");
     const group = page.getByRole("radiogroup", { name: "阅读字号", exact: true });
@@ -87,9 +87,9 @@ for (const narrow of [false, true]) {
 
 test("keyboard, tooltip, persistence and unchanged preferences", async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("nanobot.locale", "en");
-    if (!localStorage.getItem("nanobot-webui.settings-preferences")) {
-      localStorage.setItem("nanobot-webui.settings-preferences", JSON.stringify({
+    localStorage.setItem("babo.locale", "en");
+    if (!localStorage.getItem("babo-webui.settings-preferences")) {
+      localStorage.setItem("babo-webui.settings-preferences", JSON.stringify({
         schemaVersion: 1, codeWrap: false, brandLogos: false, activityMode: "expanded", notificationSound: true,
       }));
     }
@@ -106,7 +106,7 @@ test("keyboard, tooltip, persistence and unchanged preferences", async ({ page }
   await expect(page.locator(".markdown-content p").first()).toHaveCSS("line-height", `${20 * 1.625}px`);
   await page.reload();
   await expect(page.getByRole("radio", { name: "Large reading text", exact: true })).toBeChecked();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("nanobot-webui.settings-preferences")!))).toMatchObject({
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("babo-webui.settings-preferences")!))).toMatchObject({
     readingTextSize: "large", codeWrap: false, brandLogos: false, activityMode: "expanded", notificationSound: true,
   });
 });
@@ -115,7 +115,7 @@ test("touch composer keeps literal mention metrics and a safe editable minimum",
   const context = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   try {
     const page = await context.newPage();
-    await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+    await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
     await page.goto("/browser/fixture.html?case=typography");
     const readingGroup = page.getByRole("radiogroup", { name: "Reading text size", exact: true });
     await expect(readingGroup.getByRole("radio")).toHaveCount(3);
@@ -182,8 +182,8 @@ test("touch composer keeps literal mention metrics and a safe editable minimum",
 test("large narrow reading keeps long lists and code reachable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
-    localStorage.setItem("nanobot.locale", "en");
-    localStorage.setItem("nanobot-webui.settings-preferences", JSON.stringify({ schemaVersion: 1, readingTextSize: "large" }));
+    localStorage.setItem("babo.locale", "en");
+    localStorage.setItem("babo-webui.settings-preferences", JSON.stringify({ schemaVersion: 1, readingTextSize: "large" }));
   });
   await page.goto("/browser/fixture.html?case=typography&stress");
   const lastItem = page.getByText("第 30 项：中文与 English 混排的长列表内容，保持自然换行和清楚的编号。", { exact: true });

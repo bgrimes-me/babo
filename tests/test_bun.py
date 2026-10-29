@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from nanobot import bun
+from babo import bun
 
 
 def test_ensure_bun_reuses_matching_system_runtime(monkeypatch, tmp_path):

@@ -44,7 +44,7 @@ for (const width of [390, 1440]) {
     test.describe(`${width}px ${locale}`, () => {
       test.use({ viewport: { width, height: 900 }, reducedMotion: "reduce", hasTouch: width === 390 });
       test.beforeEach(async ({ page }) => {
-        await page.addInitScript((language) => localStorage.setItem("nanobot.locale", language), locale);
+        await page.addInitScript((language) => localStorage.setItem("babo.locale", language), locale);
       });
 
       test("catalog skeletons preserve loaded row, icon, title and action geometry", async ({ page }) => {
@@ -192,7 +192,7 @@ for (const width of [390, 1440]) {
 
       for (const readingTextSize of ["small", "standard", "large"] as const) test(`file preview skeletons follow code gutters and Markdown controls: ${readingTextSize}`, async ({ page }) => {
         await page.addInitScript((size) => {
-          localStorage.setItem("nanobot-webui.settings-preferences", JSON.stringify({ schemaVersion: 1, readingTextSize: size }));
+          localStorage.setItem("babo-webui.settings-preferences", JSON.stringify({ schemaVersion: 1, readingTextSize: size }));
         }, readingTextSize);
         await page.goto(fixture("file"));
         await expect(page.locator("html")).toHaveAttribute("data-reading-text-size", readingTextSize);

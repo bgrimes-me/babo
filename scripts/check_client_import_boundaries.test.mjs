@@ -9,7 +9,7 @@ import { findViolations, loadCompiler } from "./check_client_import_boundaries.m
 const project = path.basename(process.cwd());
 const compiler = loadCompiler(project);
 const script = fileURLToPath(new URL("./check_client_import_boundaries.mjs", import.meta.url));
-const temporaryPrefix = path.resolve(os.tmpdir(), "nanobot-client-imports-");
+const temporaryPrefix = path.resolve(os.tmpdir(), "babo-client-imports-");
 let root;
 
 function write(relative, source = "export {};\n") {
@@ -32,7 +32,7 @@ beforeEach(() => {
     "webui/src/channel-plugins/types.ts", "webui/src/channel-plugins/registry.ts",
     "tui/src/client/api.ts", "tui/src/app/app.ts",
     "packages/client-events/notifications.ts", "packages/client-events/delivery.ts",
-    "nanobot/channels/example/webui/index.ts",
+    "babo/channels/example/webui/index.ts",
   ]) write(file);
 });
 
@@ -111,7 +111,7 @@ test("respects Vite glob exclusions", () => {
 });
 
 test("permits channel registry composition through a Vite glob", () => {
-  expect(inspect("webui/src/channel-plugins/registry.ts", 'import.meta.glob("../../../nanobot/channels/*/webui/index.{ts,tsx}", { eager: true });')).toEqual([]);
+  expect(inspect("webui/src/channel-plugins/registry.ts", 'import.meta.glob("../../../babo/channels/*/webui/index.{ts,tsx}", { eager: true });')).toEqual([]);
 });
 
 test("includes nested dynamic import locations in diagnostics", () => {
@@ -196,11 +196,11 @@ test("CLI detects eager literal require cycles and permits function-local requir
 });
 
 test.skipIf(project !== "webui")("CLI detects an eager Vite registry cycle and permits its lazy form", () => {
-  write("webui/src/channel-plugins/registry.ts", 'export const plugins = import.meta.glob("../../../nanobot/channels/*/webui/index.ts", { "eager": true });\n');
-  write("nanobot/channels/example/webui/index.ts", 'import { plugins } from "../../../../webui/src/channel-plugins/registry"; export default plugins;\n');
+  write("webui/src/channel-plugins/registry.ts", 'export const plugins = import.meta.glob("../../../babo/channels/*/webui/index.ts", { "eager": true });\n');
+  write("babo/channels/example/webui/index.ts", 'import { plugins } from "../../../../webui/src/channel-plugins/registry"; export default plugins;\n');
   const result = run();
   expect(result.exitCode).toBe(1);
   expect(new TextDecoder().decode(result.stderr)).toContain("[client-runtime-cycle]");
-  write("webui/src/channel-plugins/registry.ts", 'export const plugins = import.meta.glob("../../../nanobot/channels/*/webui/index.ts");\n');
+  write("webui/src/channel-plugins/registry.ts", 'export const plugins = import.meta.glob("../../../babo/channels/*/webui/index.ts");\n');
   expect(run().exitCode).toBe(0);
 });

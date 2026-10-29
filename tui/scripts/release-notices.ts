@@ -102,7 +102,7 @@ for (const name of nativePackages(plan)) {
   if (!packagedNames.has(name)) throw new Error(`target runtime package is missing: ${name}`)
 }
 const sections = [
-  "nanobot native TUI third-party notices",
+  "babo native TUI third-party notices",
   "",
   `Target: ${target}`,
   "Runtime: Bun 1.3.13",
@@ -110,7 +110,7 @@ const sections = [
   "fontkit 2.0.4, dfa 1.2.0 and brotli 1.3.3 declare MIT in their included README notices.",
   "resvg's public wrapper and native binding are unmodified; its internal loader is target-selected. MPL-2.0 source is listed in RELINKING.md.",
   "",
-  "===== nanobot project license =====",
+  "===== babo project license =====",
   "",
   await readFile(join(projectRoot, "LICENSE"), "utf8"),
   "",

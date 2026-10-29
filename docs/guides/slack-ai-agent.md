@@ -1,23 +1,23 @@
-# Build a Slack AI Agent with nanobot
+# Build a Slack AI Agent with babo
 
-This guide connects nanobot to Slack through Socket Mode. No public webhook URL is required for the first working setup.
+This guide connects babo to Slack through Socket Mode. No public webhook URL is required for the first working setup.
 
 ## What this guide builds
 
 - a Slack app with Socket Mode
 - a bot token and app-level token
-- the `slack` channel enabled in nanobot
+- the `slack` channel enabled in babo
 - a DM pairing flow and mention test from an approved Slack user
 
 ## Prerequisites
 
-- A normal reply in your existing nanobot WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
+- A normal reply in your existing babo WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
 
 - Permission to create a Slack app in a workspace.
 
 ## Continue from your running instance
 
-If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `nanobot webui` command; there is no need to install nanobot again.
+If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `babo webui` command; there is no need to install babo again.
 
 For terminal or server setup, use the manual configuration section below. Reuse the config/home and executable from your working instance. Docker users should use the [container commands](../deployment.md#docker-compose).
 
@@ -33,12 +33,12 @@ DM approval does not restrict group access. With the mention policy below, any m
 Install the optional channel dependency:
 
 ```bash
-nanobot plugins enable slack
+babo plugins enable slack
 ```
 
 In Slack, create an app, enable Socket Mode, create an app-level token with `connections:write`, add bot scopes, subscribe to bot events, and install the app to your workspace.
 
-Merge this snippet into `~/.nanobot/config.json`:
+Merge this snippet into `~/.babo/config.json`:
 
 ```json
 {
@@ -64,7 +64,7 @@ Slack DMs are open by default. Setting `dm.policy` to `"allowlist"` with no `dm.
 
 In the WebUI, follow any restart prompt and keep the launcher running for the first test. You do not need to start another gateway. For unattended operation afterward, use [background or service mode](../cli-reference.md#gateway).
 
-For manual config changes, restart the existing gateway through its owning terminal, `nanobot gateway restart` for background mode, or its service/container supervisor. If none is running, start `nanobot gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
+For manual config changes, restart the existing gateway through its owning terminal, `babo gateway restart` for background mode, or its service/container supervisor. If none is running, start `babo gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
 
 ## Test a message
 
@@ -76,7 +76,7 @@ DM the Slack bot directly. It should return a pairing code. Return to the WebUI 
 In a separate local terminal, using the same instance:
 
 ```bash
-nanobot agent -m "/pairing approve ABCD-EFGH"
+babo agent -m "/pairing approve ABCD-EFGH"
 ```
 
 Replace the example code with your actual code.
@@ -86,7 +86,7 @@ Replace the example code with your actual code.
 Then DM the bot again, or mention it in a channel:
 
 ```text
-@nanobot Hello from Slack
+@babo Hello from Slack
 ```
 
 ## Security notes
@@ -100,7 +100,7 @@ Then DM the bot again, or mention it in a channel:
 ## Troubleshooting
 
 - If Socket Mode fails, confirm the app-level token starts with `xapp-`.
-- If the bot cannot send files, add `files:write`, reinstall the app, and restart nanobot.
+- If the bot cannot send files, add `files:write`, reinstall the app, and restart babo.
 - If a DM responds normally without pairing, check that `dm.policy` is `"allowlist"`.
 - If channel messages are ignored, check event subscriptions and group policy.
 

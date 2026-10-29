@@ -7,11 +7,11 @@ import { AboutSettings } from "@/components/settings/overview/OverviewSettings";
 import { UpdateNotice } from "@/components/UpdateNotice";
 import { ClientProvider } from "@/providers/ClientProvider";
 import { useVersionCheck } from "@/providers/VersionCheckProvider";
-import { NanobotClient } from "@/lib/nanobot-client";
+import { BaboClient } from "@/lib/babo-client";
 import { jsonResponse, settingsPayload } from "@/tests/settings-test-utils";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); });
-const client = new NanobotClient({ url: "ws://localhost:8765" });
+const client = new BaboClient({ url: "ws://localhost:8765" });
 const available = (version = "0.3.6") => ({ updateAvailable: { currentVersion: "0.3.5", latestVersion: version } });
 
 it.each([
@@ -131,7 +131,7 @@ describe("Sidebar update entry", () => {
     expect(screen.getByRole("button", { name: "Update available v0.3.6" })).toHaveFocus();
     fireEvent.click(screen.getByRole("button", { name: "Update available v0.3.6" }));
     fireEvent.click(screen.getByRole("button", { name: "View details" }));
-    expect(await screen.findByRole("link", { name: "Installation guide" })).toHaveAttribute("href", "https://github.com/HKUDS/nanobot#-install");
+    expect(await screen.findByRole("link", { name: "Installation guide" })).toHaveAttribute("href", "https://github.com/bgrimes-me/babo#-install");
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(fetcher).toHaveBeenCalledWith("/api/settings/version-check", expect.any(Object));
   });

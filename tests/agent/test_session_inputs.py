@@ -5,24 +5,24 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import RequestContext, request_context
-from nanobot.agent.tools.session_messages import SendSessionMessageTool
-from nanobot.bus.events import InboundMessage
-from nanobot.bus.outbound_events import UserInputEvent
-from nanobot.bus.queue import MessageBus
-from nanobot.bus.runtime_events import UserInputAccepted
-from nanobot.providers.base import LLMResponse
-from nanobot.runtime_context import public_history_message
-from nanobot.session.session_handles import SessionHandleResolver
-from nanobot.session.session_messages import SESSION_MESSAGE_METADATA_KEY
-from nanobot.session.webui_turns import WebuiTurnCoordinator
-from nanobot.webui.history import record_from_fact
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import RequestContext, request_context
+from babo.agent.tools.session_messages import SendSessionMessageTool
+from babo.bus.events import InboundMessage
+from babo.bus.outbound_events import UserInputEvent
+from babo.bus.queue import MessageBus
+from babo.bus.runtime_events import UserInputAccepted
+from babo.providers.base import LLMResponse
+from babo.runtime_context import public_history_message
+from babo.session.session_handles import SessionHandleResolver
+from babo.session.session_messages import SESSION_MESSAGE_METADATA_KEY
+from babo.session.webui_turns import WebuiTurnCoordinator
+from babo.webui.history import record_from_fact
 
 
 @pytest.fixture
 async def loop(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path / "state")
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path / "state")
     provider = MagicMock(aclose=AsyncMock())
     provider.get_default_model.return_value = "test-model"
     provider.generation = SimpleNamespace(max_tokens=4096)

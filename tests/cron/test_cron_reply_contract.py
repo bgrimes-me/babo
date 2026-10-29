@@ -5,24 +5,24 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import RequestContext, current_request_context, request_context
-from nanobot.agent.tools.cron import CronTool
-from nanobot.bus.queue import MessageBus
-from nanobot.config.schema import Config
-from nanobot.cron.binding import CronBinding, binding_revision
-from nanobot.cron.bound_runner import run_bound_cron_job
-from nanobot.cron.service import CronService
-from nanobot.cron.session_turns import CRON_TRIGGER_META
-from nanobot.cron.types import CronSchedule
-from nanobot.providers.base import GenerationSettings, LLMResponse, ToolCallRequest
-from nanobot.session.manager import SessionManager
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import RequestContext, current_request_context, request_context
+from babo.agent.tools.cron import CronTool
+from babo.bus.queue import MessageBus
+from babo.config.schema import Config
+from babo.cron.binding import CronBinding, binding_revision
+from babo.cron.bound_runner import run_bound_cron_job
+from babo.cron.service import CronService
+from babo.cron.session_turns import CRON_TRIGGER_META
+from babo.cron.types import CronSchedule
+from babo.providers.base import GenerationSettings, LLMResponse, ToolCallRequest
+from babo.session.manager import SessionManager
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("delivery", ["reply", "legacy_message", "broadcast"])
 async def test_moved_cron_keeps_reply_send_and_prompt_prefix_contract(tmp_path, monkeypatch, delivery):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path / "data")
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path / "data")
     workspace = tmp_path / "workspace"
     sessions = SessionManager(workspace)
     bus = MessageBus()

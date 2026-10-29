@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { LinearSecretField } from "../../../nanobot/channels/linear/webui/LinearSecretField";
+import { LinearSecretField } from "../../../babo/channels/linear/webui/LinearSecretField";
 
 const field = { key: "channels.linear.clientSecret", label: "OAuth client secret", secret: true };
 afterEach(cleanup);

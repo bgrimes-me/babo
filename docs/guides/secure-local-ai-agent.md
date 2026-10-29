@@ -1,6 +1,6 @@
-# How to Secure a Local AI Agent with nanobot
+# How to Secure a Local AI Agent with babo
 
-This guide covers the practical controls to review before letting a nanobot agent access files, shell commands, web fetch, chat apps, or remote users.
+This guide covers the practical controls to review before letting a babo agent access files, shell commands, web fetch, chat apps, or remote users.
 
 ## What you will build
 
@@ -11,11 +11,11 @@ This guide covers the practical controls to review before letting a nanobot agen
 
 ## When to use this
 
-Use this before exposing nanobot to teammates, chat apps, public networks, broad web access, or unattended automations.
+Use this before exposing babo to teammates, chat apps, public networks, broad web access, or unattended automations.
 
 ## Before you start
 
-If nanobot is already open, continue in that WebUI. Otherwise follow the [first-run guide](../start-without-technical-background.md) to install it, configure a model, and send a test message.
+If babo is already open, continue in that WebUI. Otherwise follow the [first-run guide](../start-without-technical-background.md) to install it, configure a model, and send a test message.
 
 ## Minimal working example
 
@@ -63,7 +63,7 @@ Start with workspace restriction:
 - If a shell command fails under `bwrap`, check whether the command needs files outside the sandbox.
 - If local HTTP tools are blocked, review the SSRF whitelist and use a narrow CIDR.
 
-## Related nanobot docs
+## Related babo docs
 
 - [Configuration: Security](../configuration.md#security)
 - [Pairing](../configuration.md#pairing)

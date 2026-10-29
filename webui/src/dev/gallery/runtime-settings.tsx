@@ -74,12 +74,12 @@ function AboutPreview() {
   const [notice, setNotice] = useState<"updateRequested" | "selectedLink" | null>(null);
   const [channel, setChannel] = useState<UpdateChannel>("stable");
   const result: VersionCheckState = mode === "up-to-date" ? { type: mode }
-    : mode === "update" ? { type: mode, latestVersion: "0.3.6", pypiUrl: "https://pypi.org/project/nanobot-ai/" }
+    : mode === "update" ? { type: mode, latestVersion: "0.3.6", pypiUrl: "https://pypi.org/project/babo/" }
       : mode === "preview" ? { type: "update", latestVersion: "0.3.7.dev2026101501",
-        releaseUrl: "https://github.com/HKUDS/nanobot/releases" }
+        releaseUrl: "https://github.com/bgrimes-me/babo/releases" }
       : mode === "error" ? { type: mode, message: t("controls.about.error") } : null;
   return <><StatePicker label={t("controls.about.state")} value={mode} options={["ready", "checking", "up-to-date", "update", "preview", "error"]} onChange={setMode} />
-    <AboutSettingsView reportIssueUrl="https://github.com/HKUDS/nanobot/issues/new?template=bug_report.yml"
+    <AboutSettingsView reportIssueUrl="https://github.com/bgrimes-me/babo/issues/new?template=bug_report.yml"
       versionCheck={<VersionCheckRowView currentVersion="0.3.5" currentCommit="abcdef1234567890" checking={mode === "checking"}
         result={result} onCheck={() => setMode("update")}
         releaseStatus={{ channel, revision: 0, currentVersion: "0.3.5", state: "current" }}

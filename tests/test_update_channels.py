@@ -7,15 +7,15 @@ from uuid import uuid4
 
 import pytest
 
-from nanobot.config.home import get_selected_home_path, set_home_path
-from nanobot.installation_lock import file_access, installation_state_dir, pending_update_path
-from nanobot.update_channel import (
+from babo.config.home import get_selected_home_path, set_home_path
+from babo.installation_lock import file_access, installation_state_dir, pending_update_path
+from babo.update_channel import (
     UpdateChannelRequest,
     read_update_channel,
     validate_channel_revision,
 )
-from nanobot.update_service import UpdateJobService
-from nanobot.update_worker import JobStatus, Phase
+from babo.update_service import UpdateJobService
+from babo.update_worker import JobStatus, Phase
 
 
 @pytest.fixture

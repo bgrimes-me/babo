@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import pytest
 
-from nanobot.agent.tools.context import RequestContext, bind_request_context, reset_request_context
-from nanobot.baton.baton_file import Checkpoint, append_checkpoint
-from nanobot.baton.bundle import build_bundle
-from nanobot.baton.context import BatonContextBuilder
-from nanobot.baton.inbox import deliver
-from nanobot.baton.notes import write_note
-from nanobot.baton.registry import Registry
-from nanobot.baton.search import reindex
-from nanobot.baton.tokens import estimate_tokens
-from nanobot.baton.town import BatonError, Town
+from babo.agent.tools.context import RequestContext, bind_request_context, reset_request_context
+from babo.baton.baton_file import Checkpoint, append_checkpoint
+from babo.baton.bundle import build_bundle
+from babo.baton.context import BatonContextBuilder
+from babo.baton.inbox import deliver
+from babo.baton.notes import write_note
+from babo.baton.registry import Registry
+from babo.baton.search import reindex
+from babo.baton.tokens import estimate_tokens
+from babo.baton.town import BatonError, Town
 
 
 def _names(bundle) -> list[str]:
@@ -103,8 +103,8 @@ def test_resident_loop_refuses_dream_and_unrestricted_tools(make_loop) -> None:
 
 
 def test_loop_for_unfounded_resident_fails_and_creates_nothing(make_config, town: Town) -> None:
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.agent.tools.registry import ToolRegistry
+    from babo.agent.loop import AgentLoop
+    from babo.agent.tools.registry import ToolRegistry
 
     cfg = make_config("mayor")
     cfg.agents.defaults.workspace = str(town.residents_dir / "ghost")
@@ -133,9 +133,9 @@ def test_bundle_is_stable_within_a_session_and_first_session_advances(make_loop,
 
 
 def test_ordinary_workspace_is_untouched(tmp_path) -> None:
-    from nanobot.agent.context import ContextBuilder
-    from nanobot.agent.memory import Consolidator
-    from nanobot.baton.loop_support import loop_classes
+    from babo.agent.context import ContextBuilder
+    from babo.agent.memory import Consolidator
+    from babo.baton.loop_support import loop_classes
 
     assert loop_classes(tmp_path, ContextBuilder, Consolidator) == (ContextBuilder, Consolidator)
 
@@ -158,7 +158,7 @@ async def test_resident_turn_runs_against_mock_llama(make_loop, mock_llama) -> N
 async def test_mcp_server_lists_and_calls_office_tools(town: Town, box) -> None:
     from mcp.shared.memory import create_connected_server_and_client_session
 
-    from nanobot.baton.mcp_server import build_server
+    from babo.baton.mcp_server import build_server
 
     server = build_server(box("mayor"))
     async with create_connected_server_and_client_session(server) as client:
@@ -174,7 +174,7 @@ async def test_mcp_server_lists_and_calls_office_tools(town: Town, box) -> None:
 def test_as_rewrites_to_resident_workspace(town: Town, tmp_path, index_path) -> None:
     import json
 
-    from nanobot.baton.cli_support import rewrite_as_args
+    from babo.baton.cli_support import rewrite_as_args
 
     cfg = tmp_path / "config.json"
     cfg.write_text(json.dumps({"baton": {"town": str(town.root), "indexPath": str(index_path)}}))

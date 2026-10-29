@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.agent.tools.cron import CronTool
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.cron.service import CronService
-from nanobot.cron.types import CronJob, CronPayload, CronSchedule
+from babo.agent.tools.cron import CronTool
+from babo.agent.tools.registry import ToolRegistry
+from babo.cron.service import CronService
+from babo.cron.types import CronJob, CronPayload, CronSchedule
 
 
 def _registry(service):

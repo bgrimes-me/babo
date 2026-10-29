@@ -7,24 +7,24 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.goal_permission import goal_mutation_allowed, goal_mutation_permission
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import (
+from babo.agent.goal_permission import goal_mutation_allowed, goal_mutation_permission
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import (
     RequestContext,
     current_request_context,
     request_context,
 )
-from nanobot.agent.tools.long_task import (
+from babo.agent.tools.long_task import (
     CreateGoalTool,
     UpdateGoalTool,
 )
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.bus.outbound_events import GoalStateSyncEvent
-from nanobot.bus.queue import MessageBus
-from nanobot.session.goal_state import GOAL_STATE_KEY, MAX_GOAL_OBJECTIVE_CHARS
-from nanobot.session.manager import SessionManager
-from nanobot.session.turn_continuation import should_finalize_on_max_iterations
-from nanobot.session.webui_turns import WebuiTurnCoordinator
+from babo.agent.tools.registry import ToolRegistry
+from babo.bus.outbound_events import GoalStateSyncEvent
+from babo.bus.queue import MessageBus
+from babo.session.goal_state import GOAL_STATE_KEY, MAX_GOAL_OBJECTIVE_CHARS
+from babo.session.manager import SessionManager
+from babo.session.turn_continuation import should_finalize_on_max_iterations
+from babo.session.webui_turns import WebuiTurnCoordinator
 
 
 def _goal_metadata() -> dict[str, object]:

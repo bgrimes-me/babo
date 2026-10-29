@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { CliRenderEvents, TextareaRenderable, TextRenderable } from "@opentui/core"
 import { MockTreeSitterClient, createTestRenderer, type TestRendererSetup } from "@opentui/core/testing"
-import { NanobotTui } from "./app"
+import { BaboTui } from "./app"
 import type { Transcript } from "../rendering/transcript"
 import { options, client, mount, waitUntil, occurrences } from "./test-support"
 
-describe("NanobotTui lifecycle", () => {
+describe("BaboTui lifecycle", () => {
   let setup: TestRendererSetup | undefined
 
   afterEach(() => {
@@ -30,7 +30,7 @@ describe("NanobotTui lifecycle", () => {
     expect(state()).toBe(false)
     const restored = setup.captureCharFrame()
     expect(restored).not.toContain("stale partial response")
-    expect(occurrences(restored, ">_  nanobot")).toBe(1)
+    expect(occurrences(restored, ">_  babo")).toBe(1)
     app.accept({
       event: "goal_status",
       chat_id: "chat",
@@ -106,7 +106,7 @@ describe("NanobotTui lifecycle", () => {
       elapsedMs: 3_500,
       health: "unreachable",
     })
-    expect(ui.status.plainText).toBe("Nanobot is taking longer to respond…")
+    expect(ui.status.plainText).toBe("Babo is taking longer to respond…")
     expect(ui.status.plainText).not.toContain("Unable")
 
     ui.handleStatus("error", "gateway bootstrap failed: HTTP 401", {
@@ -114,7 +114,7 @@ describe("NanobotTui lifecycle", () => {
       attempt: 9,
       elapsedMs: 3_800,
     })
-    expect(ui.status.plainText).toBe("Nanobot unavailable. Restart nanobot.")
+    expect(ui.status.plainText).toBe("Babo unavailable. Restart babo.")
     expect(ui.status.plainText).not.toContain("gateway")
     expect(ui.status.plainText).not.toContain("127.0.0.1")
     expect(ui.status.plainText).not.toContain("HTTP")
@@ -223,9 +223,9 @@ describe("NanobotTui lifecycle", () => {
     globalThis.fetch = (() => new Promise<Response>((resolve) => {
       resolveFetch = resolve
     })) as unknown as typeof fetch
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "token", chatId: "chat" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "token", chatId: "chat" },
       client(),
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -256,9 +256,9 @@ describe("NanobotTui lifecycle", () => {
     globalThis.fetch = (() => new Promise<Response>((resolve) => {
       resolveFetch = resolve
     })) as unknown as typeof fetch
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "token", chatId: "chat" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "token", chatId: "chat" },
       client(),
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -305,9 +305,9 @@ describe("NanobotTui lifecycle", () => {
         resolveReconnect = resolve
       })
     }) as unknown as typeof fetch
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "token", chatId: "chat" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "token", chatId: "chat" },
       client(sent),
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -400,7 +400,7 @@ describe("NanobotTui lifecycle", () => {
     const exited: string[] = []
     const transport = client()
     transport.close = () => { closed = true }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       {
         ...options,
@@ -427,7 +427,7 @@ describe("NanobotTui lifecycle", () => {
     let closed = false
     const transport = client()
     transport.close = () => { closed = true }
-    NanobotTui.mount(
+    BaboTui.mount(
       setup.renderer,
       options,
       transport,
@@ -447,7 +447,7 @@ describe("NanobotTui lifecycle", () => {
     let closed = false
     const transport = client()
     transport.close = () => { closed = true }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       transport,
@@ -468,7 +468,7 @@ describe("NanobotTui lifecycle", () => {
     let closed = false
     const transport = client(sent)
     transport.close = () => { closed = true }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       transport,
@@ -500,7 +500,7 @@ describe("NanobotTui lifecycle", () => {
     let closed = false
     const transport = client(sent)
     transport.close = () => { closed = true }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       {
         ...options,
@@ -533,7 +533,7 @@ describe("NanobotTui lifecycle", () => {
     setup = await createRenderer({ width: 72, height: 20, screenMode: "alternate-screen" })
     let detached = false
     const transport = { ...client(), activeChatId: "" }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       { ...options, onDetach: (chatId) => {
         expect(chatId).toBeUndefined()

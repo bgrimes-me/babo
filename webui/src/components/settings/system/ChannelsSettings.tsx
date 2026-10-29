@@ -12,18 +12,18 @@ import { localizedChannelDisplayName } from "@/components/settings/channels/Chan
 import { ChannelHelpMenu } from "@/components/settings/channels/ChannelHelpMenu";
 import { ChannelSetupPanel } from "@/components/settings/channels/ChannelSetupPanel";
 import { DismissibleStatusMessage, RestartRequiredNotice, SettingsGroup } from "@/components/settings/shared/SettingsControls";
-import type { NanobotFeaturesPayload } from "@/lib/types";
+import type { BaboFeaturesPayload } from "@/lib/types";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 type ChannelFilter = "all" | "enabled";
 
 export function ChannelsSettings({
-  token, nanobotFeatures, loading, actionKey, chatAppsDocsUrl, showBrandLogos,
+  token, baboFeatures, loading, actionKey, chatAppsDocsUrl, showBrandLogos,
   error, requiresRestartPending, onAction, onFeaturesUpdate, onDismissStatus,
   onRestart, isRestarting, onConfigureMcp, onBeforeCloseChange,
 }: {
   token: string;
-  nanobotFeatures: NanobotFeaturesPayload | null;
+  baboFeatures: BaboFeaturesPayload | null;
   loading: boolean;
   actionKey: string | null;
   chatAppsDocsUrl?: string;
@@ -31,7 +31,7 @@ export function ChannelsSettings({
   error: string | null;
   requiresRestartPending: boolean;
   onAction: ChannelFeatureAction;
-  onFeaturesUpdate: (payload: NanobotFeaturesPayload) => void;
+  onFeaturesUpdate: (payload: BaboFeaturesPayload) => void;
   onDismissStatus: () => void;
   onConfigureMcp?: (name: string) => void;
   onBeforeCloseChange?: (handler: (() => Promise<boolean>) | null) => void;
@@ -48,19 +48,19 @@ export function ChannelsSettings({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const beforeCloseRef = useRef<(() => Promise<boolean>) | null>(null);
   const closePendingRef = useRef(false);
-  const channels = (nanobotFeatures?.features ?? [])
+  const channels = (baboFeatures?.features ?? [])
     .filter((feature) => feature.type === "channel" && feature.settings_visible !== false)
     .sort((left, right) => Number(!left.ready) - Number(!right.ready)
       || localizedChannelDisplayName(left, t).localeCompare(localizedChannelDisplayName(right, t)));
   const hasEnabledConfigurableChannels = channels.some((feature) =>
     feature.enabled && !feature.capabilities?.includes("always_enabled"));
-  const restartRequired = requiresRestartPending || Boolean(nanobotFeatures?.requires_restart);
+  const restartRequired = requiresRestartPending || Boolean(baboFeatures?.requires_restart);
   const hasPendingChannelRestart = channels.some((feature) => feature.restart_pending);
   useLayoutEffect(() => {
-    if (!nanobotFeatures || filterInitializedRef.current) return;
+    if (!baboFeatures || filterInitializedRef.current) return;
     filterInitializedRef.current = true;
     setFilter(hasEnabledConfigurableChannels ? "enabled" : "all");
-  }, [hasEnabledConfigurableChannels, nanobotFeatures]);
+  }, [hasEnabledConfigurableChannels, baboFeatures]);
   const visibleChannels = channels.filter((feature) =>
     (filter === "all" || feature.enabled)
     && `${feature.name} ${localizedChannelDisplayName(feature, t)}`.toLocaleLowerCase()
@@ -125,7 +125,7 @@ export function ChannelsSettings({
         <RestartRequiredNotice message={t("settings.channels.restartRequired")}
           onRestart={onRestart} isRestarting={isRestarting} />
       ) : null}
-      {loading && !nanobotFeatures ? (
+      {loading && !baboFeatures ? (
         <SettingsGroup>
           <CatalogSkeleton label={t("settings.channels.loading")} layout="channels" />
         </SettingsGroup>

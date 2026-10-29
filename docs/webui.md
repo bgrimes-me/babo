@@ -1,28 +1,28 @@
-# Nanobot WebUI: Browser Workbench for Self-Hosted AI Agents
+# Babo WebUI: Browser Workbench for Self-Hosted AI Agents
 
-<!-- Meta description: Run nanobot from a browser WebUI with persistent and temporary chats, visible tool activity, workspace controls, Apps, skill discovery, settings, and Automations. -->
+<!-- Meta description: Run babo from a browser WebUI with persistent and temporary chats, visible tool activity, workspace controls, Apps, skill discovery, settings, and Automations. -->
 
-The WebUI shares its gateway and saved sessions with the native terminal client and is included with `nanobot-ai`.
+The WebUI shares its gateway and saved sessions with the native terminal client and is included with `babo`.
 
 For a visual tour, see the [README feature gallery](../README.md#-webui). This guide follows the current source tree; some features are newer than the published release.
 
 ## Open the WebUI
 
 ```bash
-nanobot webui
+babo webui
 ```
 
 On a new installation, the launcher asks for confirmation to create the config and workspace, enables the local WebUI, and opens a signed-in browser. Configure a provider and model in **Settings → Models** before sending your first message; see [Configure Your Model](./quick-start.md#2-configure-your-model). The default address is `http://127.0.0.1:8765`, accessible only from the same machine.
 
-Official-installer environments start a persistent gateway by default. Other installations keep it attached to the launchers: closing the last WebUI or TUI launcher stops an on-demand gateway. Use `nanobot webui --detach` to keep it running after the terminal closes, or start it explicitly:
+Official-installer environments start a persistent gateway by default. Other installations keep it attached to the launchers: closing the last WebUI or TUI launcher stops an on-demand gateway. Use `babo webui --detach` to keep it running after the terminal closes, or start it explicitly:
 
 ```bash
-nanobot gateway --background
+babo gateway --background
 ```
 
-Manage a persistent gateway with `nanobot gateway status`, `nanobot gateway logs`, `nanobot gateway restart`, and `nanobot gateway stop`. Use the printed instance-specific commands for a custom config or workspace. The old `nanobot webui --background` flag is deprecated; `--detach` cannot be combined with `--dev`.
+Manage a persistent gateway with `babo gateway status`, `babo gateway logs`, `babo gateway restart`, and `babo gateway stop`. Use the printed instance-specific commands for a custom config or workspace. The old `babo webui --background` flag is deprecated; `--detach` cannot be combined with `--dev`.
 
-To sign in another browser, use the complete printed login link, including the fragment after `#`. Treat it as a credential. `nanobot webui --no-open` prints the link without opening a browser. In WSL, the launcher uses the Windows default browser unless `BROWSER` is set; if automatic opening fails, use the printed link.
+To sign in another browser, use the complete printed login link, including the fragment after `#`. Treat it as a credential. `babo webui --no-open` prints the link without opening a browser. In WSL, the launcher uses the Windows default browser unless `BROWSER` is set; if automatic opening fails, use the printed link.
 
 The launcher displays gateway warnings and errors; use the printed logs command for full output.
 
@@ -48,7 +48,7 @@ Listener and authentication fields are configured in `config.json`. Localhost ac
 
 ### macOS Dock icon
 
-On a local macOS desktop, `nanobot webui` provides a Dock shortcut to the running WebUI. `--no-open` keeps the shortcut without opening a page; `--no-dock` disables it. It is unavailable in SSH/headless sessions or for non-loopback browser addresses.
+On a local macOS desktop, `babo webui` provides a Dock shortcut to the running WebUI. `--no-open` keeps the shortcut without opening a page; `--no-dock` disables it. It is unavailable in SSH/headless sessions or for non-loopback browser addresses.
 
 Attached launchers share the shortcut until the last matching WebUI launcher exits. With `--detach` or official-installer background launch, it remains until the gateway stops and returns after restart or update. It is a shortcut to a running instance, not a standalone app.
 
@@ -60,7 +60,7 @@ The message rail on wide screens and prompt-summary search in the header jump to
 
 ## Sharing access
 
-The WebUI administers one nanobot instance. Signed-in users share saved topics and administrative controls; there are no per-user roles or private topic ownership boundaries. The [remote installation restriction](#lan-access) limits package installation, not other administrative access.
+The WebUI administers one babo instance. Signed-in users share saved topics and administrative controls; there are no per-user roles or private topic ownership boundaries. The [remote installation restriction](#lan-access) limits package installation, not other administrative access.
 
 Share WebUI access only with people you trust to administer the same agent. To give someone chat access without the administration interface, connect a [chat platform](./chat-apps.md) and configure its access policy. Channel approval still does not create a separate agent or memory store. For separate clients or users whose data must not mix, use [separate instances](./multiple-instances.md).
 
@@ -83,7 +83,7 @@ Share WebUI access only with people you trust to administer the same agent. To g
 
 ## Check for updates
 
-Open **Settings → About** to check for updates automatically. Startup, reconnecting, and normal chatting do not trigger background version checks. Use **Check again** or **Retry** to check manually; changing the update channel also refreshes its status. Checking does not install updates or restart nanobot.
+Open **Settings → About** to check for updates automatically. Startup, reconnecting, and normal chatting do not trigger background version checks. Use **Check again** or **Retry** to check manually; changing the update channel also refreshes its status. Checking does not install updates or restart babo.
 
 ## Topic Workspace
 
@@ -99,7 +99,7 @@ Open a topic's sidebar action menu and choose **Create group** to turn it into a
 
 **Pane layout** controls the arrangement of resizable panes. Selecting a pane directs the shared composer to that topic. Group membership and layout persist across refreshes; grouping does not merge topic histories.
 
-To use work from another topic, mention it with `@` and tell nanobot what you need. See [Composer](#composer) for how to add a topic reference.
+To use work from another topic, mention it with `@` and tell babo what you need. See [Composer](#composer) for how to add a topic reference.
 
 ### Activity and context usage
 
@@ -139,13 +139,13 @@ After a model request fails and automatic retries stop, the WebUI shows the fail
 
 ### Delegated work
 
-When nanobot delegates work to subagents, **Subtasks** appears above the message input while tasks are queued, running, or stopping. It stays within reach as the conversation scrolls, even after the main reply finishes or you send another message. Open it for live activity; on narrow screens it opens from the bottom. The task list scrolls independently of the conversation.
+When babo delegates work to subagents, **Subtasks** appears above the message input while tasks are queued, running, or stopping. It stays within reach as the conversation scrolls, even after the main reply finishes or you send another message. Open it for live activity; on narrow screens it opens from the bottom. The task list scrolls independently of the conversation.
 
 Finished tasks leave the live list when it is closed. If you are already reading the list, they remain until you close it. When all tasks finish with the list closed, a brief completion or failure summary appears and then disappears; focusing or hovering over it keeps it available.
 
 Saved results appear as compact, expandable records beside the requests that started the work, and scroll with the conversation. Tasks without a matching request in the displayed history remain under **Other tasks**. Refreshing or reopening the WebUI restores active work in the fixed entry and finished work in the conversation, without restarting tasks or bringing all old tasks back into the live list.
 
-Select a task for its read-only conversation and tool activity. Closing the details leaves it running; its stop button cancels only that task. Give follow-up instructions to nanobot in the main conversation.
+Select a task for its read-only conversation and tool activity. Closing the details leaves it running; its stop button cancels only that task. Give follow-up instructions to babo in the main conversation.
 
 These controls appear when the connected host supports subagent tasks. See [Subagents](./concepts.md#subagents) for cancellation, saved history, and gateway restart behavior.
 
@@ -161,7 +161,7 @@ Temporary does not mean consequence-free. Requests still go to the configured mo
 
 ## Workspace and Access
 
-Use the workspace picker to browse folders on the connected nanobot host, enter an absolute path, or return to recent and starred projects; favorites persist across gateway restarts. The host name appears above saved locations. Project paths refer to that machine, not the browser's filesystem.
+Use the workspace picker to browse folders on the connected babo host, enter an absolute path, or return to recent and starred projects; favorites persist across gateway restarts. The host name appears above saved locations. Project paths refer to that machine, not the browser's filesystem.
 
 Choose the project when starting a new topic. Saved topics, including forks, keep their project directory fixed. Start a new topic for another project. You can still change access mode within the same project while the topic is idle.
 
@@ -195,13 +195,13 @@ Images appear as thumbnails above the draft. Hover over a thumbnail for its file
 
 Choose or drop MP4, WebM, or MOV videos into the composer (one per message, up to 20 MiB per upload). You can play them in WebUI; the Agent cannot directly analyze their contents yet.
 
-To attach a file on the connected nanobot host, paste its path on its own. Quoted paths and spaces are supported; relative paths start from the topic's workspace. The topic's access permissions apply. Path references do not upload or copy the file and have no file-size or combined-size limit; supported formats and attachment counts still apply. If attaching fails, the text stays in your draft.
+To attach a file on the connected babo host, paste its path on its own. Quoted paths and spaces are supported; relative paths start from the topic's workspace. The topic's access permissions apply. Path references do not upload or copy the file and have no file-size or combined-size limit; supported formats and attachment counts still apply. If attaching fails, the text stays in your draft.
 
 Files attached by path reflect changes to the original file and become unavailable if it is moved or deleted. Removing an attachment or deleting a topic does not delete the original.
 
 To reference another topic, type or paste its complete handle (such as `@luma`), choose it from the `@` menu, or drag it from the sidebar into the composer. Recognized handles are highlighted; unknown handles remain plain text. You can reference up to eight different topics in one message.
 
-Ask nanobot to find, read, or send messages to other saved topics, including those in other projects. For example, “Summarize @luma” or “Send this update to @luma.” Mentioning a topic alone does not send a message to it.
+Ask babo to find, read, or send messages to other saved topics, including those in other projects. For example, “Summarize @luma” or “Send this update to @luma.” Mentioning a topic alone does not send a message to it.
 
 On touch-primary phones and tablets, **Enter** inserts a newline; tap the send arrow to submit. This also applies when a coarse-pointer tablet has a hardware keyboard attached. On desktop, **Enter** sends and **Shift+Enter** adds a newline. An open slash-command or mention menu takes precedence: Enter selects its item.
 
@@ -224,12 +224,12 @@ Test a new channel with a private DM. When a supported channel sends a pairing c
 **Apps → Ready** lists capabilities available for use:
 
 - **Agent Plugins** are local packages that can bundle skills, MCP servers, or both. A package under `<workspace>/plugins/` is installed but remains inactive until you enable it in Apps.
-- **CLI Apps** are command-line tool adapters on the nanobot host. Install and enable an adapter before attaching it to a turn.
+- **CLI Apps** are command-line tool adapters on the babo host. Install and enable an adapter before attaching it to a turn.
 - **MCP** lists Model Context Protocol servers. Presets provide known configurations, and the **Add MCP server** panel accepts stdio, HTTP, and SSE servers. Custom HTTP/SSE servers can use no authentication, OAuth, or request headers. After saving an OAuth server, choose **Connect** to open its sign-in page. Presets such as Xmind, Notion, and Linear already use OAuth. HTTPS and localhost WebUIs return automatically; a remote plain-HTTP WebUI shows one field for pasting the complete localhost callback URL.
 
 CLI Apps run with a limited environment that excludes provider API keys. On Unix, they inherit `XDG_RUNTIME_DIR` when it is set in the gateway's environment, so desktop CLIs such as Obsidian can locate the running application. Start the gateway in the same desktop session as the app to inherit that runtime directory.
 
-Manage optional runtime support from **System**, **Models**, or **Web**, or use [`nanobot plugins`](./cli-reference.md#optional-features). That command manages runtime extras, not Agent Plugin packages. PDF and common Office attachment readers require no setup.
+Manage optional runtime support from **System**, **Models**, or **Web**, or use [`babo plugins`](./cli-reference.md#optional-features). That command manages runtime extras, not Agent Plugin packages. PDF and common Office attachment readers require no setup.
 
 Keyless hosted presets include **Firecrawl** for search, scraping, crawling and extraction, and **Parallel Search** for `web_search` and `web_fetch`. They are optional MCP tools and do not change the built-in web search provider.
 
@@ -245,14 +245,14 @@ Marketplace skills are third-party instructions and may include executable scrip
 
 ## Automations
 
-Automations are agent turns that run later in a linked topic. Create them from the topic or channel where they are supposed to run so nanobot keeps the correct target context. When an automation runs, it normally delivers the result back to that topic.
+Automations are agent turns that run later in a linked topic. Create them from the topic or channel where they are supposed to run so babo keeps the correct target context. When an automation runs, it normally delivers the result back to that topic.
 
 For the full automation model, creation flow, trigger CLI usage, and delivery semantics, see [`automations.md`](./automations.md).
 
 There are two user-facing automation types:
 
 - Scheduled automations, created by the agent's cron tool, run at a time, interval, or cron expression.
-- Local triggers, created with `/trigger <name>`, run when you call a local command such as `nanobot trigger trg_8K4P2Q9X "Review PR #4502"`.
+- Local triggers, created with `/trigger <name>`, run when you call a local command such as `babo trigger trg_8K4P2Q9X "Review PR #4502"`.
 
 For recurring background checks that should stay quiet unless there is something useful to report, use the protected heartbeat job by editing `HEARTBEAT.md` instead of creating a chat automation.
 
@@ -260,9 +260,9 @@ The Automations view manages user-created jobs and can run scheduled jobs immedi
 
 Search accepts plain text and field filters such as `name:backup`, `chat:WeChat`, `schedule:09:30`, `cron:"0 23 * * *"`, `trigger`, and `status:paused`.
 
-An automation without a linked topic cannot be enabled or run from the WebUI, because nanobot would not know where to deliver the scheduled turn. Recreate it from the target topic or channel so the automation has complete context.
+An automation without a linked topic cannot be enabled or run from the WebUI, because babo would not know where to deliver the scheduled turn. Recreate it from the target topic or channel so the automation has complete context.
 
-Local triggers do not have a WebUI "Run now" action because each run needs a message. Use the copied `nanobot trigger ...` command and replace `"message"` with the content that should be delivered.
+Local triggers do not have a WebUI "Run now" action because each run needs a message. Use the copied `babo trigger ...` command and replace `"message"` with the content that should be delivered.
 
 ## Settings
 
@@ -292,7 +292,7 @@ The gateway refuses to start with `host` set to `"0.0.0.0"` unless `token` or `t
 
 Plain HTTP is enough for basic WebUI access, but browsers expose microphone capture only in secure contexts. Voice input works on same-machine localhost; from another device, serve the WebUI over HTTPS with a certificate that device trusts. Configure [`sslCertfile` and `sslKeyfile`](./websocket.md#tlsssl) on the WebSocket channel and open `https://<your-host>:8765`, or terminate HTTPS at a reverse proxy and use that proxy's HTTPS URL.
 
-Remote WebUI clients with a valid token can view and use Apps and installed skills. Actions that install missing nanobot support packages or third-party marketplace skills are blocked by default. To let trusted remote administrators perform those installations through the WebUI, opt in explicitly:
+Remote WebUI clients with a valid token can view and use Apps and installed skills. Actions that install missing babo support packages or third-party marketplace skills are blocked by default. To let trusted remote administrators perform those installations through the WebUI, opt in explicitly:
 
 <details>
 <summary>Manual configuration</summary>
@@ -317,9 +317,9 @@ Optional feature installs use pip's configured package index, including `PIP_IND
 
 If the page does not open, check these in order:
 
-1. `nanobot agent -m "Hello!"` works in the same Python environment.
-2. `~/.nanobot/config.json` does not explicitly set `channels.websocket.enabled` to `false`.
-3. `nanobot gateway` is still running.
+1. `babo agent -m "Hello!"` works in the same Python environment.
+2. `~/.babo/config.json` does not explicitly set `channels.websocket.enabled` to `false`.
+3. `babo gateway` is still running.
 4. You are using the WebUI port (`8765` by default), not the health port (`18790` by default).
 5. LAN access uses `host: "0.0.0.0"` and a token or token issue secret.
 

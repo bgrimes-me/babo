@@ -11,9 +11,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from nanobot.agent.tools.exec_session import ExecSessionManager, ExecSessionTool, _ExecSession
-from nanobot.agent.tools.registry import is_tool_error_result
-from nanobot.agent.tools.shell import ExecTool, _reap_pid
+from babo.agent.tools.exec_session import ExecSessionManager, ExecSessionTool, _ExecSession
+from babo.agent.tools.registry import is_tool_error_result
+from babo.agent.tools.shell import ExecTool, _reap_pid
 
 
 def _python_command(code: str) -> str:
@@ -68,14 +68,14 @@ async def _cleanup_session(session: _ExecSession) -> None:
 
 def test_reap_pid_noops_without_waitpid():
     """On platforms (or test stubs) without waitpid, reaping is a no-op."""
-    with patch("nanobot.agent.tools.shell.os") as mock_os:
+    with patch("babo.agent.tools.shell.os") as mock_os:
         mock_os.waitpid = None
         mock_os.WNOHANG = None
         _reap_pid(12345)
 
 
 def test_reap_pid_calls_waitpid_wnohang():
-    with patch("nanobot.agent.tools.shell.os") as mock_os:
+    with patch("babo.agent.tools.shell.os") as mock_os:
         mock_os.waitpid = MagicMock(return_value=(12345, 0))
         mock_os.WNOHANG = 1
         _reap_pid(12345)
@@ -83,7 +83,7 @@ def test_reap_pid_calls_waitpid_wnohang():
 
 
 def test_reap_pid_swallows_already_reaped_errors():
-    with patch("nanobot.agent.tools.shell.os") as mock_os:
+    with patch("babo.agent.tools.shell.os") as mock_os:
         mock_os.WNOHANG = 1
         mock_os.waitpid = MagicMock(side_effect=ChildProcessError("no child"))
         _reap_pid(99)
@@ -98,7 +98,7 @@ async def test_kill_process_skips_kill_when_already_exited():
     process = _MockProcess(pid=4242, returncode=0)
     process.kill = MagicMock(side_effect=ProcessLookupError("already dead"))
 
-    with patch("nanobot.agent.tools.shell._reap_pid") as reap:
+    with patch("babo.agent.tools.shell._reap_pid") as reap:
         await ExecTool._kill_process(process)
 
     process.kill.assert_not_called()
@@ -110,7 +110,7 @@ async def test_kill_process_skips_kill_when_already_exited():
 async def test_kill_process_kills_and_reaps_live_process():
     process = _MockProcess(pid=77, returncode=None)
 
-    with patch("nanobot.agent.tools.shell._reap_pid") as reap:
+    with patch("babo.agent.tools.shell._reap_pid") as reap:
         await ExecTool._kill_process(process)
 
     process.kill.assert_called_once()
@@ -130,7 +130,7 @@ async def test_kill_process_reaps_even_if_kill_races_exit():
 
     process.kill.side_effect = raced_exit
 
-    with patch("nanobot.agent.tools.shell._reap_pid") as reap:
+    with patch("babo.agent.tools.shell._reap_pid") as reap:
         await ExecTool._kill_process(process)
 
     process.kill.assert_called_once()
@@ -145,7 +145,7 @@ async def test_execute_reaps_after_normal_completion():
     manager = ExecSessionManager()
     with (
         patch.object(ExecTool, "_spawn", return_value=process),
-        patch("nanobot.agent.tools.shell._reap_pid") as reap,
+        patch("babo.agent.tools.shell._reap_pid") as reap,
     ):
         try:
             result = await ExecTool(session_manager=manager).execute(command="echo ok")
@@ -167,7 +167,7 @@ async def test_execute_timeout_kills_and_reaps():
     with (
         patch.object(ExecTool, "_spawn", return_value=process) as spawn,
         patch.object(ExecTool, "_kill_process_tree", side_effect=ExecTool._kill_process) as kill_tree,
-        patch("nanobot.agent.tools.shell._reap_pid") as reap,
+        patch("babo.agent.tools.shell._reap_pid") as reap,
     ):
         try:
             result = await asyncio.wait_for(
@@ -205,7 +205,7 @@ async def test_execute_cancellation_kills_process_tree():
         patch.object(ExecTool, "_spawn", return_value=process) as spawn,
         patch.object(ExecTool, "_kill_process_tree", side_effect=ExecTool._kill_process) as kill_tree,
         patch.object(_ExecSession, "poll", new=initial_poll),
-        patch("nanobot.agent.tools.shell._reap_pid") as reap,
+        patch("babo.agent.tools.shell._reap_pid") as reap,
     ):
         execution = asyncio.create_task(
             ExecTool(session_manager=manager).execute(command="sleep 99"),
@@ -238,7 +238,7 @@ async def test_exec_session_wait_cancellation_does_not_kill_process_tree():
     with (
         patch.object(ExecTool, "_spawn", return_value=process),
         patch.object(ExecTool, "_kill_process_tree", side_effect=ExecTool._kill_process) as kill_tree,
-        patch("nanobot.agent.tools.shell._reap_pid") as reap,
+        patch("babo.agent.tools.shell._reap_pid") as reap,
     ):
         observer = None
         try:
@@ -284,9 +284,9 @@ async def test_execute_exception_after_success_does_not_raise_on_dead_process():
     manager = ExecSessionManager()
     with (
         patch.object(ExecTool, "_spawn", return_value=process),
-        patch("nanobot.agent.tools.shell._reap_pid") as reap,
+        patch("babo.agent.tools.shell._reap_pid") as reap,
         patch(
-            "nanobot.agent.tools.shell.format_session_poll",
+            "babo.agent.tools.shell.format_session_poll",
             side_effect=RuntimeError("boom after exit"),
         ) as formatter,
     ):
@@ -326,7 +326,7 @@ async def test_execute_stream_read_error_kills_live_process(tmp_path):
     with (
         patch.object(ExecTool, "_spawn", side_effect=spawn_with_broken_stdout),
         patch.object(ExecTool, "_kill_process_tree", wraps=kill_process_tree) as kill_tree,
-        patch("nanobot.agent.tools.shell._reap_pid", wraps=_reap_pid) as reap,
+        patch("babo.agent.tools.shell._reap_pid", wraps=_reap_pid) as reap,
     ):
         try:
             result = await asyncio.wait_for(tool.execute(
@@ -355,10 +355,10 @@ async def test_kill_process_tree_targets_group_after_root_exits():
     process = _MockProcess(pid=1006, returncode=0)
 
     with (
-        patch("nanobot.agent.tools.shell._IS_WINDOWS", False),
-        patch("nanobot.agent.tools.shell.os.killpg", create=True) as kill_group,
-        patch("nanobot.agent.tools.shell.signal.SIGKILL", 9, create=True),
-        patch("nanobot.agent.tools.shell._reap_pid") as reap,
+        patch("babo.agent.tools.shell._IS_WINDOWS", False),
+        patch("babo.agent.tools.shell.os.killpg", create=True) as kill_group,
+        patch("babo.agent.tools.shell.signal.SIGKILL", 9, create=True),
+        patch("babo.agent.tools.shell._reap_pid") as reap,
     ):
         await ExecTool._kill_process_tree(process)
 
@@ -445,7 +445,7 @@ async def test_exec_session_kill_reaps():
         owner_session_key=None,
     )
     try:
-        with patch("nanobot.agent.tools.shell._reap_pid") as reap:
+        with patch("babo.agent.tools.shell._reap_pid") as reap:
             await session.kill()
         process.kill.assert_called_once()
         process.wait.assert_awaited()
@@ -475,7 +475,7 @@ async def test_exec_session_kill_reaps_if_process_exits_before_kill():
         owner_session_key=None,
     )
     try:
-        with patch("nanobot.agent.tools.shell._reap_pid") as reap:
+        with patch("babo.agent.tools.shell._reap_pid") as reap:
             await session.kill()
         process.kill.assert_called_once()
         process.wait.assert_awaited()
@@ -538,7 +538,7 @@ async def test_exec_session_poll_reaps_after_exit():
         owner_session_key=None,
     )
     try:
-        with patch("nanobot.agent.tools.shell._reap_pid") as reap:
+        with patch("babo.agent.tools.shell._reap_pid") as reap:
             await asyncio.wait_for(session.wait_exit(), timeout=5)
             poll = await session.poll(yield_time_ms=0, max_output_chars=1000)
         assert poll.done is True

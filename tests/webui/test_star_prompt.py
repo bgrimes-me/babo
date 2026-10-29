@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from nanobot.webui import star_prompt
+from babo.webui import star_prompt
 
 
 @pytest.fixture
@@ -79,11 +79,11 @@ def test_corruption_and_write_failure_never_grant_display(state_path, monkeypatc
 async def test_only_successful_webui_turns_record_usage(state_path, tmp_path, monkeypatch):
     from unittest.mock import AsyncMock, Mock
 
-    from nanobot.bus.queue import MessageBus
-    from nanobot.bus.runtime_events import RuntimeEventContext, TurnCompleted
-    from nanobot.session.manager import SessionManager
-    from nanobot.session.webui_turns import WebuiTurnCoordinator
-    from nanobot.webui.metadata import WEBUI_TURN_METADATA_KEY
+    from babo.bus.queue import MessageBus
+    from babo.bus.runtime_events import RuntimeEventContext, TurnCompleted
+    from babo.session.manager import SessionManager
+    from babo.session.webui_turns import WebuiTurnCoordinator
+    from babo.webui.metadata import WEBUI_TURN_METADATA_KEY
 
     bus = MessageBus()
     coordinator = WebuiTurnCoordinator(bus, SessionManager(tmp_path), Mock())

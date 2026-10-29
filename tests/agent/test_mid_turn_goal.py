@@ -6,20 +6,20 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from agent.session_helpers import stop_loop
-from nanobot.agent.goal_permission import goal_mutation_allowed, goal_mutation_permission
-from nanobot.agent.loop import AgentLoop
-from nanobot.bus.events import InboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.providers.base import GenerationSettings, LLMResponse, ToolCallRequest
-from nanobot.runtime_context import public_history_messages
-from nanobot.session.goal_state import GOAL_STATE_KEY
-from nanobot.session.history_visibility import is_hidden_history_message
-from nanobot.session.manager import SessionManager
+from babo.agent.goal_permission import goal_mutation_allowed, goal_mutation_permission
+from babo.agent.loop import AgentLoop
+from babo.bus.events import InboundMessage
+from babo.bus.queue import MessageBus
+from babo.providers.base import GenerationSettings, LLMResponse, ToolCallRequest
+from babo.runtime_context import public_history_messages
+from babo.session.goal_state import GOAL_STATE_KEY
+from babo.session.history_visibility import is_hidden_history_message
+from babo.session.manager import SessionManager
 
 
 @pytest.mark.parametrize("command", [
     "/goal execute the agreed plan",
-    "/GOAL@nanobot execute the agreed plan",
+    "/GOAL@babo execute the agreed plan",
     "/goal /tmp/project: execute the agreed plan",
 ])
 async def test_goal_input_enters_running_turn_with_scoped_permission(tmp_path, command):
@@ -172,8 +172,8 @@ async def test_goal_at_iteration_limit_stays_queued_for_a_tool_capable_turn(tmp_
 
 
 async def test_generated_goal_input_survives_pending_followup_recovery(tmp_path):
-    from nanobot.command.router import CommandContext
-    from nanobot.session.recovery import pending_followups
+    from babo.command.router import CommandContext
+    from babo.session.recovery import pending_followups
 
     provider = MagicMock(aclose=AsyncMock())
     provider.get_default_model.return_value = "test-model"

@@ -27,11 +27,11 @@ it("indexes shared component exports and their application and channel consumers
   expect(toggle?.exports).toContain("ToggleButton");
   expect(toggle?.usedBy).toEqual(expect.arrayContaining([
     "webui/src/components/thread/WorkspaceControls.tsx",
-    "nanobot/channels/linear/webui/LinearMemberAccessView.tsx",
+    "babo/channels/linear/webui/LinearMemberAccessView.tsx",
   ]));
-  expect(inventory.find((item) => item.path === "nanobot/channels/linear/webui/LinearMemberAccess.tsx")?.group)
+  expect(inventory.find((item) => item.path === "babo/channels/linear/webui/LinearMemberAccess.tsx")?.group)
     .toBe("Channels / linear");
-  expect(inventory.find((item) => item.path === "nanobot/channels/linear/webui/index.tsx")?.exports).toContain("default");
+  expect(inventory.find((item) => item.path === "babo/channels/linear/webui/index.tsx")?.exports).toContain("default");
   expect(inventory.find((item) => item.path === "webui/src/components/MarkdownTextRenderer.tsx")?.exports).toContain("default");
 });
 
@@ -67,11 +67,11 @@ it("lets the developer retry a failed inventory request", async () => {
 it("covers every registered channel and its presentation components", () => {
   const previewed = new Set(examples.flatMap((example) => example.files));
   for (const { channel, webui } of registeredChannelUiContributions()) {
-    const entry = `nanobot/channels/${channel}/${webui}`;
+    const entry = `babo/channels/${channel}/${webui}`;
     expect(inventory.find((source) => source.path === entry)?.exports).toContain("default");
     expect(previewed.has(entry), `Missing channel entry preview: ${channel}`).toBe(true);
   }
-  for (const source of inventory.filter((item) => item.path.startsWith("nanobot/channels/"))) {
+  for (const source of inventory.filter((item) => item.path.startsWith("babo/channels/"))) {
     const hasView = inventory.some((view) => previewed.has(view.path) && view.usedBy.includes(source.path));
     expect(previewed.has(source.path) || hasView, `Missing channel component preview: ${source.path}`).toBe(true);
   }
@@ -124,7 +124,7 @@ it("submits a message through the actual composer using only local preview state
   expect(await screen.findByText("Submitted: Try the real composer")).toBeVisible();
   expect(input).toHaveValue("");
   expect(fetch).toHaveBeenCalledTimes(1);
-  expect(fetch.mock.calls[0][0]).toBe("/__nanobot_components");
+  expect(fetch.mock.calls[0][0]).toBe("/__babo_components");
 });
 
 it("switches the chat list preview between ready, loading, empty and archived states", async () => {
@@ -172,7 +172,7 @@ it("edits a pairing route without mounting a client or making a gateway mutation
   expect(preview.getByRole("status")).toHaveTextContent("Saved");
   expect(preview.getByRole("button", { name: "Save changes" })).toBeDisabled();
   expect(fetch).toHaveBeenCalledTimes(1);
-  expect(fetch.mock.calls[0][0]).toBe("/__nanobot_components");
+  expect(fetch.mock.calls[0][0]).toBe("/__babo_components");
 });
 
 it("uses the real provider manager and saves a new provider entirely in preview state", async () => {
@@ -205,11 +205,11 @@ it("uses the real provider manager and saves a new provider entirely in preview 
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(preview.getByRole("button", { name: "Manage providers" })).toHaveFocus();
   expect(fetch).toHaveBeenCalledTimes(1);
-  expect(fetch.mock.calls[0][0]).toBe("/__nanobot_components");
+  expect(fetch.mock.calls[0][0]).toBe("/__babo_components");
 });
 
 it("renders a registered channel's real secret fields and enable action without a gateway", async () => {
-  const source = "nanobot/channels/telegram/webui/index.ts";
+  const source = "babo/channels/telegram/webui/index.ts";
   window.history.replaceState({}, "", `/gallery.html#${new URLSearchParams({ component: source })}`);
   const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => inventory });
   vi.stubGlobal("fetch", fetch);
@@ -228,11 +228,11 @@ it("renders a registered channel's real secret fields and enable action without 
   expect(preview.getByRole("group", { name: "Connection mode" })).toBeVisible();
   expect(preview.getByRole("radio", { name: "Long polling" })).toBeChecked();
   expect(fetch).toHaveBeenCalledTimes(1);
-  expect(fetch.mock.calls[0][0]).toBe("/__nanobot_components");
+  expect(fetch.mock.calls[0][0]).toBe("/__babo_components");
 });
 
 it("previews QQ QR states and retries without connecting to the portal", async () => {
-  const source = "nanobot/channels/qq/webui/index.tsx";
+  const source = "babo/channels/qq/webui/index.tsx";
   window.history.replaceState({}, "", `/gallery.html#${new URLSearchParams({ component: source })}`);
   const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => inventory });
   vi.stubGlobal("fetch", fetch);
@@ -254,5 +254,5 @@ it("previews QQ QR states and retries without connecting to the portal", async (
   await userEvent.click(within(confirmation).getByRole("button", { name: "Cancel" }));
   expect(preview.getByText("Configured")).toBeVisible();
   expect(fetch).toHaveBeenCalledTimes(1);
-  expect(fetch.mock.calls[0][0]).toBe("/__nanobot_components");
+  expect(fetch.mock.calls[0][0]).toBe("/__babo_components");
 });

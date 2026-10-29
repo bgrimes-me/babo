@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { NOTIFICATION_OPEN_EVENT, notificationChatUrl, reconcileNotificationPermission, showBrowserNotification, taskNoticeKey } from "@/lib/browser-notifications";
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 
-export function BrowserNotifications({ client }: { client: Pick<NanobotClient, "onTaskNotice"> }) {
+export function BrowserNotifications({ client }: { client: Pick<BaboClient, "onTaskNotice"> }) {
   const { t } = useTranslation();
   useEffect(() => client.onTaskNotice((notice) => {
     const key = taskNoticeKey(notice);
@@ -36,7 +36,7 @@ export function useBrowserNotificationLifecycle() {
     if (!("serviceWorker" in navigator)) return;
     const navigate = (event: MessageEvent<unknown>) => {
       const data = event.data as { type?: string; url?: unknown } | null;
-      if (event.source !== navigator.serviceWorker.controller || data?.type !== "nanobot:notification-click" || typeof data.url !== "string") return;
+      if (event.source !== navigator.serviceWorker.controller || data?.type !== "babo:notification-click" || typeof data.url !== "string") return;
       let url: URL;
       try { url = new URL(data.url); } catch { return; }
       if (url.origin !== window.location.origin || url.username || url.password || url.search || url.pathname !== "/") return;

@@ -12,75 +12,75 @@ from scripts.check_import_boundaries import Violation, find_violations
 
 
 @pytest.mark.parametrize("module", [
-    "nanobot.agent.loop", "nanobot.session.state", "nanobot.runtime_admission",
-    "nanobot.data_access", "nanobot.installation_lock",
+    "babo.agent.loop", "babo.session.state", "babo.runtime_admission",
+    "babo.data_access", "babo.installation_lock",
 ])
 def test_runtime_owners_do_not_depend_on_update_policy(module: str) -> None:
-    assert find_violations("from nanobot.update_service import UpdateService", module) == [
-        Violation("update-policy-direction", "nanobot.update_service.UpdateService", 1),
+    assert find_violations("from babo.update_service import UpdateService", module) == [
+        Violation("update-policy-direction", "babo.update_service.UpdateService", 1),
     ]
 
 
 def test_updater_uses_process_contracts_not_agent_or_client_implementations() -> None:
-    assert find_violations("from nanobot.agent.loop import AgentLoop", "nanobot.update_stop") == [
-        Violation("update-domain", "nanobot.agent.loop.AgentLoop", 1),
+    assert find_violations("from babo.agent.loop import AgentLoop", "babo.update_stop") == [
+        Violation("update-domain", "babo.agent.loop.AgentLoop", 1),
     ]
     assert find_violations(
-        "from nanobot.gateway.runtime import GatewayRuntime", "nanobot.update_stop",
+        "from babo.gateway.runtime import GatewayRuntime", "babo.update_stop",
     ) == []
     assert find_violations(
-        "from nanobot.update_stop import watch_gateway_stop", "nanobot.cli.gateway_runtime",
+        "from babo.update_stop import watch_gateway_stop", "babo.cli.gateway_runtime",
     ) == []
     assert find_violations(
-        "from nanobot.cli.gateway_runtime import _run_gateway", "nanobot.update_restart",
+        "from babo.cli.gateway_runtime import _run_gateway", "babo.update_restart",
     ) == []
     assert find_violations(
-        "from nanobot.agent.loop import AgentLoop", "nanobot.update_restart",
-    ) == [Violation("update-restart-adapter", "nanobot.agent.loop.AgentLoop", 1)]
+        "from babo.agent.loop import AgentLoop", "babo.update_restart",
+    ) == [Violation("update-restart-adapter", "babo.agent.loop.AgentLoop", 1)]
 
 
 @pytest.mark.parametrize(
     ("source", "target", "line"),
     [
-        ("import nanobot.webui.metadata", "nanobot.webui.metadata", 1),
-        ("from nanobot import webui", "nanobot.webui", 1),
-        ("from nanobot.webui import metadata", "nanobot.webui.metadata", 1),
-        ("from .. import webui", "nanobot.webui", 1),
-        ("from ..webui import metadata", "nanobot.webui.metadata", 1),
+        ("import babo.webui.metadata", "babo.webui.metadata", 1),
+        ("from babo import webui", "babo.webui", 1),
+        ("from babo.webui import metadata", "babo.webui.metadata", 1),
+        ("from .. import webui", "babo.webui", 1),
+        ("from ..webui import metadata", "babo.webui.metadata", 1),
         (
-            "def load():\n    from nanobot.cli import gateway",
-            "nanobot.cli.gateway", 2,
+            "def load():\n    from babo.cli import gateway",
+            "babo.cli.gateway", 2,
         ),
         (
-            "import importlib\nimportlib.import_module('nanobot.webui.metadata')",
-            "nanobot.webui.metadata", 2,
+            "import importlib\nimportlib.import_module('babo.webui.metadata')",
+            "babo.webui.metadata", 2,
         ),
         (
             "import importlib as modules\n"
-            "modules.import_module(name='nanobot.webui.metadata')",
-            "nanobot.webui.metadata", 2,
+            "modules.import_module(name='babo.webui.metadata')",
+            "babo.webui.metadata", 2,
         ),
         (
             "from importlib import import_module as load\n"
             "load('..webui.metadata', __package__)",
-            "nanobot.webui.metadata", 2,
+            "babo.webui.metadata", 2,
         ),
         (
             "from importlib import import_module\n"
-            "import_module('..webui.metadata', package='nanobot.agent')",
-            "nanobot.webui.metadata", 2,
+            "import_module('..webui.metadata', package='babo.agent')",
+            "babo.webui.metadata", 2,
         ),
-        ("__import__('nanobot.webui.metadata')", "nanobot.webui.metadata", 1),
+        ("__import__('babo.webui.metadata')", "babo.webui.metadata", 1),
         (
-            "import builtins as imports\nimports.__import__('nanobot.webui.metadata')",
-            "nanobot.webui.metadata", 2,
+            "import builtins as imports\nimports.__import__('babo.webui.metadata')",
+            "babo.webui.metadata", 2,
         ),
     ],
 )
 def test_core_rejects_adapter_imports_in_supported_spellings(
     source: str, target: str, line: int,
 ) -> None:
-    assert find_violations(source, "nanobot.agent.loop") == [
+    assert find_violations(source, "babo.agent.loop") == [
         Violation("core-execution", target, line),
     ]
 
@@ -89,96 +89,96 @@ def test_core_rejects_adapter_imports_in_supported_spellings(
     "source",
     [
         "from typing import TYPE_CHECKING as TC\n"
-        "if TC:\n    from nanobot.webui import metadata",
+        "if TC:\n    from babo.webui import metadata",
         "import typing as t\n"
-        "if t.TYPE_CHECKING:\n    from nanobot.webui import metadata",
+        "if t.TYPE_CHECKING:\n    from babo.webui import metadata",
     ],
 )
 def test_core_boundary_includes_type_dependencies(source: str) -> None:
-    assert find_violations(source, "nanobot.agent.runner") == [
-        Violation("core-execution", "nanobot.webui.metadata", 3),
+    assert find_violations(source, "babo.agent.runner") == [
+        Violation("core-execution", "babo.webui.metadata", 3),
     ]
 
 
 @pytest.mark.parametrize(
     ("module", "rule"),
     [
-        ("nanobot.session.manager", "session-storage"),
-        ("nanobot.session.recovery", "session-storage"),
-        ("nanobot.security.workspace_policy", "security-primitives"),
-        ("nanobot.agent.turn_delivery", "core-execution"),
-        ("nanobot.channels.notification_routes", "channel-routing-contracts"),
-        ("nanobot.config.schema", "configuration-contracts"),
-        ("nanobot.agent.tools.cli_apps_config", "tool-configuration-contracts"),
-        ("nanobot.utils.file_io", "shared-primitives"),
+        ("babo.session.manager", "session-storage"),
+        ("babo.session.recovery", "session-storage"),
+        ("babo.security.workspace_policy", "security-primitives"),
+        ("babo.agent.turn_delivery", "core-execution"),
+        ("babo.channels.notification_routes", "channel-routing-contracts"),
+        ("babo.config.schema", "configuration-contracts"),
+        ("babo.agent.tools.cli_apps_config", "tool-configuration-contracts"),
+        ("babo.utils.file_io", "shared-primitives"),
     ],
 )
 def test_storage_and_security_do_not_depend_on_adapters(module: str, rule: str) -> None:
-    assert find_violations("from nanobot.cli import gateway", module) == [
-        Violation(rule, "nanobot.cli.gateway", 1),
+    assert find_violations("from babo.cli import gateway", module) == [
+        Violation(rule, "babo.cli.gateway", 1),
     ]
 
 
 @pytest.mark.parametrize(
     "dependency",
     [
-        "nanobot.bus.outbound_events.ProgressEvent",
-        "nanobot.command.router",
-        "nanobot.pairing.events.PairingChanged",
-        "nanobot.session.webui_turns.clear_websocket_turn_if_current",
-        "nanobot.webui.transcript.WebUITranscriptRecorder",
-        "nanobot.webui.outbound_wire.project_notification",
+        "babo.bus.outbound_events.ProgressEvent",
+        "babo.command.router",
+        "babo.pairing.events.PairingChanged",
+        "babo.session.webui_turns.clear_websocket_turn_if_current",
+        "babo.webui.transcript.WebUITranscriptRecorder",
+        "babo.webui.outbound_wire.project_notification",
     ],
 )
 def test_websocket_transport_leaves_event_and_history_policy_to_delivery(dependency: str) -> None:
     module, name = dependency.rsplit(".", 1)
     source = f"from {module} import {name}\n"
-    assert find_violations(source, "nanobot.channels.websocket.runtime") == [
+    assert find_violations(source, "babo.channels.websocket.runtime") == [
         Violation("websocket-transport", dependency, 1),
     ]
-    assert find_violations(source, "nanobot.webui.outbound_delivery") == []
+    assert find_violations(source, "babo.webui.outbound_delivery") == []
 
 
 @pytest.mark.parametrize(
     "source",
     [
-        "from nanobot.config.schema import Base",
+        "from babo.config.schema import Base",
         "from ...config.schema import Base as ConfigBase",
     ],
 )
 def test_tool_configs_import_the_shared_base_directly(source: str) -> None:
-    assert find_violations(source, "nanobot.agent.tools.shell") == [
-        Violation("tool-config-base", "nanobot.config.schema.Base", 1),
+    assert find_violations(source, "babo.agent.tools.shell") == [
+        Violation("tool-config-base", "babo.config.schema.Base", 1),
     ]
     assert find_violations(
-        "from nanobot.config_base import Base", "nanobot.agent.tools.shell",
+        "from babo.config_base import Base", "babo.agent.tools.shell",
     ) == []
 
 
 def test_configuration_imports_the_six_tool_owned_config_contracts() -> None:
     source = (
-        "from nanobot.agent.tools.cli_apps_config import CliAppsToolConfig\n"
-        "from nanobot.agent.tools.filesystem_config import FileToolsConfig\n"
-        "from nanobot.agent.tools.image_generation_config import ImageGenerationToolConfig\n"
-        "from nanobot.agent.tools.self_config import MyToolConfig\n"
-        "from nanobot.agent.tools.shell_config import ExecToolConfig\n"
-        "from nanobot.agent.tools.web_config import WebToolsConfig\n"
+        "from babo.agent.tools.cli_apps_config import CliAppsToolConfig\n"
+        "from babo.agent.tools.filesystem_config import FileToolsConfig\n"
+        "from babo.agent.tools.image_generation_config import ImageGenerationToolConfig\n"
+        "from babo.agent.tools.self_config import MyToolConfig\n"
+        "from babo.agent.tools.shell_config import ExecToolConfig\n"
+        "from babo.agent.tools.web_config import WebToolsConfig\n"
     )
-    assert find_violations(source, "nanobot.config.schema") == []
+    assert find_violations(source, "babo.config.schema") == []
 
 
 @pytest.mark.parametrize(
     ("module", "source"),
     [
-        ("nanobot.agent.loop", "from nanobot.session.recovery import RecoveryAdmission"),
-        ("nanobot.session.manager", "from nanobot.providers.base import ProviderConversationState"),
-        ("nanobot.session.webui_turns", "from nanobot.webui import transcript"),
-        ("nanobot.cli.gateway_runtime", "from nanobot.agent.loop import AgentLoop"),
-        ("nanobot.channels.websocket.runtime", "from nanobot.webui import inbound_commands"),
-        ("nanobot.agent.tools.cli_apps_config", "from nanobot.config_base import Base"),
+        ("babo.agent.loop", "from babo.session.recovery import RecoveryAdmission"),
+        ("babo.session.manager", "from babo.providers.base import ProviderConversationState"),
+        ("babo.session.webui_turns", "from babo.webui import transcript"),
+        ("babo.cli.gateway_runtime", "from babo.agent.loop import AgentLoop"),
+        ("babo.channels.websocket.runtime", "from babo.webui import inbound_commands"),
+        ("babo.agent.tools.cli_apps_config", "from babo.config_base import Base"),
         (
-            "nanobot.agent.turn_delivery",
-            "from nanobot.channels.notification_routes import notification_metadata",
+            "babo.agent.turn_delivery",
+            "from babo.channels.notification_routes import notification_metadata",
         ),
     ],
 )
@@ -192,65 +192,65 @@ def test_existing_runtime_and_composition_dependencies_remain_allowed(
     ("relative", "source", "rule", "target", "line"),
     [
         (
-            "nanobot/agent/runner.py", "import nanobot.webui.metadata",
-            "core-execution", "nanobot.webui.metadata", 1,
+            "babo/agent/runner.py", "import babo.webui.metadata",
+            "core-execution", "babo.webui.metadata", 1,
         ),
         (
-            "nanobot/agent/loop.py",
-            "import importlib\nif importlib.import_module('nanobot.webui.metadata'):\n    pass",
-            "core-execution", "nanobot.webui.metadata", 2,
+            "babo/agent/loop.py",
+            "import importlib\nif importlib.import_module('babo.webui.metadata'):\n    pass",
+            "core-execution", "babo.webui.metadata", 2,
         ),
         (
-            "nanobot/agent/loop.py", "if __import__('nanobot.webui.metadata'):\n    pass",
-            "core-execution", "nanobot.webui.metadata", 1,
+            "babo/agent/loop.py", "if __import__('babo.webui.metadata'):\n    pass",
+            "core-execution", "babo.webui.metadata", 1,
         ),
         (
-            "nanobot/session/manager.py", "from nanobot.cli import gateway",
-            "session-storage", "nanobot.cli.gateway", 1,
+            "babo/session/manager.py", "from babo.cli import gateway",
+            "session-storage", "babo.cli.gateway", 1,
         ),
         (
-            "nanobot/channels/notification_routes.py",
-            "from nanobot.channels.slack.runtime import SlackChannel",
-            "channel-routing-contracts", "nanobot.channels.slack.runtime.SlackChannel", 1,
+            "babo/channels/notification_routes.py",
+            "from babo.channels.slack.runtime import SlackChannel",
+            "channel-routing-contracts", "babo.channels.slack.runtime.SlackChannel", 1,
         ),
         (
-            "nanobot/channels/notification_routes.py",
-            "from nanobot.agent.turn_delivery import TurnRoute",
-            "channel-routing-contracts", "nanobot.agent.turn_delivery.TurnRoute", 1,
+            "babo/channels/notification_routes.py",
+            "from babo.agent.turn_delivery import TurnRoute",
+            "channel-routing-contracts", "babo.agent.turn_delivery.TurnRoute", 1,
         ),
         (
-            "nanobot/security/__init__.py", "from ..cli import gateway",
-            "security-primitives", "nanobot.cli.gateway", 1,
+            "babo/security/__init__.py", "from ..cli import gateway",
+            "security-primitives", "babo.cli.gateway", 1,
         ),
         (
-            "nanobot/channels/websocket/runtime.py",
-            "import importlib as modules\nmodules.import_module('nanobot.command.router')",
-            "websocket-transport", "nanobot.command.router", 2,
+            "babo/channels/websocket/runtime.py",
+            "import importlib as modules\nmodules.import_module('babo.command.router')",
+            "websocket-transport", "babo.command.router", 2,
         ),
         (
-            "nanobot/agent/tools/shell.py", "from ...config.schema import Base as ConfigBase",
-            "tool-config-base", "nanobot.config.schema.Base", 1,
+            "babo/agent/tools/shell.py", "from ...config.schema import Base as ConfigBase",
+            "tool-config-base", "babo.config.schema.Base", 1,
         ),
         (
-            "nanobot/channels/telegram/runtime.py", "from nanobot.config.schema import Base",
-            "tool-config-base", "nanobot.config.schema.Base", 1,
+            "babo/channels/telegram/runtime.py", "from babo.config.schema import Base",
+            "tool-config-base", "babo.config.schema.Base", 1,
         ),
         (
-            "nanobot/config/schema.py", "from nanobot.agent.tools.shell import ExecTool",
-            "configuration-contracts", "nanobot.agent.tools.shell.ExecTool", 1,
+            "babo/config/schema.py", "from babo.agent.tools.shell import ExecTool",
+            "configuration-contracts", "babo.agent.tools.shell.ExecTool", 1,
         ),
         (
-            "nanobot/agent/tools/cli_apps_config.py", "from .cli_apps import CliAppsTool",
-            "tool-configuration-contracts", "nanobot.agent.tools.cli_apps.CliAppsTool", 1,
+            "babo/agent/tools/cli_apps_config.py", "from .cli_apps import CliAppsTool",
+            "tool-configuration-contracts", "babo.agent.tools.cli_apps.CliAppsTool", 1,
         ),
         (
-            "nanobot/agent/tools/web_config.py", "from nanobot.config.schema import Config",
-            "tool-configuration-contracts", "nanobot.config.schema.Config", 1,
+            "babo/agent/tools/web_config.py", "from babo.config.schema import Config",
+            "tool-configuration-contracts", "babo.config.schema.Config", 1,
         ),
         (
-            "nanobot/providers/oauth_catalog_cache.py",
-            "from nanobot.providers import openai_codex_provider",
-            "oauth-catalog-cache", "nanobot.providers.openai_codex_provider", 1,
+            "babo/providers/oauth_catalog_cache.py",
+            "from babo.providers import openai_codex_provider",
+            "oauth-catalog-cache", "babo.providers.openai_codex_provider", 1,
         ),
     ],
 )
@@ -274,10 +274,10 @@ def test_cli_rejects_a_violation_and_reports_its_source_location(
 
 
 def test_cli_accepts_a_tool_owned_config_import(tmp_path: Path) -> None:
-    path = tmp_path / "nanobot/config/schema.py"
+    path = tmp_path / "babo/config/schema.py"
     path.parent.mkdir(parents=True)
     path.write_text(
-        "from nanobot.agent.tools.cli_apps_config import CliAppsToolConfig\n",
+        "from babo.agent.tools.cli_apps_config import CliAppsToolConfig\n",
         encoding="utf-8",
     )
 

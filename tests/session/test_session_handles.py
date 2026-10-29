@@ -7,15 +7,15 @@ from threading import Event, Thread
 
 import pytest
 
-from nanobot.session.manager import SessionManager
-from nanobot.session.session_handles import (
+from babo.session.manager import SessionManager
+from babo.session.session_handles import (
     SESSION_HANDLE_METADATA_KEY,
     SessionHandleResolver,
     _allocate_name,
     _tier_size,
     normalize_session_handle,
 )
-from nanobot.session.types import SESSION_TYPE_KEY, SessionType
+from babo.session.types import SESSION_TYPE_KEY, SessionType
 
 
 def _persist(manager: SessionManager, key: str) -> None:

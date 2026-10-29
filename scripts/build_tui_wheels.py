@@ -22,10 +22,10 @@ from email.parser import BytesParser
 from pathlib import Path, PurePosixPath
 
 # Packaging must use the same archive checks as the installed launcher.
-from nanobot.cli.tui_launcher import (
+from babo.cli.tui_launcher import (
     _verified_release_archive,  # pyright: ignore[reportPrivateUsage]
 )
-from nanobot.releases import PLATFORMS
+from babo.releases import PLATFORMS
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -70,7 +70,7 @@ def _verify_architecture(binary: bytes, target: str) -> None:
 
 def wheel_files(wheel: Path, version: str, *, platform: str = "any") -> tuple[dict[str, bytes], dict[str, int], str]:
     """Verify identity and every RECORD entry for an intermediate or final wheel."""
-    prefix = f"nanobot_ai-{version}"
+    prefix = f"babo-{version}"
     if wheel.name != f"{prefix}-py3-none-{platform}.whl":
         kind = "universal wheel" if platform == "any" else "platform wheel"
         raise ValueError(f"Expected the candidate's {kind} ({version})")
@@ -82,14 +82,14 @@ def wheel_files(wheel: Path, version: str, *, platform: str = "any") -> tuple[di
         for name in names:
             path = PurePosixPath(name)
             if (path.is_absolute() or ".." in path.parts or "\\" in name
-                    or (platform == "any" and name.startswith("nanobot/tui/bin/"))
+                    or (platform == "any" and name.startswith("babo/tui/bin/"))
                     or name.endswith(("/RECORD.jws", "/RECORD.p7s"))):
                 raise ValueError(f"Unexpected base wheel entry: {name}")
         files = {name: archive.read(name) for name in names if not name.endswith("/")}
         modes = {name: archive.getinfo(name).external_attr >> 16 for name in files}
     metadata = BytesParser().parsebytes(files[f"{info_dir}/METADATA"])
     wheel_metadata = BytesParser().parsebytes(files[f"{info_dir}/WHEEL"])
-    if (metadata["Name"] != "nanobot-ai" or metadata["Version"] != version
+    if (metadata["Name"] != "babo" or metadata["Version"] != version
             or wheel_metadata["Root-Is-Purelib"] != ("true" if platform == "any" else "false")
             or wheel_metadata.get_all("Tag") != [f"py3-none-{platform}"]):
         raise ValueError("Base wheel metadata does not match the candidate")
@@ -106,7 +106,7 @@ def wheel_files(wheel: Path, version: str, *, platform: str = "any") -> tuple[di
 
 def release_bundle(tui_dir: Path, target: str, *, root: Path = ROOT) -> dict[str, bytes]:
     """Validate the archive, architecture and corresponding source once at its owner."""
-    asset = f"nanobot-tui-{target}" + (".exe" if target.startswith("win32-") else "")
+    asset = f"babo-tui-{target}" + (".exe" if target.startswith("win32-") else "")
     archive = tui_dir / f"{asset}.zip"
     raw = archive.read_bytes()
     checksum = archive.with_suffix(".zip.sha256").read_text().split()
@@ -120,7 +120,7 @@ def release_bundle(tui_dir: Path, target: str, *, root: Path = ROOT) -> dict[str
     source_packager = runpy.run_path(str(root / "tui/scripts/package-release.py"))
     source_packager["_validate_opentui_version"](root / "tui", notices)
     expected_source = source_packager["_source_archive"](root / "tui")
-    if source_files(bundle["nanobot-tui-source.tar.gz"]) != source_files(expected_source):
+    if source_files(bundle["babo-tui-source.tar.gz"]) != source_files(expected_source):
         raise ValueError("TUI archive source does not match this release checkout; rebuild it")
     return bundle
 
@@ -130,14 +130,14 @@ def build_wheel(wheel: Path, tui_dir: Path, out_dir: Path, target: str, *,
     """Fail closed on stale sources, damaged archives, or existing output files."""
     version = tomllib.loads((root / "pyproject.toml").read_text())["project"]["version"]
     tag = f"py3-none-{PLATFORMS[target]}"
-    output = out_dir / f"nanobot_ai-{version}-{tag}.whl"
+    output = out_dir / f"babo-{version}-{tag}.whl"
     if output.exists():
         raise FileExistsError(output)
     files, modes, info_dir = wheel_files(wheel, version)
-    asset = f"nanobot-tui-{target}" + (".exe" if target.startswith("win32-") else "")
+    asset = f"babo-tui-{target}" + (".exe" if target.startswith("win32-") else "")
     bundle = release_bundle(tui_dir, target, root=root)
     for name, content in bundle.items():
-        path = f"nanobot/tui/bin/{name}"
+        path = f"babo/tui/bin/{name}"
         files[path] = content
         modes[path] = stat.S_IFREG | (0o755 if name == asset else 0o644)
     metadata = BytesParser().parsebytes(files[f"{info_dir}/WHEEL"])

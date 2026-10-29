@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import QRCode from "qrcode";
 
 import { ChannelQrConnectFlow } from "@/components/settings/channels/ChannelQrConnectFlow";
-import { FeishuConnectFlow } from "../../../nanobot/channels/feishu/webui/FeishuConnectFlow";
-import { FeishuAssistantsPanel } from "../../../nanobot/channels/feishu/webui/FeishuAssistantsPanel";
+import { FeishuConnectFlow } from "../../../babo/channels/feishu/webui/FeishuConnectFlow";
+import { FeishuAssistantsPanel } from "../../../babo/channels/feishu/webui/FeishuAssistantsPanel";
 import type { ChannelPluginPanelProps } from "@/channel-plugins/types";
-import type { NanobotFeatureInfo } from "@/lib/types";
+import type { BaboFeatureInfo } from "@/lib/types";
 
 const { requestMutation } = vi.hoisted(() => ({ requestMutation: vi.fn() }));
 
@@ -38,7 +38,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("channel QR connect parameters", () => {
   it("adds an assistant without replacing existing ones, and supports cancellation and retry", async () => {
-    const feature: NanobotFeatureInfo = {
+    const feature: BaboFeatureInfo = {
       name: "feishu", display_name: "Feishu", type: "channel", webui: "webui/index.tsx",
       enabled: true, configured: true, installed: true, ready: true, status: "enabled",
       install_supported: true, requires_restart: false,
@@ -77,7 +77,7 @@ describe("channel QR connect parameters", () => {
       ...feature.instances![0], id: "assistant-new", name: "Second assistant",
     }] };
     const payload = { features: [updated], enabled_count: 1 };
-    requestMutation.mockResolvedValueOnce({ status: "succeeded", nanobot_features: payload });
+    requestMutation.mockResolvedValueOnce({ status: "succeeded", babo_features: payload });
     fireEvent.click(screen.getByRole("button", { name: "Add another assistant" }));
     await waitFor(() => expect(onFeaturesUpdate).toHaveBeenCalledWith(payload));
     view.rerender(<FeishuAssistantsPanel {...props} feature={updated} />);
@@ -127,7 +127,7 @@ describe("channel QR connect parameters", () => {
     const features = { features: [], enabled_count: 0 };
     requestMutation
       .mockResolvedValueOnce({ session_id: "browser-session", status: "pending", qr_url: "https://example.com/authorize" })
-      .mockResolvedValueOnce({ session_id: "browser-session", status: "succeeded", nanobot_features: features });
+      .mockResolvedValueOnce({ session_id: "browser-session", status: "succeeded", babo_features: features });
     render(<ChannelQrConnectFlow channelName="plugin-chat" showQrCode={false}
       labels={labels} onFeaturesUpdate={onFeaturesUpdate} />);
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));

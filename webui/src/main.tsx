@@ -39,7 +39,7 @@ async function renderWebui(container: HTMLElement) {
       if (link.sheet) ready();
     }));
   await Promise.all([initializeI18n(), ...styles]);
-  /* StrictMode disabled: dev double-invokes state updaters; delta accumulation must stay pure — see useNanobotStream. */
+  /* StrictMode disabled: dev double-invokes state updaters; delta accumulation must stay pure — see useBaboStream. */
   ReactDOM.createRoot(container).render(<App />);
 }
 

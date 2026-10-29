@@ -16,7 +16,7 @@ Prefer a named preset created in **Settings → Models**, then select it in the 
 
 ## Choose a Provider Without Guessing
 
-The docs show concrete provider names so the JSON is copyable, not because nanobot ranks providers. Start from the service or endpoint you actually control:
+The docs show concrete provider names so the JSON is copyable, not because babo ranks providers. Start from the service or endpoint you actually control:
 
 | If you have... | Configure... |
 |---|---|
@@ -60,7 +60,7 @@ Create and select a preset through **Settings → Models** as described above. T
 
 </details>
 
-The provider config gives nanobot credentials and endpoint details. The model preset names the provider/model pair. The agent defaults choose which named preset to use for normal turns. Replace the example provider and model together; mixing an API key from one provider with a model ID from another is the most common first-run failure.
+The provider config gives babo credentials and endpoint details. The model preset names the provider/model pair. The agent defaults choose which named preset to use for normal turns. Replace the example provider and model together; mixing an API key from one provider with a model ID from another is the most common first-run failure.
 
 ## Provider, Model, API Key, and Base URL
 
@@ -68,13 +68,13 @@ These fields answer different questions:
 
 | Field | Where it lives | Meaning |
 |---|---|---|
-| `provider` | `modelPresets.<name>.provider` | Which nanobot provider adapter should send the request. |
+| `provider` | `modelPresets.<name>.provider` | Which babo provider adapter should send the request. |
 | `model` | `modelPresets.<name>.model` | The model ID expected by that provider or gateway. |
 | `apiKey` | `providers.<provider>.apiKey` | Credential for that provider. Use `${ENV_VAR}` for secrets. |
 | `apiBase` | `providers.<provider>.apiBase` | HTTP base URL of the provider endpoint. |
 | `use_proxy` | `providers.<provider>.useProxy` | Use the shared `network.proxy` address for this provider. Supported for OpenAI-compatible providers, Anthropic Messages, OpenAI Codex, and xAI OAuth. |
 
-You usually omit `apiBase` for hosted built-in providers such as OpenRouter, Anthropic direct, OpenAI direct, Groq, or Bedrock because nanobot knows their default endpoints. Set `apiBase` for `custom`, local OpenAI-compatible servers, provider proxies, regional endpoints, or subscription endpoints. Include the API version path when the endpoint requires it, for example `https://api.example.com/v1` or `http://localhost:11434/v1`.
+You usually omit `apiBase` for hosted built-in providers such as OpenRouter, Anthropic direct, OpenAI direct, Groq, or Bedrock because babo knows their default endpoints. Set `apiBase` for `custom`, local OpenAI-compatible servers, provider proxies, regional endpoints, or subscription endpoints. Include the API version path when the endpoint requires it, for example `https://api.example.com/v1` or `http://localhost:11434/v1`.
 
 Use `proxy` when one provider must send HTTP traffic through a proxy without changing process-wide `HTTP_PROXY` / `HTTPS_PROXY`. Supported providers include `openai`, `custom`, named custom providers, OpenRouter-style gateways, local OpenAI-compatible servers, Anthropic Messages, `openai_codex`, and `xai_grok`. For OAuth providers, this also covers exchanging and refreshing tokens. `bedrock`, `azure_openai`, and `github_copilot` reject `proxy`; use their endpoint-specific configuration instead.
 
@@ -142,7 +142,7 @@ To opt into OpenRouter server-managed search and fetch, add:
 
 </details>
 
-Chat Completions-compatible OpenRouter [server tools](https://openrouter.ai/docs/guides/features/server-tools), such as those above, are appended to nanobot's generated functions. This keeps unrelated local tools such as `write_file` available in the same request. Responses-only server tools require an API surface that the OpenRouter provider does not currently enable.
+Chat Completions-compatible OpenRouter [server tools](https://openrouter.ai/docs/guides/features/server-tools), such as those above, are appended to babo's generated functions. This keeps unrelated local tools such as `write_file` available in the same request. Responses-only server tools require an API surface that the OpenRouter provider does not currently enable.
 
 ### OrcaRouter Gateway
 
@@ -209,11 +209,11 @@ Eden AI exposes an OpenAI-compatible chat-completions endpoint at `https://api.e
 
 </details>
 
-Nanobot sends the model ID unchanged, including its provider prefix. Use Eden AI's [model listing](https://www.edenai.co/docs/v3/llms/listing-models) to choose a currently available model. The WebUI can also load that catalog after the Eden AI API key is saved under **Settings → Models**.
+Babo sends the model ID unchanged, including its provider prefix. Use Eden AI's [model listing](https://www.edenai.co/docs/v3/llms/listing-models) to choose a currently available model. The WebUI can also load that catalog after the Eden AI API key is saved under **Settings → Models**.
 
 ### OpenCode Zen and Go
 
-OpenCode Zen and OpenCode Go are OpenCode-managed gateways for coding-agent models. They share `OPENCODE_API_KEY`, but use separate provider config keys and default base URLs in nanobot.
+OpenCode Zen and OpenCode Go are OpenCode-managed gateways for coding-agent models. They share `OPENCODE_API_KEY`, but use separate provider config keys and default base URLs in babo.
 
 <details>
 <summary>Manual configuration</summary>
@@ -268,7 +268,7 @@ For OpenCode Go, switch the provider block and preset:
 
 </details>
 
-OpenCode documents model IDs with `opencode/<model-id>` for Zen and `opencode-go/<model-id>` for Go. nanobot accepts those prefixes and strips them before sending the request to OpenCode. Choose a model served through Chat Completions or Responses by the matching Zen or Go service; models that require Anthropic Messages or another provider-specific API are not supported by these connections.
+OpenCode documents model IDs with `opencode/<model-id>` for Zen and `opencode-go/<model-id>` for Go. babo accepts those prefixes and strips them before sending the request to OpenCode. Choose a model served through Chat Completions or Responses by the matching Zen or Go service; models that require Anthropic Messages or another provider-specific API are not supported by these connections.
 
 Leave API selection on **Auto** for OpenCode Go's `muse-spark-1.2-contributor` and `muse-spark-1.3-contributor`; these models use Responses automatically. Other models use Chat Completions by default. If another model requires Responses, select it in the preset's **Advanced options** only when the service supports it. See [preset API settings](./configuration.md#preset-request-api).
 
@@ -370,7 +370,7 @@ Known Flash and Pro models offer `none`, `low`, `high`, and `max` reasoning sett
 
 **Auto** uses Responses for these models at the official endpoint (`https://api.deepseek.com`, with or without `/v1`). With a proxy, keep the model ID it documents: `deepseek-flash` defaults to Chat Completions on other endpoints, while the V4 names above default to Responses. Select Responses explicitly for `deepseek-flash` only if your proxy supports it; see [preset API settings](./configuration.md#preset-request-api).
 
-For web search, configure nanobot's [web search tool](./guides/configure-web-search.md). Selecting a DeepSeek model does not enable DeepSeek-hosted search.
+For web search, configure babo's [web search tool](./guides/configure-web-search.md). Selecting a DeepSeek model does not enable DeepSeek-hosted search.
 
 ### Custom OpenAI-Compatible Endpoint
 
@@ -447,9 +447,9 @@ If you have more than one custom OpenAI-compatible endpoint, give each endpoint 
 
 </details>
 
-Custom provider keys define direct connections. Without an API declaration, they use OpenAI-compatible Chat Completions. `apiBase` is required because nanobot cannot know the endpoint URL. `apiKey` is optional for local servers or private proxies that do not require one. Choose a name that does not conflict with a built-in provider name or alias, such as `openai`, `openai-codex`, `github-copilot`, or `lm-studio`. Declare the accepted protocols under `api` as described in [connection request APIs](./configuration.md#custom-connection-apis).
+Custom provider keys define direct connections. Without an API declaration, they use OpenAI-compatible Chat Completions. `apiBase` is required because babo cannot know the endpoint URL. `apiKey` is optional for local servers or private proxies that do not require one. Choose a name that does not conflict with a built-in provider name or alias, such as `openai`, `openai-codex`, `github-copilot`, or `lm-studio`. Declare the accepted protocols under `api` as described in [connection request APIs](./configuration.md#custom-connection-apis).
 
-If your custom endpoint documents a nonstandard thinking toggle, set `providers.<name>.thinkingStyle` to `thinking_type`, `enable_thinking`, or `reasoning_split`; nanobot then maps `reasoningEffort` onto that provider-specific request body. Leave it unset for ordinary OpenAI-compatible endpoints.
+If your custom endpoint documents a nonstandard thinking toggle, set `providers.<name>.thinkingStyle` to `thinking_type`, `enable_thinking`, or `reasoning_split`; babo then maps `reasoningEffort` onto that provider-specific request body. Leave it unset for ordinary OpenAI-compatible endpoints.
 
 ### ModelScope
 
@@ -485,7 +485,7 @@ Create a ModelScope [access token](https://modelscope.cn/my/myaccesstoken), then
 
 </details>
 
-Use an inference-enabled model ID exactly as ModelScope publishes it (usually `Namespace/model-name`). The default base URL is `https://api-inference.modelscope.cn/v1`; override `providers.modelscope.apiBase` only if your account routes through a different host. Chat model IDs may optionally be prefixed with `modelscope/`; nanobot strips that routing prefix before sending the request.
+Use an inference-enabled model ID exactly as ModelScope publishes it (usually `Namespace/model-name`). The default base URL is `https://api-inference.modelscope.cn/v1`; override `providers.modelscope.apiBase` only if your account routes through a different host. Chat model IDs may optionally be prefixed with `modelscope/`; babo strips that routing prefix before sending the request.
 
 ModelScope image generation reuses the same provider key but is configured under `tools.imageGeneration`, not in a model preset:
 
@@ -510,7 +510,7 @@ Use the image model's exact ModelScope ID without a leading `modelscope/`; the i
 
 ### Ollama
 
-Prepare Ollama using the [local model recipe](./provider-cookbook.md#recipe-ollama-local-model), then point nanobot at its OpenAI-compatible endpoint.
+Prepare Ollama using the [local model recipe](./provider-cookbook.md#recipe-ollama-local-model), then point babo at its OpenAI-compatible endpoint.
 
 <details>
 <summary>Manual configuration</summary>
@@ -542,7 +542,7 @@ Prepare Ollama using the [local model recipe](./provider-cookbook.md#recipe-olla
 
 Most Ollama setups do not require an API key.
 
-Ollama renders the OpenAI-compatible messages and tools through each model's chat template. If ordinary model responses are fast but tool-using turns show low prompt cache reuse, diagnose the rendered template before changing nanobot's context or memory settings. The [Ollama prompt-cache guide](./guides/configure-ollama-prompt-cache.md) explains the log pattern and a tested `llama3.1:8b` workaround.
+Ollama renders the OpenAI-compatible messages and tools through each model's chat template. If ordinary model responses are fast but tool-using turns show low prompt cache reuse, diagnose the rendered template before changing babo's context or memory settings. The [Ollama prompt-cache guide](./guides/configure-ollama-prompt-cache.md) explains the log pattern and a tested `llama3.1:8b` workaround.
 
 ### vLLM or Other Local OpenAI-Compatible Server
 
@@ -651,7 +651,7 @@ Some providers do not use API keys in `config.json`.
 For OpenAI Codex:
 
 ```bash
-nanobot provider login openai-codex --set-main
+babo provider login openai-codex --set-main
 ```
 
 The WebUI reads the account's Codex model catalog online, including current context-window and reasoning-effort metadata. A small compatible catalog remains available when the service cannot be reached.
@@ -661,24 +661,24 @@ After three WebSocket transport failures without a completed reply, the same aut
 For an eligible X Premium / Grok subscription:
 
 ```bash
-nanobot provider login xai-grok --set-main
+babo provider login xai-grok --set-main
 ```
 
-This selects `xai-grok/grok-4.6`. The WebUI model selector reads xAI's online model catalog, so newly available subscription models appear without a nanobot release. Online metadata is cached and enriched with nanobot's curated labels; if xAI is temporarily unavailable, nanobot uses the last successful catalog or a small built-in fallback instead of emptying the selector. The same catalog controls whether the provider exposes the hosted `x_search` tool; models that do not advertise support continue without hosted X Search. When enabled, Grok can search current X posts and return inline source links without invoking a local nanobot tool. Credentials are stored under the active instance's `auth/xai.json` (normally `~/.nanobot/auth/xai.json`), not in `config.json` and not in Grok Build's credential file. Hosted X Search remains enabled by default and can be disabled with the WebUI switch or `providers.xaiGrok.extraBody.tools: []`.
+This selects `xai-grok/grok-4.6`. The WebUI model selector reads xAI's online model catalog, so newly available subscription models appear without a babo release. Online metadata is cached and enriched with babo's curated labels; if xAI is temporarily unavailable, babo uses the last successful catalog or a small built-in fallback instead of emptying the selector. The same catalog controls whether the provider exposes the hosted `x_search` tool; models that do not advertise support continue without hosted X Search. When enabled, Grok can search current X posts and return inline source links without invoking a local babo tool. Credentials are stored under the active instance's `auth/xai.json` (normally `~/.babo/auth/xai.json`), not in `config.json` and not in Grok Build's credential file. Hosted X Search remains enabled by default and can be disabled with the WebUI switch or `providers.xaiGrok.extraBody.tools: []`.
 
-The login is xAI subscription OAuth, not X Developer OAuth. It follows the public client contract documented and implemented by [Grok Build](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/02-authentication.md); xAI may change that upstream contract independently of nanobot.
+The login is xAI subscription OAuth, not X Developer OAuth. It follows the public client contract documented and implemented by [Grok Build](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/02-authentication.md); xAI may change that upstream contract independently of babo.
 
 For GitHub Copilot:
 
-You can also sign in from the WebUI's model settings. The sign-in dialog shows a device code: copy it, select **Open GitHub**, and enter the code on GitHub. Keep the dialog open; nanobot detects approval and refreshes the model catalog automatically. Closing the dialog cancels the pending sign-in without replacing your saved credentials. This works from a remote browser too; no browser needs to open on the gateway machine.
+You can also sign in from the WebUI's model settings. The sign-in dialog shows a device code: copy it, select **Open GitHub**, and enter the code on GitHub. Keep the dialog open; babo detects approval and refreshes the model catalog automatically. Closing the dialog cancels the pending sign-in without replacing your saved credentials. This works from a remote browser too; no browser needs to open on the gateway machine.
 
 For terminal sign-in:
 
 ```bash
-nanobot provider login github-copilot --set-main
+babo provider login github-copilot --set-main
 ```
 
-The WebUI reads the models enabled for the signed-in Copilot account. nanobot lists entries that support its current Copilot chat-completions or Responses transport and hides models that it cannot route safely.
+The WebUI reads the models enabled for the signed-in Copilot account. babo lists entries that support its current Copilot chat-completions or Responses transport and hides models that it cannot route safely.
 
 Each command authenticates the selected provider and makes its current default model active. OpenAI Codex and eligible GitHub Copilot models participate in [Responses state retention](./configuration.md#responses-state-and-compaction), while native compaction remains provider-capability-specific. OAuth providers are not valid automatic fallbacks. See [`troubleshooting.md`](./troubleshooting.md#provider-and-model-problems) for proxy, headless-login, model-name, and config-key errors.
 
@@ -790,7 +790,7 @@ Fallbacks are useful for transient provider failures, rate limits, or model avai
 
 </details>
 
-String entries in `fallbackModels` are preset names, not raw model names. nanobot tries them in order after the active preset. Each fallback preset uses its own `provider`, `model`, `maxTokens`, `contextWindowTokens`, `temperature`, and optional `reasoningEffort`.
+String entries in `fallbackModels` are preset names, not raw model names. babo tries them in order after the active preset. Each fallback preset uses its own `provider`, `model`, `maxTokens`, `contextWindowTokens`, `temperature`, and optional `reasoningEffort`.
 
 Use inline fallback objects only when a model is not worth naming as a preset:
 
@@ -825,18 +825,18 @@ Use inline fallback objects only when a model is not worth naming as a preset:
 
 </details>
 
-`fallbackModels` belongs under `agents.defaults`, not inside each preset. If fallback candidates use smaller context windows, nanobot builds context using the smallest window in the active chain so every candidate can receive the same prompt. See [`configuration.md#model-fallbacks`](./configuration.md#model-fallbacks) for failure conditions.
+`fallbackModels` belongs under `agents.defaults`, not inside each preset. If fallback candidates use smaller context windows, babo builds context using the smallest window in the active chain so every candidate can receive the same prompt. See [`configuration.md#model-fallbacks`](./configuration.md#model-fallbacks) for failure conditions.
 
 ## Quick Checks
 
 Run these before debugging a chat app:
 
 ```bash
-nanobot status
-nanobot agent -m "Hello!"
+babo status
+babo agent -m "Hello!"
 ```
 
-If `nanobot agent -m "Hello!"` fails:
+If `babo agent -m "Hello!"` fails:
 
 | Symptom | Likely cause |
 |---|---|

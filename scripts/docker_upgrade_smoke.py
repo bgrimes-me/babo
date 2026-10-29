@@ -1,6 +1,6 @@
 """Replace real Docker images while retaining isolated config and chat data.
 
-The image owner performs the upgrade, not nanobot's in-place updater. Reuse the
+The image owner performs the upgrade, not babo's in-place updater. Reuse the
 packaged-update data contract inside each image; never install into a container.
 """
 
@@ -18,24 +18,24 @@ from urllib.parse import quote
 
 
 def product_phase(phase: str, version: str) -> None:
-    import nanobot
-    from nanobot.gateway.runtime import GatewayInstance, GatewayRuntime
+    import babo
+    from babo.gateway.runtime import GatewayInstance, GatewayRuntime
 
     spec = importlib.util.spec_from_file_location("probe", Path(__file__).with_name("verify_packaged_update.py"))
     probe = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(probe)
-    root = Path("/home/nanobot/.nanobot/acceptance")
-    assert nanobot.__version__ == version
-    assert Path(nanobot.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
+    root = Path("/home/babo/.babo/acceptance")
+    assert babo.__version__ == version
+    assert Path(babo.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
 
     def ready(root, expected):
-        instance = GatewayInstance.resolve(config_path=root / "account/.nanobot/config.json")
+        instance = GatewayInstance.resolve(config_path=root / "account/.babo/config.json")
         runtime = GatewayRuntime(paths=instance.paths)
         deadline = time.monotonic() + 60
         while time.monotonic() < deadline:
             status = runtime.status()
             if status.running and status.ready:
-                assert nanobot.__version__ == expected and status.command[0] == sys.executable
+                assert babo.__version__ == expected and status.command[0] == sys.executable
                 terminal = probe.request(root, "/webui/terminal")
                 assert terminal["protocolVersion"] == 1 and terminal["gatewayId"]
                 return SimpleNamespace(run_id=f"{version}:{status.pid}:{status.started_at}")
@@ -80,7 +80,7 @@ def run(args) -> dict:
     images = {key: json.loads(subprocess.check_output(
         ["docker", "image", "inspect", image], text=True,
     ))[0]["Id"] for key, image in (("baseline", args.baseline_image), ("target", args.image))}
-    with tempfile.TemporaryDirectory(prefix="nanobot-docker-upgrade-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="babo-docker-upgrade-") as temporary:
         root = Path(temporary)
         volume = root.name
         container = volume + "-run"
@@ -99,7 +99,7 @@ def run(args) -> dict:
                         "docker", "run", "--rm", "--name", container, "--network", "none",
                         "--user", "1000:1000", "--cap-drop", "ALL",
                         "--security-opt", "no-new-privileges:true", "--entrypoint", "python",
-                        "-v", volume + ":/home/nanobot/.nanobot",
+                        "-v", volume + ":/home/babo/.babo",
                         "-v", str(scripts) + ":/probe:ro", image,
                         "-I", "/probe/docker_upgrade_smoke.py", "--phase", phase, "--version", version,
                     ], stdout=log, stderr=log, timeout=240)

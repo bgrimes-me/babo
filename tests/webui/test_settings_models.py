@@ -6,9 +6,9 @@ from typing import Any
 import httpx
 import pytest
 
-from nanobot.config.schema import Config
-from nanobot.providers.registry import find_by_name
-from nanobot.webui.settings_models import (
+from babo.config.schema import Config
+from babo.providers.registry import find_by_name
+from babo.webui.settings_models import (
     WebUISettingsError,
     create_model_configuration,
     model_settings_payload,
@@ -73,12 +73,12 @@ def _oauth_status(_spec: Any) -> dict[str, Any]:
 @pytest.mark.parametrize("target", ["tenant_a", "tenant_b"])
 @pytest.mark.parametrize("environment_model", [False, True])
 def test_auto_preset_model_change_isolates_connection_settings(target, environment_model, monkeypatch):
-    monkeypatch.setenv("NANOBOT_TEST_MODEL", "tenant_a/old")
+    monkeypatch.setenv("BABO_TEST_MODEL", "tenant_a/old")
     config = Config.model_validate({
         "providers": {name: {"apiKey": "fixture", "apiBase": "https://shared.test/v1"}
                       for name in ("tenant_b", "tenant_a")},
         "modelPresets": {"primary": {
-            "provider": "auto", "model": "${NANOBOT_TEST_MODEL}" if environment_model else "tenant_a/old",
+            "provider": "auto", "model": "${BABO_TEST_MODEL}" if environment_model else "tenant_a/old",
             "extraHeaders": {"X-Token": "private"},
             "extraQuery": {"key": "private"}, "extraBody": {"token": "private"},
         }},
@@ -87,7 +87,7 @@ def test_auto_preset_model_change_isolates_connection_settings(target, environme
         update_model_configuration(config, {
             "name": ["primary"], "temperature": ["0.3"],
         }, oauth_status=_oauth_status)
-        assert config.model_presets["primary"].model == "${NANOBOT_TEST_MODEL}"
+        assert config.model_presets["primary"].model == "${BABO_TEST_MODEL}"
     update_model_configuration(config, {
         "name": ["primary"], "model": [f"{target}/new"],
     }, oauth_status=_oauth_status)
@@ -192,10 +192,10 @@ def test_default_context_window_rejects_invalid_tokens(value: str) -> None:
 def test_provider_model_refresh_reaches_oauth_catalog(monkeypatch, provider, refresh):
     from unittest.mock import Mock
 
-    from nanobot.providers.oauth_model_catalog import OAuthModelCatalogSnapshot
+    from babo.providers.oauth_model_catalog import OAuthModelCatalogSnapshot
 
     catalog = Mock(return_value=OAuthModelCatalogSnapshot(models=(), source="remote", fetched_at=123))
-    monkeypatch.setattr("nanobot.webui.settings_models.get_oauth_model_catalog", catalog)
+    monkeypatch.setattr("babo.webui.settings_models.get_oauth_model_catalog", catalog)
     query = {"provider": [provider]}
     if refresh:
         query["refresh"] = ["1"]

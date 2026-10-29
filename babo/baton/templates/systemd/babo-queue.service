@@ -1,0 +1,12 @@
+[Unit]
+Description=Babo model queue (one line for every model call in the town)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart={{ distrobox }} enter {{ box }} -- {{ babo }} queue
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

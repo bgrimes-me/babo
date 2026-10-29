@@ -9,15 +9,15 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.baton import founding
-from nanobot.baton.founding import (
+from babo.baton import founding
+from babo.baton.founding import (
     approve_founding_request,
     decline_founding_request,
     found_town,
     founding_requests,
 )
-from nanobot.baton.registry import Registry
-from nanobot.baton.town import RESIDENT_MARKER, BatonError, Town, find_town_for_workspace
+from babo.baton.registry import Registry
+from babo.baton.town import RESIDENT_MARKER, BatonError, Town, find_town_for_workspace
 
 BATON_PKG = Path(founding.__file__).resolve().parent
 
@@ -51,7 +51,7 @@ def test_found_town_is_idempotent_and_commits_once(town: Town) -> None:
 
 def test_town_gitignore_keeps_projects_and_derived_data_out(town: Town) -> None:
     ignore = (town.root / ".gitignore").read_text()
-    for pattern in ("residents/*/projects/", "commons/projects/", "residents/*/memory/", "residents/*/.nanobot*/"):
+    for pattern in ("residents/*/projects/", "commons/projects/", "residents/*/memory/", "residents/*/.babo*/"):
         assert pattern in ignore
 
 

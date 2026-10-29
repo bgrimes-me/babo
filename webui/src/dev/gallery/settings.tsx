@@ -33,7 +33,7 @@ import { AutomationRunDialogView } from "@/components/settings/system/Automation
 import { AutomationRunAtPicker } from "@/components/settings/system/AutomationRunAtPicker";
 import { TokenUsageCard } from "@/components/settings/TokenUsageCard";
 import { Button } from "@/components/ui/button";
-import type { ChannelValidationPayload, ModelAPIConfig, NanobotFeatureInfo, SessionAutomationJob, SettingsPayload } from "@/lib/types";
+import type { ChannelValidationPayload, ModelAPIConfig, BaboFeatureInfo, SessionAutomationJob, SettingsPayload } from "@/lib/types";
 import { Sample, StatePicker, type ComponentExample } from "./example";
 import { useGalleryTranslation } from "./i18n";
 
@@ -288,10 +288,10 @@ function SafetyPreview() {
     isNativeHostSurface={false} onChangeForm={setForm} onSave={save} /><FormStatus dirty={dirty} /></>;
 }
 
-const channel: NanobotFeatureInfo = {
+const channel: BaboFeatureInfo = {
   name: "gallery_channel", display_name: "Example channel", type: "channel", enabled: false, installed: true,
   configured: true, ready: true, status: "not_enabled", install_supported: true, requires_restart: false, runtime_status: "stopped",
-  setup: { fields: [], official_url: "https://nanobot.wiki/docs/latest/getting-started/chat-apps" },
+  setup: { fields: [], official_url: "https://babo.wiki/docs/latest/getting-started/chat-apps" },
 };
 
 function ChannelCatalogPreview() {
@@ -335,7 +335,7 @@ function CredentialsPreview() {
     <div className="flex flex-wrap items-center gap-3"><Button variant="outline" onClick={() => {
       const next = channelRequirementErrors(channelFields, [{ alternatives: [["bot_token"]] }], values, new Set(), new Set(), "required");
       setErrorFields(Object.keys(next)); setNotice({ kind: Object.keys(next).length ? "incomplete" : "saved" });
-    }}>{t("controls.credentials.checkSave")}</Button><ChannelSetupActions feature={{ ...channel, display_name: t("controls.channelCatalog.exampleChannel") }} setup={{ actions: [{ id: "copy", label: t("controls.credentials.command"), copyText: "nanobot gateway" }] }} onNotice={(message) => setNotice(message ? { kind: "helper", message } : null)} /></div>
+    }}>{t("controls.credentials.checkSave")}</Button><ChannelSetupActions feature={{ ...channel, display_name: t("controls.channelCatalog.exampleChannel") }} setup={{ actions: [{ id: "copy", label: t("controls.credentials.command"), copyText: "babo gateway" }] }} onNotice={(message) => setNotice(message ? { kind: "helper", message } : null)} /></div>
     <p role="status" className="text-xs text-muted-foreground">{notice?.kind === "helper" ? notice.message : notice?.kind === "applied" ? t("controls.credentials.applied", { name: t(`controls.credentials.${notice.preset}`) }) : t(notice ? `controls.credentials.${notice.kind}` : "controls.credentials.hint")}</p>
   </div>;
 }

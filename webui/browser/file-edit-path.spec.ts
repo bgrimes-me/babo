@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-const longEditPath = "C:/Users/HR/.nanobot-ncode/workspace/artifacts/nan284-local-file-attachments/review-fixes-20261022-133833/serve_fixture.py";
+const longEditPath = "C:/Users/HR/.babo-ncode/workspace/artifacts/nan284-local-file-attachments/review-fixes-20261022-133833/serve_fixture.py";
 
 for (const width of [360, 1024]) {
   test(`file edit paths preserve statistics and reveal full paths at ${width}px`, async ({ page }, testInfo) => {

@@ -3,8 +3,8 @@ import type { ServerWebSocket } from "bun"
 import type { TextareaRenderable } from "@opentui/core"
 import { createTestRenderer, MockTreeSitterClient } from "@opentui/core/testing"
 
-import { NanobotTui } from "./app"
-import type { InboundEvent, NanobotClient } from "../client"
+import { BaboTui } from "./app"
+import type { InboundEvent, BaboClient } from "../client"
 
 async function waitUntil(predicate: () => boolean): Promise<void> {
   const deadline = Date.now() + 2_000
@@ -32,20 +32,20 @@ async function fixture() {
     },
   })
   const setup = await createTestRenderer({ width: 72, height: 20 })
-  const app = NanobotTui.mount(setup.renderer, {
+  const app = BaboTui.mount(setup.renderer, {
     wsUrl: `ws://127.0.0.1:${server.port}`,
     apiUrl: "",
     apiToken: "",
     model: "test/model",
     modelPreset: "default",
-    workspace: "/tmp/nanobot-workspace",
+    workspace: "/tmp/babo-workspace",
     version: "test",
     access: "workspace access",
     theme: "dark",
   }, undefined, new MockTreeSitterClient({ autoResolveTimeout: 0 }))
   const ui = app as unknown as {
     composer: TextareaRenderable
-    client: NanobotClient
+    client: BaboClient
     ready: boolean
     activeTurn: boolean
   }

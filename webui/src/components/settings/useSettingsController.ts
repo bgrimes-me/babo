@@ -114,7 +114,7 @@ export function useSettingsController({
   const draftsRef = useRef({ form, imageGenerationForm, networkSafetyForm, transcriptionForm, webSearchForm });
   draftsRef.current = { form, imageGenerationForm, networkSafetyForm, transcriptionForm, webSearchForm };
   const systemState = useSystemSettingsState();
-  const featureCatalog = systemState.nanobotFeatures?.features ?? [];
+  const featureCatalog = systemState.baboFeatures?.features ?? [];
 
   useEffect(() => {
     setActiveSection(initialSection);

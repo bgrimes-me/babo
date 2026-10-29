@@ -14,13 +14,13 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.gateway import (
+from babo.gateway import (
     GatewayInstance,
     GatewayRuntime,
     GatewayRuntimePaths,
     GatewayStartOptions,
 )
-from nanobot.gateway.windows_shutdown import WindowsShutdownEvent, request_windows_shutdown
+from babo.gateway.windows_shutdown import WindowsShutdownEvent, request_windows_shutdown
 
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="Windows process lifecycle")
 
@@ -46,7 +46,7 @@ def test_windowless_gateway_stop_runs_application_cleanup(tmp_path: Path) -> Non
     log_path = tmp_path / "gateway.log"
     with log_path.open("w", encoding="utf-8") as output:
         process = subprocess.Popen(
-            [sys.executable, "-m", "nanobot", "gateway", "--foreground", "--config", str(config_path)],
+            [sys.executable, "-m", "babo", "gateway", "--foreground", "--config", str(config_path)],
             cwd=root,
             env=env,
             stdin=subprocess.DEVNULL,
@@ -70,7 +70,7 @@ def test_windowless_gateway_stop_runs_application_cleanup(tmp_path: Path) -> Non
                 assert time.monotonic() < deadline, log_path.read_text(encoding="utf-8")
                 time.sleep(0.02)
             stopped = subprocess.run(
-                [sys.executable, "-m", "nanobot", "gateway", "stop", "--config", str(config_path)],
+                [sys.executable, "-m", "babo", "gateway", "stop", "--config", str(config_path)],
                 cwd=root,
                 env=env,
                 capture_output=True,
@@ -168,7 +168,7 @@ def test_shutdown_signal_is_private_process_bound_and_latched(tmp_path: Path) ->
         assert request_windows_shutdown(pid, identity + "1", token) is False
         other = WindowsShutdownEvent(pid, identity)
         try:
-            other_name = rf"Local\nanobot-gateway-stop-{pid}-{identity}-{other.token}"
+            other_name = rf"Local\babo-gateway-stop-{pid}-{identity}-{other.token}"
             assert request_windows_shutdown(pid, identity, other_name) is False
             kernel = ctypes.WinDLL("kernel32", use_last_error=True)
             kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
@@ -211,7 +211,7 @@ def test_failed_foreground_publication_closes_shutdown_signal(tmp_path: Path, mo
     def fail_write(_state):
         raise OSError("cannot publish state")
 
-    monkeypatch.setattr("nanobot.gateway.runtime.WindowsShutdownEvent", create_signal)
+    monkeypatch.setattr("babo.gateway.runtime.WindowsShutdownEvent", create_signal)
     monkeypatch.setattr(runtime, "_write_state", fail_write)
     with pytest.raises(OSError, match="cannot publish state"):
         with runtime.foreground_instance(GatewayStartOptions(port=0)):
@@ -223,7 +223,7 @@ def test_failed_foreground_publication_closes_shutdown_signal(tmp_path: Path, mo
 _STALLED_GATEWAY = r"""
 import json, subprocess, sys, time
 from pathlib import Path
-from nanobot.gateway import GatewayInstance, GatewayRuntime, GatewayStartOptions
+from babo.gateway import GatewayInstance, GatewayRuntime, GatewayStartOptions
 
 root = Path(sys.argv[1])
 runtime = GatewayRuntime(paths=GatewayInstance.resolve(config_path=root / 'config.json').paths)

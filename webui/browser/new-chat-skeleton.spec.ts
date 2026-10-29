@@ -28,7 +28,7 @@ for (const c of cases) for (const locale of ["en", "zh-CN"]) {
     test("aligns the document skeleton with the real welcome, composer and header", async ({ page }) => {
       await page.addInitScript((language) => {
         Math.random = () => 0;
-        localStorage.setItem("nanobot.locale", language);
+        localStorage.setItem("babo.locale", language);
       }, locale);
       await page.route("**/api/commands", (route) => route.fulfill({ json: { commands: [] } }));
       const url = `/browser/fixture.html?case=new-chat-skeleton${c.extra}${locale === "zh-CN" ? "&dark" : ""}`;
@@ -62,7 +62,7 @@ for (const c of cases) for (const locale of ["en", "zh-CN"]) {
       if (c.width < 640) expect(Math.abs(greeting.y + greeting.height / 2 - loaded.greeting.y - loaded.greeting.height / 2)).toBeLessThanOrEqual(1);
       else expect(Math.abs(greeting.y + greeting.height - loaded.greeting.y - loaded.greeting.height)).toBeLessThanOrEqual(1);
       expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
-      await expect(page.getByRole("status")).toHaveText("Loading nanobot…");
+      await expect(page.getByRole("status")).toHaveText("Loading babo…");
     });
   });
 }

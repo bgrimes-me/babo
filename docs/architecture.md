@@ -1,6 +1,6 @@
 # Architecture
 
-This page maps nanobot's runtime behavior to source files. Use it when you are debugging internals, reviewing a PR, adding a provider/channel/tool, or trying to understand where a user-visible behavior comes from.
+This page maps babo's runtime behavior to source files. Use it when you are debugging internals, reviewing a PR, adding a provider/channel/tool, or trying to understand where a user-visible behavior comes from.
 
 For the product-level mental model, read [`concepts.md`](./concepts.md) first.
 
@@ -26,12 +26,12 @@ Main files:
 
 | Area | Files |
 |---|---|
-| Message events and queue | `nanobot/bus/events.py`, `nanobot/bus/queue.py` |
-| Turn orchestration | `nanobot/agent/loop.py` |
-| Provider/tool conversation loop | `nanobot/agent/runner.py` |
-| Context construction | `nanobot/agent/context.py` |
-| Session storage and compaction | `nanobot/session/manager.py` |
-| Long-term memory and Dream | `nanobot/agent/memory.py` |
+| Message events and queue | `babo/bus/events.py`, `babo/bus/queue.py` |
+| Turn orchestration | `babo/agent/loop.py` |
+| Provider/tool conversation loop | `babo/agent/runner.py` |
+| Context construction | `babo/agent/context.py` |
+| Session storage and compaction | `babo/session/manager.py` |
+| Long-term memory and Dream | `babo/agent/memory.py` |
 
 ## Agent Loop vs Agent Runner
 
@@ -63,7 +63,7 @@ When file reads make a request exceed the context budget, the runner first summa
 
 ## Providers
 
-Provider metadata is centralized in `nanobot/providers/registry.py`. Configuration fields live in `nanobot/config/schema.py`.
+Provider metadata is centralized in `babo/providers/registry.py`. Configuration fields live in `babo/config/schema.py`.
 
 Provider selection uses:
 
@@ -73,9 +73,9 @@ Provider selection uses:
 - local provider fallback when `apiBase` is configured;
 - gateway fallback for providers that can route many model families.
 
-Provider implementations live in `nanobot/providers/`. Most hosted providers use the OpenAI-compatible implementation, while Anthropic, Azure OpenAI, AWS Bedrock, OpenAI Codex, and GitHub Copilot have specialized paths.
+Provider implementations live in `babo/providers/`. Most hosted providers use the OpenAI-compatible implementation, while Anthropic, Azure OpenAI, AWS Bedrock, OpenAI Codex, and GitHub Copilot have specialized paths.
 
-Responses API paths share `nanobot/providers/openai_responses/backend.py`. The backend constructs protocol input, dispatches SDK or HTTP/SSE requests, owns WebSocket sessions, and advances replay and compaction state. SDK, SSE, and WebSocket events use the same parser in `openai_responses/parsing.py`.
+Responses API paths share `babo/providers/openai_responses/backend.py`. The backend constructs protocol input, dispatches SDK or HTTP/SSE requests, owns WebSocket sessions, and advances replay and compaction state. SDK, SSE, and WebSocket events use the same parser in `openai_responses/parsing.py`.
 
 Provider adapters supply authentication, endpoint and model rules, supported request fields, hosted tools, and error mapping. Codex enables WebSocket with its beta header; other adapters retain their existing HTTP transports. Protocol compatibility alone does not enable WebSocket or persistent continuation. OpenAI's `extraBody.store` override controls server storage; automatic response-ID continuation currently uses the active WebSocket connection. Full replay state remains local and scoped to the provider endpoint and model.
 
@@ -92,16 +92,16 @@ Main files:
 
 | Area | Files |
 |---|---|
-| Base channel contract | `nanobot/channels/base.py` |
-| Channel packages | `nanobot/channels/<channel>/` |
-| Discovery and lifecycle | `nanobot/channels/manager.py` |
-| WebSocket/WebUI channel | `nanobot/channels/websocket/` |
+| Base channel contract | `babo/channels/base.py` |
+| Channel packages | `babo/channels/<channel>/` |
+| Discovery and lifecycle | `babo/channels/manager.py` |
+| WebSocket/WebUI channel | `babo/channels/websocket/` |
 
-Channels are discovered by scanning self-contained packages under `nanobot/channels/`. Add a channel by contributing one package that follows [`channel-package-guide.md`](./channel-package-guide.md).
+Channels are discovered by scanning self-contained packages under `babo/channels/`. Add a channel by contributing one package that follows [`channel-package-guide.md`](./channel-package-guide.md).
 
 ## WebUI and Gateway
 
-`nanobot gateway` starts:
+`babo gateway` starts:
 
 - enabled chat channels;
 - the WebSocket channel when configured;
@@ -116,7 +116,7 @@ The packaged WebUI is served by the WebSocket channel, not the health endpoint:
 | Health endpoint | `http://127.0.0.1:18790/health` |
 | WebUI/WebSocket | `http://127.0.0.1:8765` |
 
-WebUI source lives in `webui/`. The production build is written to `nanobot/web/dist/` and bundled into the wheel.
+WebUI source lives in `webui/`. The production build is written to `babo/web/dist/` and bundled into the wheel.
 
 Useful docs:
 
@@ -126,21 +126,21 @@ Useful docs:
 
 ## Tools
 
-Tools are discovered from `nanobot/agent/tools/` and plugin entry points.
+Tools are discovered from `babo/agent/tools/` and plugin entry points.
 
 Important files:
 
 | Tool area | Files |
 |---|---|
-| Tool base and schema | `nanobot/agent/tools/base.py`, `nanobot/agent/tools/schema.py` |
-| Discovery | `nanobot/agent/tools/registry.py` |
-| Shell execution | `nanobot/agent/tools/shell.py` |
-| Filesystem tools | `nanobot/agent/tools/filesystem.py` |
-| Web search/fetch | `nanobot/agent/tools/web.py` |
-| MCP tools | `nanobot/agent/tools/mcp.py` |
-| Cron | `nanobot/agent/tools/cron.py`, `nanobot/cron/` |
-| Image generation | `nanobot/agent/tools/image_generation.py` |
-| Runtime self-inspection | `nanobot/agent/tools/self.py` |
+| Tool base and schema | `babo/agent/tools/base.py`, `babo/agent/tools/schema.py` |
+| Discovery | `babo/agent/tools/registry.py` |
+| Shell execution | `babo/agent/tools/shell.py` |
+| Filesystem tools | `babo/agent/tools/filesystem.py` |
+| Web search/fetch | `babo/agent/tools/web.py` |
+| MCP tools | `babo/agent/tools/mcp.py` |
+| Cron | `babo/agent/tools/cron.py`, `babo/cron/` |
+| Image generation | `babo/agent/tools/image_generation.py` |
+| Runtime self-inspection | `babo/agent/tools/self.py` |
 
 Tool behavior is part of the model contract. Keep user-visible tool names, schemas, and error messages stable unless a change is intentional.
 
@@ -148,15 +148,15 @@ Before tool execution, schema-guided casting can decode a nested JSON string whe
 
 ## Config and Paths
 
-The config schema lives in `nanobot/config/schema.py`. Loading and saving live in `nanobot/config/loader.py`. Runtime path helpers live in `nanobot/config/paths.py`.
+The config schema lives in `babo/config/schema.py`. Loading and saving live in `babo/config/loader.py`. Runtime path helpers live in `babo/config/paths.py`.
 
 Defaults:
 
 | Path | Default |
 |---|---|
-| Config | `~/.nanobot/config.json` |
-| Workspace | `~/.nanobot/workspace/` |
-| Sessions | `<config-dir>/sessions/<workspace-id>/sessions.sqlite3` (default: `~/.nanobot/sessions/...`) |
+| Config | `~/.babo/config.json` |
+| Workspace | `~/.babo/workspace/` |
+| Sessions | `<config-dir>/sessions/<workspace-id>/sessions.sqlite3` (default: `~/.babo/sessions/...`) |
 | Memory | `<workspace>/memory/` |
 | Cron store | `<workspace>/cron/jobs.json` |
 | WebUI/media/log runtime data | config directory subdirectories such as `webui/`, `media/`, and `logs/` |
@@ -179,13 +179,13 @@ Runtime code distinguishes the configured agent workspace from the effective pro
 
 Session history is the near-term conversation replay. Memory is the longer-term workspace state.
 
-`nanobot/session/history.py` reads full persisted model history for `search_sessions` and `read_session`, including messages before summary checkpoints. Tool results contain public user and assistant text with indexes into the original session messages. Display facts are stored separately from those messages in the same SQLite database; they never become provider context or session-tool history.
+`babo/session/history.py` reads full persisted model history for `search_sessions` and `read_session`, including messages before summary checkpoints. Tool results contain public user and assistant text with indexes into the original session messages. Display facts are stored separately from those messages in the same SQLite database; they never become provider context or session-tool history.
 
 `SessionState` owns both logical histories. `history_entries` stores transport-neutral inputs, completed answer/reasoning segments, activity, historical file diffs, response sources, and completion statistics/outcomes; `history_turns` and `history_heads` provide bounded paging and revision/sidebar projections. WebUI converts these facts into its existing transcript protocol inside an owner-managed read snapshot. Delta frames remain transient. A turn may commit facts as it progresses; this is not a transaction held across a model request or network delivery.
 
 Every append carries the generation admitted before execution, including a distinct display destination under unified-session routing. A missing or replaced session rejects the append instead of creating a new row. Delete/reset cascades through both logical histories; fork copies its canonical and display prefixes in one SQLite transaction. Future in-place history replacement should use that same owner transaction rather than file journals or replay-cache writes.
 
-`nanobot/webui/history.py` resolves legacy `<stem>.jsonl` files and numbered JSONL files inside `<stem>.segments/` directories, then imports them through `SessionState` before recovery or transport admission. Recorded chat identities determine the target session; histories without a recorded identity require an unambiguous existing canonical session. Display-only histories with a recorded identity are imported into the starting workspace namespace. Histories owned by exactly one other namespace are deferred to that namespace; duplicate owners and malformed records fail startup.
+`babo/webui/history.py` resolves legacy `<stem>.jsonl` files and numbered JSONL files inside `<stem>.segments/` directories, then imports them through `SessionState` before recovery or transport admission. Recorded chat identities determine the target session; histories without a recorded identity require an unambiguous existing canonical session. Display-only histories with a recorded identity are imported into the starting workspace namespace. Histories owned by exactly one other namespace are deferred to that namespace; duplicate owners and malformed records fail startup.
 
 `SqliteSessionStore.migrate_history()` commits the imported facts and completion markers in one transaction. Per-session ownership receipts in `storage_meta` survive session deletion, so another namespace cannot restore deleted chats by reimporting the unchanged legacy backups.
 
@@ -194,9 +194,9 @@ Every append carries the generation admitted before execution, including a disti
 | SQLite conversation state | `<config-dir>/sessions/<workspace-id>/sessions.sqlite3` |
 | Long-term memory | `<workspace>/memory/MEMORY.md` |
 | Consolidation source history | `<workspace>/memory/history.jsonl` |
-| Bootstrap identity files | `<workspace>/SOUL.md`, `<workspace>/USER.md`, templates under `nanobot/templates/` |
+| Bootstrap identity files | `<workspace>/SOUL.md`, `<workspace>/USER.md`, templates under `babo/templates/` |
 
-Dream is implemented in `nanobot/agent/memory.py` and scheduled by the runtime when enabled.
+Dream is implemented in `babo/agent/memory.py` and scheduled by the runtime when enabled.
 
 ## Security Boundaries
 
@@ -204,11 +204,11 @@ Security-sensitive code paths include:
 
 | Boundary | Files |
 |---|---|
-| Workspace scope | `nanobot/security/workspace_access.py`, `nanobot/security/workspace_policy.py` |
-| Shell sandboxing | `nanobot/agent/tools/shell.py` |
-| SSRF/network checks | `nanobot/security/network.py`, `nanobot/agent/tools/web.py` |
-| PTH guard and CLI startup security | `nanobot/security/` and CLI entrypoints |
-| Channel access control | channel config in `nanobot/channels/*.py` |
+| Workspace scope | `babo/security/workspace_access.py`, `babo/security/workspace_policy.py` |
+| Shell sandboxing | `babo/agent/tools/shell.py` |
+| SSRF/network checks | `babo/security/network.py`, `babo/agent/tools/web.py` |
+| PTH guard and CLI startup security | `babo/security/` and CLI entrypoints |
+| Channel access control | channel config in `babo/channels/*.py` |
 
 When changing tools, channels, file access, WebUI workspace behavior, or network fetching, treat security as part of the functional behavior and update docs if the user-facing boundary changes.
 
@@ -221,7 +221,7 @@ When changing tools, channels, file access, WebUI workspace behavior, or network
 | Tool | Implement a tool under `agent/tools/` or expose a plugin entry point |
 | Agent Plugin | Add a v1 package under `<workspace>/plugins/` and enable it from Apps |
 | MCP | Add `tools.mcpServers` config or bundle the server in an Agent Plugin |
-| Skill | Add workspace skills under `<workspace>/skills/`, bundle them in an Agent Plugin, or add built-in skills under `nanobot/skills/` |
+| Skill | Add workspace skills under `<workspace>/skills/`, bundle them in an Agent Plugin, or add built-in skills under `babo/skills/` |
 | CLI App | Add it to the CLI Apps catalog; the installer owns its executable lifecycle and writes a skills-only Agent Plugin |
 
 Prefer existing registry/discovery patterns over ad hoc wiring.
@@ -232,7 +232,7 @@ Common checks:
 
 ```bash
 pytest tests/test_openai_api.py::test_function -v
-ruff check nanobot/
+ruff check babo/
 cd webui && bun run test
 cd webui && bun run build
 ```
@@ -241,8 +241,8 @@ Choose tests based on the changed surface:
 
 | Change | Minimum useful verification |
 |---|---|
-| Provider behavior | Provider unit tests or a mocked API path; `nanobot agent -m "Hello!"` with safe config when possible |
-| Channel behavior | Channel tests plus `nanobot gateway` startup path |
+| Provider behavior | Provider unit tests or a mocked API path; `babo agent -m "Hello!"` with safe config when possible |
+| Channel behavior | Channel tests plus `babo gateway` startup path |
 | WebUI behavior | WebUI tests/build and, for routing/settings/chat changes, browser-level verification through the gateway |
 | Tool behavior | Tool unit tests and an agent-run path when schema or model-facing behavior changes |
 | Docs | Link checks, command accuracy against CLI/schema, and `git diff --check` |

@@ -10,14 +10,14 @@ import pytest
 from websockets.datastructures import Headers
 from websockets.http11 import Request
 
-from nanobot.agent.memory import Consolidator
-from nanobot.agent.subagent import SubagentManager
-from nanobot.bus.queue import MessageBus
-from nanobot.channels.websocket.runtime import WebSocketConfig
-from nanobot.providers.base import GenerationSettings, LLMProvider
-from nanobot.session.manager import SessionManager
-from nanobot.utils.llm_runtime import LLMRuntime
-from nanobot.webui.gateway_services import build_gateway_services
+from babo.agent.memory import Consolidator
+from babo.agent.subagent import SubagentManager
+from babo.bus.queue import MessageBus
+from babo.channels.websocket.runtime import WebSocketConfig
+from babo.providers.base import GenerationSettings, LLMProvider
+from babo.session.manager import SessionManager
+from babo.utils.llm_runtime import LLMRuntime
+from babo.webui.gateway_services import build_gateway_services
 
 
 @pytest.mark.asyncio

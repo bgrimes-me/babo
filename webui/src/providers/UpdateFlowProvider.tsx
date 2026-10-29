@@ -8,10 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { UpdateGuide } from "@/components/UpdateGuide";
 import { ApiError, createUpdateReview, readUpdateReview, readUpdateJob, prepareUpdate, executeUpdate, settleUpdate,
   type UpdateReviewResponse, type UpdateJob } from "@/lib/api";
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 
-const STORAGE_KEY = "nanobot.pending-update.v1";
-const RECOVERY_KEY = "nanobot.pending-update-recovery.v1";
+const STORAGE_KEY = "babo.pending-update.v1";
+const RECOVERY_KEY = "babo.pending-update-recovery.v1";
 const terminal = new Set(["preparation_failed", "handoff_failed", "restart_failed", "succeeded", "failed", "cancelled"]);
 const UpdateFlowContext = createContext<{ open: (() => void) | undefined; pending: boolean }>({ open: undefined, pending: false });
 
@@ -26,7 +26,7 @@ function remember(id: string | null) {
 }
 
 export function UpdateFlowProvider({ client, token, enabled, canSettleHandoff = false, children }: {
-  client: NanobotClient; token: string; enabled: boolean; canSettleHandoff?: boolean; children: ReactNode;
+  client: BaboClient; token: string; enabled: boolean; canSettleHandoff?: boolean; children: ReactNode;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -281,7 +281,7 @@ export function UpdateFlowProvider({ client, token, enabled, canSettleHandoff = 
     } else void confirm();
   };
   const close = () => { setOpen(false); if (done) { remember(null); setPendingId(null); window.location.reload(); } };
-  const ownerInstructions = <a className="mt-3 block rounded-control text-sm text-muted-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href="https://github.com/HKUDS/nanobot/blob/main/docs/updating.md#installation-owners"
+  const ownerInstructions = <a className="mt-3 block rounded-control text-sm text-muted-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href="https://github.com/bgrimes-me/babo/blob/main/docs/updating.md#installation-owners"
     target="_blank" rel="noreferrer">{t("updates.ownerGuide")}</a>;
 
   return <UpdateFlowContext.Provider value={{ open: enabled ? show : undefined, pending: enabled && !!pendingId }}>
@@ -291,7 +291,7 @@ export function UpdateFlowProvider({ client, token, enabled, canSettleHandoff = 
         onOpenAutoFocus={(event) => { event.preventDefault(); heading.current?.focus(); }}
         onCloseAutoFocus={(event) => { event.preventDefault(); if (trigger.current?.isConnected) trigger.current.focus(); }}>
         <div aria-live="polite" aria-atomic="true">
-          <img src="/brand/nanobot_mark.svg" alt="" draggable={false} className="mb-4 h-11 w-11 select-none" />
+          <img src="/brand/babo_mark.svg" alt="" draggable={false} className="mb-4 h-11 w-11 select-none" />
           <AlertDialogTitle ref={heading} tabIndex={-1} className="text-lg font-semibold leading-7 tracking-tight outline-none">{guide
             ? guide.reason === "restart" ? t("updates.guide.verifyTitle") : t("updates.guide.entry", { method: t(`updates.guide.methods.${guide.method}`) })
             : t(checkingStatus ? "settings.about.checking" : `updates.${title}`)}</AlertDialogTitle>

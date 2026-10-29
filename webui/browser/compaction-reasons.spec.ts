@@ -25,7 +25,7 @@ for (const { code } of supportedLocales) {
       readFileSync(new URL(`../src/i18n/locales/${code}/common.json`, import.meta.url), "utf8"),
     );
     const copy = messages.thread.compaction;
-    await page.addInitScript((locale) => localStorage.setItem("nanobot.locale", locale), code);
+    await page.addInitScript((locale) => localStorage.setItem("babo.locale", locale), code);
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     const history: ThreadProjectionEvent[] = [legacy,

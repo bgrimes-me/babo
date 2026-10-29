@@ -126,7 +126,7 @@ Figma uses the desktop app's local MCP endpoint. Supabase starts a local server 
 
 ## Local servers
 
-Local servers run on the gateway computer. Install the runtime or application listed for each service. Stdio servers use a managed working directory under the nanobot data directory so their runtime files stay outside the source checkout. Figma connects over HTTP to the local desktop app.
+Local servers run on the gateway computer. Install the runtime or application listed for each service. Stdio servers use a managed working directory under the babo data directory so their runtime files stay outside the source checkout. Figma connects over HTTP to the local desktop app.
 
 | Service | Requirements | Setup |
 | --- | --- | --- |
@@ -161,7 +161,7 @@ Firebase uses your Firebase CLI sign-in. The dbt server completes its own browse
 
 Azure uses your Azure CLI sign-in. BigQuery uses Google Application Default Credentials and the project ID you provide. Salesforce DX uses your authorized default target org and enables its data, orgs, and metadata toolsets. AWS uses the official SigV4 proxy with your IAM credentials; its preset connects to the `us-east-1` managed endpoint. Alation uses a service-account integration. Tableau uses a personal access token and requires a site name for Tableau Cloud.
 
-For Gong, a Tech admin must create an **Automatic** MCP integration and register nanobot's callback URL. Vanta requires an Admin account. Omni requires administrator-enabled AI, MCP, and personal access tokens. Supermetrics requires a subscription with API access. Zoho CRM provides separate server URLs for Data Insights, Data Operations, Module Customization, and Automation; copy the one you need from its setup guide.
+For Gong, a Tech admin must create an **Automatic** MCP integration and register babo's callback URL. Vanta requires an Admin account. Omni requires administrator-enabled AI, MCP, and personal access tokens. Supermetrics requires a subscription with API access. Zoho CRM provides separate server URLs for Data Insights, Data Operations, Module Customization, and Automation; copy the one you need from its setup guide.
 
 Semrush's preset uses an API key and adds the `Apikey` authorization prefix. Snowflake requires a managed MCP server URL, a programmatic access token, and grants on the tools exposed by that server. Provider guides list regional alternatives for services whose presets use a US endpoint.
 
@@ -171,11 +171,11 @@ Clay workspace administrators must enable MCP and allow **Unknown** clients for 
 
 A listing in another product's plugin directory does not supply a portable MCP URL or reusable credentials. Native OAuth presets require authorization-server discovery and dynamic client registration. Services that require a fixed OAuth client, client allowlisting, or additional onboarding need their own setup. This includes [Asana](https://developers.asana.com/docs/integrating-with-asanas-mcp-server), [HubSpot](https://developers.hubspot.com/docs/apps/developer-platform/build-apps/integrate-with-the-remote-hubspot-mcp-server), [Slack](https://docs.slack.dev/ai/slack-mcp-server/), [Canva](https://www.canva.dev/docs/apps/mcp/verify-app/), and [Dropbox](https://help.dropbox.com/integrations/connect-dropbox-mcp-server). Use a compatible local server or custom connection when you have completed the service's requirements.
 
-Provider plans, quotas, enabled tools, and organization policies still apply. A configured connection is distinct from a connected runtime; test it from Apps to inspect the actual tool list. Tool access follows your provider permissions and nanobot's configured policy. [MCP configuration](./configuration.md#mcp-model-context-protocol) describes tool allowlists, timeouts, OAuth token storage, and private-host access.
+Provider plans, quotas, enabled tools, and organization policies still apply. A configured connection is distinct from a connected runtime; test it from Apps to inspect the actual tool list. Tool access follows your provider permissions and babo's configured policy. [MCP configuration](./configuration.md#mcp-model-context-protocol) describes tool allowlists, timeouts, OAuth token storage, and private-host access.
 
 OpenAI Developers, Redis Docs, and Adobe Express Developer provide documentation. They do not grant access to private OpenAI accounts, Redis databases, or Adobe designs. Instacart's Developer Platform server creates recipe pages and shopping lists; it does not reproduce the account-based shopping plugin. MCP tools also do not imply support for another host's embedded plugin UI.
 
-Shopify Developer provides developer resources and validation; it does not supply an authenticated store-administration connection. The separate [Shop MCP](https://shopify.dev/changelog/posts/add-shopping-and-shop-pay-checkout-to-any-agent-with-shop-mcp) currently requires a protocol version unsupported by nanobot's MCP SDK. [tldraw's MCP App](https://tldraw.dev/blog/tldraw-mcp-app) depends on an embedded interactive canvas, which nanobot does not render.
+Shopify Developer provides developer resources and validation; it does not supply an authenticated store-administration connection. The separate [Shop MCP](https://shopify.dev/changelog/posts/add-shopping-and-shop-pay-checkout-to-any-agent-with-shop-mcp) currently requires a protocol version unsupported by babo's MCP SDK. [tldraw's MCP App](https://tldraw.dev/blog/tldraw-mcp-app) depends on an embedded interactive canvas, which babo does not render.
 
 [Box](https://developer.box.com/guides/box-mcp), [G2](https://documentation.g2.com/docs/g2-mcp-server), [Lovable](https://github.com/lovablelabs/mcp), and [Docusign](https://developers.docusign.com/platform/mcp-server/) require client-specific OAuth setup. [QuickBooks Online's local server](https://github.com/intuit/quickbooks-online-mcp-server) requires an Intuit OAuth app, an initial authorization handshake, and a local build. These services need a custom connection rather than a native browser-sign-in preset.
 
@@ -183,4 +183,4 @@ Expedia Travel Recommendations provides API-based travel recommendations and nee
 
 ## Maintaining presets
 
-The built-in catalogue is maintained in [`nanobot/webui/mcp_presets.json`](../nanobot/webui/mcp_presets.json). Each entry declares its server configuration and setup fields. Field types and defaults are defined in [`mcp_presets.py`](../nanobot/webui/mcp_presets.py); the gateway validates the catalogue when loading it. Add service connections to the JSON file and document their requirements here.
+The built-in catalogue is maintained in [`babo/webui/mcp_presets.json`](../babo/webui/mcp_presets.json). Each entry declares its server configuration and setup fields. Field types and defaults are defined in [`mcp_presets.py`](../babo/webui/mcp_presets.py); the gateway validates the catalogue when loading it. Add service connections to the JSON file and document their requirements here.

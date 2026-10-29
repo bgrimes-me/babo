@@ -51,7 +51,7 @@ test.skipIf(!nativeFontsAvailable)("viewer preserves preview footprint, transcri
   const raster = spyOn(transcript.diagrams.jobs, "raster")
   const height = transcript.root.scrollHeight
   const top = transcript.root.scrollTop
-  const composer = setup.renderer.root.findDescendantById("nanobot-tui-composer") as TextareaRenderable
+  const composer = setup.renderer.root.findDescendantById("babo-tui-composer") as TextareaRenderable
   composer.setText("keep draft 中文")
   setup.mockInput.pressKey("\x07")
   await setup.flush()
@@ -114,7 +114,7 @@ test("diagram command on ordinary Markdown shows an empty viewer and returns to 
   setup = await createTestRenderer({ width: 80, height: 35 })
   const app = mount(setup)
   app.accept({ event: "stream_end", chat_id: "chat", text: "Ordinary **Markdown**" })
-  const composer = setup.renderer.root.findDescendantById("nanobot-tui-composer") as TextareaRenderable
+  const composer = setup.renderer.root.findDescendantById("babo-tui-composer") as TextareaRenderable
   composer.setText("draft")
   setup.mockInput.pressKey("\x07")
   await setup.flush()

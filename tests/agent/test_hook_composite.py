@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from agent.session_helpers import mock_session_manager
-from nanobot.agent.context import TranscriptInput
-from nanobot.agent.hook import (
+from babo.agent.context import TranscriptInput
+from babo.agent.hook import (
     AgentHook,
     AgentHookContext,
     AgentRunHookContext,
@@ -16,11 +16,11 @@ from nanobot.agent.hook import (
     CompositeHook,
     SDKCaptureHook,
 )
-from nanobot.agent.hooks.file_edit_activity import FileEditActivityHook
-from nanobot.agent.progress_hook import AgentProgressHook
-from nanobot.agent.tools.context import RequestContext
-from nanobot.events import NO_EVENTS
-from nanobot.utils.progress_events import output_events
+from babo.agent.hooks.file_edit_activity import FileEditActivityHook
+from babo.agent.progress_hook import AgentProgressHook
+from babo.agent.tools.context import RequestContext
+from babo.events import NO_EVENTS
+from babo.utils.progress_events import output_events
 
 
 def _ctx() -> AgentHookContext:
@@ -416,18 +416,18 @@ async def test_composite_can_wrap_another_composite():
 
 
 def _make_loop(tmp_path, hooks=None, hook_factories=None):
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
     provider.get_default_model.return_value = "test-model"
     provider.generation.max_tokens = 4096
 
-    with patch("nanobot.agent.loop.ContextBuilder"), \
-         patch("nanobot.agent.loop.SessionManager", side_effect=mock_session_manager), \
-         patch("nanobot.agent.loop.SubagentManager") as mock_sub_mgr, \
-         patch("nanobot.agent.loop.Consolidator"):
+    with patch("babo.agent.loop.ContextBuilder"), \
+         patch("babo.agent.loop.SessionManager", side_effect=mock_session_manager), \
+         patch("babo.agent.loop.SubagentManager") as mock_sub_mgr, \
+         patch("babo.agent.loop.Consolidator"):
         mock_sub_mgr.return_value.cancel_by_session = AsyncMock(return_value=0)
         loop = AgentLoop(
             bus=bus,
@@ -442,7 +442,7 @@ def _make_loop(tmp_path, hooks=None, hook_factories=None):
 @pytest.mark.asyncio
 async def test_agent_loop_extra_hook_receives_calls(tmp_path):
     """Extra hook passed to AgentLoop is called alongside core LoopHook."""
-    from nanobot.providers.base import LLMResponse
+    from babo.providers.base import LLMResponse
 
     events: list[str] = []
 
@@ -480,7 +480,7 @@ async def test_agent_loop_extra_hook_receives_calls(tmp_path):
 @pytest.mark.asyncio
 async def test_agent_loop_turn_hook_factories_receive_context(tmp_path):
     """Turn-scoped hooks can be supplied externally and see turn-local context."""
-    from nanobot.providers.base import LLMResponse
+    from babo.providers.base import LLMResponse
 
     captured: list[tuple[str, AgentTurnHookContext]] = []
     events: list[str] = []
@@ -546,7 +546,7 @@ async def test_agent_loop_turn_hook_factories_receive_context(tmp_path):
 @pytest.mark.asyncio
 async def test_agent_loop_extra_hook_error_isolation(tmp_path):
     """A faulty extra hook does not crash the agent loop."""
-    from nanobot.providers.base import LLMResponse
+    from babo.providers.base import LLMResponse
 
     class BadHook(AgentHook):
         async def before_iteration(self, context):
@@ -569,7 +569,7 @@ async def test_agent_loop_extra_hook_error_isolation(tmp_path):
 @pytest.mark.asyncio
 async def test_agent_loop_extra_hooks_do_not_swallow_loop_hook_errors(tmp_path):
     """Extra hooks must not change the core LoopHook failure behavior."""
-    from nanobot.providers.base import LLMResponse, ToolCallRequest
+    from babo.providers.base import LLMResponse, ToolCallRequest
 
     loop = _make_loop(tmp_path, hooks=[AgentHook()])
     loop.provider.chat_stream_with_retry = AsyncMock(return_value=LLMResponse(
@@ -594,7 +594,7 @@ async def test_agent_loop_extra_hooks_do_not_swallow_loop_hook_errors(tmp_path):
 @pytest.mark.asyncio
 async def test_agent_loop_no_hooks_backward_compat(tmp_path):
     """Without hooks param, behavior is identical to before."""
-    from nanobot.providers.base import LLMResponse, ToolCallRequest
+    from babo.providers.base import LLMResponse, ToolCallRequest
 
     loop = _make_loop(tmp_path)
     loop.provider.chat_stream_with_retry = AsyncMock(return_value=LLMResponse(

@@ -6,9 +6,9 @@ import json
 
 import pytest
 
-from nanobot.agent.tools.context import RequestContext, request_context
-from nanobot.agent.tools.sessions import ReadSessionTool, SearchSessionsTool
-from nanobot.session.manager import SessionManager
+from babo.agent.tools.context import RequestContext, request_context
+from babo.agent.tools.sessions import ReadSessionTool, SearchSessionsTool
+from babo.session.manager import SessionManager
 
 
 @pytest.mark.asyncio
@@ -58,7 +58,7 @@ async def test_session_tools_find_old_matches_in_full_session(
 @pytest.mark.parametrize("state", ["canonical", "transcript", "mixed"])
 async def test_session_tools_use_canonical_records_after_restart(history, tmp_path, monkeypatch, state):
     webui_dir = tmp_path / "webui"
-    monkeypatch.setattr("nanobot.webui.history.get_webui_dir", lambda: webui_dir)
+    monkeypatch.setattr("babo.webui.history.get_webui_dir", lambda: webui_dir)
     manager = history.sessions
     key = "websocket:history"
     if state != "transcript":

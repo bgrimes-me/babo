@@ -9,22 +9,22 @@ from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
 from pydantic import ValidationError
 
-from nanobot.agent.tools.web import WebSearchTool
-from nanobot.config.schema import (
+from babo.agent.tools.web import WebSearchTool
+from babo.config.schema import (
     Config,
     InlineFallbackConfig,
     ModelAPIConfig,
     ModelPresetConfig,
     ProviderAPIConfig,
 )
-from nanobot.providers.anthropic_provider import AnthropicProvider
-from nanobot.providers.factory import (
+from babo.providers.anthropic_provider import AnthropicProvider
+from babo.providers.factory import (
     make_provider,
     provider_signature,
     resolve_automatic_model_api,
     validate_provider_setup,
 )
-from nanobot.providers.openai_compat_provider import _RESPONSES_FAILURE_THRESHOLD
+from babo.providers.openai_compat_provider import _RESPONSES_FAILURE_THRESHOLD
 
 
 def _config() -> Config:
@@ -55,9 +55,9 @@ def _config() -> Config:
 async def test_model_override_keeps_request_settings_within_connection(
     bind_transport, entrypoint, target, literal_env_syntax, monkeypatch,
 ):
-    from nanobot.agent.model_runtime import ModelRuntimeResolver
-    from nanobot.providers.factory import build_provider_snapshot
-    from nanobot.utils.llm_runtime import runtime_from_provider_snapshot
+    from babo.agent.model_runtime import ModelRuntimeResolver
+    from babo.providers.factory import build_provider_snapshot
+    from babo.utils.llm_runtime import runtime_from_provider_snapshot
 
     config = Config.model_validate({
         "agents": {"defaults": {"modelPreset": "primary"}},
@@ -78,8 +78,8 @@ async def test_model_override_keeps_request_settings_within_connection(
     if literal_env_syntax:
         # SDK/factory arguments are model IDs, not configuration templates.
         # Auto routing of this literal uses the first configured connection.
-        monkeypatch.setenv("NANOBOT_TEST_CALL_MODEL", "tenant_a/env-model")
-        model = "${NANOBOT_TEST_CALL_MODEL}"
+        monkeypatch.setenv("BABO_TEST_CALL_MODEL", "tenant_a/env-model")
+        model = "${BABO_TEST_CALL_MODEL}"
     if entrypoint == "sdk":
         resolver = ModelRuntimeResolver(runtime_from_provider_snapshot(build_provider_snapshot(config)))
         runtime = resolver.resolve_override(model=model, model_preset=None, config=config)
@@ -231,9 +231,9 @@ async def test_preset_overrides_isolate_requests_and_preserve_prompt_prefix(bind
 
 
 def test_preset_override_fallbacks_and_roundtrip(tmp_path):
-    from nanobot.config.loader import load_config, save_config
-    from nanobot.providers.factory import _resolve_fallback_presets
-    from nanobot.providers.routing import resolve_provider_route
+    from babo.config.loader import load_config, save_config
+    from babo.providers.factory import _resolve_fallback_presets
+    from babo.providers.routing import resolve_provider_route
 
     config = _config()
     primary = config.model_presets["chat"]
@@ -330,7 +330,7 @@ async def test_automatic_preview_matches_actual_request(
 async def test_deepseek_automatic_api_preserves_endpoint_routing(
     bind_transport, tmp_path, stream, model, api_base, api,
 ):
-    from nanobot.config.loader import load_config
+    from babo.config.loader import load_config
 
     config_path = tmp_path / "config.json"
     config_path.write_text(json.dumps({
@@ -480,7 +480,7 @@ async def test_fallback_preset_keeps_its_api_and_invalidates_runtime(bind_transp
             return httpx.Response(401, json={"error": {"message": "invalid_api_key", "type": "authentication_error"}})
         return _answer(request)
 
-    from nanobot.providers import factory
+    from babo.providers import factory
 
     original = factory._make_provider_core
     monkeypatch.setattr(factory, "_make_provider_core", lambda *args, **kwargs: bind_transport(original(*args, **kwargs), handler))
@@ -718,7 +718,7 @@ async def test_explicit_model_api_overrides_connection_default(bind_transport, p
     ("responses", "/v1/responses"),
 ])
 async def test_migrated_openai_default_routes_and_allows_model_override(bind_transport, tmp_path, legacy, path):
-    from nanobot.config.loader import load_config, save_config
+    from babo.config.loader import load_config, save_config
 
     config_path = tmp_path / "config.json"
     config_path.write_text(json.dumps({
@@ -758,9 +758,9 @@ async def test_migrated_openai_default_routes_and_allows_model_override(bind_tra
 async def test_legacy_openai_environment_selector_keeps_request_api(
     bind_transport, tmp_path, monkeypatch, env_field, legacy, path,
 ):
-    from nanobot.config.loader import load_config
+    from babo.config.loader import load_config
 
-    monkeypatch.setenv(f"NANOBOT_PROVIDERS__OPENAI__{env_field}", legacy)
+    monkeypatch.setenv(f"BABO_PROVIDERS__OPENAI__{env_field}", legacy)
     config_path = tmp_path / "config.json"
     config_path.write_text(json.dumps({
         "providers": {"openai": {"apiKey": "fixture", "apiBase": "https://tenant.test/v1"}},

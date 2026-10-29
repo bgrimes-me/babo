@@ -3,8 +3,8 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need_box
-bin="$(nanobot_bin)" || fail "nanobot is not installed; run 02-install-nanobot.sh first"
-if "$bin" baton doctor; then
+bin="$(babo_bin)" || fail "babo is not installed; run 02-install-babo.sh first"
+if "$bin" doctor; then
   ok "doctor passed: the town is working"
 fi
 fail "doctor found problems (see the table above)"

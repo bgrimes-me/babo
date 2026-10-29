@@ -12,14 +12,14 @@ from unittest.mock import Mock
 
 import pytest
 
-from nanobot.agent.tools.context import RequestContext, request_context
-from nanobot.agent.tools.exec_session import (
+from babo.agent.tools.context import RequestContext, request_context
+from babo.agent.tools.exec_session import (
     ExecSessionManager,
     ExecSessionTool,
     ListExecSessionsTool,
 )
-from nanobot.agent.tools.registry import is_tool_error_result
-from nanobot.agent.tools.shell import ExecTool
+from babo.agent.tools.registry import is_tool_error_result
+from babo.agent.tools.shell import ExecTool
 
 
 def _python(code: str) -> list[str]:

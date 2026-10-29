@@ -24,7 +24,7 @@ import type { UIMessage } from "@/lib/types";
 import { Sample, StatePicker, type ComponentExample } from "./example";
 import { useGalleryTranslation } from "./i18n";
 
-const markdown = `## A small result\n\nA reply can contain **emphasis**, a list, and inline math $a^2 + b^2 = c^2$.\n\n- Read the source\n- Reuse the existing component\n\n| Item | State |\n| --- | --- |\n| UI | Ready |\n\n\`\`\`python\nprint("Hello, Nanobot")\n\`\`\``;
+const markdown = `## A small result\n\nA reply can contain **emphasis**, a list, and inline math $a^2 + b^2 = c^2$.\n\n- Read the source\n- Reuse the existing component\n\n| Item | State |\n| --- | --- |\n| UI | Ready |\n\n\`\`\`python\nprint("Hello, Babo")\n\`\`\``;
 
 function MarkdownPreview() {
   const { t } = useGalleryTranslation();
@@ -83,8 +83,8 @@ function FilesPreview() {
   const [display, setDisplay] = useState<"summary" | "diff" | "collapsed_diff">("diff");
   const [opened, setOpened] = useState("");
   const diffs = {
-    create: '@@ -0,0 +1 @@\n+export const greeting = "Hello, Nanobot";\n',
-    edit: '@@ -1,2 +1,2 @@\n-export const greeting = "Hello";\n+export const greeting = "Hello, Nanobot";\n export const ready = true;\n',
+    create: '@@ -0,0 +1 @@\n+export const greeting = "Hello, Babo";\n',
+    edit: '@@ -1,2 +1,2 @@\n-export const greeting = "Hello";\n+export const greeting = "Hello, Babo";\n export const ready = true;\n',
     delete: '@@ -1 +0,0 @@\n-export const greeting = "Hello";\n',
   };
   const edit: FileEditSummary = {
@@ -164,7 +164,7 @@ function SettingsPreview() {
     <SettingsSectionTitle>{t("controls.settingsComposition.preferences")}</SettingsSectionTitle>
     <SettingsGroup><SettingsRow title={t("controls.settingsComposition.keepDrafts")} description={t("controls.settingsComposition.switchHint")}>
       <ToggleButton checked={enabled} onChange={setEnabled} label={t("controls.settingsComposition.keepDrafts")} />
-    </SettingsRow><SettingsRow title={t("controls.settingsComposition.projectLabel")}><Input aria-label={t("controls.settingsComposition.projectName")} defaultValue="Nanobot" /></SettingsRow></SettingsGroup>
+    </SettingsRow><SettingsRow title={t("controls.settingsComposition.projectLabel")}><Input aria-label={t("controls.settingsComposition.projectName")} defaultValue="Babo" /></SettingsRow></SettingsGroup>
     <SettingsFeature title={t("controls.settingsComposition.capability")} enabled={enabled} onChange={setEnabled}>
       <SettingsGroup><SettingsRow title={t("controls.settingsComposition.notes")}><Input aria-label={t("controls.settingsComposition.capabilityNotes")} placeholder={t("controls.settingsComposition.localOnly")} /></SettingsRow></SettingsGroup>
     </SettingsFeature>

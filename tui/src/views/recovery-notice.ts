@@ -42,7 +42,7 @@ export class RecoveryNotice {
     options: RecoveryNoticeOptions,
   ) {
     this.root = new BoxRenderable(renderer, {
-      id: "nanobot-tui-recovery-notice",
+      id: "babo-tui-recovery-notice",
       width: "100%",
       height: 4,
       flexShrink: 0,
@@ -56,7 +56,7 @@ export class RecoveryNotice {
       backgroundColor: RGBA.defaultBackground(),
     })
     const header = new BoxRenderable(renderer, {
-      id: "nanobot-tui-recovery-header",
+      id: "babo-tui-recovery-header",
       width: "100%",
       height: 1,
       flexDirection: "row",
@@ -64,7 +64,7 @@ export class RecoveryNotice {
       gap: 2,
     })
     this.title = new TextRenderable(renderer, {
-      id: "nanobot-tui-recovery-title",
+      id: "babo-tui-recovery-title",
       width: "auto",
       minWidth: 0,
       flexGrow: 1,
@@ -73,7 +73,7 @@ export class RecoveryNotice {
       selectable: false,
     })
     this.detail = new TextRenderable(renderer, {
-      id: "nanobot-tui-recovery-detail",
+      id: "babo-tui-recovery-detail",
       width: "100%",
       height: 1,
       truncate: true,
@@ -124,7 +124,7 @@ export class RecoveryNotice {
     primary = false,
   ): TextRenderable {
     return new TextRenderable(renderer, {
-      id: `nanobot-tui-recovery-${id}`,
+      id: `babo-tui-recovery-${id}`,
       content: label,
       width: label.length,
       height: 1,

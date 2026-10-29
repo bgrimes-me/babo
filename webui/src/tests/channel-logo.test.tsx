@@ -5,9 +5,9 @@ import { channelUiPresentation, registeredChannelUiContributions } from "@/chann
 import { ChannelLogo } from "@/components/settings/channels/ChannelIdentity";
 import { __clearLogoFallbackCacheForTests } from "@/hooks/useLogoFallback";
 import { logoFallbackUrls } from "@/lib/provider-brand";
-import type { NanobotFeatureInfo } from "@/lib/types";
+import type { BaboFeatureInfo } from "@/lib/types";
 
-function feature(name: string): NanobotFeatureInfo {
+function feature(name: string): BaboFeatureInfo {
   return {
     name,
     display_name: channelUiPresentation(name)?.displayName ?? name,
@@ -128,10 +128,10 @@ describe("channel logos", () => {
     expect(container.firstElementChild).toHaveClass("bg-white");
   });
 
-  it("keeps the local nanobot mark and unknown channel initials readable", () => {
+  it("keeps the local babo mark and unknown channel initials readable", () => {
     const { container, rerender } = render(<ChannelLogo feature={feature("websocket")} showBrandLogos />);
     expectFootprint(container.firstElementChild!);
-    expect(container.querySelector("img")).toHaveAttribute("src", "/brand/nanobot_mark.svg");
+    expect(container.querySelector("img")).toHaveAttribute("src", "/brand/babo_mark.svg");
 
     rerender(<ChannelLogo feature={feature("custom-channel")} showBrandLogos />);
     expectFootprint(container.firstElementChild!);

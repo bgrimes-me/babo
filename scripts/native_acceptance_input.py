@@ -26,7 +26,7 @@ def acceptance_input(directory: Path, *, tag: str, commit: str,
         version = manifest["version"]
     if not re.fullmatch(r"[0-9][A-Za-z0-9.]*", version):
         raise ValueError("Invalid acceptance version")
-    filename = f"nanobot_ai-{version}-py3-none-{tag}.whl"
+    filename = f"babo-{version}-py3-none-{tag}.whl"
     wheel = directory / filename
     if wheel.is_symlink() or not wheel.is_file():
         raise ValueError("Acceptance requires the exact native wheel")
@@ -37,7 +37,7 @@ def acceptance_input(directory: Path, *, tag: str, commit: str,
         if len(records) != 1 or (records[0]["sha256"], records[0]["size"]) != (sha256, wheel.stat().st_size):
             raise ValueError("Candidate wheel differs from its manifest")
     with ZipFile(wheel) as archive:
-        if archive.read("nanobot/_build_commit.txt").decode().strip() != commit:
+        if archive.read("babo/_build_commit.txt").decode().strip() != commit:
             raise ValueError("Wheel build commit differs from the acceptance target")
     return {"wheel": str(wheel.resolve()), "version": version, "commit": commit,
             "wheel_sha256": sha256, "manifest_sha256": manifest_sha256}

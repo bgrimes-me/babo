@@ -7,7 +7,7 @@ import subprocess
 
 import pytest
 
-from nanobot.cli.windows_browser import _WSL_OPEN_SCRIPT, _redirect_html
+from babo.cli.windows_browser import _WSL_OPEN_SCRIPT, _redirect_html
 
 
 @pytest.mark.skipif(
@@ -41,7 +41,7 @@ def test_windows_handoff_file_is_private_readable_and_removed(opens):
     if (-not $blocked) { throw 'Active redirect was writable' }
     [Console]::Write('private;')
 '''
-    script = script.replace("    if (-not [NanobotBrowser]::Open($path))", check + "    if (-not [NanobotBrowser]::Open($path))")
+    script = script.replace("    if (-not [BaboBrowser]::Open($path))", check + "    if (-not [BaboBrowser]::Open($path))")
     script = script.replace(
         "    if ($owned) { try { [IO.File]::Delete($path) } catch {} }",
         "    if ($owned) { [IO.File]::Delete($path) }\n"

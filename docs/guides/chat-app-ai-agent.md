@@ -1,6 +1,6 @@
-# How to Connect an AI Agent to Chat Apps with nanobot
+# How to Connect an AI Agent to Chat Apps with babo
 
-nanobot can run as a self-hosted chatbot or AI agent in Telegram, Discord, Slack, WeChat, Email, Mattermost, and other chat apps. The gateway receives chat messages, runs the agent, and sends replies back to the same channel.
+babo can run as a self-hosted chatbot or AI agent in Telegram, Discord, Slack, WeChat, Email, Mattermost, and other chat apps. The gateway receives chat messages, runs the agent, and sends replies back to the same channel.
 
 ## What you will build
 
@@ -15,7 +15,7 @@ Use chat apps when the agent should live where users already communicate: privat
 
 ## Before you start
 
-Complete [Quick Start](../quick-start.md) if nanobot is not installed or cannot reply yet. If you already have a working WebUI or CLI session, continue here using that instance; no reinstall or second gateway is needed.
+Complete [Quick Start](../quick-start.md) if babo is not installed or cannot reply yet. If you already have a working WebUI or CLI session, continue here using that instance; no reinstall or second gateway is needed.
 
 Send `Hello!` in the WebUI before adding a channel. Then choose one platform guide for the bot/account prerequisites:
 
@@ -46,13 +46,13 @@ If your installed release does not show **Channels**, use the full [Chat Apps re
 Check status from the terminal when you need a lower-level confirmation:
 
 ```bash
-nanobot channels status
+babo channels status
 ```
 
-The `nanobot webui` command already runs the gateway. For a chat-only or server deployment, start it directly:
+The `babo webui` command already runs the gateway. For a chat-only or server deployment, start it directly:
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 Use the full [Chat Apps reference](../chat-apps.md) when you manage `config.json` directly or need platform-specific advanced settings.
@@ -72,12 +72,12 @@ Use the full [Chat Apps reference](../chat-apps.md) when you manage `config.json
 
 ## Troubleshooting
 
-- If `nanobot channels status` does not show the channel, the config key or optional dependency is likely missing.
+- If `babo channels status` does not show the channel, the config key or optional dependency is likely missing.
 - If the first DM returns a pairing code, approve the pending request in the WebUI or use `/pairing approve <code>` from an authorized chat.
 - If messages do not arrive, inspect the running gateway logs and compare platform credentials, event permissions, and allow lists. Use `--verbose` when restarting that gateway for diagnosis.
 - If group replies are unexpected, review that channel's group policy.
 
-## Related nanobot docs
+## Related babo docs
 
 - [Chat Apps](../chat-apps.md)
 - [Configuration](../configuration.md#channel-settings)

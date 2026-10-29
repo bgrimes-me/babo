@@ -32,8 +32,8 @@ concurrency:
 jobs:
   approve:
     if: >-
-      github.repository == 'HKUDS/nanobot' && github.ref == 'refs/heads/main' &&
-      vars.NANOBOT_RELEASE_SIGNING_ENABLED == 'true'
+      github.repository == 'bgrimes-me/babo' && github.ref == 'refs/heads/main' &&
+      vars.BABO_RELEASE_SIGNING_ENABLED == 'true'
     environment: release-approval
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -74,7 +74,7 @@ jobs:
             --bundle "$RUNNER_TEMP/approval/release-manifest.json.sigstore.json" \
             "$RUNNER_TEMP/approval/release-manifest.json"
           python -m sigstore verify identity \
-            --cert-identity 'https://github.com/HKUDS/nanobot/.github/workflows/release-approve.yml@refs/heads/main' \
+            --cert-identity 'https://github.com/bgrimes-me/babo/.github/workflows/release-approve.yml@refs/heads/main' \
             --cert-oidc-issuer 'https://token.actions.githubusercontent.com' \
             --bundle "$RUNNER_TEMP/approval/release-manifest.json.sigstore.json" \
             "$RUNNER_TEMP/approval/release-manifest.json"

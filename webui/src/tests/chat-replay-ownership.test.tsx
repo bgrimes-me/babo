@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SubagentTasksProvider } from "@/components/thread/SubagentTasks";
-import { useNanobotStream } from "@/hooks/useNanobotStream";
-import { NanobotClient } from "@/lib/nanobot-client";
+import { useBaboStream } from "@/hooks/useBaboStream";
+import { BaboClient } from "@/lib/babo-client";
 import type { InboundEvent, UIMessage } from "@/lib/types";
 import { ClientProvider } from "@/providers/ClientProvider";
 
@@ -40,7 +40,7 @@ function toolMessage(callId: string): InboundEvent {
 }
 
 function Thread({ children }: { children?: ReactNode }) {
-  const { messages } = useNanobotStream(CHAT_ID, INITIAL_MESSAGES);
+  const { messages } = useBaboStream(CHAT_ID, INITIAL_MESSAGES);
   return <><output data-testid="messages">{JSON.stringify(messages)}</output>{children}</>;
 }
 
@@ -58,7 +58,7 @@ describe("transcript replay with real task and stream subscriptions", () => {
   it("retains transcript events while only the task observer is mounted", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ tasks: [] }))));
     const socket = new TestSocket();
-    const client = new NanobotClient({
+    const client = new BaboClient({
       url: "ws://test", reconnect: false,
       socketFactory: () => socket as unknown as WebSocket,
     });
@@ -89,7 +89,7 @@ describe("transcript replay with real task and stream subscriptions", () => {
     async (order) => {
       vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ tasks: [] }))));
       const socket = new TestSocket();
-      const client = new NanobotClient({
+      const client = new BaboClient({
         url: "ws://test", reconnect: false,
         socketFactory: () => socket as unknown as WebSocket,
       });

@@ -1,0 +1,13 @@
+[Unit]
+Description=Babo gateway for resident %i (channels bound to %i)
+After=babo-queue.service
+Wants=babo-queue.service
+
+[Service]
+Type=simple
+ExecStart={{ distrobox }} enter {{ box }} -- {{ babo }} gateway --foreground --config {{ generated }}/%i/config.json
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=default.target

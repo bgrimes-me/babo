@@ -25,7 +25,7 @@ Apply [Robin Williams's *The Non-Designer's Design Book* principles](https://www
 
 Unless the task explicitly limits languages, review every supported locale for each changed copy key in the same change. Keep already-clear translations when appropriate; do not use English fallback as a substitute for completing the localized copy.
 
-For WebUI, use [`supportedLocales`](../webui/src/i18n/config.ts) as the locale inventory. Check both `webui/src/i18n/locales/<locale>/common.json` and channel-owned `nanobot/channels/<channel>/webui/locales/<locale>.json`; common bundles do not contain all interface text. Inspect the owning client for other copy surfaces.
+For WebUI, use [`supportedLocales`](../webui/src/i18n/config.ts) as the locale inventory. Check both `webui/src/i18n/locales/<locale>/common.json` and channel-owned `babo/channels/<channel>/webui/locales/<locale>.json`; common bundles do not contain all interface text. Inspect the owning client for other copy surfaces.
 
 Preserve locale keys, interpolation variables and their occurrences, formatting tokens, configuration values, command identifiers, and preset prompts. Prompts that are sent to the model affect behavior and are not ordinary interface copy. Keep intentionally localized display names and existing optional-key conventions.
 

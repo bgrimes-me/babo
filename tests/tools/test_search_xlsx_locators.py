@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from openpyxl import Workbook
 
-from nanobot.agent.tools.search import GrepTool
+from babo.agent.tools.search import GrepTool
 
 
 @pytest.mark.parametrize(

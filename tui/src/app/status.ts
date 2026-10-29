@@ -15,9 +15,9 @@ export function connectionStatusText(
   if (status === "unavailable") {
     return info?.health === "degraded"
       ? "Still getting ready…"
-      : "Nanobot is taking longer to respond…"
+      : "Babo is taking longer to respond…"
   }
-  if (status === "error") return "Nanobot unavailable. Restart nanobot."
+  if (status === "error") return "Babo unavailable. Restart babo."
   return "Session ended"
 }
 
@@ -62,5 +62,5 @@ export function retryStatusLine(status: RenderedRetryStatus, nowMs = Date.now())
 
 export function sessionExitMessage(chatId: string): string {
   const sessionId = `websocket:${chatId}`
-  return `Resume with: nanobot agent --session ${sessionId}\n`
+  return `Resume with: babo agent --session ${sessionId}\n`
 }

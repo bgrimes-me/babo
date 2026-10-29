@@ -398,7 +398,7 @@ describe("Settings providers", () => {
 
     expect(
       screen.getByText(
-        "Complete sign-in in your browser. If nanobot does not connect automatically, paste the authorization code below.",
+        "Complete sign-in in your browser. If babo does not connect automatically, paste the authorization code below.",
       ),
     ).toBeInTheDocument();
     const callbackInput = await screen.findByRole("textbox", {
@@ -566,7 +566,7 @@ describe("Settings providers", () => {
 
     await chooseProviderToConfigure("OpenAI Codex");
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    const dialog = (await screen.findByText("Finish signing in using your browser. If nanobot does not connect automatically, copy the full URL from the localhost page’s address bar—even if the page cannot load—paste it below, then select “Finish sign-in”.")).closest('[role="dialog"]') as HTMLElement;
+    const dialog = (await screen.findByText("Finish signing in using your browser. If babo does not connect automatically, copy the full URL from the localhost page’s address bar—even if the page cannot load—paste it below, then select “Finish sign-in”.")).closest('[role="dialog"]') as HTMLElement;
 
     expect(requestMutationMock).toHaveBeenCalledWith(
       "settings.provider.oauth_login",
@@ -576,7 +576,7 @@ describe("Settings providers", () => {
     expect(openMock).not.toHaveBeenCalled();
     expect(
       within(dialog).getByText(
-        "Finish signing in using your browser. If nanobot does not connect automatically, copy the full URL from the localhost page’s address bar—even if the page cannot load—paste it below, then select “Finish sign-in”.",
+        "Finish signing in using your browser. If babo does not connect automatically, copy the full URL from the localhost page’s address bar—even if the page cannot load—paste it below, then select “Finish sign-in”.",
       ),
     ).toBeInTheDocument();
     expect(within(dialog).getByText("Waiting for sign-in to finish…")).toBeInTheDocument();
@@ -661,7 +661,7 @@ describe("Settings providers", () => {
       await chooseProviderToConfigure("OpenAI Codex");
       expect(
         screen.getByText(
-          "Sign in through this browser, then paste the full localhost callback URL back into nanobot.",
+          "Sign in through this browser, then paste the full localhost callback URL back into babo.",
         ),
       ).toBeInTheDocument();
 

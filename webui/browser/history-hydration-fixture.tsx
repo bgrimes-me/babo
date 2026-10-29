@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { ThreadShell } from "@/components/thread/ThreadShell";
 import { settings } from "@/dev/gallery/settings";
-import { NanobotClient } from "@/lib/nanobot-client";
+import { BaboClient } from "@/lib/babo-client";
 import type { ChatSummary, ConnectionStatus } from "@/lib/types";
 import { ClientProvider } from "@/providers/ClientProvider";
 
@@ -17,7 +17,7 @@ const sessions: ChatSummary[] = ["a", "b"].map((suffix) => ({
 
 // Synthetic backend-boundary reproduction, not an original user recording.
 export function HistoryHydrationFixture() {
-  const [client] = useState(() => new NanobotClient({
+  const [client] = useState(() => new BaboClient({
     url: `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/nan311-fixture-ws`,
     reconnect: false,
   }));

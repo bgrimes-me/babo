@@ -11,7 +11,7 @@ const output = join(outputDir, plan.executable)
 await mkdir(outputDir, { recursive: true })
 const result = await Bun.build({
   entrypoints: [join(import.meta.dir, "..", "src", "index.ts")],
-  define: { NANOBOT_COMPILED: "true" },
+  define: { BABO_COMPILED: "true" },
   // Standalone files retain JS; the optional precompiled cache costs another ~22 MiB on x64.
   bytecode: false,
   format: "esm",

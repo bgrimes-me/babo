@@ -1,12 +1,12 @@
-# How to Configure Langfuse Observability for nanobot
+# How to Configure Langfuse Observability for babo
 
-nanobot can trace supported OpenAI-compatible provider calls through Langfuse's OpenAI SDK wrapper, and Codex OAuth provider calls through Langfuse's native Python SDK.
+babo can trace supported OpenAI-compatible provider calls through Langfuse's OpenAI SDK wrapper, and Codex OAuth provider calls through Langfuse's native Python SDK.
 
 ## What you will build
 
-- Langfuse installed in the same Python environment as nanobot
+- Langfuse installed in the same Python environment as babo
 - Langfuse environment variables set before startup
-- one traced nanobot model call
+- one traced babo model call
 
 ## When to use this
 
@@ -14,25 +14,25 @@ Use Langfuse when you need observability for model requests, latency, errors, co
 
 ## Install
 
-Complete [Quick Start](../quick-start.md) if nanobot is not installed or cannot reply yet. Continue with the same working instance.
+Complete [Quick Start](../quick-start.md) if babo is not installed or cannot reply yet. Continue with the same working instance.
 
 Install Langfuse:
 
 ```bash
-nanobot plugins enable langfuse
+babo plugins enable langfuse
 ```
 
-nanobot uses Langfuse Python SDK 4.7 or later in the 4.x series. Tracing supports Langfuse Cloud and self-hosted Langfuse 3.63.0 or later. The SDK enables real-time ingestion on Langfuse v4 automatically; see [Langfuse compatibility](https://langfuse.com/docs/compatibility).
+babo uses Langfuse Python SDK 4.7 or later in the 4.x series. Tracing supports Langfuse Cloud and self-hosted Langfuse 3.63.0 or later. The SDK enables real-time ingestion on Langfuse v4 automatically; see [Langfuse compatibility](https://langfuse.com/docs/compatibility).
 
 ## Minimal working example
 
-Set credentials before starting nanobot:
+Set credentials before starting babo:
 
 ```bash
 export LANGFUSE_SECRET_KEY="sk-lf-..."
 export LANGFUSE_PUBLIC_KEY="pk-lf-..."
 export LANGFUSE_BASE_URL="https://cloud.langfuse.com"
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
 PowerShell:
@@ -41,7 +41,7 @@ PowerShell:
 $env:LANGFUSE_SECRET_KEY = "sk-lf-..."
 $env:LANGFUSE_PUBLIC_KEY = "pk-lf-..."
 $env:LANGFUSE_BASE_URL = "https://cloud.langfuse.com"
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
 ## Production notes
@@ -61,9 +61,9 @@ nanobot agent -m "Hello!"
 
 - If no traces appear, confirm the service process sees the environment variables.
 - Confirm the provider path is OpenAI-compatible or the Codex OAuth provider.
-- Run one local `nanobot agent -m "Hello!"` call before debugging service logs.
+- Run one local `babo agent -m "Hello!"` call before debugging service logs.
 
-## Related nanobot docs
+## Related babo docs
 
 - [Configuration: Langfuse Observability](../configuration.md#langfuse-observability)
 - [Provider Cookbook: Langfuse Tracing](../provider-cookbook.md#recipe-langfuse-tracing)

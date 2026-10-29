@@ -27,7 +27,7 @@ export class ContextPanel {
 
   constructor(renderer: CliRenderer, theme: ContextPanelTheme) {
     this.root = new BoxRenderable(renderer, {
-      id: "nanobot-tui-context-panel",
+      id: "babo-tui-context-panel",
       width: "100%",
       maxHeight: 9,
       flexShrink: 0,
@@ -40,14 +40,14 @@ export class ContextPanel {
       visible: false,
     })
     this.stats = new TextRenderable(renderer, {
-      id: "nanobot-tui-context-stats",
+      id: "babo-tui-context-stats",
       content: "",
       width: "100%",
       fg: theme.accent,
       wrapMode: "word",
     })
     this.summary = new TextRenderable(renderer, {
-      id: "nanobot-tui-context-summary",
+      id: "babo-tui-context-summary",
       content: "",
       width: "100%",
       maxHeight: 6,

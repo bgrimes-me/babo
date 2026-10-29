@@ -4,18 +4,18 @@ import { useTranslation } from "react-i18next";
 import { channelTranslator } from "@/channel-plugins/i18n";
 import { channelSetup } from "@/components/settings/channels/ChannelIdentity";
 import { defaultChannelFieldValues } from "@/components/settings/channels/CredentialForm";
-import type { ChannelConnectPayload, NanobotFeatureInfo } from "@/lib/types";
-import { LinearPanelView } from "../../../../nanobot/channels/linear/webui/LinearPanelView";
-import { LinearMemberAccessView, type LinearMemberAccessSnapshot } from "../../../../nanobot/channels/linear/webui/LinearMemberAccessView";
-import { LinearConnectFlowView, linearConnectLabels } from "../../../../nanobot/channels/linear/webui/LinearConnectFlowView";
-import { LinearResetConnectionView } from "../../../../nanobot/channels/linear/webui/LinearResetConnectionView";
-import type { LinearInstallationSummary } from "../../../../nanobot/channels/linear/webui/types";
+import type { ChannelConnectPayload, BaboFeatureInfo } from "@/lib/types";
+import { LinearPanelView } from "../../../../babo/channels/linear/webui/LinearPanelView";
+import { LinearMemberAccessView, type LinearMemberAccessSnapshot } from "../../../../babo/channels/linear/webui/LinearMemberAccessView";
+import { LinearConnectFlowView, linearConnectLabels } from "../../../../babo/channels/linear/webui/LinearConnectFlowView";
+import { LinearResetConnectionView } from "../../../../babo/channels/linear/webui/LinearResetConnectionView";
+import type { LinearInstallationSummary } from "../../../../babo/channels/linear/webui/types";
 import { channelFeatures } from "./channel-fixtures";
 import { StatePicker, type ComponentExample } from "./example";
 import { useGalleryTranslation } from "./i18n";
 
 const workspace: LinearInstallationSummary = {
-  organization_id: "gallery-workspace", organization_name: "Nanobot team",
+  organization_id: "gallery-workspace", organization_name: "Babo team",
   scopes: ["read", "write", "app:assignable", "app:mentionable"], authorization_status: "authorized",
 };
 
@@ -107,14 +107,14 @@ function ResetPreview() {
 }
 
 type PanelStory = "setup" | "configured" | "connected" | "missing-scopes" | "loading" | "inspection-error" | "save-error" | "runtime-error";
-function panelFeature(story: PanelStory): NanobotFeatureInfo {
+function panelFeature(story: PanelStory): BaboFeatureInfo {
   const base = channelFeatures.linear;
   if (story === "setup") return base;
   return { ...base, configured: true, enabled: story === "connected" || story === "missing-scopes",
     runtime_status: story === "runtime-error" ? "failed" : story === "connected" || story === "missing-scopes" ? "running" : "stopped",
     runtime_error: story === "runtime-error" ? "previews.linearPanel.runtimeError" : undefined,
     configured_fields: ["channels.linear.clientId", "channels.linear.clientSecret", "channels.linear.webhookSigningSecret", "channels.linear.publicBaseUrl"],
-    config_values: { ...base.config_values, "channels.linear.clientId": "gallery-linear-app", "channels.linear.publicBaseUrl": "https://nanobot.example" },
+    config_values: { ...base.config_values, "channels.linear.clientId": "gallery-linear-app", "channels.linear.publicBaseUrl": "https://babo.example" },
   };
 }
 
@@ -187,19 +187,19 @@ function PanelPreview() {
 }
 
 export const linearChannelExamples: ComponentExample[] = [
-  { title: "previews.linearPanel.title", files: ["nanobot/channels/linear/webui/LinearPanelView.tsx"], Preview: PanelPreview,
+  { title: "previews.linearPanel.title", files: ["babo/channels/linear/webui/LinearPanelView.tsx"], Preview: PanelPreview,
     description: "previews.linearPanel.description",
     options: "previews.linearPanel.options",
     code: "<LinearPanelView feature={feature} state={state} workspaces={workspaces} formProps={formProps} {...actions} {...composition} />" },
-  { title: "previews.linearMembers.title", files: ["nanobot/channels/linear/webui/LinearMemberAccessView.tsx"], Preview: MembersPreview,
+  { title: "previews.linearMembers.title", files: ["babo/channels/linear/webui/LinearMemberAccessView.tsx"], Preview: MembersPreview,
     description: "previews.linearMembers.description",
     options: "previews.linearMembers.options",
     code: "<LinearMemberAccessView snapshot={snapshot} onLoad={refresh} onSetAllowed={saveAccess} />" },
-  { title: "previews.linearConnect.title", files: ["nanobot/channels/linear/webui/LinearConnectFlowView.tsx"], Preview: AuthorizationPreview,
+  { title: "previews.linearConnect.title", files: ["babo/channels/linear/webui/LinearConnectFlowView.tsx"], Preview: AuthorizationPreview,
     description: "previews.linearConnect.description",
     options: "previews.linearConnect.options",
     code: "<LinearConnectFlowView connect={authorization} labels={labels} busy={busy} error={error} onStart={start} onCancel={cancel} onPoll={poll} />" },
-  { title: "previews.linearReset.title", files: ["nanobot/channels/linear/webui/LinearResetConnectionView.tsx"], Preview: ResetPreview,
+  { title: "previews.linearReset.title", files: ["babo/channels/linear/webui/LinearResetConnectionView.tsx"], Preview: ResetPreview,
     description: "previews.linearReset.description",
     options: "previews.linearReset.options",
     code: "<LinearResetConnectionView disabled={false} onReset={resetConnection} />" },

@@ -8,16 +8,16 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from agent.runner_helpers import make_run_spec
-from nanobot.agent.progress_hook import AgentProgressHook
-from nanobot.agent.runner import _PERSISTED_MODEL_ERROR_PLACEHOLDER, AgentRunner
-from nanobot.config.schema import ModelPresetConfig
-from nanobot.providers.base import LLMProvider, LLMResponse, ToolCallRequest
-from nanobot.providers.fallback_provider import FallbackProvider
-from nanobot.providers.model_api import ModelAPICapabilities
-from nanobot.providers.openai_compat_provider import OpenAICompatProvider
-from nanobot.providers.openai_responses import parse_response_output
-from nanobot.providers.unconfigured_provider import UnconfiguredProvider
-from nanobot.utils.progress_events import output_events
+from babo.agent.progress_hook import AgentProgressHook
+from babo.agent.runner import _PERSISTED_MODEL_ERROR_PLACEHOLDER, AgentRunner
+from babo.config.schema import ModelPresetConfig
+from babo.providers.base import LLMProvider, LLMResponse, ToolCallRequest
+from babo.providers.fallback_provider import FallbackProvider
+from babo.providers.model_api import ModelAPICapabilities
+from babo.providers.openai_compat_provider import OpenAICompatProvider
+from babo.providers.openai_responses import parse_response_output
+from babo.providers.unconfigured_provider import UnconfiguredProvider
+from babo.utils.progress_events import output_events
 
 
 @pytest.mark.asyncio

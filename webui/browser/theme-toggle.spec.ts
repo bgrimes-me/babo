@@ -6,8 +6,8 @@ for (const width of [1440, 390]) {
 
     test("morphs in place, ignores rapid reversals, and stays keyboard accessible", async ({ page }) => {
       await page.addInitScript(() => {
-        localStorage.setItem("nanobot.locale", "en");
-        if (!localStorage.getItem("nanobot-webui.theme")) localStorage.setItem("nanobot-webui.theme", "light");
+        localStorage.setItem("babo.locale", "en");
+        if (!localStorage.getItem("babo-webui.theme")) localStorage.setItem("babo-webui.theme", "light");
       });
       await page.goto("/browser/fixture.html?case=theme-toggle");
       const toggle = page.getByRole("button", { name: "Toggle theme from header", exact: true });
@@ -72,8 +72,8 @@ for (const width of [1440, 390]) {
 test("reduced motion keeps the canvas fade but switches the icon directly", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
-    localStorage.setItem("nanobot.locale", "en");
-    localStorage.setItem("nanobot-webui.theme", "dark");
+    localStorage.setItem("babo.locale", "en");
+    localStorage.setItem("babo-webui.theme", "dark");
   });
   await page.goto("/browser/fixture.html?case=theme-toggle");
   const toggle = page.getByRole("button", { name: "Toggle theme from header", exact: true });
@@ -110,8 +110,8 @@ for (const width of [1440, 390]) {
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.setViewportSize({ width, height: 844 });
       await page.addInitScript((theme) => {
-        localStorage.setItem("nanobot.locale", "en");
-        localStorage.setItem("nanobot-webui.theme", theme);
+        localStorage.setItem("babo.locale", "en");
+        localStorage.setItem("babo-webui.theme", theme);
       }, initial);
       await page.goto("/browser/fixture.html?case=theme-toggle&chat");
       const input = page.getByRole("textbox");
@@ -169,8 +169,8 @@ for (const width of [1440, 390]) {
     test(`crossfades the whole ${initial === "light" ? "dark" : "light"} palette without a blank stage at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
       await page.addInitScript((theme) => {
-        localStorage.setItem("nanobot.locale", "en");
-        if (!localStorage.getItem("nanobot-webui.theme")) localStorage.setItem("nanobot-webui.theme", theme);
+        localStorage.setItem("babo.locale", "en");
+        if (!localStorage.getItem("babo-webui.theme")) localStorage.setItem("babo-webui.theme", theme);
       }, initial);
       await page.goto("/browser/fixture.html?case=theme-toggle&chat");
       const toggle = page.getByRole("button", { name: "Toggle theme from header", exact: true });
@@ -239,7 +239,7 @@ for (const width of [1440, 390]) {
 
 test("browsers without View Transitions keep a working palette fade", async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("nanobot-webui.theme", "light");
+    localStorage.setItem("babo-webui.theme", "light");
     Object.defineProperty(document, "startViewTransition", { value: undefined });
   });
   await page.goto("/browser/fixture.html?case=theme-toggle&chat");
@@ -286,7 +286,7 @@ test("browsers without View Transitions keep a working palette fade", async ({ p
 
 test("a browser-skipped transition still applies the theme and releases the toggle", async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("nanobot-webui.theme", "light");
+    localStorage.setItem("babo-webui.theme", "light");
     const start = document.startViewTransition.bind(document);
     document.startViewTransition = (...args) => {
       const transition = start(...args);
@@ -307,8 +307,8 @@ test("a browser-skipped transition still applies the theme and releases the togg
 test("selection highlights keep geometry easing and only fade paint with reduced motion", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 844 });
   await page.addInitScript(() => {
-    localStorage.setItem("nanobot.locale", "en");
-    localStorage.setItem("nanobot-webui.theme", "light");
+    localStorage.setItem("babo.locale", "en");
+    localStorage.setItem("babo-webui.theme", "light");
   });
   await page.goto("/browser/fixture.html?case=theme-toggle&chat");
   const highlight = page.getByTestId("chats-selection-highlight");

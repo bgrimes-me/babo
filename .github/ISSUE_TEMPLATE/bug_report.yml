@@ -21,7 +21,7 @@ body:
       label: Steps to Reproduce
       description: How can we reproduce this behavior?
       placeholder: |
-        1. Configure nanobot with ...
+        1. Configure babo with ...
         2. Send message ...
         3. See error ...
     validations:
@@ -40,15 +40,15 @@ body:
     attributes:
       label: Relevant Logs
       description: |
-        Paste any relevant log output. You can run nanobot with `--log-level DEBUG` for more verbose logs.
+        Paste any relevant log output. You can run babo with `--log-level DEBUG` for more verbose logs.
         **Remember to redact any sensitive information (tokens, API keys, passwords, etc.)**
       render: shell
 
   - type: input
     id: version
     attributes:
-      label: nanobot Version
-      description: Run `nanobot --version` or `pip show nanobot-ai`
+      label: babo Version
+      description: Run `babo --version` or `pip show babo`
       placeholder: e.g., 0.2.0
     validations:
       required: true
@@ -57,7 +57,7 @@ body:
     id: python_version
     attributes:
       label: Python Version
-      description: Python version running the nanobot gateway.
+      description: Python version running the babo gateway.
       placeholder: e.g., 3.12.10
     validations:
       required: true
@@ -66,7 +66,7 @@ body:
     id: os
     attributes:
       label: Operating System
-      description: Operating system running the nanobot gateway (including container OS).
+      description: Operating system running the babo gateway (including container OS).
       placeholder: e.g., Windows, macOS, Linux, Docker
     validations:
       required: true
@@ -114,7 +114,7 @@ body:
     attributes:
       label: Configuration (Optional)
       description: |
-        Relevant parts of your nanobot configuration. **Remember to redact any sensitive information.**
+        Relevant parts of your babo configuration. **Remember to redact any sensitive information.**
       render: yaml
 
   - type: textarea

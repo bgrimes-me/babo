@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from agent.runner_helpers import make_run_spec
-from nanobot.agent.runner import AgentRunner
-from nanobot.config.schema import AgentDefaults
-from nanobot.providers.base import LLMProvider, LLMResponse
+from babo.agent.runner import AgentRunner
+from babo.config.schema import AgentDefaults
+from babo.providers.base import LLMProvider, LLMResponse
 
 
 @pytest.fixture

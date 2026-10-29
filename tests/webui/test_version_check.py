@@ -9,25 +9,25 @@ import httpx
 import pytest
 from packaging.tags import Tag
 
-import nanobot
-import nanobot.webui.version_check as version_check
-from nanobot.release_feed import CATALOGUE_URL, PYPI_URL, ReleaseFeed
-from nanobot.releases import (
+import babo
+import babo.webui.version_check as version_check
+from babo.release_feed import CATALOGUE_URL, PYPI_URL, ReleaseFeed
+from babo.releases import (
     ReleaseArtifact,
     ReleaseCatalogue,
     ReleaseManifest,
     ReleasePointer,
     release_filenames,
 )
-from nanobot.update_channel import UpdateChannelRequest, read_update_channel
-from nanobot.update_service import UpdateJobService
+from babo.update_channel import UpdateChannelRequest, read_update_channel
+from babo.update_service import UpdateJobService
 
 
 @pytest.fixture
 def releases(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path / "account"))
     monkeypatch.setattr(sys, "prefix", str(tmp_path / "installation"))
-    monkeypatch.setattr(nanobot, "__version__", "0.3.6")
+    monkeypatch.setattr(babo, "__version__", "0.3.6")
     state = SimpleNamespace(stable="0.3.6", preview="0.3.7.dev42", generation=1,
                             withdrawn={}, partial=False, offline=False, incompatible=False, missing=False, requests=[])
 
@@ -53,7 +53,7 @@ def releases(tmp_path, monkeypatch):
             version = state.stable
             files = [name for name in sorted(release_filenames(version)) if name.endswith((".whl", ".tar.gz"))]
             return httpx.Response(200, json={
-                "info": {"name": "nanobot-ai", "version": version, "requires_python": ">=3.11"},
+                "info": {"name": "babo", "version": version, "requires_python": ">=3.11"},
                 "urls": [{"filename": name, "size": 123, "yanked": False, "digests": {"sha256": "c" * 64},
                           "url": f"https://files.pythonhosted.org/packages/{name}"}
                          for name in (files[:-1] if state.partial else files)],
@@ -79,7 +79,7 @@ async def test_stable_preview_exit_wait_and_final_release(releases, monkeypatch)
     select("preview")
     result = await version_check.check_for_update()
     assert result["updateAvailable"]["latestVersion"] == "0.3.7.dev42"
-    monkeypatch.setattr(nanobot, "__version__", "0.3.7.dev42")
+    monkeypatch.setattr(babo, "__version__", "0.3.7.dev42")
     releases.preview, releases.generation = "0.3.7.dev43", 2
     assert (await version_check.check_for_update())["updateAvailable"]["latestVersion"] == "0.3.7.dev43"
     select("stable")
@@ -94,9 +94,9 @@ async def test_stable_preview_exit_wait_and_final_release(releases, monkeypatch)
 async def test_preview_subscription_survives_final_release_and_next_cycle(releases, monkeypatch):
     select("preview")
     releases.stable = "0.3.7"
-    monkeypatch.setattr(nanobot, "__version__", "0.3.7.dev42")
+    monkeypatch.setattr(babo, "__version__", "0.3.7.dev42")
     assert (await version_check.check_for_update())["updateAvailable"]["latestVersion"] == "0.3.7"
-    monkeypatch.setattr(nanobot, "__version__", "0.3.7")
+    monkeypatch.setattr(babo, "__version__", "0.3.7")
     assert (await version_check.check_for_update())["releaseStatus"]["state"] == "current"
     assert read_update_channel().channel == "preview"
     releases.preview, releases.generation = "0.3.8.dev1", 2
@@ -105,7 +105,7 @@ async def test_preview_subscription_survives_final_release_and_next_cycle(releas
 
 async def test_leaving_preview_can_find_a_newer_stable_when_catalogue_is_unavailable(releases, monkeypatch):
     select("preview")
-    monkeypatch.setattr(nanobot, "__version__", "0.3.7.dev42")
+    monkeypatch.setattr(babo, "__version__", "0.3.7.dev42")
     select("stable")
     releases.missing = True
     releases.stable = "0.3.7"
@@ -128,7 +128,7 @@ async def test_leaving_preview_can_find_a_newer_stable_when_catalogue_is_unavail
 @pytest.mark.parametrize("channel", ["stable", "preview"])
 async def test_withdrawn_running_preview_is_not_reported_up_to_date(releases, monkeypatch, replacement, channel):
     select(channel)
-    monkeypatch.setattr(nanobot, "__version__", "0.3.7.dev42")
+    monkeypatch.setattr(babo, "__version__", "0.3.7.dev42")
     releases.withdrawn = {"0.3.7.dev42": "Startup regression"}
     if replacement != "older":
         releases.preview = "0.3.7.dev43"
@@ -154,7 +154,7 @@ async def test_unavailable_checks_have_feedback_and_can_recover(releases, proble
 
 
 async def test_current_dev_does_not_implicitly_opt_in_and_older_target_is_not_offered(releases, monkeypatch):
-    monkeypatch.setattr(nanobot, "__version__", "0.3.8.dev1")
+    monkeypatch.setattr(babo, "__version__", "0.3.8.dev1")
     assert read_update_channel().channel == "stable"
     assert (await version_check.check_for_update())["releaseStatus"]["state"] == "waiting_stable"
     select("preview")

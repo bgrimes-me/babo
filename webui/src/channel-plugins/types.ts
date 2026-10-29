@@ -2,8 +2,8 @@ import type { ComponentType } from "react";
 
 import type { ChannelPresentation } from "@/channel-plugins/catalog";
 import type {
-  NanobotFeatureInfo,
-  NanobotFeaturesPayload,
+  BaboFeatureInfo,
+  BaboFeaturesPayload,
 } from "@/lib/types";
 
 export type ChannelFeatureActionOptions = {
@@ -20,26 +20,26 @@ export type ChannelFeatureAction = (
 export type ChannelPluginPanelProps = {
   connectRequestId?: number;
   token: string;
-  feature: NanobotFeatureInfo;
+  feature: BaboFeatureInfo;
   actionKey: string | null;
   showBrandLogos: boolean;
   onAction: ChannelFeatureAction;
-  onFeaturesUpdate: (payload: NanobotFeaturesPayload) => void;
+  onFeaturesUpdate: (payload: BaboFeaturesPayload) => void;
   onConfigureMcp?: (name: string) => void;
   onBeforeCloseChange?: (handler: (() => Promise<boolean>) | null) => void;
 };
 
 export type ChannelPluginConnectFlowProps = {
   token: string;
-  feature: NanobotFeatureInfo;
+  feature: BaboFeatureInfo;
   idleLabel?: string;
   connectRequestId?: number;
   onOpenAdvanced?: () => void;
-  onFeaturesUpdate: (payload: NanobotFeaturesPayload) => void;
+  onFeaturesUpdate: (payload: BaboFeaturesPayload) => void;
 };
 
 export type ChannelPluginHelpProps = {
-  feature: NanobotFeatureInfo;
+  feature: BaboFeatureInfo;
 };
 
 export type ChannelUiContribution = {

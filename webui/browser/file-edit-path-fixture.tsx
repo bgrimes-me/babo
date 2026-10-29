@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FileActionsProvider } from "@/components/FileActions";
 import { FileEditGroup, type FileEditSummary } from "@/components/thread/activity/FileEditRow";
 
-export const longEditPath = "C:/Users/HR/.nanobot-ncode/workspace/artifacts/nan284-local-file-attachments/review-fixes-20261022-133833/serve_fixture.py";
+export const longEditPath = "C:/Users/HR/.babo-ncode/workspace/artifacts/nan284-local-file-attachments/review-fixes-20261022-133833/serve_fixture.py";
 const paths = [longEditPath, "src/verify.py", `C:/项目/带空格的目录/${"very_long_file_name_".repeat(12)}verify.py`, longEditPath.replace("serve_fixture.py", "screenshot.png")];
 export function FileEditPathFixture() {
   const [opened, setOpened] = useState("");

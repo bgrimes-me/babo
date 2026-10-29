@@ -4,8 +4,8 @@ import { expect, it, vi } from "vitest";
 import type {
   ChannelSetupContract,
   ChannelSetupContractField,
-  NanobotFeatureInfo,
-  NanobotFeaturesPayload,
+  BaboFeatureInfo,
+  BaboFeaturesPayload,
 } from "@/lib/types";
 import { requestMutationMock, jsonResponse, settingsPayload, renderSettingsView, installSettingsViewTestHooks } from "@/tests/settings-test-utils";
 
@@ -160,7 +160,7 @@ function channelSetupContract(
 
 function uninstalledConnectFeature(
   name: "feishu" | "weixin" | "whatsapp",
-): NanobotFeatureInfo {
+): BaboFeatureInfo {
   const displayNames = {
     feishu: "Feishu",
     weixin: "WeChat",
@@ -184,7 +184,7 @@ function uninstalledConnectFeature(
       ? {
           instances: [{
             id: "default",
-            name: "nanobot",
+            name: "babo",
             enabled: false,
             runtime_status: "stopped",
             configured: false,
@@ -200,7 +200,7 @@ function catalogFeature(
   name: string,
   enabled: boolean,
   requiresDependencies = false,
-): NanobotFeatureInfo {
+): BaboFeatureInfo {
   return {
     name,
     display_name: name,
@@ -216,7 +216,7 @@ function catalogFeature(
   };
 }
 
-function configuredEmailFeature(overrides: Partial<NanobotFeatureInfo> = {}): NanobotFeatureInfo {
+function configuredEmailFeature(overrides: Partial<BaboFeatureInfo> = {}): BaboFeatureInfo {
   return {
     ...catalogFeature("email", true),
     display_name: "Email",
@@ -249,7 +249,7 @@ describe("Settings channels", () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/settings") return jsonResponse(settingsPayload());
-      if (url === "/api/settings/nanobot-features") return jsonResponse({
+      if (url === "/api/settings/babo-features") return jsonResponse({
         features: [{
           ...catalogFeature("whatsapp_agent", false),
           display_name: "WhatsApp Agent Platform",
@@ -270,7 +270,7 @@ describe("Settings channels", () => {
 
     const privacy = screen.getByText(/Agent chats are not end-to-end encrypted/);
     expect(privacy).toBeVisible();
-    expect(privacy).toHaveTextContent("nanobot and your configured model provider");
+    expect(privacy).toHaveTextContent("babo and your configured model provider");
     const token = screen.getByLabelText("API token");
     expect(token).toHaveValue("");
     expect(privacy.compareDocumentPosition(token) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -291,7 +291,7 @@ describe("Settings channels", () => {
     {
       name: "discord",
       displayName: "Discord",
-      identity: "nanobot-test",
+      identity: "babo-test",
       checks: [
         { id: "bot_token", label: "Bot token", status: "pass" },
         {
@@ -311,7 +311,7 @@ describe("Settings channels", () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/settings") return jsonResponse(settingsPayload());
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({
           features: [{
             name,
@@ -395,7 +395,7 @@ describe("Settings channels", () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/settings") return jsonResponse(settingsPayload());
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({ features: [enabled, enabledWithDependencies, disabled], enabled_count: 2 });
       }
       return jsonResponse({});
@@ -420,7 +420,7 @@ describe("Settings channels", () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/settings") return jsonResponse(settingsPayload());
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({ features: [first, second], enabled_count: 0 });
       }
       return jsonResponse({});
@@ -436,14 +436,14 @@ describe("Settings channels", () => {
   it("shows all channels by default when only the always-enabled WebUI is enabled", async () => {
     const websocket = {
       ...catalogFeature("websocket", true),
-      display_name: "nanobot WebUI",
+      display_name: "babo WebUI",
       capabilities: ["always_enabled"],
     };
     const disabled = catalogFeature("Disabled channel", false);
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/settings") return jsonResponse(settingsPayload());
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({ features: [websocket, disabled], enabled_count: 1 });
       }
       return jsonResponse({});
@@ -451,7 +451,7 @@ describe("Settings channels", () => {
 
     renderSettingsView({ initialSection: "channels" });
 
-    expect(await screen.findByText("nanobot WebUI")).toBeInTheDocument();
+    expect(await screen.findByText("babo WebUI")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "View Disabled channel settings" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
   });
@@ -480,13 +480,13 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({ features: [whatsappFeature, weixinFeature], enabled_count: 0 });
         }
         return { ok: false, status: 404, json: async () => ({}) } as Response;
       }),
     );
-    let finishInstall: (payload: NanobotFeaturesPayload) => void = () => {};
+    let finishInstall: (payload: BaboFeaturesPayload) => void = () => {};
     requestMutationMock.mockImplementationOnce(() => new Promise((resolve) => {
       finishInstall = resolve;
     }));
@@ -521,17 +521,17 @@ describe("Settings channels", () => {
     );
     finishInstall(installedPayload);
     expect(requestMutationMock).not.toHaveBeenCalledWith("settings.channel.connect.start", expect.anything(), expect.anything());
-    const restartButton = await within(installationGroup).findByRole("button", { name: "Restart nanobot" });
+    const restartButton = await within(installationGroup).findByRole("button", { name: "Restart babo" });
     const blockedInstallHint = within(installationGroup).getByRole("group", { name: "Install WeChat" });
     expect(secondInstall).toBeDisabled();
     await act(async () => { blockedInstallHint.focus(); });
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Restart nanobot before installing another channel.");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Restart babo before installing another channel.");
     await userEvent.setup().keyboard("{Enter}");
     fireEvent.click(secondInstall);
     expect(requestMutationMock).toHaveBeenCalledTimes(1);
     expect(restartButton).toBeEnabled();
     await act(async () => { restartButton.focus(); });
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Restart nanobot to apply updated channel support.");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Restart babo to apply updated channel support.");
     expect(screen.queryByRole("switch", { name: "WhatsApp channel" })).not.toBeInTheDocument();
     expect(restart).not.toHaveBeenCalled();
     fireEvent.click(restartButton);
@@ -550,7 +550,7 @@ describe("Settings channels", () => {
       if (url === "/api/settings") {
         return jsonResponse({ ...settingsPayload(), requires_restart: restartPending });
       }
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({
           features: [{ ...installed, restart_pending: restartPending }, other, uninstalledConnectFeature("weixin")],
           enabled_count: 0,
@@ -562,7 +562,7 @@ describe("Settings channels", () => {
     renderSettingsView({ initialSection: "channels" });
 
     const installationGroup = await screen.findByRole("region", { name: "Requires dependencies" });
-    expect(await within(installationGroup).findByRole("button", { name: "Restart nanobot" })).toBeEnabled();
+    expect(await within(installationGroup).findByRole("button", { name: "Restart babo" })).toBeEnabled();
     expect(screen.getByRole("switch", { name: "Existing channel" })).toBeDisabled();
 
     restartPending = false;
@@ -591,7 +591,7 @@ describe("Settings channels", () => {
           if (url === "/api/settings/mcp-presets") {
             return jsonResponse({ presets: [], installed_count: 0 });
           }
-          if (url === "/api/settings/nanobot-features") {
+          if (url === "/api/settings/babo-features") {
             return jsonResponse({ features: [feature], enabled_count: 0 });
           }
           return { ok: false, status: 404, json: async () => ({}) } as Response;
@@ -645,7 +645,7 @@ describe("Settings channels", () => {
   );
 
   it("keeps WeChat login recovery visible across transient channel refreshes", async () => {
-    const expiredFeature: NanobotFeatureInfo = {
+    const expiredFeature: BaboFeatureInfo = {
       name: "weixin",
       display_name: "WeChat",
       webui: "webui/index.tsx",
@@ -675,7 +675,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings/mcp-presets") {
           return jsonResponse({ presets: [], installed_count: 0 });
         }
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           featureFetches += 1;
           return jsonResponse({ features: [currentFeature], enabled_count: 0 });
         }
@@ -730,7 +730,7 @@ describe("Settings channels", () => {
           if (url === "/api/settings/mcp-presets") {
             return jsonResponse({ presets: [], installed_count: 0 });
           }
-          if (url === "/api/settings/nanobot-features") {
+          if (url === "/api/settings/babo-features") {
             return jsonResponse({ features: [feature], enabled_count: 0 });
           }
           return { ok: false, status: 404, json: async () => ({}) } as Response;
@@ -745,7 +745,7 @@ describe("Settings channels", () => {
       expect(await screen.findByRole("alert")).toHaveTextContent("Package install failed");
       expect(screen.getByRole("button", { name: "Install WhatsApp" })).toBeEnabled();
       expect(consoleError).toHaveBeenCalledWith(
-        "nanobot feature action failed",
+        "babo feature action failed",
         expect.objectContaining({
           action: "enable",
           name: "whatsapp",
@@ -764,7 +764,7 @@ describe("Settings channels", () => {
       if (url === "/api/settings") return jsonResponse(settingsPayload());
       if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
       if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({
           features: [{
             name: "matrix",
@@ -828,7 +828,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({
             features: [{
               name: "matrix",
@@ -869,7 +869,7 @@ describe("Settings channels", () => {
       if (url === "/api/settings") return jsonResponse(settingsPayload());
       if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
       if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({
           features: [{
             name: "feishu",
@@ -922,7 +922,7 @@ describe("Settings channels", () => {
       if (url === "/api/settings") return jsonResponse(settingsPayload());
       if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
       if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({
           features: [{
             name: "feishu",
@@ -974,7 +974,7 @@ describe("Settings channels", () => {
       if (url === "/api/settings") return jsonResponse(settingsPayload());
       if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
       if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({
           features: [{
             name: "feishu",
@@ -1009,7 +1009,7 @@ describe("Settings channels", () => {
             configured: true,
             instances: [{
               id: "default",
-              name: "nanobot",
+              name: "babo",
               enabled: true,
               running: true,
               runtime_status: "running",
@@ -1040,7 +1040,7 @@ describe("Settings channels", () => {
     renderSettingsView({ initialSection: "channels" });
 
     fireEvent.click((await screen.findAllByRole("button", { name: /^View .+ settings$/ }))[0]);
-    fireEvent.click(await screen.findByRole("switch", { name: "nanobot assistant" }));
+    fireEvent.click(await screen.findByRole("switch", { name: "babo assistant" }));
 
     await waitFor(() =>
       expect(requestMutationMock).toHaveBeenCalledWith(
@@ -1052,7 +1052,7 @@ describe("Settings channels", () => {
     expect(requestMutationMock.mock.calls.some(([action]) => (
       action === "settings.channel.connect.start"
     ))).toBe(false);
-    expect(screen.getByRole("switch", { name: "nanobot assistant" })).toHaveAttribute(
+    expect(screen.getByRole("switch", { name: "babo assistant" })).toHaveAttribute(
       "aria-checked",
       "true",
     );
@@ -1066,7 +1066,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({
             features: [{
               name: "feishu",
@@ -1084,7 +1084,7 @@ describe("Settings channels", () => {
               instances: [
                 {
                   id: "default",
-                  name: "nanobot",
+                  name: "babo",
                   display_name: "Support Bot",
                   avatar_url: "https://example.com/support.png",
                   enabled: true,
@@ -1153,7 +1153,7 @@ describe("Settings channels", () => {
     expect(product.getByLabelText("App ID")).toHaveValue("cli_product");
     fireEvent.change(product.getByLabelText("App ID"), { target: { value: "cli_updated" } });
     const featureRequests = () => vi.mocked(fetch).mock.calls
-      .filter(([input]) => String(input) === "/api/settings/nanobot-features").length;
+      .filter(([input]) => String(input) === "/api/settings/babo-features").length;
     const beforeRefresh = featureRequests();
     await act(async () => { fireEvent(window, new Event("focus")); });
     await waitFor(() => expect(featureRequests()).toBeGreaterThan(beforeRefresh));
@@ -1183,7 +1183,7 @@ describe("Settings channels", () => {
   });
 
   it("opens WeChat advanced settings from the header and preserves autosave", async () => {
-    const feature: NanobotFeatureInfo = {
+    const feature: BaboFeatureInfo = {
       name: "weixin",
       display_name: "WeChat",
       webui: "webui/index.tsx",
@@ -1207,7 +1207,7 @@ describe("Settings channels", () => {
     };
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       if (String(input) === "/api/settings") return jsonResponse(settingsPayload());
-      if (String(input) === "/api/settings/nanobot-features") {
+      if (String(input) === "/api/settings/babo-features") {
         return jsonResponse({ features: [feature], enabled_count: 0 });
       }
       return { ok: false, status: 404, json: async () => ({}) } as Response;
@@ -1243,7 +1243,7 @@ describe("Settings channels", () => {
       if (url === "/api/settings") return jsonResponse(settingsPayload());
       if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
       if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({
           features: [{
             name: "multiplugin",
@@ -1332,7 +1332,7 @@ describe("Settings channels", () => {
         requires_restart: true,
         instances: [{
           id: "default",
-          name: "nanobot",
+          name: "babo",
           display_name: "Support Bot",
           avatar_url: "https://example.com/support.png",
           enabled: true,
@@ -1355,7 +1355,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") return jsonResponse(feishuPayload);
+        if (url === "/api/settings/babo-features") return jsonResponse(feishuPayload);
         return { ok: false, status: 404, json: async () => ({}) } as Response;
       }),
     );
@@ -1384,7 +1384,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({
             features: [{
               name: "feishu",
@@ -1442,7 +1442,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({
             features: [{
               name: "discord",
@@ -1512,7 +1512,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({
             features: [{
               name: "email",
@@ -1554,7 +1554,7 @@ describe("Settings channels", () => {
       if (url === "/api/settings") return jsonResponse(settingsPayload());
       if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
       if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({
           features: [{
             name: "discord",
@@ -1593,7 +1593,7 @@ describe("Settings channels", () => {
             "channels.discord.allowChannels",
             "channels.discord.groupPolicy",
           ],
-          nanobot_features: {
+          babo_features: {
             features: [{
               name: "discord",
               display_name: "Discord",
@@ -1621,7 +1621,7 @@ describe("Settings channels", () => {
     fireEvent.pointerDown(screen.getByRole("button", { name: "Help" }), { button: 0, ctrlKey: false });
     expect(await screen.findByRole("menuitem", { name: "Open Discord setup" })).toHaveAttribute(
       "href",
-      "https://nanobot.wiki/docs/0.2.2/getting-started/chat-apps#discord",
+      "https://babo.wiki/docs/0.2.2/getting-started/chat-apps#discord",
     );
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
     expect(screen.getByLabelText("Discord channel")).toBeEnabled();
@@ -1673,7 +1673,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({
             features: [{
               name: "email",
@@ -1806,7 +1806,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({
             features: [configuredEmailFeature({ running: true, runtime_status: "running" })],
             enabled_count: 1,
@@ -1864,7 +1864,7 @@ describe("Settings channels", () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/settings") return jsonResponse(settingsPayload());
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({ features: [emailFeature], enabled_count: 1 });
       }
       return jsonResponse({});
@@ -1929,7 +1929,7 @@ describe("Settings channels", () => {
       if (url === "/api/settings") return jsonResponse(settingsPayload());
       if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
       if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({
           features: [{
             name: "discord",
@@ -2019,7 +2019,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({
             features: [{
               name: "telegram",
@@ -2046,7 +2046,7 @@ describe("Settings channels", () => {
     fireEvent.pointerDown(screen.getByRole("button", { name: "Help" }), { button: 0, ctrlKey: false });
     expect(await screen.findByRole("menuitem", { name: "Open Telegram setup" })).toHaveAttribute(
       "href",
-      "https://nanobot.wiki/docs/0.2.2/getting-started/chat-apps#telegram",
+      "https://babo.wiki/docs/0.2.2/getting-started/chat-apps#telegram",
     );
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
   });
@@ -2077,7 +2077,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({
             features: channels.map(([name, displayName]) => ({
               name,
@@ -2118,7 +2118,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({
             features: ["email", "feishu", "matrix", "qq"].map((name) => ({
               name,
@@ -2171,7 +2171,7 @@ describe("Settings channels", () => {
   });
 
   it("connects QQ by QR scan and fills AppID from saved credentials", async () => {
-    const qqFeature: NanobotFeatureInfo = {
+    const qqFeature: BaboFeatureInfo = {
       name: "qq",
       display_name: "QQ",
       webui: "webui/index.tsx",
@@ -2193,7 +2193,7 @@ describe("Settings channels", () => {
         if (url === "/api/settings") return jsonResponse(settingsPayload());
         if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
         if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-        if (url === "/api/settings/nanobot-features") {
+        if (url === "/api/settings/babo-features") {
           return jsonResponse({ features: [currentFeature], enabled_count: 0 });
         }
         return { ok: false, status: 404, json: async () => ({}) } as Response;
@@ -2215,7 +2215,7 @@ describe("Settings channels", () => {
           status: "succeeded",
           session_id: "qq-1",
           message: "QQ is connected.",
-          nanobot_features: { features: [currentFeature], enabled_count: 1 },
+          babo_features: { features: [currentFeature], enabled_count: 1 },
         };
       }
       return settingsPayload();
@@ -2240,7 +2240,7 @@ describe("Settings channels", () => {
   });
 
   it("keeps saved QQ setup distinct from a running connection when reopening settings", async () => {
-    const qqFeature: NanobotFeatureInfo = {
+    const qqFeature: BaboFeatureInfo = {
       ...catalogFeature("qq", false),
       display_name: "QQ",
       webui: "webui/index.tsx",
@@ -2253,7 +2253,7 @@ describe("Settings channels", () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/settings") return jsonResponse(settingsPayload());
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({ features: [qqFeature], enabled_count: 0 });
       }
       return { ok: false, status: 404, json: async () => ({}) } as Response;
@@ -2307,7 +2307,7 @@ describe("Settings channels", () => {
       if (url === "/api/settings") return jsonResponse(settingsPayload());
       if (url === "/api/settings/cli-apps") return jsonResponse({ apps: [], installed_count: 0 });
       if (url === "/api/settings/mcp-presets") return jsonResponse({ presets: [], installed_count: 0 });
-      if (url === "/api/settings/nanobot-features") {
+      if (url === "/api/settings/babo-features") {
         return jsonResponse({
           features: [{
             name: "websocket",
@@ -2331,10 +2331,10 @@ describe("Settings channels", () => {
 
     renderSettingsView({ initialSection: "channels" });
 
-    const websocketName = await screen.findByText("nanobot WebUI");
+    const websocketName = await screen.findByText("babo WebUI");
     fireEvent.click(websocketName);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    const websocketSwitch = screen.getByRole("switch", { name: "nanobot WebUI channel" });
+    const websocketSwitch = screen.getByRole("switch", { name: "babo WebUI channel" });
     expect(websocketSwitch).toBeDisabled();
     expect(websocketSwitch).toHaveAttribute("aria-checked", "true");
     expect(requestMutationMock).not.toHaveBeenCalled();

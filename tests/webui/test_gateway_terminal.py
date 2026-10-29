@@ -6,10 +6,10 @@ from types import SimpleNamespace
 from websockets.datastructures import Headers
 from websockets.http11 import Request
 
-from nanobot.channels.websocket.runtime import WebSocketConfig
-from nanobot.webui.client_contract import gateway_identity
-from nanobot.webui.gateway_tokens import GatewayTokenStore
-from nanobot.webui.ws_http import GatewayHTTPHandler
+from babo.channels.websocket.runtime import WebSocketConfig
+from babo.webui.client_contract import gateway_identity
+from babo.webui.gateway_tokens import GatewayTokenStore
+from babo.webui.ws_http import GatewayHTTPHandler
 
 
 def test_terminal_probe_is_private_stable_and_does_not_issue_credentials():
@@ -19,7 +19,7 @@ def test_terminal_probe_is_private_stable_and_does_not_issue_credentials():
     connection = SimpleNamespace(remote_address=("127.0.0.1", 10000))
     request = Request("/webui/terminal", Headers({"Host": "127.0.0.1:8765"}))
     assert handler._handle_bootstrap(connection, request, terminal_probe=True).status_code == 401
-    request.headers["X-Nanobot-Auth"] = "fixture-secret"
+    request.headers["X-Babo-Auth"] = "fixture-secret"
     for _ in range(3):
         response = handler._handle_bootstrap(connection, request, terminal_probe=True)
         assert response.status_code == 200

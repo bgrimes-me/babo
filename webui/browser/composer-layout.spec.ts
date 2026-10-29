@@ -15,7 +15,7 @@ const history = canonicalThreadPayload({
 });
 
 async function openThread(page: Page) {
-  await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+  await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
   await page.route("**/api/commands", route => route.fulfill({ json: { commands: [] } }));
   await page.route("**/api/sessions/*/webui-thread?*", route => route.fulfill({ json: history }));
   await page.goto("/browser/fixture.html?case=thread-loading");
@@ -111,7 +111,7 @@ test("Chromium IME composition and commit keep the transcript stationary", async
 
 test("multiline drafts resize after reading typography changes", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+  await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
   await page.goto("/browser/fixture.html?case=typography");
   const input = page.getByRole("textbox", { name: "Message input", exact: true });
   await input.fill("First line\nSecond line\nThird line");

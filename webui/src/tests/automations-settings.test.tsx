@@ -14,7 +14,7 @@ const task: SessionAutomationJob = {
   schedule: { kind: "every", every_ms: 1_800_000 },
   payload: { message: "Check open pull requests and report failed CI." },
   state: { next_run_at_ms: now + 540_000, last_run_at_ms: now - 60_000, last_status: "ok" },
-  origin: { channel: "websocket", session_key: "websocket:demo", title: "nanobot-development" },
+  origin: { channel: "websocket", session_key: "websocket:demo", title: "babo-development" },
   created_at_ms: now - 86_400_000,
 };
 const systemTask: SessionAutomationJob = {
@@ -36,8 +36,8 @@ const modelSettings = {
   providers: [{ name: "openai", label: "OpenAI", configured: true }],
 } as SettingsPayload;
 type Props = Partial<React.ComponentProps<typeof AutomationsSettings>>;
-const SYSTEM_TASKS_OPEN_STORAGE_KEY = "nanobot-webui.automation-show-system-tasks";
-const VIEW_STORAGE_KEY = "nanobot-webui.automation-view";
+const SYSTEM_TASKS_OPEN_STORAGE_KEY = "babo-webui.automation-show-system-tasks";
+const VIEW_STORAGE_KEY = "babo-webui.automation-view";
 
 function Harness({ payload = { jobs: [task, systemTask] }, ...props }: Props) {
   const [filter, setFilter] = useState<AutomationFilter>("all");
@@ -119,8 +119,8 @@ describe("Automation task list and detail sheet", () => {
   const triggerTask: SessionAutomationJob = {
     ...task, id: "trigger-review", name: "Review on request", kind: "local_trigger",
     schedule: { kind: "local" }, state: {},
-    payload: { kind: "local_trigger", message: "nanobot trigger trg_review \"message\"" },
-    trigger: { id: "trg_review", command: "nanobot trigger trg_review \"message\"" },
+    payload: { kind: "local_trigger", message: "babo trigger trg_review \"message\"" },
+    trigger: { id: "trg_review", command: "babo trigger trg_review \"message\"" },
   };
 
   it("keeps undated triggers in Tasks and opens their shared details with keyboard focus restored", async () => {
@@ -131,7 +131,7 @@ describe("Automation task list and detail sheet", () => {
     const row = screen.getByRole("button", { name: /Review on request/ });
     expect(within(row).getByText("Command trigger")).toBeVisible();
     expect(within(row).queryByText("Waiting for trigger")).not.toBeInTheDocument();
-    expect(within(row).queryByText(/nanobot trigger/)).not.toBeInTheDocument();
+    expect(within(row).queryByText(/babo trigger/)).not.toBeInTheDocument();
     await user.click(row);
     const dialog = screen.getByRole("dialog", { name: "Review on request" });
     expect(within(dialog).getByText(triggerTask.trigger!.command)).toBeVisible();
@@ -575,7 +575,7 @@ describe("Automation task list and detail sheet", () => {
     render(<Harness payload={{ jobs: [] }} onStartChat={() => {}} settingsSnapshot={modelSettings} />);
     expect(screen.getByRole("textbox", { name: "Describe an automation" })).toHaveAttribute(
       "placeholder",
-      "What should nanobot automate?",
+      "What should babo automate?",
     );
   });
 
@@ -583,7 +583,7 @@ describe("Automation task list and detail sheet", () => {
     await act(() => i18n.changeLanguage("zh-CN"));
     render(<Harness payload={{ jobs: [] }} onStartChat={() => {}} settingsSnapshot={modelSettings} />);
     expect(screen.getByRole("textbox", { name: "描述一个自动任务" })).toHaveAttribute(
-      "placeholder", "想让 nanobot 自动做什么？",
+      "placeholder", "想让 babo 自动做什么？",
     );
   });
 
@@ -784,11 +784,11 @@ describe("Automation task list and detail sheet", () => {
       id: task.id, payload: task.payload,
       origin: expect.objectContaining({ session_key: "websocket:demo" }),
     }));
-    expect(task.origin?.title).toBe("nanobot-development");
+    expect(task.origin?.title).toBe("babo-development");
     await user.click(within(dialog).getByRole("button", { name: "Close" }));
     rerender(<Harness payload={payload} titleOverrides={{}} />);
     await user.click(screen.getByRole("button", { name: /PR watch/ }));
-    expect(screen.queryByText("nanobot-development")).not.toBeInTheDocument();
+    expect(screen.queryByText("babo-development")).not.toBeInTheDocument();
     expect(taskMenuItem("Open a chat")).toHaveAttribute("href", "#/chat/websocket%3Ademo");
   });
 
@@ -1041,11 +1041,11 @@ describe("Automation task list and detail sheet", () => {
     const user = userEvent.setup();
     render(<Harness payload={{ jobs: [{
       ...task, kind: "local_trigger", schedule: { kind: "local" },
-      trigger: { id: "trigger-1", command: "nanobot trigger run trigger-1" },
+      trigger: { id: "trigger-1", command: "babo trigger run trigger-1" },
     }] }} />);
     await user.click(screen.getByRole("button", { name: /PR watch/ }));
     expect(screen.getByText("Command")).toBeVisible();
-    expect(within(screen.getByRole("dialog")).getByText("nanobot trigger run trigger-1")).toBeVisible();
+    expect(within(screen.getByRole("dialog")).getByText("babo trigger run trigger-1")).toBeVisible();
     expect(screen.getByRole("button", { name: "Copy" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Run now" })).not.toBeInTheDocument();
     expect(taskMenuItem("Delete")).toBeVisible();

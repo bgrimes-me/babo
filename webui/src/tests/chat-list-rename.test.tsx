@@ -64,7 +64,7 @@ describe("inline sidebar topic rename", () => {
   beforeEach(() => { restoreFocus = mockBrowserFocus(); });
   afterEach(() => {
     restoreFocus();
-    localStorage.removeItem("nanobot-webui.collapsed-pane-groups.v1");
+    localStorage.removeItem("babo-webui.collapsed-pane-groups.v1");
   });
 
   it.each([false, true])("saves an inactive topic only after acknowledgement, grouped=%s", async (grouped) => {

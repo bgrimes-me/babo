@@ -1,7 +1,7 @@
-from nanobot.providers.base import LLMUsage
-from nanobot.session import Session
-from nanobot.utils.helpers import estimate_message_tokens
-from nanobot.webui.session_context import session_context_payload
+from babo.providers.base import LLMUsage
+from babo.session import Session
+from babo.utils.helpers import estimate_message_tokens
+from babo.webui.session_context import session_context_payload
 
 
 def test_session_context_separates_archive_progress_from_replay() -> None:

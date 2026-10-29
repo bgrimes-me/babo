@@ -6,11 +6,11 @@ from typing import Any
 
 import pytest
 
-from nanobot.providers.openai_compat_provider import (
+from babo.providers.openai_compat_provider import (
     OpenAICompatProvider,
     _deep_merge,
 )
-from nanobot.providers.registry import find_by_name
+from babo.providers.registry import find_by_name
 
 # ---------------------------------------------------------------------------
 # _deep_merge unit tests
@@ -144,7 +144,7 @@ class TestBuildKwargsExtraBody:
 
     def test_extra_body_merges_with_thinking(self) -> None:
         """Config extra_body should merge with (and override) thinking params."""
-        from nanobot.providers.registry import ProviderSpec
+        from babo.providers.registry import ProviderSpec
 
         spec = ProviderSpec(
             name="custom", keywords=(), env_key="",
@@ -261,7 +261,7 @@ class TestBuildResponsesBodyExtraBody:
                     "type": "function",
                     "function": {
                         "name": "web_search",
-                        "description": "Search with nanobot's configured backend",
+                        "description": "Search with babo's configured backend",
                         "parameters": {"type": "object"},
                     },
                 },
@@ -309,7 +309,7 @@ class TestBuildResponsesBodyExtraBody:
                 "type": "function",
                 "function": {
                     "name": "web_search",
-                    "description": "Search with nanobot's configured backend",
+                    "description": "Search with babo's configured backend",
                     "parameters": {"type": "object"},
                 },
             }],
@@ -323,7 +323,7 @@ class TestBuildResponsesBodyExtraBody:
         assert body["tools"] == [{
             "type": "function",
             "name": "web_search",
-            "description": "Search with nanobot's configured backend",
+            "description": "Search with babo's configured backend",
             "parameters": {"type": "object"},
             "strict": False,
         }]
@@ -362,19 +362,19 @@ class TestSchemaConfig:
     """Verify ProviderConfig accepts extra_body."""
 
     def test_default_is_none(self) -> None:
-        from nanobot.config.schema import ProviderConfig
+        from babo.config.schema import ProviderConfig
 
         config = ProviderConfig()
         assert config.extra_body is None
 
     def test_accepts_dict(self) -> None:
-        from nanobot.config.schema import ProviderConfig
+        from babo.config.schema import ProviderConfig
 
         config = ProviderConfig(extra_body={"guided_json": {"type": "object"}})
         assert config.extra_body == {"guided_json": {"type": "object"}}
 
     def test_nested_dict(self) -> None:
-        from nanobot.config.schema import ProviderConfig
+        from babo.config.schema import ProviderConfig
 
         config = ProviderConfig(
             extra_body={"chat_template_kwargs": {"enable_thinking": False}}

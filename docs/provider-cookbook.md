@@ -19,15 +19,15 @@ Match the recipe to the credential or endpoint you already have:
 | An OpenAI platform API key and OpenAI model ID | [OpenAI Direct](#recipe-openai-direct) | `OPENAI_API_KEY`, `provider: "openai"`, and an OpenAI model available to that account |
 | An Anthropic API key and Anthropic model ID | [Anthropic Direct](#recipe-anthropic-direct) | `ANTHROPIC_API_KEY`, `provider: "anthropic"`, and a non-gateway model ID |
 | A Kimi Coding Plan key | [Kimi Coding Plan](#recipe-kimi-coding-plan) | `KIMI_CODING_API_KEY`, `provider: "kimi_coding"`, and `model: "kimi-for-coding"` |
-| An OpenAI-compatible `/v1` endpoint that is not a named nanobot provider | [Custom OpenAI-Compatible Provider](#recipe-custom-openai-compatible-provider) | `apiBase`, optional API key, and the model ID served by that endpoint |
+| An OpenAI-compatible `/v1` endpoint that is not a named babo provider | [Custom OpenAI-Compatible Provider](#recipe-custom-openai-compatible-provider) | `apiBase`, optional API key, and the model ID served by that endpoint |
 | Ollama already running locally | [Ollama Local Model](#recipe-ollama-local-model) | Ollama `apiBase`, pulled model name, and local server availability |
 | vLLM, LM Studio, or another local OpenAI-compatible server | [vLLM or LM Studio](#recipe-vllm-or-lm-studio) | Local `/v1` base URL, any required key, and served model name |
 | A primary model plus one or more backups | [Fallback Presets](#recipe-fallback-presets) | Named presets in `modelPresets`, referenced from `agents.defaults.fallbackModels` |
-| A working agent and a Langfuse project | [Langfuse Tracing](#recipe-langfuse-tracing) | Langfuse env vars in the same process environment that starts nanobot |
+| A working agent and a Langfuse project | [Langfuse Tracing](#recipe-langfuse-tracing) | Langfuse env vars in the same process environment that starts babo |
 
 ## How to Use a Recipe
 
-1. Install nanobot and open `nanobot webui`.
+1. Install babo and open `babo webui`.
 2. Open **Settings → Models → New preset**. If **Convert to presets** appears, choose it first.
 3. Select the recipe's provider from **Provider**, or choose **Add provider** and save its credentials and endpoint.
 4. Select a model available to your account. Expand **Advanced options** if you need generation settings or an explicit request API.
@@ -48,17 +48,17 @@ Use the variable name shown by the recipe you picked. The commands below use `OP
 
 ```bash
 export OPENROUTER_API_KEY="sk-or-v1-..."
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
 **Windows PowerShell**
 
 ```powershell
 $env:OPENROUTER_API_KEY = "sk-or-v1-..."
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
-Environment variables set this way apply only to the current terminal. For long-running services such as systemd, Docker, LaunchAgent, or a remote shell, set the variables in that service environment before starting nanobot.
+Environment variables set this way apply only to the current terminal. For long-running services such as systemd, Docker, LaunchAgent, or a remote shell, set the variables in that service environment before starting babo.
 
 ## Recipe: OpenRouter Gateway
 
@@ -98,11 +98,11 @@ This recipe applies when one API key routes many hosted model families.
 Verify:
 
 ```bash
-nanobot status
-nanobot agent -m "Hello!"
+babo status
+babo agent -m "Hello!"
 ```
 
-If this fails with `401` or `unauthorized`, check that `OPENROUTER_API_KEY` is visible in the same terminal or service that starts nanobot. If it fails with `model not found`, choose a model ID that OpenRouter lists for your account.
+If this fails with `401` or `unauthorized`, check that `OPENROUTER_API_KEY` is visible in the same terminal or service that starts babo. If it fails with `model not found`, choose a model ID that OpenRouter lists for your account.
 
 ## Recipe: OpenCode Zen or Go
 
@@ -175,11 +175,11 @@ OpenCode Go:
 Verify:
 
 ```bash
-nanobot status
-nanobot agent -m "Hello!"
+babo status
+babo agent -m "Hello!"
 ```
 
-OpenCode's docs list models across multiple endpoint types. The `opencode_zen` and `opencode_go` providers in nanobot use the OpenAI-compatible `chat/completions` path. If a model fails with `model not found` or an endpoint shape error, choose a model that OpenCode lists under `chat/completions` for the matching Zen or Go endpoint.
+OpenCode's docs list models across multiple endpoint types. The `opencode_zen` and `opencode_go` providers in babo use the OpenAI-compatible `chat/completions` path. If a model fails with `model not found` or an endpoint shape error, choose a model that OpenCode lists under `chat/completions` for the matching Zen or Go endpoint.
 
 ## Recipe: OpenAI Direct
 
@@ -219,10 +219,10 @@ This recipe applies when you have an OpenAI API key and want to call OpenAI dire
 Verify:
 
 ```bash
-OPENAI_API_KEY="sk-..." nanobot agent -m "Hello!"
+OPENAI_API_KEY="sk-..." babo agent -m "Hello!"
 ```
 
-If your shell cannot use inline environment variables, set `OPENAI_API_KEY` first and then run `nanobot agent -m "Hello!"`. Leave API selection on Auto unless you need a specific API in the preset's **Advanced options**; see [preset API settings](./configuration.md#preset-request-api). If your configuration still uses `apiType`, follow the [migration instructions](./configuration.md#legacy-openai-api-selector-migration).
+If your shell cannot use inline environment variables, set `OPENAI_API_KEY` first and then run `babo agent -m "Hello!"`. Leave API selection on Auto unless you need a specific API in the preset's **Advanced options**; see [preset API settings](./configuration.md#preset-request-api). If your configuration still uses `apiType`, follow the [migration instructions](./configuration.md#legacy-openai-api-selector-migration).
 
 ## Recipe: Anthropic Direct
 
@@ -262,7 +262,7 @@ This recipe applies when your key comes from Anthropic and your model name is an
 Verify:
 
 ```bash
-ANTHROPIC_API_KEY="sk-ant-..." nanobot agent -m "Hello!"
+ANTHROPIC_API_KEY="sk-ant-..." babo agent -m "Hello!"
 ```
 
 If you copied a model name such as `anthropic/claude-sonnet-4.5`, that is a gateway-style model path and belongs under `provider: "openrouter"`, not `provider: "anthropic"`.
@@ -305,7 +305,7 @@ Do not configure Anthropic-compatible endpoints as arbitrary custom provider nam
 
 In **Settings → Models → New preset**, select Kimi Coding, add your Coding Plan key, choose `kimi-for-coding`, and save. Select the preset in chat.
 
-This recipe applies when your key comes from Kimi's Coding Plan endpoint. Nanobot uses a dedicated `kimi_coding` provider for this Anthropic Messages API endpoint; do not configure it as a generic `custom` provider.
+This recipe applies when your key comes from Kimi's Coding Plan endpoint. Babo uses a dedicated `kimi_coding` provider for this Anthropic Messages API endpoint; do not configure it as a generic `custom` provider.
 
 <details>
 <summary>Manual configuration</summary>
@@ -338,17 +338,17 @@ This recipe applies when your key comes from Kimi's Coding Plan endpoint. Nanobo
 Verify:
 
 ```bash
-nanobot status
-nanobot agent -m "Hello!"
+babo status
+babo agent -m "Hello!"
 ```
 
-The default base URL is `https://api.kimi.com/coding/v1`. This endpoint requires a Claude-compatible `User-Agent`; nanobot sends `claude-code/0.1.0` by default. If your account requires a different value, override it with `providers.kimiCoding.extraHeaders.User-Agent`.
+The default base URL is `https://api.kimi.com/coding/v1`. This endpoint requires a Claude-compatible `User-Agent`; babo sends `claude-code/0.1.0` by default. If your account requires a different value, override it with `providers.kimiCoding.extraHeaders.User-Agent`.
 
 ## Recipe: Custom OpenAI-Compatible Provider
 
 In **Settings → Models → New preset → Provider → Add provider**, create a custom connection with the endpoint URL and any required key. Select its served model, save the preset, and select it in chat.
 
-This recipe applies to an OpenAI-compatible service that is not a named nanobot provider.
+This recipe applies to an OpenAI-compatible service that is not a named babo provider.
 
 <details>
 <summary>Manual configuration</summary>
@@ -380,11 +380,11 @@ This recipe applies to an OpenAI-compatible service that is not a named nanobot 
 
 </details>
 
-Verify the endpoint before blaming nanobot:
+Verify the endpoint before blaming babo:
 
 ```bash
 curl -sS https://api.example.com/v1/models
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
 `apiBase` is the HTTP base URL, not the model name. Include the version path when the service expects it, such as `/v1`. If the service requires a non-empty key but does not validate it, use a placeholder such as `"apiKey": "EMPTY"`.
@@ -435,7 +435,7 @@ These custom names define direct connections: `apiBase` is required and `apiKey`
 
 ## Recipe: Ollama Local Model
 
-Follow the server preparation below, then open **Settings → Models → New preset**, select or add an Ollama connection at `http://localhost:11434/v1`, choose the downloaded model, and save. Select the preset in chat. If nanobot runs in a container or on another computer, `localhost` refers to that host; use an address reachable from nanobot.
+Follow the server preparation below, then open **Settings → Models → New preset**, select or add an Ollama connection at `http://localhost:11434/v1`, choose the downloaded model, and save. Select the preset in chat. If babo runs in a container or on another computer, `localhost` refers to that host; use an address reachable from babo.
 
 If Ollama is not installed, follow its [official quickstart](https://docs.ollama.com/quickstart) ([Linux setup](https://docs.ollama.com/linux)). Keep the Ollama app or service running. If no service is running, start `ollama serve` in a terminal and leave it open; do not start a second server when the app or system service already owns the port. In a separate terminal, download a model and confirm it is listed:
 
@@ -444,7 +444,7 @@ ollama pull llama3.2
 ollama list
 ```
 
-Use that exact model name in nanobot. Downloading requires internet access and disk space; model inference then runs on the machine hosting Ollama.
+Use that exact model name in babo. Downloading requires internet access and disk space; model inference then runs on the machine hosting Ollama.
 
 <details>
 <summary>Manual configuration</summary>
@@ -487,7 +487,7 @@ Local inference does not disable network tools. For local-only document work, tu
 
 If you see `connection refused`, Ollama is not running or `apiBase` points to the wrong port. If every response is slow, try a smaller local model or lower `contextWindowTokens`.
 
-If direct Ollama responses are fast but tool-using nanobot turns repeatedly evaluate thousands of prompt tokens, the model's chat template may be moving its tool definitions between requests. See [Improve Ollama Tool-Calling Prompt Cache Reuse](./guides/configure-ollama-prompt-cache.md) for a diagnostic procedure and an optional model-specific workaround.
+If direct Ollama responses are fast but tool-using babo turns repeatedly evaluate thousands of prompt tokens, the model's chat template may be moving its tool definitions between requests. See [Improve Ollama Tool-Calling Prompt Cache Reuse](./guides/configure-ollama-prompt-cache.md) for a diagnostic procedure and an optional model-specific workaround.
 
 ## Recipe: vLLM or LM Studio
 
@@ -602,27 +602,27 @@ This recipe applies when one provider sometimes rate-limits, one model is expens
 
 </details>
 
-`fallbackModels` belongs under `agents.defaults`. String entries are preset names, not raw model names. nanobot tries the active preset first, then the fallback presets in order.
+`fallbackModels` belongs under `agents.defaults`. String entries are preset names, not raw model names. babo tries the active preset first, then the fallback presets in order.
 
-Keep fallback candidates realistic. If the local fallback has a smaller context window, nanobot must build context that fits the smallest window in the active chain.
+Keep fallback candidates realistic. If the local fallback has a smaller context window, babo must build context that fits the smallest window in the active chain.
 
 ## Recipe: Langfuse Tracing
 
 This recipe applies after the agent works and you want observability for OpenAI-compatible provider calls, or for the Codex OAuth provider.
 
-Install the optional package in the same Python environment that runs nanobot:
+Install the optional package in the same Python environment that runs babo:
 
 ```bash
-nanobot plugins enable langfuse
+babo plugins enable langfuse
 ```
 
-Set the environment variables before starting nanobot:
+Set the environment variables before starting babo:
 
 ```bash
 export LANGFUSE_SECRET_KEY="sk-lf-..."
 export LANGFUSE_PUBLIC_KEY="pk-lf-..."
 export LANGFUSE_BASE_URL="https://cloud.langfuse.com"
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
 PowerShell:
@@ -631,7 +631,7 @@ PowerShell:
 $env:LANGFUSE_SECRET_KEY = "sk-lf-..."
 $env:LANGFUSE_PUBLIC_KEY = "pk-lf-..."
 $env:LANGFUSE_BASE_URL = "https://cloud.langfuse.com"
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
 Langfuse is not a model provider in `config.json`. It is configured through environment variables and traces supported OpenAI-compatible provider calls, plus Codex OAuth provider calls via Langfuse's native SDK. Other native providers that do not use either path may not produce Langfuse traces.
@@ -687,7 +687,7 @@ In chat:
 | `model not found` | The model ID does not belong to the selected provider or gateway | Compare `modelPresets.<name>.provider` and `modelPresets.<name>.model` |
 | `connection refused` | Local server is not running or `apiBase` has the wrong port/path | Run `curl <apiBase>/models` |
 | `provider not found` | Provider name is misspelled or uses the config key instead of registry name | Use names such as `openrouter`, `openai`, `anthropic`, `ollama`, `vllm`, `lm_studio` |
-| Langfuse shows no traces | Env vars are missing, `langfuse` is not installed in the active Python environment, or the provider path is a native provider other than Codex OAuth | Run `python -m pip show langfuse` and restart nanobot from the same environment |
+| Langfuse shows no traces | Env vars are missing, `langfuse` is not installed in the active Python environment, or the provider path is a native provider other than Codex OAuth | Run `python -m pip show langfuse` and restart babo from the same environment |
 
 ## Next References
 
