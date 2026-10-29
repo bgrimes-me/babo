@@ -44,7 +44,7 @@ it("switches the gallery interface and sample controls without replacing the act
   expect(input).toHaveAccessibleName(/[\u4e00-\u9fff]/);
   expect(window.location.hash).toBe(hash);
   expect(document.documentElement.lang).toBe("zh-CN");
-  expect(localStorage.getItem("nanobot.locale")).toBe("zh-CN");
+  expect(localStorage.getItem("babo.locale")).toBe("zh-CN");
   expect(fetch).toHaveBeenCalledTimes(1);
 });
 
@@ -64,7 +64,7 @@ it("translates a visible inventory failure without retrying or losing search inp
 });
 
 it("keeps the visible assistant identity when translating existing interaction feedback", async () => {
-  const source = "nanobot/channels/feishu/webui/FeishuAssistantsPanelView.tsx";
+  const source = "babo/channels/feishu/webui/FeishuAssistantsPanelView.tsx";
   window.history.replaceState({}, "", `/gallery.html#${new URLSearchParams({ component: source })}`);
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => inventory }));
   render(<Gallery />);

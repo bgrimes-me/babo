@@ -13,9 +13,9 @@ TAG = "win_amd64"
 
 
 def candidate(tmp_path):
-    wheel = tmp_path / "nanobot_ai-0.3.6.dev42-py3-none-win_amd64.whl"
+    wheel = tmp_path / "babo-0.3.6.dev42-py3-none-win_amd64.whl"
     with ZipFile(wheel, "w") as archive:
-        archive.writestr("nanobot/_build_commit.txt", COMMIT + "\n")
+        archive.writestr("babo/_build_commit.txt", COMMIT + "\n")
     manifest = {"candidate_commit": COMMIT, "version": "0.3.6.dev42", "artifacts": [{
         "filename": wheel.name, "size": wheel.stat().st_size,
         "sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),

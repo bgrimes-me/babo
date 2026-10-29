@@ -46,13 +46,13 @@ module.exports = { BBox, Resvg, RenderedImage, renderAsync };
 `
 
   return {
-    name: "nanobot-resvg-target",
+    name: "babo-resvg-target",
     setup(builder) {
       builder.onResolve({ filter: /^\.\/js-binding\.js$/ }, (args) => {
-        if (resolve(args.importer) === resolve(entry)) return { path: "binding", namespace: "nanobot-resvg" }
+        if (resolve(args.importer) === resolve(entry)) return { path: "binding", namespace: "babo-resvg" }
         return undefined
       })
-      builder.onLoad({ filter: /^binding$/, namespace: "nanobot-resvg" }, () => ({ contents, loader: "js" }))
+      builder.onLoad({ filter: /^binding$/, namespace: "babo-resvg" }, () => ({ contents, loader: "js" }))
     },
   }
 }

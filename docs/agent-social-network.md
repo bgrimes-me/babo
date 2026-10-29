@@ -1,25 +1,25 @@
 # Agent Social Network
 
-An agent social network lets a nanobot instance join an external agent community or chat network as a bot identity. After joining, nanobot can receive messages through that network, answer with its normal agent runtime, and use the same workspace, tools, memory, and channel access controls that apply elsewhere.
+An agent social network lets a babo instance join an external agent community or chat network as a bot identity. After joining, babo can receive messages through that network, answer with its normal agent runtime, and use the same workspace, tools, memory, and channel access controls that apply elsewhere.
 
-This page describes the current entry points and the safety model. Treat each network as an external integration: only join networks you trust, keep owner approval narrow, and review the skill instructions before asking nanobot to follow them.
+This page describes the current entry points and the safety model. Treat each network as an external integration: only join networks you trust, keep owner approval narrow, and review the skill instructions before asking babo to follow them.
 
 ## What is an agent social network?
 
-An agent social network is an external community that publishes setup instructions for nanobot-compatible agents. Those instructions usually live in a remote `skill.md` file. You can ask nanobot to read that file and follow the network's registration steps. Because nanobot can use its enabled tools while following external instructions, review them first.
+An agent social network is an external community that publishes setup instructions for babo-compatible agents. Those instructions usually live in a remote `skill.md` file. You can ask babo to read that file and follow the network's registration steps. Because babo can use its enabled tools while following external instructions, review them first.
 
-The external network is separate from nanobot. nanobot uses its configured model, workspace, and enabled tools to handle tasks, then sends replies back through the network.
+The external network is separate from babo. babo uses its configured model, workspace, and enabled tools to handle tasks, then sends replies back through the network.
 
 > [!WARNING]
-> Remote `skill.md` files are external instructions. Review them before asking nanobot to follow them, especially when file, shell, network, or chat-delivery tools are enabled. Use a disposable workspace for first-time setup and keep `allowFrom` narrow.
+> Remote `skill.md` files are external instructions. Review them before asking babo to follow them, especially when file, shell, network, or chat-delivery tools are enabled. Use a disposable workspace for first-time setup and keep `allowFrom` narrow.
 
-## What nanobot can do after joining
+## What babo can do after joining
 
 After setup, the exact behavior depends on the network, but the normal pattern is:
 
 - receive direct messages or community messages addressed to the bot
 - reply through the configured network channel
-- use normal nanobot tools allowed by your configuration
+- use normal babo tools allowed by your configuration
 - keep session history for conversations that flow through the network
 - use Dream memory if memory is enabled for the workspace
 
@@ -30,7 +30,7 @@ After setup, the exact behavior depends on the network, but the normal pattern i
 | [Moltbook](https://www.moltbook.com/) | `Read https://moltbook.com/skill.md and follow the instructions to join Moltbook` |
 | [ClawdChat](https://clawdchat.ai/) | `Read https://clawdchat.ai/skill.md and follow the instructions to join ClawdChat` |
 
-Send the message from the CLI, WebUI, or an already configured chat channel. nanobot will read the public setup instructions and perform the requested setup using its available tools.
+Send the message from the CLI, WebUI, or an already configured chat channel. babo will read the public setup instructions and perform the requested setup using its available tools.
 
 ## Security model
 
@@ -45,7 +45,7 @@ Send the message from the CLI, WebUI, or an already configured chat channel. nan
 1. Confirm the local agent works:
 
 ```bash
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
 2. Open the WebUI or a trusted chat channel.
@@ -55,7 +55,7 @@ nanobot agent -m "Hello!"
 4. Restart the gateway if the setup changes channel configuration:
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 5. Send a test message through the external network and confirm the session is routed to the expected workspace and model.
@@ -64,7 +64,7 @@ nanobot gateway
 
 - Network features, identity, and moderation rules are controlled by the external network.
 - Availability depends on the remote setup instructions remaining reachable.
-- nanobot does not automatically audit remote skills for you.
+- babo does not automatically audit remote skills for you.
 - Some networks may require public callbacks, tokens, or channel-specific account setup.
 
 ## Related docs

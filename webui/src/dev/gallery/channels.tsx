@@ -111,7 +111,7 @@ const genericRegistrations = registeredChannelUiContributions()
 export const channelExamples: ComponentExample[] = genericRegistrations.map(({ channel, webui, contribution }, index) => ({
   title: "previews.channel.title",
   titleValues: { channel: contribution.presentation.displayName },
-  files: [`nanobot/channels/${channel}/${webui}`, ...(index === 0 ? ["webui/src/components/settings/channels/ChannelSetupSurfaceView.tsx"] : [])],
+  files: [`babo/channels/${channel}/${webui}`, ...(index === 0 ? ["webui/src/components/settings/channels/ChannelSetupSurfaceView.tsx"] : [])],
   description: "previews.channel.description",
   options: "previews.channel.options",
   code: `<ChannelSetupSurfaceView feature={channelFeatures.${channel}} setup={setup} {...displayState} {...actions} />`,
@@ -122,13 +122,13 @@ export function withChannelEntries(customExamples: ComponentExample[]): Componen
   const assigned = new Set(customExamples.flatMap((example) => example.files));
   return customExamples.map((example) => {
     const entries = registeredChannelUiContributions().filter(({ channel, webui }) => {
-      const entry = `nanobot/channels/${channel}/${webui}`;
-      const ownsMainView = example.files.some((file) => file.startsWith(`nanobot/channels/${channel}/webui/`)
+      const entry = `babo/channels/${channel}/${webui}`;
+      const ownsMainView = example.files.some((file) => file.startsWith(`babo/channels/${channel}/webui/`)
         && (file.endsWith("PanelView.tsx") || file.endsWith("WhatsAppConnectFlowView.tsx")));
       if (!ownsMainView || assigned.has(entry)) return false;
       assigned.add(entry);
       return true;
-    }).map(({ channel, webui }) => `nanobot/channels/${channel}/${webui}`);
+    }).map(({ channel, webui }) => `babo/channels/${channel}/${webui}`);
     return { ...example, files: [...example.files, ...entries] };
   });
 }

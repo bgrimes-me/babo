@@ -5,16 +5,16 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.context import TranscriptInput
-from nanobot.agent.loop import AgentLoop, TurnContext, TurnKind
-from nanobot.agent.tools.context import RequestContext
-from nanobot.agent.tools.filesystem import ReadFileTool
-from nanobot.bus.events import InboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.config.schema import ChannelsConfig
-from nanobot.providers.base import LLMResponse
-from nanobot.runtime_context import public_history_message
-from nanobot.utils.document import reference_non_image_attachments
+from babo.agent.context import TranscriptInput
+from babo.agent.loop import AgentLoop, TurnContext, TurnKind
+from babo.agent.tools.context import RequestContext
+from babo.agent.tools.filesystem import ReadFileTool
+from babo.bus.events import InboundMessage
+from babo.bus.queue import MessageBus
+from babo.config.schema import ChannelsConfig
+from babo.providers.base import LLMResponse
+from babo.runtime_context import public_history_message
+from babo.utils.document import reference_non_image_attachments
 
 
 def _make_loop(
@@ -56,8 +56,8 @@ async def test_document_attachment_is_referenced_and_read_on_demand(
     media_dir = tmp_path / "media"
     media_dir.mkdir()
     csv_path = media_dir / "report.csv"
-    csv_path.write_text("name,value\nnanobot,1", encoding="utf-8")
-    monkeypatch.setattr("nanobot.agent.tools.path_utils.get_media_dir", lambda: media_dir)
+    csv_path.write_text("name,value\nbabo,1", encoding="utf-8")
+    monkeypatch.setattr("babo.agent.tools.path_utils.get_media_dir", lambda: media_dir)
 
     loop = _make_loop(
         workspace,
@@ -82,7 +82,7 @@ async def test_document_attachment_is_referenced_and_read_on_demand(
     result = await read_tool.execute(path=str(csv_path))
 
     assert "1| name,value" in result
-    assert "2| nanobot,1" in result
+    assert "2| babo,1" in result
 
 
 @pytest.mark.asyncio
@@ -217,7 +217,7 @@ def test_attachment_references_canonicalize_existing_relative_paths(
 
 @pytest.mark.asyncio
 async def test_borrowed_image_origin_survives_canonical_reload(tmp_path: Path) -> None:
-    from nanobot.webui.transcript import build_session_thread_response
+    from babo.webui.transcript import build_session_thread_response
 
     source = tmp_path / "borrowed.png"
     source.write_bytes(base64.b64decode(

@@ -1,12 +1,12 @@
 # Development
 
-This page collects contributor-facing notes for extending nanobot. User-facing setup and runtime options live in [`configuration.md`](./configuration.md).
+This page collects contributor-facing notes for extending babo. User-facing setup and runtime options live in [`configuration.md`](./configuration.md).
 
 For browser interface changes, start with [WebUI development](../webui/README.md). For Python setup and contribution checks, see [CONTRIBUTING.md](../CONTRIBUTING.md). The sections below cover provider extensions.
 
 ## Adding an LLM Provider
 
-nanobot uses the provider registry in `nanobot/providers/registry.py` as the source of truth for LLM provider metadata. Most OpenAI-compatible providers need only two changes.
+babo uses the provider registry in `babo/providers/registry.py` as the source of truth for LLM provider metadata. Most OpenAI-compatible providers need only two changes.
 
 1. Add a `ProviderSpec` entry to `PROVIDERS`:
 
@@ -21,7 +21,7 @@ ProviderSpec(
 )
 ```
 
-2. Add a field to `ProvidersConfig` in `nanobot/config/schema.py`:
+2. Add a field to `ProvidersConfig` in `babo/config/schema.py`:
 
 ```python
 class ProvidersConfig(BaseModel):
@@ -50,7 +50,7 @@ Useful `ProviderSpec` options:
 
 ### Request API routing
 
-`resolve_provider_route` in `nanobot/providers/routing.py` validates connection and preset declarations and selects the adapter. Built-in OpenAI connection declarations set an overridable default; custom connection declarations also limit the preset's allowed APIs.
+`resolve_provider_route` in `babo/providers/routing.py` validates connection and preset declarations and selects the adapter. Built-in OpenAI connection declarations set an overridable default; custom connection declarations also limit the preset's allowed APIs.
 
 `ProviderSpec.default_model_api` resolves automatic model rules from the registry. Copilot uses the account's last successfully discovered `supported_endpoints` when available. The WebUI preview calls `resolve_automatic_model_api` without probing endpoints or consulting circuit-breaker state; it reports a preference, not a guarantee of remote support.
 
@@ -74,14 +74,14 @@ Replace `OpenAICompatProvider(api_type=...)` with `OpenAICompatProvider(model_ap
 ModelAPICapabilities(supported_apis=("responses",), preferred_api="responses")
 ```
 
-API types and automatic selection rules are defined in `nanobot.providers.model_api`. The registry owns `ProviderSpec`, model metadata, and provider declarations; it also re-exports the API types. The temporary `apiType` configuration migration applies to JSON configuration and Settings inputs; it does not preserve the old Python constructor arguments.
+API types and automatic selection rules are defined in `babo.providers.model_api`. The registry owns `ProviderSpec`, model metadata, and provider declarations; it also re-exports the API types. The temporary `apiType` configuration migration applies to JSON configuration and Settings inputs; it does not preserve the old Python constructor arguments.
 
 ## Adding a Transcription Provider
 
 Transcription is intentionally split into two layers:
 
-- `nanobot/audio/transcription_registry.py` owns provider names, aliases, default models, and adapter loading.
-- `nanobot/providers/transcription.py` owns provider-specific HTTP behavior.
+- `babo/audio/transcription_registry.py` owns provider names, aliases, default models, and adapter loading.
+- `babo/providers/transcription.py` owns provider-specific HTTP behavior.
 
 Credentials still live under `providers.<provider>` so chat channels and WebUI resolve API keys and API bases the same way.
 
@@ -93,7 +93,7 @@ class ProvidersConfig(BaseModel):
     my_stt: ProviderConfig = Field(default_factory=ProviderConfig)
 ```
 
-2. Add a `ProviderSpec` in `nanobot/providers/registry.py`.
+2. Add a `ProviderSpec` in `babo/providers/registry.py`.
 
 For transcription-only providers, set `is_transcription_only=True` so they show up in credential/settings surfaces but stay out of chat model selection.
 
@@ -109,7 +109,7 @@ ProviderSpec(
 )
 ```
 
-3. Add an adapter class in `nanobot/providers/transcription.py`.
+3. Add an adapter class in `babo/providers/transcription.py`.
 
 Adapters receive resolved credentials and settings. They return an empty string for provider errors so channel voice messages fail quietly instead of crashing the agent loop.
 
@@ -131,13 +131,13 @@ class MySTTTranscriptionProvider:
         ...
 ```
 
-4. Register the adapter in `nanobot/audio/transcription_registry.py`.
+4. Register the adapter in `babo/audio/transcription_registry.py`.
 
 ```python
 TranscriptionProviderSpec(
     name="my_stt",
     default_model="my-default-stt-model",
-    adapter="nanobot.providers.transcription:MySTTTranscriptionProvider",
+    adapter="babo.providers.transcription:MySTTTranscriptionProvider",
     aliases=("mystt",),
 )
 ```

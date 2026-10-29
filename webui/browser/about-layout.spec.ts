@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("About current-version feedback keeps its initial row height with wider system fonts", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+  await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
   const positions: number[] = [];
   for (const state of ["loaded", "loading"]) {
     await page.goto(`/browser/fixture.html?case=skeleton-additions&surface=settings&state=${state}&section=about`);
@@ -23,7 +23,7 @@ for (const state of ["loaded", "loading"]) {
     await page.emulateMedia({ reducedMotion: "reduce" });
     let release!: () => void;
     const pendingImage = new Promise<void>(resolve => { release = resolve; });
-    await page.route("**/brand/nanobot_wordmark.svg", async route => {
+    await page.route("**/brand/babo_wordmark.svg", async route => {
       await pendingImage;
       await route.continue();
     });
@@ -33,7 +33,7 @@ for (const state of ["loaded", "loading"]) {
       await expect(row).toBeVisible();
       const before = await row.boundingBox();
       release();
-      const wordmark = page.locator('img[alt="nanobot"]');
+      const wordmark = page.locator('img[alt="babo"]');
       await expect(wordmark).toHaveJSProperty("complete", true);
       expect(await wordmark.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
       const after = await row.boundingBox();

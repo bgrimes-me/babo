@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 492 184" fill="none">
+  <title>babo</title>
+  <g stroke="#1F5F6B" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30 20V164M30 121C30 96 47 78 72 78C97 78 114 96 114 121C114 146 97 164 72 164C47 164 30 146 30 121"/>
+    <path d="M230 78V164M230 121C230 96 213 78 188 78C163 78 146 96 146 121C146 146 163 164 188 164C213 164 230 146 230 121"/>
+    <path d="M262 20V164M262 121C262 96 279 78 304 78C329 78 346 96 346 121C346 146 329 164 304 164C279 164 262 146 262 121"/>
+  </g>
+  <g stroke="#D9792B" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M462 121C462 146 445 164 420 164C395 164 378 146 378 121C378 96 395 78 420 78C445 78 462 96 462 121Z"/>
+  </g>
+</svg>

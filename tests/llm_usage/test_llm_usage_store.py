@@ -10,10 +10,10 @@ from typing import Any
 
 import pytest
 
-from nanobot.llm_usage.context import LLMUsageSource
-from nanobot.llm_usage.models import LLMCallRecord
-from nanobot.llm_usage.store import SCHEMA_VERSION, LLMUsageStore
-from nanobot.providers.base import LLMUsage
+from babo.llm_usage.context import LLMUsageSource
+from babo.llm_usage.models import LLMCallRecord
+from babo.llm_usage.store import SCHEMA_VERSION, LLMUsageStore
+from babo.providers.base import LLMUsage
 
 
 def _timestamp(value: str) -> int:

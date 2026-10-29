@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.security.workspace_access import default_workspace_scope
-from nanobot.webui.file_preview import (
+from babo.security.workspace_access import default_workspace_scope
+from babo.webui.file_preview import (
     WebUIFilePreviewError,
     file_preview_availability_payload,
     file_preview_payload,
@@ -80,7 +80,7 @@ def test_raster_preview_uses_content_signature(tmp_path: Path, data: bytes, mime
 
 
 def test_large_raster_is_rejected_without_truncating(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr("nanobot.webui.file_preview.MAX_IMAGE_PREVIEW_BYTES", 32)
+    monkeypatch.setattr("babo.webui.file_preview.MAX_IMAGE_PREVIEW_BYTES", 32)
     (tmp_path / "large.png").write_bytes(PNG)
     scope = default_workspace_scope(tmp_path, restrict_to_workspace=True)
     for read in (file_preview_payload, file_preview_availability_payload):
@@ -129,7 +129,7 @@ def test_restricted_preview_allows_media_file(tmp_path: Path, monkeypatch: pytes
     media.mkdir()
     uploaded = media / "upload.txt"
     uploaded.write_text("uploaded", encoding="utf-8")
-    monkeypatch.setattr("nanobot.webui.file_preview.get_media_dir", lambda: media)
+    monkeypatch.setattr("babo.webui.file_preview.get_media_dir", lambda: media)
 
     scope = default_workspace_scope(workspace, restrict_to_workspace=True)
 
@@ -146,7 +146,7 @@ def test_restricted_preview_rejects_other_root(tmp_path: Path, monkeypatch: pyte
     media.mkdir()
     outside = tmp_path / "outside.txt"
     outside.write_text("secret", encoding="utf-8")
-    monkeypatch.setattr("nanobot.webui.file_preview.get_media_dir", lambda: media)
+    monkeypatch.setattr("babo.webui.file_preview.get_media_dir", lambda: media)
 
     scope = default_workspace_scope(workspace, restrict_to_workspace=True)
 

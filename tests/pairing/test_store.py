@@ -2,13 +2,13 @@ import json
 
 import pytest
 
-from nanobot.pairing import __all__ as pairing_all
-from nanobot.pairing import store
+from babo.pairing import __all__ as pairing_all
+from babo.pairing import store
 
 
 def test_all_exports_are_importable():
-    """Every name in __all__ must actually be importable from nanobot.pairing."""
-    import nanobot.pairing as pkg
+    """Every name in __all__ must actually be importable from babo.pairing."""
+    import babo.pairing as pkg
 
     for name in pairing_all:
         assert hasattr(pkg, name), f"{name} is in __all__ but not exported"
@@ -110,10 +110,10 @@ class TestFormatPairingReply:
     def test_points_owner_to_webui_with_command_fallback(self) -> None:
         reply = store.format_pairing_reply("ABCD-EFGH")
 
-        assert "nanobot WebUI" in reply
+        assert "babo WebUI" in reply
         assert "ABCD-EFGH" in reply
         assert "/pairing approve ABCD-EFGH" in reply
-        assert "private nanobot" in reply
+        assert "private babo" in reply
         assert "approved users" not in reply
 
 

@@ -2,10 +2,10 @@ import { fileURLToPath } from "node:url"
 import { jsonLines, REPLY_LIMIT, REQUEST_LIMIT } from "./protocol"
 import { MAX_DIMENSION, MAX_PIXELS, OUTPUT_LIMIT, SOURCE_LIMIT, type DiagramAsset, type DiagramFrame, type DiagramImage, type DiagramInput, type DiagramLayout, type DiagramWork } from "./types"
 
-declare const NANOBOT_COMPILED: boolean
+declare const BABO_COMPILED: boolean
 
 function launch() {
-  const args = typeof NANOBOT_COMPILED !== "undefined" && NANOBOT_COMPILED
+  const args = typeof BABO_COMPILED !== "undefined" && BABO_COMPILED
     ? [process.execPath, "--render-mermaid"]
     : [process.execPath, fileURLToPath(new URL("../../index.ts", import.meta.url)), "--render-mermaid"]
   return Bun.spawn(args, { stdin: "pipe", stdout: "pipe", stderr: "pipe", windowsHide: true })

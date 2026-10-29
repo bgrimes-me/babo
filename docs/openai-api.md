@@ -1,16 +1,16 @@
-# Nanobot OpenAI-Compatible API: Run a Local Agent Behind /v1/chat/completions
+# Babo OpenAI-Compatible API: Run a Local Agent Behind /v1/chat/completions
 
-nanobot can expose a minimal OpenAI-compatible endpoint for local integrations. If your agent already replies in the WebUI, open **Settings → System**, configure and start the API service there. You do not need another installation or a separate `nanobot serve` process.
+babo can expose a minimal OpenAI-compatible endpoint for local integrations. If your agent already replies in the WebUI, open **Settings → System**, configure and start the API service there. You do not need another installation or a separate `babo serve` process.
 
 For a terminal-managed API, use your existing configured installation:
 
 ```bash
-nanobot plugins enable api
-nanobot agent -m "Hello!"
-nanobot serve
+babo plugins enable api
+babo agent -m "Hello!"
+babo serve
 ```
 
-Run the CLI check first. If `nanobot agent -m "Hello!"` fails, fix provider or config setup before debugging the API server. By default, the API binds to `127.0.0.1:8900`. You can change this in `config.json`.
+Run the CLI check first. If `babo agent -m "Hello!"` fails, fix provider or config setup before debugging the API server. By default, the API binds to `127.0.0.1:8900`. You can change this in `config.json`.
 
 For setup help, see [`quick-start.md`](./quick-start.md), [`providers.md`](./providers.md), and [`troubleshooting.md`](./troubleshooting.md).
 
@@ -18,7 +18,7 @@ For setup help, see [`quick-start.md`](./quick-start.md), [`providers.md`](./pro
 
 For graphical setup, open **Settings → System**, find the API service, enter its host, port, and API key, and start it. Set a key before binding to a network interface. The config-file alternative is collapsed below.
 
-Local-only `127.0.0.1` usage does not require an API key. If you bind the API server to all interfaces with `api.host: "0.0.0.0"` or `"::"`, nanobot requires `api.apiKey`; otherwise startup fails to avoid exposing an unauthenticated agent endpoint on the network.
+Local-only `127.0.0.1` usage does not require an API key. If you bind the API server to all interfaces with `api.host: "0.0.0.0"` or `"::"`, babo requires `api.apiKey`; otherwise startup fails to avoid exposing an unauthenticated agent endpoint on the network.
 
 <details>
 <summary>Manual configuration</summary>
@@ -28,7 +28,7 @@ Local-only `127.0.0.1` usage does not require an API key. If you bind the API se
   "api": {
     "host": "0.0.0.0",
     "port": 8900,
-    "apiKey": "${NANOBOT_API_KEY}"
+    "apiKey": "${BABO_API_KEY}"
   }
 }
 ```
@@ -39,7 +39,7 @@ When `api.apiKey` is set, send it as a Bearer token on API routes. The health en
 
 ```bash
 curl http://127.0.0.1:8900/v1/models \
-  -H "Authorization: Bearer $NANOBOT_API_KEY"
+  -H "Authorization: Bearer $BABO_API_KEY"
 ```
 
 ## Behavior
@@ -51,7 +51,7 @@ curl http://127.0.0.1:8900/v1/models \
 - **File uploads**: supports images, PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx) via JSON base64 or `multipart/form-data` (max 10MB per file)
 - API requests run in the synthetic `api` channel. Responses are returned to the HTTP client; the standalone API service does not deliver `message` tool calls to chat apps.
 
-`nanobot serve` creates its own in-process message queue without starting chat-channel consumers. The API service started from **Settings → System** uses the same command. An explicit `channel` and `chat_id` can enqueue a tool message, but it does not cause platform delivery, even when that channel is enabled or a separate gateway is running. Do not treat the tool acknowledgement as a delivery receipt. Applications that need to forward an API result to Telegram, Discord, or another platform must handle that delivery separately.
+`babo serve` creates its own in-process message queue without starting chat-channel consumers. The API service started from **Settings → System** uses the same command. An explicit `channel` and `chat_id` can enqueue a tool message, but it does not cause platform delivery, even when that channel is enabled or a separate gateway is running. Do not treat the tool acknowledgement as a delivery receipt. Applications that need to forward an API result to Telegram, Discord, or another platform must handle that delivery separately.
 
 The API can start before provider/model setup is complete. Health checks remain available, and authenticated model requests return a setup error without executing an agent turn. Configure the provider/model, then restart the API process to load the new settings.
 
@@ -76,7 +76,7 @@ These API error responses use `{"error":{"message":"...","type":"...","code":400
 
 Once an SSE response has started, an execution failure or timeout closes it **without** a final `finish_reason: "stop"` chunk or `data: [DONE]`. There is no separate SSE error event. Treat a stream ending without `[DONE]` as incomplete, even if HTTP status was 200 or some text arrived.
 
-Execution timeout defaults to 120 seconds (`api.timeout`, or `nanobot serve --timeout`). It starts after acquiring the session lock, so waiting behind another request can make total request time longer. A client timeout or disconnect is not a reliable cancellation interface. A failed SSE write cancels its running task, but disconnect detection may wait for output; non-streaming work can continue after a client disconnects. Cancellation and timeout do not undo tool actions already performed.
+Execution timeout defaults to 120 seconds (`api.timeout`, or `babo serve --timeout`). It starts after acquiring the session lock, so waiting behind another request can make total request time longer. A client timeout or disconnect is not a reliable cancellation interface. A failed SSE write cancels its running task, but disconnect detection may wait for output; non-streaming work can continue after a client disconnects. Cancellation and timeout do not undo tool actions already performed.
 
 There is no request idempotency key or automatic deduplication. Retrying can repeat a message, file edit, or external action. Check the result before retrying side-effecting requests, and disable automatic client retries when duplicate actions would matter.
 
@@ -88,11 +88,11 @@ There is no request idempotency key or automatic deduplication. Retrying can rep
 
 ## curl
 
-The examples below use a local server. If you configured `api.apiKey`, set `NANOBOT_API_KEY` to that same value in the client shell; it is separate from your model provider key. The authorization header is ignored when the local server has no configured key.
+The examples below use a local server. If you configured `api.apiKey`, set `BABO_API_KEY` to that same value in the client shell; it is separate from your model provider key. The authorization header is ignored when the local server has no configured key.
 
 ```bash
 curl http://127.0.0.1:8900/v1/chat/completions \
-  -H "Authorization: Bearer $NANOBOT_API_KEY" \
+  -H "Authorization: Bearer $BABO_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [{"role": "user", "content": "hi"}],
@@ -106,7 +106,7 @@ Send images inline using the OpenAI multimodal content format:
 
 ```bash
 curl http://127.0.0.1:8900/v1/chat/completions \
-  -H "Authorization: Bearer $NANOBOT_API_KEY" \
+  -H "Authorization: Bearer $BABO_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [{"role": "user", "content": [
@@ -123,13 +123,13 @@ Upload any supported file type (images, PDF, Word, Excel, PPT) via multipart:
 ```bash
 # Single file
 curl http://127.0.0.1:8900/v1/chat/completions \
-  -H "Authorization: Bearer $NANOBOT_API_KEY" \
+  -H "Authorization: Bearer $BABO_API_KEY" \
   -F "message=Summarize this report" \
   -F "files=@report.docx"
 
 # Multiple files with session isolation
 curl http://127.0.0.1:8900/v1/chat/completions \
-  -H "Authorization: Bearer $NANOBOT_API_KEY" \
+  -H "Authorization: Bearer $BABO_API_KEY" \
   -F "message=Compare these files" \
   -F "files=@chart.png" \
   -F "files=@data.xlsx" \
@@ -150,7 +150,7 @@ import requests
 
 resp = requests.post(
     "http://127.0.0.1:8900/v1/chat/completions",
-    headers={"Authorization": f"Bearer {os.environ.get('NANOBOT_API_KEY', '')}"},
+    headers={"Authorization": f"Bearer {os.environ.get('BABO_API_KEY', '')}"},
     json={
         "messages": [{"role": "user", "content": "hi"}],
         "session_id": "my-session",  # optional: isolate conversation
@@ -172,7 +172,7 @@ from openai import OpenAI
 
 client = OpenAI(
     base_url="http://127.0.0.1:8900/v1",
-    api_key=os.environ.get("NANOBOT_API_KEY") or "local-no-key",
+    api_key=os.environ.get("BABO_API_KEY") or "local-no-key",
     max_retries=0,  # A retry could repeat a tool action.
 )
 

@@ -5,7 +5,7 @@ for (const width of [412, 1440]) {
     test.use({ viewport: { width, height: 922 }, reducedMotion: "reduce" });
     for (const surface of ["skills", "apps", "channels", "automations", "settings", "chat"]) {
       test(`${surface} paints before the application and stylesheet download`, async ({ page }) => {
-        await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+        await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
         // Neither React nor the app stylesheet may supply this first paint.
         await page.route(/\/(?:src\/main\.tsx|assets\/index-[^/]+\.(?:js|css))$/, (route) => route.abort());
         await page.goto(`/#/${surface === "chat" ? "chat/websocket%3Aexample" : surface}`, { waitUntil: "domcontentloaded" });
@@ -23,23 +23,23 @@ for (const width of [412, 1440]) {
         expect(await shell.getByRole("textbox").count()).toBe(0);
         expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
         const status = shell.getByRole("status");
-        await expect(status).toHaveText("Loading nanobot…");
+        await expect(status).toHaveText("Loading babo…");
         expect(await status.evaluate((element) => element.getBoundingClientRect().width)).toBe(1);
       });
     }
 
     test("restores a collapsed sidebar and the settings-section alias before React", async ({ page }) => {
       await page.addInitScript(() => {
-        localStorage.setItem("nanobot-webui.sidebar", "0");
-        localStorage.setItem("nanobot-webui.theme", "dark");
-        localStorage.setItem("nanobot.locale", "zh-CN");
+        localStorage.setItem("babo-webui.sidebar", "0");
+        localStorage.setItem("babo-webui.theme", "dark");
+        localStorage.setItem("babo.locale", "zh-CN");
       });
       await page.route("**/src/main.tsx", (route) => route.abort());
       await page.goto("/#/settings?section=skills");
       const shell = page.locator(".startup-shell");
       await expect(shell).toHaveAttribute("data-startup-surface", "skills");
       await expect(shell).toHaveAttribute("data-sidebar-expanded", "false");
-      await expect(shell.getByRole("status")).toHaveText("正在加载 nanobot…");
+      await expect(shell.getByRole("status")).toHaveText("正在加载 babo…");
       await expect(page.locator("html")).toHaveClass(/dark/);
       if (width === 1440) expect((await shell.locator(".startup-navigation").boundingBox())!.width).toBe(56);
     });

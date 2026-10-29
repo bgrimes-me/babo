@@ -4,7 +4,7 @@ import os
 from contextlib import nullcontext
 from pathlib import Path
 
-from nanobot.webui.build import (
+from babo.webui.build import (
     ensure_webui_bundle,
     inspect_webui_bundle,
     pick_webui_build_runner,
@@ -24,7 +24,7 @@ def _touch(path: Path, *, mtime_ns: int) -> None:
 
 def test_inspect_webui_bundle_ignores_packaged_install_without_source(tmp_path: Path) -> None:
     source = tmp_path / "site-packages" / "webui"
-    dist = tmp_path / "site-packages" / "nanobot" / "web" / "dist"
+    dist = tmp_path / "site-packages" / "babo" / "web" / "dist"
     _touch(dist / "index.html", mtime_ns=20)
 
     status = inspect_webui_bundle(source_dir=source, dist_dir=dist)
@@ -36,7 +36,7 @@ def test_inspect_webui_bundle_ignores_packaged_install_without_source(tmp_path: 
 
 def test_inspect_webui_bundle_marks_missing_dist_stale(tmp_path: Path) -> None:
     source = tmp_path / "webui"
-    dist = tmp_path / "nanobot" / "web" / "dist"
+    dist = tmp_path / "babo" / "web" / "dist"
     _touch(source / "package.json", mtime_ns=10)
 
     status = inspect_webui_bundle(source_dir=source, dist_dir=dist)
@@ -49,7 +49,7 @@ def test_inspect_webui_bundle_marks_missing_dist_stale(tmp_path: Path) -> None:
 
 def test_inspect_webui_bundle_detects_source_newer_than_dist(tmp_path: Path) -> None:
     source = tmp_path / "webui"
-    dist = tmp_path / "nanobot" / "web" / "dist"
+    dist = tmp_path / "babo" / "web" / "dist"
     _touch(source / "package.json", mtime_ns=10)
     _touch(source / "src" / "App.tsx", mtime_ns=30)
     _touch(dist / "index.html", mtime_ns=20)
@@ -63,8 +63,8 @@ def test_inspect_webui_bundle_detects_source_newer_than_dist(tmp_path: Path) -> 
 
 def test_inspect_webui_bundle_detects_channel_owned_ui_source(tmp_path: Path) -> None:
     source = tmp_path / "webui"
-    dist = tmp_path / "nanobot" / "web" / "dist"
-    channel_ui = tmp_path / "nanobot" / "channels" / "example" / "webui" / "index.tsx"
+    dist = tmp_path / "babo" / "web" / "dist"
+    channel_ui = tmp_path / "babo" / "channels" / "example" / "webui" / "index.tsx"
     _touch(source / "package.json", mtime_ns=10)
     _touch(dist / "index.html", mtime_ns=20)
     _touch(channel_ui, mtime_ns=30)
@@ -78,7 +78,7 @@ def test_inspect_webui_bundle_detects_channel_owned_ui_source(tmp_path: Path) ->
 
 def test_shared_notifications_make_existing_bundle_stale(tmp_path: Path) -> None:
     source = tmp_path / "webui"
-    dist = tmp_path / "nanobot/web/dist"
+    dist = tmp_path / "babo/web/dist"
     shared = tmp_path / "packages/client-events/notifications.ts"
     _touch(source / "package.json", mtime_ns=10)
     _touch(dist / "index.html", mtime_ns=20)
@@ -90,7 +90,7 @@ def test_shared_notifications_make_existing_bundle_stale(tmp_path: Path) -> None
 
 def test_inspect_webui_bundle_accepts_fresh_dist(tmp_path: Path) -> None:
     source = tmp_path / "webui"
-    dist = tmp_path / "nanobot" / "web" / "dist"
+    dist = tmp_path / "babo" / "web" / "dist"
     _touch(source / "package.json", mtime_ns=10)
     _touch(source / "src" / "App.tsx", mtime_ns=20)
     _touch(dist / "index.html", mtime_ns=30)
@@ -102,9 +102,9 @@ def test_inspect_webui_bundle_accepts_fresh_dist(tmp_path: Path) -> None:
 
 
 def test_ensure_webui_bundle_auto_builds_stale_dist(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr("nanobot.webui.build.bun_environment", lambda _: nullcontext({"PATH": "bun"}))
+    monkeypatch.setattr("babo.webui.build.bun_environment", lambda _: nullcontext({"PATH": "bun"}))
     source = tmp_path / "webui"
-    dist = tmp_path / "nanobot" / "web" / "dist"
+    dist = tmp_path / "babo" / "web" / "dist"
     _touch(source / "package.json", mtime_ns=10)
     _touch(source / "src" / "App.tsx", mtime_ns=30)
     _touch(dist / "index.html", mtime_ns=20)
@@ -136,7 +136,7 @@ def test_pick_webui_build_runner_returns_resolved_executable(monkeypatch) -> Non
     bun_shim = r"C:\tools\npm\bun.CMD"
 
     monkeypatch.setattr(
-        "nanobot.webui.build.shutil.which",
+        "babo.webui.build.shutil.which",
         lambda candidate: bun_shim if candidate == "bun" else None,
     )
 
@@ -145,7 +145,7 @@ def test_pick_webui_build_runner_returns_resolved_executable(monkeypatch) -> Non
 
 def test_ensure_webui_bundle_warns_without_building(tmp_path: Path) -> None:
     source = tmp_path / "webui"
-    dist = tmp_path / "nanobot" / "web" / "dist"
+    dist = tmp_path / "babo" / "web" / "dist"
     _touch(source / "package.json", mtime_ns=10)
     _touch(source / "src" / "App.tsx", mtime_ns=30)
     _touch(dist / "index.html", mtime_ns=20)

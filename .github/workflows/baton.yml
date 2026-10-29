@@ -1,7 +1,7 @@
 name: Baton
 
 # Runs on every push to any branch, and on pull requests. Upstream's own
-# "Test Suite" workflow (ci.yml) still runs the full nanobot suite on PRs to main.
+# "Test Suite" workflow (ci.yml) still runs the full babo suite on PRs to main.
 on:
   push:
   pull_request:
@@ -42,10 +42,10 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Lint (ruff)
-        run: uv run --no-sync ruff check nanobot/baton tests/baton
+        run: uv run --no-sync ruff check babo/baton tests/baton
 
       - name: Type check Baton (BasedPyright, strict)
-        run: uv run --no-sync basedpyright nanobot/baton
+        run: uv run --no-sync basedpyright babo/baton
 
       - name: Import boundaries
         run: uv run --no-sync python -m scripts.check_import_boundaries

@@ -33,7 +33,7 @@ export function FilePreviewPanelView({ path, state, imageOpen, onImageOpenChange
   const errorMessage = state.status === "error"
     ? (state.routeMissing
       ? t("filePreview.routeMissing", {
-          defaultValue: "File preview needs the latest gateway. Restart nanobot gateway and try again.",
+          defaultValue: "File preview needs the latest gateway. Restart babo gateway and try again.",
         })
       : state.message ?? t("filePreview.failed", { defaultValue: "Could not preview this file." }))
     : null;

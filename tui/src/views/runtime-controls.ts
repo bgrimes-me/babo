@@ -72,7 +72,7 @@ export class RuntimeControls {
     }
     this.canUseFullAccess = this.scope.access_mode === "full"
     this.menu = new PickerMenu<Choice>(renderer, theme, {
-      id: "nanobot-tui-runtime-menu",
+      id: "babo-tui-runtime-menu",
       maxWidth: 64,
       searchText: (choice) => `${choice.label} ${choice.detail}`,
       render: (choice) => `${choice.label}${choice.detail ? `  ${choice.detail}` : ""}`,
@@ -82,7 +82,7 @@ export class RuntimeControls {
     this.modelText = this.controlText(renderer, "model", () => void this.openModel())
     this.accessText = this.controlText(renderer, "access", () => void this.openAccess())
     this.contextText = new TextRenderable(renderer, {
-      id: "nanobot-tui-context-text",
+      id: "babo-tui-context-text",
       content: "",
       height: 1,
       flexShrink: 0,
@@ -174,7 +174,7 @@ export class RuntimeControls {
     open: () => void,
   ): TextRenderable {
     const text = new TextRenderable(renderer, {
-      id: `nanobot-tui-${id}-text`,
+      id: `babo-tui-${id}-text`,
       content: "",
       height: 1,
       flexShrink: id === "model" ? 1 : 0,

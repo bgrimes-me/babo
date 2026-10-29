@@ -11,10 +11,10 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.config.loader import load_config
-from nanobot.session.jsonl_migration import WORKSPACE_BACKUP_DIR
-from nanobot.session.location import SessionLocation
-from nanobot.session.manager import SessionManager
+from babo.config.loader import load_config
+from babo.session.jsonl_migration import WORKSPACE_BACKUP_DIR
+from babo.session.location import SessionLocation
+from babo.session.manager import SessionManager
 
 
 def _write_legacy_session(
@@ -62,7 +62,7 @@ def test_sessions_are_stored_outside_workspace(tmp_path: Path) -> None:
     # workspace carries only a non-secret stable identity marker.
     marker = manager.sessions_dir / ".workspace"
     assert marker.read_text(encoding="utf-8").strip() == str(workspace.resolve())
-    workspace_id = (workspace / ".nanobot" / "workspace-id").read_text(encoding="utf-8").strip()
+    workspace_id = (workspace / ".babo" / "workspace-id").read_text(encoding="utf-8").strip()
     assert manager.sessions_dir.name == workspace_id
     assert manager.sessions_dir.parent.name == "sessions"
 
@@ -79,7 +79,7 @@ def test_workspace_identity_marker_contains_no_session_content(tmp_path: Path) -
     session.add_message("user", secret)
     manager.save(session)
 
-    marker = workspace / ".nanobot" / "workspace-id"
+    marker = workspace / ".babo" / "workspace-id"
     assert marker.read_text(encoding="utf-8").strip() == manager.sessions_dir.name
     assert secret not in marker.read_text(encoding="utf-8")
     assert not any(
@@ -128,7 +128,7 @@ def test_sessions_follow_active_custom_config_data_root(
 
     assert manager.sessions_dir.parent == custom_instance / "sessions"
     assert (manager.sessions_dir / "sessions.sqlite3").exists()
-    assert not (default_home / ".nanobot" / "sessions").exists()
+    assert not (default_home / ".babo" / "sessions").exists()
 
 
 def test_session_root_inside_workspace_fails_closed(tmp_path: Path) -> None:
@@ -163,12 +163,12 @@ def test_deleted_workspace_identity_marker_is_recovered(tmp_path: Path) -> None:
     session.add_message("user", "survives-cleanup")
     manager.save(session)
 
-    shutil.rmtree(workspace / ".nanobot")
+    shutil.rmtree(workspace / ".babo")
     reloaded = SessionManager(workspace=workspace)
 
     assert reloaded.sessions_dir == manager.sessions_dir
     assert reloaded.get_or_create("telegram:1").messages[-1]["content"] == "survives-cleanup"
-    assert (workspace / ".nanobot" / "workspace-id").read_text(encoding="utf-8").strip() == (
+    assert (workspace / ".babo" / "workspace-id").read_text(encoding="utf-8").strip() == (
         manager.sessions_dir.name
     )
 
@@ -187,8 +187,8 @@ def test_copied_workspace_gets_isolated_session_identity(tmp_path: Path) -> None
 
     assert copied_manager.sessions_dir != manager.sessions_dir
     assert copied_manager.get_or_create("telegram:1").messages == []
-    assert (copied / ".nanobot" / "workspace-id").read_text(encoding="utf-8") != (
-        original / ".nanobot" / "workspace-id"
+    assert (copied / ".babo" / "workspace-id").read_text(encoding="utf-8") != (
+        original / ".babo" / "workspace-id"
     ).read_text(encoding="utf-8")
 
 

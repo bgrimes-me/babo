@@ -18,7 +18,7 @@ import { ToggleButton } from "@/components/ui/toggle-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type {
-  NanobotFeatureInfo,
+  BaboFeatureInfo,
   SettingsPayload,
   WebSearchSettingsUpdate,
 } from "@/lib/types";
@@ -118,7 +118,7 @@ export function WebSettings({
   onRestart?: () => void;
   isRestarting?: boolean;
   requiresRestartPending: boolean;
-  olostepFeature?: NanobotFeatureInfo;
+  olostepFeature?: BaboFeatureInfo;
   olostepInstalling: boolean;
   capabilityError: string | null;
   children?: ReactNode;
@@ -283,7 +283,7 @@ export function WebSettings({
           <RestartSettingsFooter
             error={missingCredential || Boolean(error)}
             autoSave={form.provider !== "olostep" || olostepFeature?.installed === true}
-            saveLabel={t("settings.nanobotFeatures.installConfirmAction")}
+            saveLabel={t("settings.baboFeatures.installConfirmAction")}
             dirty={dirty}
             saving={saving}
             pendingRestart={!embedded && requiresRestartPending}
@@ -294,7 +294,7 @@ export function WebSettings({
                 : error || (!embedded && requiresRestartPending && !dirty
                   ? tx("settings.status.savedRestartApply", "Saved. Restart to apply changes.")
                   : jinaReaderDirty
-                    ? tx("settings.status.restartAfterSaving", "Save changes, then restart nanobot to apply them.")
+                    ? tx("settings.status.restartAfterSaving", "Save changes, then restart babo to apply them.")
                     : dirty
                       ? t("settings.byok.webSearch.saveHint")
                       : undefined)

@@ -34,7 +34,7 @@ function pdfFile(name = "report.pdf", size = 8) {
 }
 
 function csvFile(name = "report.csv", type = "application/vnd.ms-excel") {
-  return new File(["name,value\nnanobot,1"], name, { type });
+  return new File(["name,value\nbabo,1"], name, { type });
 }
 
 function resolveReady(file: File): Extract<EncodeResponse, { ok: true }> {

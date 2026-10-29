@@ -7,13 +7,13 @@ import sys
 
 import pytest
 
-from nanobot.apps.cli.service import CliAppManager
+from babo.apps.cli.service import CliAppManager
 
 
 @pytest.mark.parametrize("platform", ["linux", "darwin"])
 @pytest.mark.parametrize("runtime_dir", ["/run/user/1000", None])
 def test_subprocess_env_excludes_api_keys(monkeypatch, tmp_path, platform, runtime_dir) -> None:
-    monkeypatch.setattr("nanobot.apps.cli.service.sys.platform", platform)
+    monkeypatch.setattr("babo.apps.cli.service.sys.platform", platform)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-should-not-leak")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-leak")
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-leak")
@@ -36,7 +36,7 @@ def test_subprocess_env_excludes_api_keys(monkeypatch, tmp_path, platform, runti
 
 
 def test_subprocess_env_excludes_api_keys_on_windows(monkeypatch, tmp_path) -> None:
-    monkeypatch.setattr("nanobot.apps.cli.service.sys.platform", "win32")
+    monkeypatch.setattr("babo.apps.cli.service.sys.platform", "win32")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-should-not-leak")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-leak")
     monkeypatch.setenv("XDG_RUNTIME_DIR", "/run/user/1000")

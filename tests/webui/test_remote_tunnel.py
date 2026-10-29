@@ -10,8 +10,8 @@ import pytest
 from websockets.asyncio.client import connect
 from websockets.asyncio.server import serve
 
-from nanobot.webui import remote_ssh
-from nanobot.webui.remote_ssh import RemoteError, RemoteProfile, open_tunnel
+from babo.webui import remote_ssh
+from babo.webui.remote_ssh import RemoteError, RemoteProfile, open_tunnel
 
 PROFILE = RemoteProfile(name="Fixture", host="fixture.test")
 ECHO = "import os\nwhile data := os.read(0, 65536):\n os.write(1, data)\n"

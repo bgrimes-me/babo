@@ -1,7 +1,7 @@
 import pytest
 
-from nanobot.cron.session_delivery import origin_delivery_context
-from nanobot.cron.types import CronJob, CronPayload
+from babo.cron.session_delivery import origin_delivery_context
+from babo.cron.types import CronJob, CronPayload
 
 
 def test_origin_delivery_context_uses_explicit_origin_fields() -> None:

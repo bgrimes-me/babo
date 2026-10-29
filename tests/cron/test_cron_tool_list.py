@@ -7,10 +7,10 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from nanobot.agent.tools.context import RequestContext, request_context
-from nanobot.agent.tools.cron import CronTool
-from nanobot.cron.service import CronService
-from nanobot.cron.types import CronJob, CronJobState, CronPayload, CronSchedule
+from babo.agent.tools.context import RequestContext, request_context
+from babo.agent.tools.cron import CronTool
+from babo.cron.service import CronService
+from babo.cron.types import CronJob, CronJobState, CronPayload, CronSchedule
 
 
 def _make_tool(tmp_path) -> CronTool:
@@ -309,7 +309,7 @@ def test_add_at_job_rejects_past_datetime(tmp_path) -> None:
 def test_add_at_job_rejects_datetime_equal_to_now(tmp_path, monkeypatch) -> None:
     tool = _make_tool(tmp_path)
     fixed_now = 1_900_000_000.0
-    monkeypatch.setattr("nanobot.agent.tools.cron.time", SimpleNamespace(time=lambda: fixed_now))
+    monkeypatch.setattr("babo.agent.tools.cron.time", SimpleNamespace(time=lambda: fixed_now))
     at = datetime.fromtimestamp(fixed_now, tz=timezone.utc).isoformat()
     with request_context(
         RequestContext(channel="telegram", chat_id="chat-1", session_key="telegram:chat-1")

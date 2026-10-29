@@ -7,8 +7,8 @@ import httpx
 import pytest
 from aiohttp.test_utils import make_mocked_request
 
-from nanobot.webui.remote_proxy import RemoteProxy
-from nanobot.webui.remote_ssh import Tunnel
+from babo.webui.remote_proxy import RemoteProxy
+from babo.webui.remote_ssh import Tunnel
 
 
 @pytest.mark.asyncio
@@ -30,7 +30,7 @@ async def test_proxy_preserves_independently_declared_host_capabilities(monkeypa
 
     def upstream(request):
         assert request.url.path == "/webui/bootstrap"
-        assert request.headers["X-Nanobot-Auth"] == "private-upstream-secret"
+        assert request.headers["X-Babo-Auth"] == "private-upstream-secret"
         return httpx.Response(200, json={
             "terminal": {"protocolVersion": 1, "gatewayId": "gateway-test", "webui": declaration},
             "token": "upstream-ws-token", "api_token": "upstream-api-token",
@@ -38,11 +38,11 @@ async def test_proxy_preserves_independently_declared_host_capabilities(monkeypa
         })
 
     client_type = httpx.AsyncClient
-    monkeypatch.setattr("nanobot.webui.remote_proxy.httpx.AsyncClient", lambda **kwargs: (
+    monkeypatch.setattr("babo.webui.remote_proxy.httpx.AsyncClient", lambda **kwargs: (
         client_type(transport=httpx.MockTransport(upstream), **kwargs)
     ))
     request = make_mocked_request("GET", "/webui/bootstrap", headers={
-        "Host": "127.0.0.1:0", "X-Nanobot-Auth": proxy.secret,
+        "Host": "127.0.0.1:0", "X-Babo-Auth": proxy.secret,
     })
     try:
         response = await proxy._handle(request)

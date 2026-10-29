@@ -31,7 +31,7 @@ import { ThreadHeader } from "@/components/thread/ThreadHeader";
 import { ThreadLoadingSkeleton } from "@/components/thread/ThreadLoadingSkeleton";
 import { StreamErrorNotice } from "@/components/thread/StreamErrorNotice";
 import { ThreadViewport, type ThreadViewportHandle } from "@/components/thread/ThreadViewport";
-import { useNanobotStream, type SendAttachment, type SendOptions } from "@/hooks/useNanobotStream";
+import { useBaboStream, type SendAttachment, type SendOptions } from "@/hooks/useBaboStream";
 import { useFilePreviewState, type FilePreviewState, type FilePreviewStore } from "@/hooks/useFilePreviewState";
 import {
   ApiError,
@@ -55,7 +55,7 @@ import {
   installedMcpPresetsFromPayload,
   isMcpPresetsPayload,
 } from "@/lib/mcp-preset-events";
-import type { StreamError } from "@/lib/nanobot-client";
+import type { StreamError } from "@/lib/babo-client";
 import { isLocalAttachment } from "../../../../packages/client-events/attachments";
 import type {
   ChatSummary,
@@ -618,7 +618,7 @@ export function ThreadShell({
     loadTraceDetails: loadBodyTraceDetails,
     streamError,
     dismissStreamError,
-  } = useNanobotStream(
+  } = useBaboStream(
     chatId, undefined, false, handleTurnEnd, undefined, undefined,
     { key: historyKey, cache: messageCacheRef.current },
   );

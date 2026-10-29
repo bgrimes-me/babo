@@ -213,7 +213,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
-  Reflect.deleteProperty(window, "nanobotHost");
+  Reflect.deleteProperty(window, "baboHost");
   if (ORIGINAL_MEDIA_DEVICES) {
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
@@ -1489,7 +1489,7 @@ describe("ThreadComposer", () => {
     const user = userEvent.setup();
     const onWorkspaceScopeChange = vi.fn();
     const defaultScope = {
-      project_path: "/Users/test/.nanobot/workspace",
+      project_path: "/Users/test/.babo/workspace",
       project_name: "workspace",
       access_mode: "restricted" as const,
       restrict_to_workspace: true,
@@ -1513,7 +1513,7 @@ describe("ThreadComposer", () => {
 
     await user.click(screen.getByRole("button", { name: "Switch directory" }));
 
-    expect(await screen.findByRole("button", { name: "/Users/test/.nanobot/workspace" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "/Users/test/.babo/workspace" })).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /^Edit path:/ }));
@@ -1549,10 +1549,10 @@ describe("ThreadComposer", () => {
   });
 
   it.each([
-    ["Windows", "D:\\Users\\test\\.nanobot\\workspace", "D:\\path\\to\\project"],
+    ["Windows", "D:\\Users\\test\\.babo\\workspace", "D:\\path\\to\\project"],
     ["Windows UNC", "\\\\server\\share\\workspace", "\\\\server\\share\\project"],
-    ["macOS", "/Users/test/.nanobot/workspace", "/Users/name/project"],
-    ["Linux", "/home/test/.nanobot/workspace", "/home/name/project"],
+    ["macOS", "/Users/test/.babo/workspace", "/Users/name/project"],
+    ["Linux", "/home/test/.babo/workspace", "/home/name/project"],
   ])("accepts a %s project path", async (_, projectPath, selectedPath) => {
     const user = userEvent.setup();
     const onWorkspaceScopeChange = vi.fn();
@@ -1588,7 +1588,7 @@ describe("ThreadComposer", () => {
     const user = userEvent.setup();
     const onWorkspaceScopeChange = vi.fn();
     const defaultScope = {
-      project_path: "/Users/test/.nanobot/workspace",
+      project_path: "/Users/test/.babo/workspace",
       project_name: "workspace",
       access_mode: "full" as const,
       restrict_to_workspace: false,
@@ -1663,7 +1663,7 @@ describe("ThreadComposer", () => {
     const user = userEvent.setup();
     const onWorkspaceScopeChange = vi.fn();
     const defaultScope = {
-      project_path: "/Users/test/.nanobot/workspace",
+      project_path: "/Users/test/.babo/workspace",
       project_name: "workspace",
       access_mode: "full" as const,
       restrict_to_workspace: false,
@@ -1672,13 +1672,13 @@ describe("ThreadComposer", () => {
     const onBrowseWorkspaceDirectories = vi.fn((rawPath: string) => {
       const path = rawPath.replace(/\/$/, "");
       return Promise.resolve({
-        path, parent: path === defaultScope.project_path ? "/Users/test/.nanobot" : defaultScope.project_path,
+        path, parent: path === defaultScope.project_path ? "/Users/test/.babo" : defaultScope.project_path,
         entries: path === defaultScope.project_path ? [project] : [],
         truncated: false, host: "dev-mac", platform: "Darwin",
       });
     });
     const onResolveWorkspaceProject = vi.fn().mockResolvedValue(project);
-    Object.defineProperty(window, "nanobotHost", {
+    Object.defineProperty(window, "baboHost", {
       configurable: true,
       value: {
         getRuntimeInfo: vi.fn(),
@@ -1727,7 +1727,7 @@ describe("ThreadComposer", () => {
     const user = userEvent.setup();
     const onWorkspaceScopeChange = vi.fn();
     const defaultScope = {
-      project_path: "/srv/nanobot/workspace",
+      project_path: "/srv/babo/workspace",
       project_name: "workspace",
       access_mode: "full" as const,
       restrict_to_workspace: false,
@@ -1952,11 +1952,11 @@ describe("ThreadComposer", () => {
 
     expect(onStop).toHaveBeenCalledTimes(1);
     expect(input).toHaveValue("");
-    expect(window.localStorage.getItem("nanobot.webui.slashCommandRecents")).toBeNull();
+    expect(window.localStorage.getItem("babo.webui.slashCommandRecents")).toBeNull();
   });
 
   it("orders recent slash commands first for the blank slash menu", () => {
-    window.localStorage.setItem("nanobot.webui.slashCommandRecents", JSON.stringify(["/history"]));
+    window.localStorage.setItem("babo.webui.slashCommandRecents", JSON.stringify(["/history"]));
     render(
       <ThreadComposer
         onSend={vi.fn()}
@@ -2326,7 +2326,7 @@ describe("ThreadComposer", () => {
       target: { value: "参考 @收费", selectionStart: 6 },
     });
 
-    expect(screen.getByRole("group", { name: "Nanobot conversations" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Babo conversations" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /@收费设计/i })).toBeInTheDocument();
     fireEvent.keyDown(input, { key: "Tab" });
 
@@ -3726,7 +3726,7 @@ describe("ThreadComposer", () => {
     },
   );
 
-  it.each(["/history 5", "/stop now", "/STOP@nanobot now"])(
+  it.each(["/history 5", "/stop now", "/STOP@babo now"])(
     "sends registered command %s to the gateway without queuing it",
     (content) => {
       const onSend = vi.fn();
@@ -4393,7 +4393,7 @@ describe("ThreadComposer", () => {
   });
 
   it("retains legacy queued drafts for manual sending when mounted idle", () => {
-    window.localStorage.setItem("nanobot.webui.composerQueuedGuidance.v1:chat-a", JSON.stringify([
+    window.localStorage.setItem("babo.webui.composerQueuedGuidance.v1:chat-a", JSON.stringify([
       { id: "legacy-draft", text: "legacy follow-up" },
     ]));
     const onSend = vi.fn();

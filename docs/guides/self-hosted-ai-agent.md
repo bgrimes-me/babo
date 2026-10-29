@@ -1,12 +1,12 @@
-# How to Run a Self-Hosted AI Agent with nanobot
+# How to Run a Self-Hosted AI Agent with babo
 
-This guide sets up nanobot as a self-hosted AI agent runtime on your own machine or server. The result is a gateway process that can serve the WebUI, chat apps, automations, and API integrations.
+This guide sets up babo as a self-hosted AI agent runtime on your own machine or server. The result is a gateway process that can serve the WebUI, chat apps, automations, and API integrations.
 
 ## What you will build
 
-- a nanobot config and workspace under your control
+- a babo config and workspace under your control
 - a model provider connected through `config.json`
-- a long-running `nanobot gateway`
+- a long-running `babo gateway`
 - optional browser, chat app, and API access
 
 ## When to use this
@@ -15,7 +15,7 @@ Use this path when you want local or server-side ownership of the agent process,
 
 ## Choose your starting point
 
-**Already chatting in the WebUI:** you already have a self-hosted agent and a running gateway. Open **Channels** to connect a chat platform; use the same running gateway. If you want it to survive closing the launcher, follow [long-running gateway setup](./deploy-nanobot-gateway.md).
+**Already chatting in the WebUI:** you already have a self-hosted agent and a running gateway. Open **Channels** to connect a chat platform; use the same running gateway. If you want it to survive closing the launcher, follow [long-running gateway setup](./deploy-babo-gateway.md).
 
 **New desktop installation:** follow the [quick start](../quick-start.md), configure a model in **Settings → Models**, and send `Hello!`. A normal browser reply confirms the setup; no additional CLI test or second gateway is required.
 
@@ -43,11 +43,11 @@ Send a message through the interface you intend to use. Check that it replies, t
 
 ## Troubleshooting
 
-- Run `nanobot status` with the same `--config` and `--workspace` flags used by the service.
-- Run `nanobot gateway --verbose` while debugging channel startup.
+- Run `babo status` with the same `--config` and `--workspace` flags used by the service.
+- Run `babo gateway --verbose` while debugging channel startup.
 - Check port conflicts if the WebUI, WebSocket channel, or API endpoint fails to bind.
 
-## Related nanobot docs
+## Related babo docs
 
 - [Deployment](../deployment.md)
 - [Multiple Instances](../multiple-instances.md)

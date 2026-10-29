@@ -50,7 +50,7 @@ describe("tab reload cache", () => {
   it("does not persist oversized replay and validates session summaries", () => {
     activateReloadCache("ws://localhost:8765/");
     writeReloadCache("thread", { key: "large", body: "x".repeat(600_000) });
-    expect(sessionStorage.getItem("nanobot.reload.v1.thread")).toBeNull();
+    expect(sessionStorage.getItem("babo.reload.v1.thread")).toBeNull();
     writeReloadCache("sessions", [{ key: "bad" }, {
       key: "websocket:a", channel: "websocket", chatId: "a", preview: "Answer", title: "Topic",
     }]);

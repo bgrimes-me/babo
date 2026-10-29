@@ -4,10 +4,10 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import ValidationError
 
-from nanobot.agent.tools.shell_config import ExecToolConfig
-from nanobot.config.errors import ConfigLoadError
-from nanobot.config.loader import load_config, save_config
-from nanobot.config.schema import Config
+from babo.agent.tools.shell_config import ExecToolConfig
+from babo.config.errors import ConfigLoadError
+from babo.config.loader import load_config, save_config
+from babo.config.schema import Config
 
 
 def test_exec_timing_defaults() -> None:
@@ -112,7 +112,7 @@ def test_legacy_exec_config_loads_and_saves_canonical_fields(tmp_path) -> None:
 
 @pytest.mark.parametrize("runtime", [0, 42, 14400])
 def test_legacy_webui_timeout_editor_updates_canonical_runtime(tmp_path, runtime: int) -> None:
-    from nanobot.webui.settings_api import update_runtime_config_settings
+    from babo.webui.settings_api import update_runtime_config_settings
 
     path = tmp_path / "config.json"
     save_config(Config.model_validate({"tools": {"exec": {
@@ -143,11 +143,11 @@ def test_legacy_webui_timeout_editor_updates_canonical_runtime(tmp_path, runtime
 def test_exec_runtime_source_precedence_survives_settings_saves(
     tmp_path, monkeypatch, file_name: str, env_name: str,
 ) -> None:
-    from nanobot.webui.settings_api import update_agent_settings, update_runtime_config_settings
+    from babo.webui.settings_api import update_agent_settings, update_runtime_config_settings
 
     path = tmp_path / "config.json"
     path.write_text(json.dumps({"tools": {"exec": {file_name: 60}}}), encoding="utf-8")
-    monkeypatch.setenv(f"NANOBOT_TOOLS__EXEC__{env_name}", "90")
+    monkeypatch.setenv(f"BABO_TOOLS__EXEC__{env_name}", "90")
     assert load_config(path).tools.exec.max_runtime == 60
 
     result = update_runtime_config_settings(
@@ -170,14 +170,14 @@ def test_exec_load_rejects_runtime_aliases_from_the_same_source(tmp_path, monkey
     if source == "file":
         path.write_text(json.dumps(data), encoding="utf-8")
     else:
-        monkeypatch.setenv("NANOBOT_TOOLS", json.dumps(data["tools"]))
+        monkeypatch.setenv("BABO_TOOLS", json.dumps(data["tools"]))
 
     with pytest.raises(ConfigLoadError):
         load_config(path)
 
 
 def test_exec_runtime_source_precedence_covers_both_canonical_spellings(monkeypatch):
-    monkeypatch.setenv("NANOBOT_TOOLS__EXEC", json.dumps({
+    monkeypatch.setenv("BABO_TOOLS__EXEC", json.dumps({
         "maxRuntime": 90, "max_runtime": 120,
     }))
 
@@ -188,9 +188,9 @@ def test_exec_runtime_source_precedence_covers_both_canonical_spellings(monkeypa
 
 @pytest.mark.asyncio
 async def test_my_exec_config_reports_configured_timing(tmp_path) -> None:
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.agent.tools.self import MyTool
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.agent.tools.self import MyTool
+    from babo.bus.queue import MessageBus
 
     config = Config.model_validate({"tools": {"exec": {
         "timeout": 172800, "idleTimeout": 0, "idleAction": "terminate",

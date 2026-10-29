@@ -5,9 +5,9 @@ import json
 import httpx
 import pytest
 
-from nanobot.config.loader import ConfigLoadError, load_config, resolve_config_env_vars, save_config
-from nanobot.config.network import NetworkConfig
-from nanobot.config.schema import Config
+from babo.config.loader import ConfigLoadError, load_config, resolve_config_env_vars, save_config
+from babo.config.network import NetworkConfig
+from babo.config.schema import Config
 
 
 @pytest.mark.parametrize("address", ["http://127.0.0.1:7890", "socks5://user:pass@localhost:1080", "${SHARED_PROXY}"])
@@ -90,9 +90,9 @@ def test_invalid_shared_proxy_has_a_safe_error(address):
 @pytest.mark.parametrize("file_present", [False, True])
 def test_environment_legacy_proxy_migrates_after_source_merge(tmp_path, monkeypatch, file_present):
     proxy = "http://localhost:7890"
-    monkeypatch.setenv("NANOBOT_PROVIDERS", json.dumps({"openai": {"proxy": proxy}}))
-    monkeypatch.setenv("NANOBOT_TOOLS", json.dumps({"web": {"proxy": proxy}}))
-    monkeypatch.setenv("NANOBOT_CHANNELS", json.dumps({"telegram": {"proxy": proxy}}))
+    monkeypatch.setenv("BABO_PROVIDERS", json.dumps({"openai": {"proxy": proxy}}))
+    monkeypatch.setenv("BABO_TOOLS", json.dumps({"web": {"proxy": proxy}}))
+    monkeypatch.setenv("BABO_CHANNELS", json.dumps({"telegram": {"proxy": proxy}}))
     path = tmp_path / "config.json"
     if file_present:
         path.write_text(json.dumps({"providers": {"openai": {"apiKey": "test-key"}}}), encoding="utf-8")
@@ -111,7 +111,7 @@ def test_environment_legacy_proxy_migrates_after_source_merge(tmp_path, monkeypa
 
 
 def test_file_proxy_and_opt_out_take_precedence_over_environment(tmp_path, monkeypatch):
-    monkeypatch.setenv("NANOBOT_PROVIDERS", json.dumps({"openai": {"proxy": "http://environment:7890"}}))
+    monkeypatch.setenv("BABO_PROVIDERS", json.dumps({"openai": {"proxy": "http://environment:7890"}}))
     path = tmp_path / "config.json"
     path.write_text(json.dumps({"providers": {"openai": {"proxy": "http://file:7891", "useProxy": False}}}), encoding="utf-8")
     config = load_config(path)
@@ -162,7 +162,7 @@ def test_whole_discord_url_reference_with_separate_credentials_requires_consolid
 @pytest.mark.parametrize("saved_opt_out", [True, False], ids=["refresh", "changed-setting"])
 def test_oauth_proxy_opt_out_survives_save_with_legacy_environment(tmp_path, monkeypatch, alias, attribute, saved_opt_out):
     proxy = "http://proxy.example:8080"
-    monkeypatch.setenv("NANOBOT_PROVIDERS", json.dumps({alias: {"proxy": proxy, "apiKey": "oauth-secret"}}))
+    monkeypatch.setenv("BABO_PROVIDERS", json.dumps({alias: {"proxy": proxy, "apiKey": "oauth-secret"}}))
     original = {"network": {"proxy": proxy}, "providers": {alias: {"useProxy": False} if saved_opt_out else {}}}
     path = tmp_path / "config.json"
     path.write_text(json.dumps(original), encoding="utf-8")

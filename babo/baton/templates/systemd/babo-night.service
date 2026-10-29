@@ -1,0 +1,9 @@
+[Unit]
+Description=Babo night cycle (folds, Archivist, Inspector, the night's commit)
+After=babo-queue.service
+Wants=babo-queue.service
+
+[Service]
+Type=oneshot
+ExecStart={{ distrobox }} enter {{ box }} -- {{ babo }} night
+TimeoutStartSec=6h

@@ -2,10 +2,10 @@ import os
 
 import pytest
 
-from nanobot.agent.tools.context import RequestContext, request_context
-from nanobot.agent.tools.message import MessageTool
-from nanobot.bus.events import OutboundMessage
-from nanobot.config.paths import get_workspace_path
+from babo.agent.tools.context import RequestContext, request_context
+from babo.agent.tools.message import MessageTool
+from babo.bus.events import OutboundMessage
+from babo.config.paths import get_workspace_path
 
 
 @pytest.mark.asyncio

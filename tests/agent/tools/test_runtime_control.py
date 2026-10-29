@@ -9,29 +9,29 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.context import TranscriptInput
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import RequestContext, request_context
-from nanobot.agent.tools.runtime_control import (
+from babo.agent.context import TranscriptInput
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import RequestContext, request_context
+from babo.agent.tools.runtime_control import (
     RUNTIME_COMMAND_KEYS,
     RUNTIME_SNAPSHOT_KEYS,
     AgentRuntimeControl,
     RuntimeControl,
 )
-from nanobot.agent.tools.self import MyTool, MyToolConfig
-from nanobot.bus.events import InboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.config.schema import ToolsConfig
-from nanobot.providers.base import GenerationSettings, LLMProvider, LLMResponse, ToolCallRequest
-from nanobot.providers.openai_compat_provider import OpenAICompatProvider
-from nanobot.runtime_context import RUNTIME_CONTEXT_END, RUNTIME_CONTEXT_TAG
-from nanobot.security.workspace_access import (
+from babo.agent.tools.self import MyTool, MyToolConfig
+from babo.bus.events import InboundMessage
+from babo.bus.queue import MessageBus
+from babo.config.schema import ToolsConfig
+from babo.providers.base import GenerationSettings, LLMProvider, LLMResponse, ToolCallRequest
+from babo.providers.openai_compat_provider import OpenAICompatProvider
+from babo.runtime_context import RUNTIME_CONTEXT_END, RUNTIME_CONTEXT_TAG
+from babo.security.workspace_access import (
     bind_workspace_scope,
     build_workspace_scope,
     reset_workspace_scope,
 )
-from nanobot.session.keys import UNIFIED_SESSION_KEY
-from nanobot.utils.llm_runtime import LLMRuntime
+from babo.session.keys import UNIFIED_SESSION_KEY
+from babo.utils.llm_runtime import LLMRuntime
 
 
 def _make_loop(
@@ -289,8 +289,8 @@ async def test_workspace_inspection_matches_registered_file_tool(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mode: str, sandbox: str, restricted: bool,
 ) -> None:
     # A configured shell backend is not proof that an external sandbox is running.
-    monkeypatch.delenv("NANOBOT_WORKSPACE_SANDBOX_ENFORCED", raising=False)
-    monkeypatch.delenv("NANOBOT_SANDBOX_ENFORCED", raising=False)
+    monkeypatch.delenv("BABO_WORKSPACE_SANDBOX_ENFORCED", raising=False)
+    monkeypatch.delenv("BABO_SANDBOX_ENFORCED", raising=False)
     agent = tmp_path / "agent"
     project = tmp_path / "project"
     project.mkdir()
@@ -711,7 +711,7 @@ async def test_subagent_check_without_session_cannot_enumerate_tasks(tmp_path, s
 
 
 async def test_subagent_check_retained_results_and_receipts_are_scoped_and_detached(tmp_path, runtime):
-    from nanobot.agent.runner import AgentRunResult
+    from babo.agent.runner import AgentRunResult
 
     loop = _make_loop(tmp_path)
     manager = loop.subagents

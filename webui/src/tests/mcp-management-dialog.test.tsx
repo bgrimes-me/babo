@@ -9,7 +9,7 @@ import {
 import { createSystemSettingsActions } from "@/components/settings/system/createSystemSettingsActions";
 import { useSystemSettingsState } from "@/components/settings/system/useSystemSettingsState";
 import i18n from "@/i18n";
-import { NanobotClient } from "@/lib/nanobot-client";
+import { BaboClient } from "@/lib/babo-client";
 import type { McpPresetInfo, McpPresetsPayload } from "@/lib/types";
 import {
   installSettingsViewTestHooks,
@@ -487,7 +487,7 @@ describe("MCP connection draft lifecycle", () => {
 });
 
 function renderMcpActions() {
-  const client = new NanobotClient({ url: "ws://example.test" });
+  const client = new BaboClient({ url: "ws://example.test" });
   client.requestMutation = requestMutationMock;
   return renderHook(() => {
     const state = useSystemSettingsState();

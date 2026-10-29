@@ -6,11 +6,11 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from nanobot.agent.tools.cron import CronTool
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.cron import service as cron_service
-from nanobot.cron.service import CronJobSkippedError, CronService
-from nanobot.cron.types import CronSchedule
+from babo.agent.tools.cron import CronTool
+from babo.agent.tools.registry import ToolRegistry
+from babo.cron import service as cron_service
+from babo.cron.service import CronJobSkippedError, CronService
+from babo.cron.types import CronSchedule
 
 
 def _registry(service: CronService) -> ToolRegistry:

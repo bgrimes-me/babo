@@ -28,7 +28,7 @@ import { AboutSettings, AppearanceSettings, OverviewSettings } from "@/component
 import { NotificationSettings } from "@/components/settings/notifications/NotificationSettings";
 import { SettingsSidebar, standaloneSectionTitle } from "@/components/settings/SettingsSidebar";
 import {
-  NanobotFeatureInstallDialog,
+  BaboFeatureInstallDialog,
   SettingsGroup,
   SettingsRow,
   SettingsSectionTitle,
@@ -45,7 +45,7 @@ import { RUNTIME_CONFIG_FIELDS, type RuntimeConfigPage } from "@/components/sett
 import { RuntimeConfigSettings } from "@/components/settings/system/RuntimeConfigSettings";
 import { RuntimeSettings } from "@/components/settings/system/RuntimeSettings";
 import type { SettingsController } from "@/components/settings/useSettingsController";
-import type { SendAttachment, SendOptions } from "@/hooks/useNanobotStream";
+import type { SendAttachment, SendOptions } from "@/hooks/useBaboStream";
 import type { ThemePreference } from "@/hooks/useTheme";
 import type { ChatSummary, SessionAutomationJob, SkillSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -335,9 +335,9 @@ export function SettingsPage({
                 }
               }}
               settings={settings}
-              nanobotFeatures={systemState.nanobotFeatures}
-              featureAction={systemState.nanobotFeatureAction}
-              capabilityError={systemState.nanobotFeaturesError}
+              baboFeatures={systemState.baboFeatures}
+              featureAction={systemState.baboFeatureAction}
+              capabilityError={systemState.baboFeaturesError}
               providerForms={modelState.providerForms}
               visibleProviderKeys={modelState.visibleProviderKeys}
               editingProviderKeys={modelState.editingProviderKeys}
@@ -441,8 +441,8 @@ export function SettingsPage({
               isRestarting={restartInProgress}
               requiresRestartPending={pendingRestartSections.browser}
               olostepFeature={featureCatalog.find((feature) => feature.name === "olostep")}
-              olostepInstalling={systemState.nanobotFeatureAction === "enable:olostep"}
-              capabilityError={systemState.nanobotFeaturesError}
+              olostepInstalling={systemState.baboFeatureAction === "enable:olostep"}
+              capabilityError={systemState.baboFeaturesError}
             >
               {settings.runtime_config ? runtimeConfiguration("network") : null}
             </WebSettings>
@@ -463,9 +463,9 @@ export function SettingsPage({
               apiServiceAction={systemState.apiServiceAction}
               apiServiceError={systemState.apiServiceError}
               langfuseFeature={featureCatalog.find((feature) => feature.name === "langfuse")}
-              capabilitiesLoading={systemState.nanobotFeaturesLoading}
-              capabilityAction={systemState.nanobotFeatureAction}
-              capabilityError={systemState.nanobotFeaturesError}
+              capabilitiesLoading={systemState.baboFeaturesLoading}
+              capabilityAction={systemState.baboFeatureAction}
+              capabilityError={systemState.baboFeaturesError}
               onApiServiceAction={systemActions.handleApiServiceAction}
               onInstallCapability={(name) => void systemActions.installCapabilities([name])}
             />
@@ -496,17 +496,17 @@ export function SettingsPage({
               selectSection("apps");
             }}
             token={token}
-            nanobotFeatures={systemState.nanobotFeatures}
-            loading={systemState.nanobotFeaturesLoading}
-            actionKey={systemState.nanobotFeatureAction}
+            baboFeatures={systemState.baboFeatures}
+            loading={systemState.baboFeaturesLoading}
+            actionKey={systemState.baboFeatureAction}
             chatAppsDocsUrl={settings?.docs?.chat_apps_url}
             showBrandLogos={localPrefs.brandLogos}
-            error={systemState.nanobotFeaturesError}
+            error={systemState.baboFeaturesError}
             requiresRestartPending={pendingRestartSections.runtime}
-            onAction={systemActions.handleNanobotFeatureAction}
-            onFeaturesUpdate={systemState.setNanobotFeatures}
+            onAction={systemActions.handleBaboFeatureAction}
+            onFeaturesUpdate={systemState.setBaboFeatures}
             onDismissStatus={() => {
-              systemState.setNanobotFeaturesError(null);
+              systemState.setBaboFeaturesError(null);
             }}
             onRestart={restartViaSettingsSurface}
             isRestarting={restartInProgress}
@@ -694,16 +694,16 @@ export function SettingsPage({
         onClose={closeProviderOAuthFlow}
       />
 
-      <NanobotFeatureInstallDialog
-        feature={systemState.nanobotFeatureConfirm?.feature ?? null}
-        installOnly={systemState.nanobotFeatureConfirm?.installOnly ?? false}
-        installing={systemState.nanobotFeatureAction === `${systemState.nanobotFeatureConfirm?.installOnly ? "install" : "enable"}:${systemState.nanobotFeatureConfirm?.feature.name ?? ""}`}
+      <BaboFeatureInstallDialog
+        feature={systemState.baboFeatureConfirm?.feature ?? null}
+        installOnly={systemState.baboFeatureConfirm?.installOnly ?? false}
+        installing={systemState.baboFeatureAction === `${systemState.baboFeatureConfirm?.installOnly ? "install" : "enable"}:${systemState.baboFeatureConfirm?.feature.name ?? ""}`}
         onOpenChange={(open) => {
-          if (!open) systemState.setNanobotFeatureConfirm(null);
+          if (!open) systemState.setBaboFeatureConfirm(null);
         }}
-        onConfirm={(feature) => systemActions.handleNanobotFeatureAction("enable", feature.name, {
+        onConfirm={(feature) => systemActions.handleBaboFeatureAction("enable", feature.name, {
           confirmed: true,
-          installOnly: systemState.nanobotFeatureConfirm?.installOnly,
+          installOnly: systemState.baboFeatureConfirm?.installOnly,
         })}
       />
 

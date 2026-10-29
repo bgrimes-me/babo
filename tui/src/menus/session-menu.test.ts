@@ -192,15 +192,15 @@ describe("SessionMenu", () => {
     const scoped = sessions.map((session) => ({
       ...session,
       workspaceScope: {
-        project_path: "/work/nanobot",
-        project_name: "nanobot",
+        project_path: "/work/babo",
+        project_name: "babo",
         access_mode: "restricted" as const,
       },
     }))
 
     menu.open(scoped, "one", 6)
     await setup.renderOnce()
-    expect(setup.captureCharFrame()).not.toContain("nanobot  Codex")
+    expect(setup.captureCharFrame()).not.toContain("babo  Codex")
 
     menu.open([
       scoped[0]!,
@@ -215,7 +215,7 @@ describe("SessionMenu", () => {
     ], "one", 6)
     await setup.renderOnce()
     const frame = setup.captureCharFrame()
-    expect(frame).toContain("nanobot  Codex")
+    expect(frame).toContain("babo  Codex")
     expect(frame).toContain("desktop")
 
     menu.update("desktop", 6)
@@ -225,24 +225,24 @@ describe("SessionMenu", () => {
       {
         ...scoped[0]!,
         workspaceScope: {
-          project_path: "/work/frontend/nanobot",
-          project_name: "nanobot",
+          project_path: "/work/frontend/babo",
+          project_name: "babo",
           access_mode: "restricted",
         },
       },
       {
         ...scoped[1]!,
         workspaceScope: {
-          project_path: "/work/backend/nanobot",
-          project_name: "nanobot",
+          project_path: "/work/backend/babo",
+          project_name: "babo",
           access_mode: "restricted",
         },
       },
     ], "one", 6)
     await setup.renderOnce()
     const duplicates = setup.captureCharFrame()
-    expect(duplicates).toContain("frontend/nanobot")
-    expect(duplicates).toContain("backend/nanobot")
+    expect(duplicates).toContain("frontend/babo")
+    expect(duplicates).toContain("backend/babo")
   })
 
   test("shows only model overrides and keeps previews searchable", async () => {

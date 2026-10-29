@@ -8,47 +8,47 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from agent.session_helpers import mock_session_manager
-from nanobot.agent.context import TranscriptInput
-from nanobot.agent.goal_permission import goal_mutation_allowed, goal_mutation_permission
-from nanobot.agent.tools.context import RequestContext
-from nanobot.bus.events import InboundMessage
-from nanobot.bus.outbound_events import StreamedResponseEvent
-from nanobot.bus.queue import MessageBus
-from nanobot.config.schema import AgentDefaults
-from nanobot.events import RetryStatusEvent
-from nanobot.providers.base import (
+from babo.agent.context import TranscriptInput
+from babo.agent.goal_permission import goal_mutation_allowed, goal_mutation_permission
+from babo.agent.tools.context import RequestContext
+from babo.bus.events import InboundMessage
+from babo.bus.outbound_events import StreamedResponseEvent
+from babo.bus.queue import MessageBus
+from babo.config.schema import AgentDefaults
+from babo.events import RetryStatusEvent
+from babo.providers.base import (
     GenerationSettings,
     LLMProvider,
     LLMResponse,
     ToolCallRequest,
 )
-from nanobot.runtime_context import (
+from babo.runtime_context import (
     RUNTIME_CONTEXT_INPUT_META,
     WEBUI_QUOTE_METADATA,
     RuntimeContextBlock,
     public_history_message,
     webui_quote_runtime_context,
 )
-from nanobot.session.goal_state import GOAL_STATE_KEY
-from nanobot.utils.llm_runtime import LLMRuntime
-from nanobot.utils.progress_events import output_events
+from babo.session.goal_state import GOAL_STATE_KEY
+from babo.utils.llm_runtime import LLMRuntime
+from babo.utils.progress_events import output_events
 
 _MAX_TOOL_RESULT_CHARS = AgentDefaults().max_tool_result_chars
 _GOAL_RUNTIME_GUIDANCE_TAG = "[Goal Runtime Guidance — host instructions]"
 
 
 def _make_loop(tmp_path):
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
     provider.get_default_model.return_value = "test-model"
     provider.generation = GenerationSettings()
 
-    with patch("nanobot.agent.loop.ContextBuilder"), \
-         patch("nanobot.agent.loop.SessionManager", side_effect=mock_session_manager), \
-         patch("nanobot.agent.loop.SubagentManager") as mock_sub_mgr:
+    with patch("babo.agent.loop.ContextBuilder"), \
+         patch("babo.agent.loop.SessionManager", side_effect=mock_session_manager), \
+         patch("babo.agent.loop.SubagentManager") as mock_sub_mgr:
         mock_sub_mgr.return_value.cancel_by_session = AsyncMock(return_value=0)
         loop = AgentLoop(bus=bus, provider=provider, workspace=tmp_path)
     return loop
@@ -56,7 +56,7 @@ def _make_loop(tmp_path):
 
 @pytest.mark.asyncio
 async def test_loop_uses_structured_retry_status_without_legacy_text(tmp_path):
-    from nanobot.agent.loop import AgentLoop
+    from babo.agent.loop import AgentLoop
 
     bus = MessageBus()
     provider = MagicMock()
@@ -123,9 +123,9 @@ async def test_ephemeral_runner_enters_and_restores_turn_scopes(tmp_path):
 
 @pytest.mark.asyncio
 async def test_goal_command_can_implement_plan_from_prior_discussion(tmp_path):
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.events import InboundMessage
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.events import InboundMessage
+    from babo.bus.queue import MessageBus
 
     provider = MagicMock()
     provider.get_default_model.return_value = "test-model"
@@ -187,9 +187,9 @@ async def test_goal_command_can_implement_plan_from_prior_discussion(tmp_path):
 
 @pytest.mark.asyncio
 async def test_runtime_context_is_persisted_as_next_turn_prompt_prefix(tmp_path):
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.events import InboundMessage
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.events import InboundMessage
+    from babo.bus.queue import MessageBus
 
     skill_dir = tmp_path / "skills" / "review"
     skill_dir.mkdir(parents=True)
@@ -254,9 +254,9 @@ async def test_runtime_context_is_persisted_as_next_turn_prompt_prefix(tmp_path)
 
 @pytest.mark.asyncio
 async def test_webui_quote_reaches_model_without_leaking_into_public_history(tmp_path):
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.events import InboundMessage
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.events import InboundMessage
+    from babo.bus.queue import MessageBus
 
     provider = MagicMock()
     provider.get_default_model.return_value = "test-model"
@@ -287,9 +287,9 @@ async def test_webui_quote_reaches_model_without_leaking_into_public_history(tmp
 
 @pytest.mark.asyncio
 async def test_runtime_context_provider_runs_once_across_tool_iterations(tmp_path):
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.events import InboundMessage
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.events import InboundMessage
+    from babo.bus.queue import MessageBus
 
     (tmp_path / "note.txt").write_text("hello", encoding="utf-8")
     provider = MagicMock()
@@ -332,8 +332,8 @@ async def test_runtime_context_provider_runs_once_across_tool_iterations(tmp_pat
 
 @pytest.mark.asyncio
 async def test_non_goal_direct_turn_cannot_reuse_prior_goal_command(tmp_path):
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.queue import MessageBus
 
     provider = MagicMock()
     provider.get_default_model.return_value = "test-model"
@@ -513,9 +513,9 @@ async def test_loop_retries_think_only_final_response(tmp_path):
 @pytest.mark.asyncio
 async def test_llm_error_returns_regular_response_instead_of_streamed_event(tmp_path):
     """LLM errors must not produce StreamedResponseEvent, so channels deliver the error."""
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.events import InboundMessage
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.events import InboundMessage
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
@@ -545,9 +545,9 @@ async def test_llm_error_returns_regular_response_instead_of_streamed_event(tmp_
 
 @pytest.mark.asyncio
 async def test_ssrf_soft_block_can_finalize_after_streamed_tool_call(tmp_path):
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.events import InboundMessage
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.bus.events import InboundMessage
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
@@ -597,10 +597,10 @@ async def test_ssrf_soft_block_can_finalize_after_streamed_tool_call(tmp_path):
 
 @pytest.mark.asyncio
 async def test_next_turn_after_llm_error_keeps_turn_boundary(tmp_path):
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.agent.runner import _PERSISTED_MODEL_ERROR_PLACEHOLDER
-    from nanobot.bus.events import InboundMessage
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.loop import AgentLoop
+    from babo.agent.runner import _PERSISTED_MODEL_ERROR_PLACEHOLDER
+    from babo.bus.events import InboundMessage
+    from babo.bus.queue import MessageBus
 
     provider = MagicMock()
     provider.get_default_model.return_value = "test-model"
@@ -645,8 +645,8 @@ async def test_next_turn_after_llm_error_keeps_turn_boundary(tmp_path):
 
 @pytest.mark.asyncio
 async def test_subagent_max_iterations_announces_partial_incomplete_result(tmp_path, monkeypatch):
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.bus.queue import MessageBus
+    from babo.agent.subagent import SubagentManager
+    from babo.bus.queue import MessageBus
 
     bus = MessageBus()
     provider = MagicMock()
@@ -666,7 +666,7 @@ async def test_subagent_max_iterations_announces_partial_incomplete_result(tmp_p
     async def fake_execute(self, **kwargs):
         return "tool result"
 
-    monkeypatch.setattr("nanobot.agent.tools.filesystem.ListDirTool.execute", fake_execute)
+    monkeypatch.setattr("babo.agent.tools.filesystem.ListDirTool.execute", fake_execute)
 
     await mgr.spawn(
         task="do task",

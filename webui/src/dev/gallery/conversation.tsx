@@ -18,7 +18,7 @@ import { ThreadViewport, type ThreadViewportHandle } from "@/components/thread/T
 import { WorkspaceAccessMenu, WorkspaceProjectPicker } from "@/components/thread/WorkspaceControls";
 import { WebSearchRun } from "@/components/thread/activity/WebSearchRun";
 import { Button } from "@/components/ui/button";
-import type { StreamError } from "@/lib/nanobot-client";
+import type { StreamError } from "@/lib/babo-client";
 import { formatToolCallTrace } from "@/lib/tool-traces";
 import type { RecoveryState, SlashCommand, ToolProgressEvent, UIContextCompaction, UIMessage, WorkspaceScopePayload, WorkspacesPayload } from "@/lib/types";
 import { Sample, StatePicker, type ComponentExample } from "./example";
@@ -39,11 +39,11 @@ const commands: SlashCommand[] = [
   { command: "/compact", title: "previews.composer.compactCommand", description: "previews.composer.compactDescription", icon: "archive", lifecycle: "finalize_active_turn", acceptsArgs: false },
   { command: "/help", title: "previews.composer.helpCommand", description: "previews.composer.helpDescription", icon: "circle-help", lifecycle: "side_channel", acceptsArgs: false },
 ];
-const projectScope: WorkspaceScopePayload = { project_path: "D:\\Projects\\nanobot", project_name: "nanobot", access_mode: "restricted" };
+const projectScope: WorkspaceScopePayload = { project_path: "D:\\Projects\\babo", project_name: "babo", access_mode: "restricted" };
 const workspaceCatalog: WorkspacesPayload = {
   schema_version: 1, default_access_mode: "default", default_scope: projectScope,
-  recent_projects: [{ name: "nanobot", path: projectScope.project_path }, { name: "design-system", path: "D:\\Projects\\design-system" }],
-  favorite_projects: [{ name: "nanobot", path: projectScope.project_path }],
+  recent_projects: [{ name: "babo", path: projectScope.project_path }, { name: "design-system", path: "D:\\Projects\\design-system" }],
+  favorite_projects: [{ name: "babo", path: projectScope.project_path }],
   controls: { can_change_project: true },
 };
 const loadExampleProjects = () => Promise.resolve(workspaceCatalog);

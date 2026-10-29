@@ -1,9 +1,9 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { LinearMemberAccess } from "../../../nanobot/channels/linear/webui/LinearMemberAccess";
-import { linearMemberAccessStore } from "../../../nanobot/channels/linear/webui/member-access-store";
-import type { LinearMembersPayload } from "../../../nanobot/channels/linear/webui/types";
+import { LinearMemberAccess } from "../../../babo/channels/linear/webui/LinearMemberAccess";
+import { linearMemberAccessStore } from "../../../babo/channels/linear/webui/member-access-store";
+import type { LinearMembersPayload } from "../../../babo/channels/linear/webui/types";
 
 const { requestMutation, context } = vi.hoisted(() => {
   const requestMutation = vi.fn();
@@ -14,8 +14,8 @@ vi.mock("@/providers/ClientProvider", () => ({ useClient: () => context }));
 const roster: LinearMembersPayload = {
   session_id: "", status: "members", organization_id: "org-1", legacy_allow_all: false,
   members: [
-    { id: "u1", name: "Xubin", teams: ["nanobot"], allowed: true },
-    { id: "u2", name: "Yongru", teams: ["nanobot"], allowed: false },
+    { id: "u1", name: "Xubin", teams: ["babo"], allowed: true },
+    { id: "u2", name: "Yongru", teams: ["babo"], allowed: false },
   ],
 };
 
@@ -27,8 +27,8 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const header = () => screen.getByRole("button", { name: /^Member access/ });
-const xubin = () => screen.getByRole("switch", { name: "Allow Xubin to use nanobot" });
-const yongru = () => screen.getByRole("switch", { name: "Allow Yongru to use nanobot" });
+const xubin = () => screen.getByRole("switch", { name: "Allow Xubin to use babo" });
+const yongru = () => screen.getByRole("switch", { name: "Allow Yongru to use babo" });
 const refresh = () => fireEvent.click(screen.getByRole("button", { name: "Refresh members" }));
 
 function deferNextRequest() {
@@ -45,7 +45,7 @@ async function openMembers() {
   const view = render(<LinearMemberAccess organizationId="org-1" />);
   expect(requestMutation).not.toHaveBeenCalled();
   fireEvent.click(header());
-  await screen.findByRole("switch", { name: "Allow Yongru to use nanobot" });
+  await screen.findByRole("switch", { name: "Allow Yongru to use babo" });
   return view;
 }
 
@@ -67,7 +67,7 @@ describe("Linear member access", () => {
   it("shows members without team subtitles or a team filter", async () => {
     await openMembers();
     expect(screen.queryByRole("combobox", { name: "Filter by team" })).not.toBeInTheDocument();
-    expect(screen.queryByText("nanobot", { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByText("babo", { exact: true })).not.toBeInTheDocument();
   });
 
   it("keeps one workspace-level switch per member regardless of team membership", async () => {
@@ -156,7 +156,7 @@ describe("Linear member access", () => {
     fireEvent.click(screen.getByRole("button", { name: "About member access" }));
     expect(await screen.findByRole("tooltip")).toHaveTextContent("does not grant access");
     fireEvent.change(screen.getByRole("textbox", { name: "Search members" }), { target: { value: "yong" } });
-    expect(screen.queryByRole("switch", { name: "Allow Xubin to use nanobot" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Allow Xubin to use babo" })).not.toBeInTheDocument();
     expect(yongru()).toBeVisible();
   });
 
@@ -210,7 +210,7 @@ describe("Linear member access", () => {
     expect(yongru()).toBeEnabled();
     expect(screen.getByText("Checking for updates…")).toBeVisible();
     await act(async () => request.resolve({ ...roster, members: [roster.members[0]] }));
-    expect(screen.queryByRole("switch", { name: "Allow Yongru to use nanobot" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Allow Yongru to use babo" })).not.toBeInTheDocument();
   });
 
   it("changes a switch only after confirmation and keeps other members editable", async () => {
@@ -335,7 +335,7 @@ describe("Linear member access", () => {
     expect(screen.queryByRole("switch")).not.toBeInTheDocument();
     await act(async () => nextRead.resolve({ ...roster, organization_id: organizationId, members: [roster.members[0]] }));
     expect(xubin()).toBeVisible();
-    expect(screen.queryByRole("switch", { name: "Allow Yongru to use nanobot" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Allow Yongru to use babo" })).not.toBeInTheDocument();
   });
 
   it("explains legacy wildcard access without hiding individual off switches", async () => {

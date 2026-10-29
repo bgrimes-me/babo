@@ -4,7 +4,7 @@ import { afterEach, beforeEach, vi } from "vitest";
 import { SettingsView } from "@/components/settings/SettingsView";
 import { ClientProvider } from "@/providers/ClientProvider";
 import type { SettingsPayload } from "@/lib/types";
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 
 export { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 
@@ -118,9 +118,9 @@ export function settingsPayload(): SettingsPayload {
     },
     docs: {
       version: "0.2.2",
-      base_url: "https://nanobot.wiki/docs/0.2.2",
-      chat_apps_url: "https://nanobot.wiki/docs/0.2.2/getting-started/chat-apps",
-      latest_url: "https://nanobot.wiki/docs/latest",
+      base_url: "https://babo.wiki/docs/0.2.2",
+      chat_apps_url: "https://babo.wiki/docs/0.2.2/getting-started/chat-apps",
+      latest_url: "https://babo.wiki/docs/latest",
     },
   };
 }
@@ -140,7 +140,7 @@ type SettingsViewTestOptions = Partial<Pick<
   | "onStartAutomationChat"
   | "onNativeEngineRestart"
   | "onRestart"
->> & { client?: NanobotClient };
+>> & { client?: BaboClient };
 
 export function renderSettingsView(options: SettingsViewTestOptions = {}) {
   render(
@@ -200,7 +200,7 @@ export function installSettingsViewTestHooks() {
 
   afterEach(() => {
     cleanup();
-    localStorage.removeItem("nanobot-webui.settings-preferences");
+    localStorage.removeItem("babo-webui.settings-preferences");
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });

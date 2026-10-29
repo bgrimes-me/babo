@@ -11,7 +11,7 @@ import { WorkspaceProjectPicker } from "@/components/thread/WorkspaceControls";
 import { settings } from "@/dev/gallery/settings";
 import { useReadingTypography } from "@/hooks/useReadingTypography";
 import { fetchWorkspaceDirectories } from "@/lib/api";
-import type { McpPresetInfo, NanobotFeatureInfo } from "@/lib/types";
+import type { McpPresetInfo, BaboFeatureInfo } from "@/lib/types";
 
 const noop = () => {};
 const names = ["Search documentation", "Read repository", "List projects", "Inspect changes", "Review results", "Write notes"];
@@ -26,7 +26,7 @@ export function SkeletonFixture({ surface, loading }: { surface: string; loading
   useReadingTypography();
   const [model, setModel] = useState("");
   const [previewLoading, setPreviewLoading] = useState(loading);
-  const feature: NanobotFeatureInfo = {
+  const feature: BaboFeatureInfo = {
     name: "telegram", display_name: "Telegram", type: "channel", enabled: true, installed: true,
     configured: true, ready: true, install_supported: true, status: "enabled", requires_restart: false,
   };
@@ -54,7 +54,7 @@ export function SkeletonFixture({ surface, loading }: { surface: string; loading
       onBackToChat={noop} onMcpFieldChange={noop} onCustomMcpFormChange={noop}
       onMcpConfigImportChange={noop} onSaveCustomMcp={noop} onImportMcpConfig={noop} onMcpToolsChange={noop}
     /> : surface === "channels" ? <ChannelsSettings
-      token="fixture" nanobotFeatures={loading ? null : { features: names.map((name, index) => ({ ...feature, name: `channel-${index}`, display_name: name })), enabled_count: 6, requires_restart: false }}
+      token="fixture" baboFeatures={loading ? null : { features: names.map((name, index) => ({ ...feature, name: `channel-${index}`, display_name: name })), enabled_count: 6, requires_restart: false }}
       loading={loading} actionKey={null} showBrandLogos={false} error={null} requiresRestartPending={false}
       onAction={noop} onFeaturesUpdate={noop} onDismissStatus={noop}
     /> : surface === "skills" ? <SkillsCatalogSettings loading={loading} skills={loading ? [] : names.map((name) => ({

@@ -42,10 +42,10 @@ export function VersionCheckRowView({
         <span>{t("settings.about.version")}</span>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-2 text-[13px] font-normal leading-5 tabular-nums text-muted-foreground">
           <span className="min-w-0 break-all">
-            {currentVersion ? `v${currentVersion}` : "nanobot"}
+            {currentVersion ? `v${currentVersion}` : "babo"}
             {currentCommit && <>
               <span aria-hidden> (</span>
-              <a href={`https://github.com/HKUDS/nanobot/commit/${currentCommit}`}
+              <a href={`https://github.com/bgrimes-me/babo/commit/${currentCommit}`}
                 target="_blank" rel="noopener noreferrer" title={currentCommit}
                 className="font-mono hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 {currentCommit.slice(0, 7)}
@@ -83,7 +83,7 @@ export function VersionCheckRowView({
                 ? t("updates.guide.entry", { method: t(`updates.guide.methods.${installationMethod}`) })
                 : t("settings.about.updateNow")}
             </Button> : <Button size="sm" variant="outline" className={actionClass} asChild>
-              <a href="https://github.com/HKUDS/nanobot#-install" target="_blank" rel="noopener noreferrer">
+              <a href="https://github.com/bgrimes-me/babo#-install" target="_blank" rel="noopener noreferrer">
                 {t("settings.about.installationGuide")}<ExternalLink className="ms-1.5 h-3 w-3 shrink-0" aria-hidden />
               </a>
             </Button>}

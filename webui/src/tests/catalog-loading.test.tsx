@@ -1,7 +1,7 @@
 import { act, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { CliAppInfo, McpPresetInfo, NanobotFeatureInfo } from "@/lib/types";
+import type { CliAppInfo, McpPresetInfo, BaboFeatureInfo } from "@/lib/types";
 import {
   installSettingsViewTestHooks,
   jsonResponse,
@@ -28,7 +28,7 @@ const plugin: McpPresetInfo = {
   available: false, status: "disabled", required_fields: [], source: "agent-plugin",
   docs_url: "", note: "", connection_summary: "",
 };
-const channel: NanobotFeatureInfo = {
+const channel: BaboFeatureInfo = {
   name: "discord", display_name: "Discord", type: "channel", installed: true,
   configured: false, enabled: false, ready: false, status: "not_enabled",
   install_supported: true, requires_restart: false,
@@ -105,7 +105,7 @@ describe("catalog loading", () => {
     const refresh = deferred<Response>();
     const fetchFeatures = vi.fn().mockReturnValueOnce(initial.promise).mockReturnValue(refresh.promise);
     vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => (
-      String(input) === "/api/settings/nanobot-features"
+      String(input) === "/api/settings/babo-features"
         ? fetchFeatures() : Promise.resolve(jsonResponse(settingsPayload()))
     )));
     renderSettingsView({ initialSection: "channels", initialSettings: settingsPayload() });

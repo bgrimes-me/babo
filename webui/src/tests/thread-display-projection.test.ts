@@ -49,7 +49,7 @@ describe("command display projection", () => {
       "This unrelated reply stays visible.",
     ]);
     expect([
-      isModelCommandText("/MODEL@nanobot fast"),
+      isModelCommandText("/MODEL@babo fast"),
       isModelCommandText("/modelish"),
     ]).toEqual([true, false]);
     expect(visibleSessionPreview("Switched model preset to `fast`.")).toBe("");

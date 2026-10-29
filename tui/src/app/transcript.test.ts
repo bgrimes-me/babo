@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { BoxRenderable, CliRenderEvents, MarkdownRenderable, TextareaRenderable, TextRenderable } from "@opentui/core"
 import { MockTreeSitterClient, createTestRenderer, type TestRendererSetup } from "@opentui/core/testing"
-import { NanobotTui } from "./app"
+import { BaboTui } from "./app"
 import { options, client, mount, waitUntil, occurrences } from "./test-support"
 import type { Transcript } from "../rendering/transcript"
 
-describe("NanobotTui transcript", () => {
+describe("BaboTui transcript", () => {
   let setup: TestRendererSetup | undefined
 
   afterEach(() => {
@@ -43,9 +43,9 @@ describe("NanobotTui transcript", () => {
           : { has_more_before: true, before_cursor: "older-page" },
       })))
     }) as typeof fetch
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "secret", chatId: "chat" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "secret", chatId: "chat" },
       client(),
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -108,7 +108,7 @@ describe("NanobotTui transcript", () => {
     app.accept({
       event: "stream_end",
       chat_id: "chat",
-      text: "canonical https://nanobot.test/signed/current",
+      text: "canonical https://babo.test/signed/current",
       resuming: true,
       merge_next: true,
     })
@@ -116,14 +116,14 @@ describe("NanobotTui transcript", () => {
     app.accept({
       event: "stream_end",
       chat_id: "chat",
-      text: "final https://nanobot.test/signed/current tail",
+      text: "final https://babo.test/signed/current tail",
     })
     app.accept({ event: "turn_end", chat_id: "chat" })
     await setup.flush()
     const frame = setup.captureCharFrame()
 
-    expect(frame).toContain("final https://nanobot.test/signed/current tail")
-    expect(frame).not.toContain("canonical https://nanobot.test/signed/current")
+    expect(frame).toContain("final https://babo.test/signed/current tail")
+    expect(frame).not.toContain("canonical https://babo.test/signed/current")
     expect(frame).not.toContain("draft signed://expired")
   })
 
@@ -270,7 +270,7 @@ describe("NanobotTui transcript", () => {
     expect(status.plainText).not.toContain("pwd")
     app.accept({ event: "turn_end", chat_id: "chat" })
     await setup.flush()
-    expect(ui.composer.placeholder).toBe("Ask nanobot anything")
+    expect(ui.composer.placeholder).toBe("Ask babo anything")
     expect(status.plainText).toMatch(/^Ready/u)
     const stopped = status.content
     await Bun.sleep(200)
@@ -414,7 +414,7 @@ describe("NanobotTui transcript", () => {
         phase: "end" as const,
         call_id: `read-${index}`,
         name: "read_file",
-        arguments: { path: `/tmp/nanobot-workspace/src/file-${index}.ts` },
+        arguments: { path: `/tmp/babo-workspace/src/file-${index}.ts` },
       })),
     })
     await setup.renderOnce()

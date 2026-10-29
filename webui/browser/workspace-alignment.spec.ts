@@ -19,7 +19,7 @@ for (const variant of ["hero", "thread"]) for (const c of cases) {
   test.describe(`${variant} ${c.name}`, () => {
     test.use({ viewport: { width: c.width, height: 900 }, hasTouch: c.touch, reducedMotion: "reduce" });
     test("aligns the directory glyph with the attachment glyph", async ({ page }) => {
-      await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+      await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
       await page.route("**/api/commands", route => route.fulfill({ json: { commands: [] } }));
       await page.goto(`/browser/fixture.html?case=workspace-alignment&composerVariant=${variant}`);
       await expectAlignedWorkspaceGlyph(page);
@@ -32,7 +32,7 @@ for (const variant of ["hero", "thread"]) for (const width of [280, 320, 390, 60
   test.describe(`${variant} permission at ${width}px`, () => {
     test.use({ viewport: { width, height: 900 }, hasTouch: width < 640, reducedMotion: "reduce" });
     test("places mobile permission opposite the directory and preserves desktop placement", async ({ page }) => {
-      await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+      await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
       await page.route("**/api/commands", route => route.fulfill({ json: { commands: [] } }));
       await page.goto(`/browser/fixture.html?case=workspace-alignment&composerVariant=${variant}${width === 1024 ? "&containerWidth=480" : ""}`);
       if ([390, 1024, 1280].includes(width)) await expectAlignedWorkspaceGlyph(page);
@@ -64,7 +64,7 @@ for (const variant of ["hero", "thread"]) for (const width of [320, 600]) {
   test.describe(`${variant} mobile permission with usage at ${width}px`, () => {
     test.use({ viewport: { width, height: 900 }, hasTouch: true, reducedMotion: "reduce" });
     test("keeps access on the lower right when context usage appears", async ({ page }) => {
-      await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+      await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
       await page.route("**/api/commands", route => route.fulfill({ json: { commands: [] } }));
       await page.goto(`/browser/fixture.html?case=workspace-alignment&composerVariant=${variant}&usage=1`);
       const workspace = (await page.getByRole("button", { name: "Switch directory" }).boundingBox())!;
@@ -88,7 +88,7 @@ for (const variant of ["hero", "thread"]) for (const width of [320, 600]) {
 test.describe("permission across phone and desktop widths", () => {
   test.use({ viewport: { width: 390, height: 900 }, hasTouch: true, reducedMotion: "reduce" });
   test("keeps the draft and one usable permission trigger when the viewport changes", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+    await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
     await page.route("**/api/commands", route => route.fulfill({ json: { commands: [] } }));
     await page.goto("/browser/fixture.html?case=workspace-alignment&composerVariant=hero");
     const input = page.getByRole("textbox", { name: "Message input" });

@@ -17,7 +17,7 @@ import type {
   McpPresetsPayload,
   McpOAuthFlowPayload,
   MarketplaceProvider,
-  NanobotFeaturesPayload,
+  BaboFeaturesPayload,
   ModelConfigurationCreate,
   ModelConfigurationUpdate,
   NetworkSafetySettingsUpdate,
@@ -132,7 +132,7 @@ async function request<T>(
     throw new ApiError(
       res.status,
       isHtml
-        ? "Gateway returned WebUI HTML instead of JSON. Restart nanobot gateway and try again."
+        ? "Gateway returned WebUI HTML instead of JSON. Restart babo gateway and try again."
         : "Gateway returned a non-JSON response.",
     );
   }
@@ -811,7 +811,7 @@ export async function checkVersion(
 }
 
 export function changeUpdateChannel(transport: WebUIMutationTransport, channel: UpdateChannel, revision: number): Promise<{ channel: UpdateChannel; revision: number }> {
-  return mutation(transport, "settings.nanobot.update.channel", { channel, revision });
+  return mutation(transport, "settings.babo.update.channel", { channel, revision });
 }
 
 export async function fetchWorkspaces(
@@ -874,22 +874,22 @@ export interface UpdateJob {
   recovery_command?: string;
 }
 export function createUpdateReview(transport: WebUIMutationTransport): Promise<UpdateReviewResponse> {
-  return mutation(transport, "settings.nanobot.update.plan", { restart_running: true }, 60_000);
+  return mutation(transport, "settings.babo.update.plan", { restart_running: true }, 60_000);
 }
 export function readUpdateReview(token: string, id: string): Promise<UpdateReviewResponse> {
-  return request(`/api/settings/nanobot-update/plan?id=${encodeURIComponent(id)}`, token, undefined, API_READ_TIMEOUT_MS);
+  return request(`/api/settings/babo-update/plan?id=${encodeURIComponent(id)}`, token, undefined, API_READ_TIMEOUT_MS);
 }
 export function readUpdateJob(token: string, id: string): Promise<{ job: UpdateJob }> {
-  return request(`/api/settings/nanobot-update/job?id=${encodeURIComponent(id)}`, token, undefined, API_READ_TIMEOUT_MS);
+  return request(`/api/settings/babo-update/job?id=${encodeURIComponent(id)}`, token, undefined, API_READ_TIMEOUT_MS);
 }
 export function prepareUpdate(transport: WebUIMutationTransport, id: string): Promise<{ job: UpdateJob }> {
-  return mutation(transport, "settings.nanobot.update.prepare", { id });
+  return mutation(transport, "settings.babo.update.prepare", { id });
 }
 export function settleUpdate(transport: WebUIMutationTransport, id: string): Promise<{ job: UpdateJob }> {
-  return mutation(transport, "settings.nanobot.update.settle", { id });
+  return mutation(transport, "settings.babo.update.settle", { id });
 }
 export function executeUpdate(transport: WebUIMutationTransport, id: string, previousConfirmation?: string): Promise<{ job: UpdateJob }> {
-  return mutation(transport, previousConfirmation ? "settings.nanobot.update.retry" : "settings.nanobot.update.execute",
+  return mutation(transport, previousConfirmation ? "settings.babo.update.retry" : "settings.babo.update.execute",
     { id, confirm_restart: true, ...(previousConfirmation ? { previous_confirmation_id: previousConfirmation } : {}) });
 }
 
@@ -933,12 +933,12 @@ export async function fetchInstalledCliApps(
   );
 }
 
-export async function fetchNanobotFeatures(
+export async function fetchBaboFeatures(
   token: string,
   base: string = "",
-): Promise<NanobotFeaturesPayload> {
-  return request<NanobotFeaturesPayload>(
-    `${base}/api/settings/nanobot-features`,
+): Promise<BaboFeaturesPayload> {
+  return request<BaboFeaturesPayload>(
+    `${base}/api/settings/babo-features`,
     token,
     undefined,
     API_READ_TIMEOUT_MS,
@@ -972,12 +972,12 @@ export async function stopApiService(
   return mutation<ApiServicePayload>(transport, "settings.api_service.stop");
 }
 
-export async function enableNanobotFeature(
+export async function enableBaboFeature(
   transport: WebUIMutationTransport,
   name: string,
   options: { instanceId?: string; installOnly?: boolean } = {},
-): Promise<NanobotFeaturesPayload> {
-  return mutation<NanobotFeaturesPayload>(
+): Promise<BaboFeaturesPayload> {
+  return mutation<BaboFeaturesPayload>(
     transport,
     "settings.feature.enable",
     {
@@ -989,12 +989,12 @@ export async function enableNanobotFeature(
   );
 }
 
-export async function disableNanobotFeature(
+export async function disableBaboFeature(
   transport: WebUIMutationTransport,
   name: string,
   options: { instanceId?: string } = {},
-): Promise<NanobotFeaturesPayload> {
-  return mutation<NanobotFeaturesPayload>(
+): Promise<BaboFeaturesPayload> {
+  return mutation<BaboFeaturesPayload>(
     transport,
     "settings.feature.disable",
     { name, ...(options.instanceId ? { instance_id: options.instanceId } : {}) },

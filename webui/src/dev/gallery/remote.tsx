@@ -41,14 +41,14 @@ function PairRoutePreview() {
 const preview: PairConnectionPreview = {
   id: "gallery-invitation", host: "developer@dev.example", hostname: "开发主机",
   fingerprint: "SHA256:gallery-example-fingerprint", authorized_until: Date.UTC(2026, 10, 1) / 1000,
-  revoke_command: "nanobot remote revoke gallery-authorization",
+  revoke_command: "babo remote revoke gallery-authorization",
 };
 type PairStory = "invite" | "copied" | "manual" | "confirm" | "existing" | "saved_retry" | "waiting" | "expired";
 
 function pairState(story: PairStory): QuickPairSetupState {
   return {
     request: story === "waiting" ? null : {
-      id: "gallery-invitation", command: "nanobot remote pair nbpr1.gallery-example", expires: Date.now() / 1000 + (story === "expired" ? -60 : 600),
+      id: "gallery-invitation", command: "babo remote pair nbpr1.gallery-example", expires: Date.now() / 1000 + (story === "expired" ? -60 : 600),
     },
     preview: story === "confirm" || story === "saved_retry" ? preview : story === "existing" ? {
       ...preview, existing_connection: { id: "gallery-host", name: "团队主机", connected: true },

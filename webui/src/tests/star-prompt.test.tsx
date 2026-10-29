@@ -110,8 +110,8 @@ it("keeps a failed permanent dismissal retryable", async () => {
 
 it("the About link opens GitHub and persists permanent dismissal", async () => {
   render(<StarLink />);
-  const link = screen.getByRole("link", { name: "Star nanobot on GitHub" });
-  expect(link).toHaveAttribute("href", "https://github.com/HKUDS/nanobot");
+  const link = screen.getByRole("link", { name: "Star babo on GitHub" });
+  expect(link).toHaveAttribute("href", "https://github.com/bgrimes-me/babo");
   expect(link).toHaveAttribute("target", "_blank");
   await clickStarLink(link);
   expect(action).toHaveBeenCalledWith(client, "dismiss");
@@ -181,7 +181,7 @@ it("keeps the GitHub action a real link and retries failed preference saves", as
   render(<StarPrompt ready />);
   await enter();
   const link = screen.getByRole("link", { name: "Star on GitHub" });
-  expect(link).toHaveAttribute("href", "https://github.com/HKUDS/nanobot");
+  expect(link).toHaveAttribute("href", "https://github.com/bgrimes-me/babo");
   expect(link).toHaveAttribute("target", "_blank");
   expect(link.querySelector(".star-prompt-decoration")).toHaveAttribute("aria-hidden", "true");
   action.mockRejectedValueOnce(new Error("offline"));

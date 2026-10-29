@@ -34,120 +34,120 @@ class Violation:
 
 
 _ADAPTERS = (
-    "nanobot.api",
-    "nanobot.channels",
-    "nanobot.cli",
-    "nanobot.gateway",
-    "nanobot.webui",
+    "babo.api",
+    "babo.channels",
+    "babo.cli",
+    "babo.gateway",
+    "babo.webui",
 )
 
 _TOOL_CONFIG_MODULES = (
-    "nanobot.agent.tools.cli_apps_config",
-    "nanobot.agent.tools.filesystem_config",
-    "nanobot.agent.tools.image_generation_config",
-    "nanobot.agent.tools.self_config",
-    "nanobot.agent.tools.shell_config",
-    "nanobot.agent.tools.web_config",
+    "babo.agent.tools.cli_apps_config",
+    "babo.agent.tools.filesystem_config",
+    "babo.agent.tools.image_generation_config",
+    "babo.agent.tools.self_config",
+    "babo.agent.tools.shell_config",
+    "babo.agent.tools.web_config",
 )
 
 IMPORT_RULES = (
     ImportRule(
         "update-policy-direction",
-        ("nanobot.agent", "nanobot.session", "nanobot.runtime_admission",
-         "nanobot.data_access", "nanobot.installation_lock"),
-        ("nanobot.update_service", "nanobot.update_plan", "nanobot.update_jobs",
-         "nanobot.update_worker", "nanobot.update_stop", "nanobot.update_restart"),
+        ("babo.agent", "babo.session", "babo.runtime_admission",
+         "babo.data_access", "babo.installation_lock"),
+        ("babo.update_service", "babo.update_plan", "babo.update_jobs",
+         "babo.update_worker", "babo.update_stop", "babo.update_restart"),
     ),
     ImportRule(
         "update-domain",
-        ("nanobot.update_service", "nanobot.update_plan", "nanobot.update_jobs",
-         "nanobot.update_worker", "nanobot.update_stop",
-         "nanobot.update_profiles", "nanobot.update_handoff", "nanobot.update_guidance"),
-        ("nanobot.agent", "nanobot.session", "nanobot.api", "nanobot.cli",
-         "nanobot.channels", "nanobot.webui"),
+        ("babo.update_service", "babo.update_plan", "babo.update_jobs",
+         "babo.update_worker", "babo.update_stop",
+         "babo.update_profiles", "babo.update_handoff", "babo.update_guidance"),
+        ("babo.agent", "babo.session", "babo.api", "babo.cli",
+         "babo.channels", "babo.webui"),
     ),
     ImportRule(
         "update-restart-adapter",
-        ("nanobot.update_restart",),
-        (*_ADAPTERS, "nanobot.agent", "nanobot.session"),
+        ("babo.update_restart",),
+        (*_ADAPTERS, "babo.agent", "babo.session"),
         # This protected-startup entry composes the existing CLI, not a second
         # agent runtime. Keep its frozen worker entry and launch semantics stable.
-        allowed_targets=("nanobot.gateway.runtime", "nanobot.cli.gateway_runtime._run_gateway",
-                         "nanobot.cli.entry.configure_windows_console",
-                         "nanobot.cli.process_identity.set_cli_process_identity",
-                         "nanobot.cli.runtime_config._load_runtime_config"),
+        allowed_targets=("babo.gateway.runtime", "babo.cli.gateway_runtime._run_gateway",
+                         "babo.cli.entry.configure_windows_console",
+                         "babo.cli.process_identity.set_cli_process_identity",
+                         "babo.cli.runtime_config._load_runtime_config"),
     ),
     ImportRule(
         "core-execution",
-        ("nanobot.agent.loop", "nanobot.agent.runner", "nanobot.agent.turn_delivery"),
+        ("babo.agent.loop", "babo.agent.runner", "babo.agent.turn_delivery"),
         _ADAPTERS,
-        allowed_targets=("nanobot.channels.notification_routes",),
+        allowed_targets=("babo.channels.notification_routes",),
     ),
     ImportRule(
         "channel-routing-contracts",
-        ("nanobot.channels.notification_routes",),
-        ("nanobot",),
+        ("babo.channels.notification_routes",),
+        ("babo",),
     ),
     ImportRule(
         "session-storage",
-        ("nanobot.session.manager", "nanobot.session.history", "nanobot.session.summary",
-         "nanobot.session.recovery"),
-        (*_ADAPTERS, "nanobot.agent"),
+        ("babo.session.manager", "babo.session.history", "babo.session.summary",
+         "babo.session.recovery"),
+        (*_ADAPTERS, "babo.agent"),
     ),
     ImportRule(
         "security-primitives",
-        ("nanobot.security",),
-        (*_ADAPTERS, "nanobot.agent", "nanobot.session"),
+        ("babo.security",),
+        (*_ADAPTERS, "babo.agent", "babo.session"),
     ),
     ImportRule(
         "websocket-transport",
-        ("nanobot.channels.websocket.runtime",),
+        ("babo.channels.websocket.runtime",),
         (
-            "nanobot.bus.outbound_events",
-            "nanobot.command",
-            "nanobot.runtime_context",
-            "nanobot.security.workspace_access",
-            "nanobot.pairing.events",
-            "nanobot.session.goal_state",
-            "nanobot.session.webui_turns",
-            "nanobot.webui.metadata",
-            "nanobot.webui.outbound_wire",
-            "nanobot.webui.transcript",
-            "nanobot.webui.cli_apps_api",
-            "nanobot.webui.forking",
-            "nanobot.webui.mcp_presets_api",
-            "nanobot.webui.sidebar_state",
-            "nanobot.webui.transcription_ws",
+            "babo.bus.outbound_events",
+            "babo.command",
+            "babo.runtime_context",
+            "babo.security.workspace_access",
+            "babo.pairing.events",
+            "babo.session.goal_state",
+            "babo.session.webui_turns",
+            "babo.webui.metadata",
+            "babo.webui.outbound_wire",
+            "babo.webui.transcript",
+            "babo.webui.cli_apps_api",
+            "babo.webui.forking",
+            "babo.webui.mcp_presets_api",
+            "babo.webui.sidebar_state",
+            "babo.webui.transcription_ws",
         ),
     ),
     ImportRule(
         "tool-config-base",
-        ("nanobot.agent.tools", "nanobot.channels"),
-        ("nanobot.config.schema.Base",),
+        ("babo.agent.tools", "babo.channels"),
+        ("babo.config.schema.Base",),
     ),
     ImportRule(
         "configuration-contracts",
-        ("nanobot.config", "nanobot.config_base"),
-        (*_ADAPTERS, "nanobot.agent", "nanobot.apps", "nanobot.session"),
+        ("babo.config", "babo.config_base"),
+        (*_ADAPTERS, "babo.agent", "babo.apps", "babo.session"),
         allowed_targets=_TOOL_CONFIG_MODULES,
     ),
     ImportRule(
         "tool-configuration-contracts",
         _TOOL_CONFIG_MODULES,
-        (*_ADAPTERS, "nanobot.agent", "nanobot.apps", "nanobot.session", "nanobot.config"),
+        (*_ADAPTERS, "babo.agent", "babo.apps", "babo.session", "babo.config"),
         allowed_targets=_TOOL_CONFIG_MODULES,
     ),
     ImportRule(
         "shared-primitives",
-        ("nanobot.utils.file_io", "nanobot.agent.skill_metadata", "nanobot.providers.generation",
-         "nanobot.llm_usage.types", "nanobot.session.automation_spec"),
-        (*_ADAPTERS, "nanobot.agent", "nanobot.apps", "nanobot.session", "nanobot.config"),
+        ("babo.utils.file_io", "babo.agent.skill_metadata", "babo.providers.generation",
+         "babo.llm_usage.types", "babo.session.automation_spec"),
+        (*_ADAPTERS, "babo.agent", "babo.apps", "babo.session", "babo.config"),
     ),
     ImportRule(
         "oauth-catalog-cache",
-        ("nanobot.providers.oauth_catalog_cache",),
-        ("nanobot.providers.oauth_model_catalog", "nanobot.providers.openai_codex_provider",
-         "nanobot.providers.github_copilot_provider", "nanobot.providers.xai_grok_provider"),
+        ("babo.providers.oauth_catalog_cache",),
+        ("babo.providers.oauth_model_catalog", "babo.providers.openai_codex_provider",
+         "babo.providers.github_copilot_provider", "babo.providers.xai_grok_provider"),
     ),
 )
 
@@ -207,7 +207,7 @@ class ImportCollector(ast.NodeVisitor):
                         self.builtin_import_calls.add(binding)
 
     def _add(self, target: str, line: int) -> None:
-        if _within(target, "nanobot"):
+        if _within(target, "babo"):
             self.edges.append(ImportEdge(target, line, self.type_only))
 
     def visit_Import(self, node: ast.Import) -> None:
@@ -275,7 +275,7 @@ def find_violations(
 def check_repository(root: Path) -> tuple[int, list[str]]:
     checked = 0
     violations: list[str] = []
-    for path in sorted((root / "nanobot").rglob("*.py")):
+    for path in sorted((root / "babo").rglob("*.py")):
         relative = path.relative_to(root)
         if "tests" in relative.parts:
             continue
@@ -301,11 +301,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--root", type=Path, default=Path(__file__).resolve().parents[1],
-        help="repository root containing nanobot/",
+        help="repository root containing babo/",
     )
     args = parser.parse_args()
-    if not (args.root / "nanobot").is_dir():
-        parser.error(f"{args.root} does not contain nanobot/")
+    if not (args.root / "babo").is_dir():
+        parser.error(f"{args.root} does not contain babo/")
     checked, violations = check_repository(args.root)
     if checked == 0:
         parser.error(f"{args.root} contains no protected Python modules")

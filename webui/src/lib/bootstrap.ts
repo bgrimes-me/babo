@@ -1,7 +1,7 @@
 import type { BootstrapResponse } from "./types";
 import { fetchWithTimeout } from "./http";
 
-const SECRET_STORAGE_KEY = "nanobot-webui.bootstrap-secret";
+const SECRET_STORAGE_KEY = "babo-webui.bootstrap-secret";
 const URL_SECRET_PARAM = "bootstrapSecret";
 
 export class BootstrapAuthRequiredError extends Error {
@@ -73,7 +73,7 @@ export async function fetchBootstrap(
 ): Promise<BootstrapResponse> {
   const headers: Record<string, string> = {};
   if (secret) {
-    headers["X-Nanobot-Auth"] = secret;
+    headers["X-Babo-Auth"] = secret;
   }
   const res = await fetchWithTimeout(`${baseUrl}/webui/bootstrap`, {
     method: "GET",
@@ -121,7 +121,7 @@ export function deriveWsUrl(
     const authority = port ? `${host}:${port}` : host;
     return `${scheme}://${authority}${path}${query}`;
   }
-  if (wsUrl && /^(wss?|nanobot-host):\/\//i.test(wsUrl)) {
+  if (wsUrl && /^(wss?|babo-host):\/\//i.test(wsUrl)) {
     if (!token) return wsUrl;
     const join = wsUrl.includes("?") ? "&" : "?";
     return `${wsUrl}${join}token=${encodeURIComponent(token)}`;

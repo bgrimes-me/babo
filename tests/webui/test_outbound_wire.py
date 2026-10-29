@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from nanobot.bus.outbound_events import (
+from babo.bus.outbound_events import (
     ContextCompactionEvent,
     RecoveryStateEvent,
     RetryStatusEvent,
     TurnEndEvent,
 )
-from nanobot.events import CompactionReason
-from nanobot.providers.base import LLMUsage
-from nanobot.webui.metadata import WEBUI_TURN_METADATA_KEY
-from nanobot.webui.outbound_wire import (
+from babo.events import CompactionReason
+from babo.providers.base import LLMUsage
+from babo.webui.metadata import WEBUI_TURN_METADATA_KEY
+from babo.webui.outbound_wire import (
     encode_context_compaction,
     encode_recovery_state,
     encode_retry_status,
@@ -85,7 +85,7 @@ def test_encode_recovery_state_preserves_false_can_continue() -> None:
 def test_encode_retry_status_projects_relative_wait_and_turn_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("nanobot.webui.outbound_wire.time.time", lambda: 120.0)
+    monkeypatch.setattr("babo.webui.outbound_wire.time.time", lambda: 120.0)
 
     payload = encode_retry_status(
         "chat-1",

@@ -1,6 +1,6 @@
 """Exercise the public installers against real, offline package managers.
 
-The tiny wheel reports its runtime identity; it is not the nanobot application.
+The tiny wheel reports its runtime identity; it is not the babo application.
 No gateway, model, user configuration or public package index is used by these tests.
 """
 
@@ -28,7 +28,7 @@ from zipfile import ZipFile
 import pytest
 from packaging.tags import sys_tags
 
-from nanobot import releases
+from babo import releases
 from scripts.release_install_guide import (
     bootstrap_commands,
     install_command,
@@ -41,20 +41,20 @@ WINDOWS = os.name == "nt"
 BASE_PYTHON = sys._base_executable
 
 
-def _wheel(directory, version, *, platform="any", package="nanobot-ai", extras=(), installer_receipt=False):
-    module = package.replace("-", "_") if package != "nanobot-ai" else "nanobot"
+def _wheel(directory, version, *, platform="any", package="babo", extras=(), installer_receipt=False):
+    module = package.replace("-", "_") if package != "babo" else "babo"
     wheel_name = package.replace("-", "_")
     metadata = f"{wheel_name}-{version}.dist-info"
     files = {
-        "nanobot/__init__.py": f'__version__ = "{version}"\n',
-        "nanobot/__main__.py": """
+        "babo/__init__.py": f'__version__ = "{version}"\n',
+        "babo/__main__.py": """
 import json
 import sys
-import nanobot
+import babo
 
 def main():
     print("INSTALLER_PROBE " + json.dumps({
-        "version": nanobot.__version__, "package": nanobot.__file__,
+        "version": babo.__version__, "package": babo.__file__,
         "python": sys.executable, "prefix": sys.prefix,
         "isolated": sys.flags.isolated, "args": sys.argv[1:],
     }))
@@ -62,20 +62,20 @@ def main():
 if __name__ == "__main__":
     main()
 """,
-        f"{metadata}/METADATA": f"Metadata-Version: 2.1\nName: nanobot-ai\nVersion: {version}\nRequires-Python: >=3.11\n",
+        f"{metadata}/METADATA": f"Metadata-Version: 2.1\nName: babo\nVersion: {version}\nRequires-Python: >=3.11\n",
         f"{metadata}/WHEEL": "Wheel-Version: 1.0\nGenerator: installer-test\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
-        f"{metadata}/entry_points.txt": "[console_scripts]\nnanobot = nanobot.__main__:main\n",
+        f"{metadata}/entry_points.txt": "[console_scripts]\nbabo = babo.__main__:main\n",
     }
-    files = {name.replace("nanobot/", f"{module}/"): content for name, content in files.items()}
-    files[f"{module}/__main__.py"] = files[f"{module}/__main__.py"].replace("nanobot", module)
-    files[f"{metadata}/METADATA"] = files[f"{metadata}/METADATA"].replace("Name: nanobot-ai", f"Name: {package}")
+    files = {name.replace("babo/", f"{module}/"): content for name, content in files.items()}
+    files[f"{module}/__main__.py"] = files[f"{module}/__main__.py"].replace("babo", module)
+    files[f"{metadata}/METADATA"] = files[f"{metadata}/METADATA"].replace("Name: babo", f"Name: {package}")
     files[f"{metadata}/METADATA"] += "".join(f"Provides-Extra: {extra}\n" for extra in extras)
     files[f"{metadata}/WHEEL"] = files[f"{metadata}/WHEEL"].replace("py3-none-any", f"py3-none-{platform}")
     files[f"{metadata}/entry_points.txt"] = f"[console_scripts]\n{module} = {module}.__main__:main\n"
     if installer_receipt:
-        files["nanobot/installation_receipt.py"] = (SCRIPTS.parent / "nanobot/installation_receipt.py").read_text()
-        files["nanobot/utils/__init__.py"] = ""
-        files["nanobot/utils/atomic_file.py"] = (SCRIPTS.parent / "nanobot/utils/atomic_file.py").read_text()
+        files["babo/installation_receipt.py"] = (SCRIPTS.parent / "babo/installation_receipt.py").read_text()
+        files["babo/utils/__init__.py"] = ""
+        files["babo/utils/atomic_file.py"] = (SCRIPTS.parent / "babo/utils/atomic_file.py").read_text()
     record = []
     path = directory / f"{wheel_name}-{version}-py3-none-{platform}.whl"
     with ZipFile(path, "w") as wheel:
@@ -137,7 +137,7 @@ def _identity(result):
 
 def _expose(sandbox, name):
     # Explicit overrides let local verification use disposable manager installations.
-    source = os.environ.get(f"NANOBOT_TEST_{name.upper()}") or shutil.which(name)
+    source = os.environ.get(f"BABO_TEST_{name.upper()}") or shutil.which(name)
     if not source:
         pytest.skip(f"{name} is required for this real installer check")
     destination = sandbox["bin"] / (f"{name}.exe" if WINDOWS else name)
@@ -158,8 +158,8 @@ def sandbox(tmp_path):
     wheels.mkdir()
     # A checkout and PYTHONPATH must not replace the package just installed.
     checkout = root / "checkout"
-    (checkout / "nanobot").mkdir(parents=True)
-    (checkout / "nanobot/__init__.py").write_text('raise RuntimeError("wrong checkout imported")\n')
+    (checkout / "babo").mkdir(parents=True)
+    (checkout / "babo/__init__.py").write_text('raise RuntimeError("wrong checkout imported")\n')
     env = {key: value for key, value in os.environ.items()
            if key.upper() in {"SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT"}}
     system_path = (str(Path(env["SYSTEMROOT"]) / "System32") if WINDOWS else "/usr/bin:/bin")
@@ -167,8 +167,8 @@ def sandbox(tmp_path):
         "HOME": str(root), "USERPROFILE": str(root),
         "PATH": str(command_bin) + os.pathsep + system_path,
         "PYTHON": BASE_PYTHON, "PYTHONPATH": str(checkout), "PYTHONUTF8": "1",
-        "NANOBOT_SKIP_WIZARD": "1", "NANOBOT_VENV": str(root / "managed"),
-        "NANOBOT_BIN_DIR": str(root / "launchers"),
+        "BABO_SKIP_WIZARD": "1", "BABO_VENV": str(root / "managed"),
+        "BABO_BIN_DIR": str(root / "launchers"),
         "XDG_CONFIG_HOME": str(root / "config"), "XDG_CACHE_HOME": str(root / "cache"),
         "XDG_DATA_HOME": str(root / "data"), "APPDATA": str(root / "config"),
         "LOCALAPPDATA": str(root / "data"), "TMPDIR": str(root), "TMP": str(root), "TEMP": str(root),
@@ -188,9 +188,9 @@ def sandbox(tmp_path):
 def test_installer_starts_and_upgrades_same_persistent_manager_environment(sandbox, manager):
     executable = _expose(sandbox, manager)
     _wheel(sandbox["wheels"], "0.0.1")
-    _run([executable, *(["tool"] if manager == "uv" else []), "install", "--python", BASE_PYTHON, "nanobot-ai"], sandbox)
-    prefix = (sandbox["root"] / "uv-tools/nanobot-ai" if manager == "uv"
-              else sandbox["root"] / "pipx/venvs/nanobot-ai")
+    _run([executable, *(["tool"] if manager == "uv" else []), "install", "--python", BASE_PYTHON, "babo"], sandbox)
+    prefix = (sandbox["root"] / "uv-tools/babo" if manager == "uv"
+              else sandbox["root"] / "pipx/venvs/babo")
     for version in ("0.0.1", "0.0.2"):
         if version == "0.0.2":
             _wheel(sandbox["wheels"], version)
@@ -211,8 +211,8 @@ def test_powershell_manager_discovery_keeps_session_functions_without_importing_
         pytest.skip("Windows PowerShell is required")
     uv = Path(_expose(sandbox, "uv"))
     _wheel(sandbox["wheels"], "0.0.1")
-    _run([str(uv), "tool", "install", "--python", BASE_PYTHON, "nanobot-ai"], sandbox)
-    prefix = sandbox["root"] / "uv-tools/nanobot-ai"
+    _run([str(uv), "tool", "install", "--python", BASE_PYTHON, "babo"], sandbox)
+    prefix = sandbox["root"] / "uv-tools/babo"
     # The session function is the only uv command; its real executable is not on PATH.
     native = sandbox["root"] / "native"
     native.mkdir()
@@ -256,9 +256,9 @@ def test_rerunning_installer_preserves_uv_version_constraint(sandbox):
     uv = _expose(sandbox, "uv")
     _wheel(sandbox["wheels"], "0.0.1")
     _wheel(sandbox["wheels"], "0.0.2")
-    _run([uv, "tool", "install", "--python", BASE_PYTHON, "nanobot-ai==0.0.1"], sandbox)
+    _run([uv, "tool", "install", "--python", BASE_PYTHON, "babo==0.0.1"], sandbox)
     assert _identity(_installer(sandbox))["version"] == "0.0.1"
-    receipt = sandbox["root"] / "uv-tools/nanobot-ai/uv-receipt.toml"
+    receipt = sandbox["root"] / "uv-tools/babo/uv-receipt.toml"
     assert "==0.0.1" in receipt.read_text(encoding="utf-8")
 
 
@@ -267,10 +267,10 @@ def test_rerunning_installer_preserves_uv_version_constraint(sandbox):
 def test_installer_never_discards_pipx_install_policy(sandbox, exact, custom):
     pipx = _expose(sandbox, "pipx")
     _wheel(sandbox["wheels"], "0.0.1")
-    requirement = "nanobot-ai>=0.0.1,<0.1" if custom == "constraint" else "nanobot-ai"
+    requirement = "babo>=0.0.1,<0.1" if custom == "constraint" else "babo"
     options = ["--pip-args=--no-deps"] if custom == "pip-options" else []
     _run([pipx, "install", "--python", BASE_PYTHON, *options, requirement], sandbox)
-    prefix = sandbox["root"] / "pipx/venvs/nanobot-ai"
+    prefix = sandbox["root"] / "pipx/venvs/babo"
     receipt = prefix / "pipx_metadata.json"
     original = receipt.read_bytes()
     if exact:
@@ -293,14 +293,14 @@ def test_fresh_default_records_dedicated_environment_even_with_uv_available(sand
     identity = _identity(_installer(sandbox))
     prefix = sandbox["root"] / "managed"
     assert Path(identity["prefix"]).resolve() == prefix
-    receipt = prefix / "nanobot-install.json"
+    receipt = prefix / "babo-install.json"
     original = receipt.read_bytes()
-    assert json.loads(original) == {"schema_version": 1, "owner": "nanobot-installer",
+    assert json.loads(original) == {"schema_version": 1, "owner": "babo-installer",
                                     "environment": str(prefix), "extras": []}
     _wheel(sandbox["wheels"], "0.0.2", installer_receipt=True)
     assert _identity(_installer(sandbox))["version"] == "0.0.2"
     assert receipt.read_bytes() == original
-    assert not (sandbox["root"] / "uv-tools/nanobot-ai").exists()
+    assert not (sandbox["root"] / "uv-tools/babo").exists()
 
 
 @pytest.mark.parametrize("original", ["pipx", "managed"])
@@ -309,7 +309,7 @@ def test_existing_owner_wins_when_uv_is_installed_later(sandbox, original):
         executable = _expose(sandbox, "pipx")
     _wheel(sandbox["wheels"], "0.0.1")
     if original == "pipx":
-        _run([executable, "install", "--python", BASE_PYTHON, "nanobot-ai"], sandbox)
+        _run([executable, "install", "--python", BASE_PYTHON, "babo"], sandbox)
     before = _identity(_installer(sandbox))
     _expose(sandbox, "uv")
     _wheel(sandbox["wheels"], "0.0.2")
@@ -317,34 +317,34 @@ def test_existing_owner_wins_when_uv_is_installed_later(sandbox, original):
     assert after["version"] == "0.0.2"
     assert after["prefix"] == before["prefix"]
     assert after["python"] == before["python"]
-    assert not (sandbox["root"] / "uv-tools/nanobot-ai").exists()
+    assert not (sandbox["root"] / "uv-tools/babo").exists()
 
 
 def test_multiple_existing_installations_need_an_explicit_owner(sandbox):
     uv, pipx = _expose(sandbox, "uv"), _expose(sandbox, "pipx")
     _wheel(sandbox["wheels"], "0.0.1")
-    _run([uv, "tool", "install", "--python", BASE_PYTHON, "nanobot-ai"], sandbox)
-    _run([pipx, "install", "--python", BASE_PYTHON, "nanobot-ai"], sandbox)
+    _run([uv, "tool", "install", "--python", BASE_PYTHON, "babo"], sandbox)
+    _run([pipx, "install", "--python", BASE_PYTHON, "babo"], sandbox)
     _wheel(sandbox["wheels"], "0.0.2")
     result = _installer(sandbox, check=False)
     assert result.returncode != 0
-    assert "Multiple nanobot installations" in result.stdout + result.stderr
-    for prefix in (sandbox["root"] / "uv-tools/nanobot-ai", sandbox["root"] / "pipx/venvs/nanobot-ai"):
-        identity = _identity(_run([str(_python(prefix)), "-I", "-m", "nanobot", "--version"], sandbox))
+    assert "Multiple babo installations" in result.stdout + result.stderr
+    for prefix in (sandbox["root"] / "uv-tools/babo", sandbox["root"] / "pipx/venvs/babo"):
+        identity = _identity(_run([str(_python(prefix)), "-I", "-m", "babo", "--version"], sandbox))
         assert identity["version"] == "0.0.1"
 
 
 def test_activated_manager_environment_is_not_updated_with_pip(sandbox):
     executable = _expose(sandbox, "uv")
     _wheel(sandbox["wheels"], "0.0.1")
-    _run([executable, "tool", "install", "--python", BASE_PYTHON, "nanobot-ai"], sandbox)
+    _run([executable, "tool", "install", "--python", BASE_PYTHON, "babo"], sandbox)
     before = _identity(_installer(sandbox))
     sandbox["env"]["PYTHON"] = before["python"]
     _wheel(sandbox["wheels"], "0.0.2")
     result = _installer(sandbox, check=False)
     assert result.returncode != 0
     assert "active Python belongs to uv or pipx" in result.stdout + result.stderr
-    assert _identity(_run([before["python"], "-I", "-m", "nanobot", "--version"], sandbox))["version"] == "0.0.1"
+    assert _identity(_run([before["python"], "-I", "-m", "babo", "--version"], sandbox))["version"] == "0.0.1"
 
 
 @pytest.mark.parametrize("active", [True, False], ids=["active-venv", "managed-venv"])
@@ -358,7 +358,7 @@ def test_python_install_uses_same_environment_and_quoted_launcher(sandbox, activ
     assert Path(identity["prefix"]).resolve() == prefix
     assert identity["isolated"] == 1
     if not WINDOWS and not active:
-        wrapper = sandbox["root"] / "launchers/nanobot"
+        wrapper = sandbox["root"] / "launchers/babo"
         launched = _identity(_run([str(wrapper), "--version"], sandbox))
         assert launched == identity
 
@@ -370,18 +370,18 @@ def test_failed_default_install_does_not_fall_through_to_available_manager(sandb
     result = _installer(sandbox, check=False)
     assert result.returncode != 0
     assert (sandbox["root"] / "managed").exists()
-    assert not (sandbox["root"] / "uv-tools/nanobot-ai").exists()
-    assert not (sandbox["root"] / "pipx/venvs/nanobot-ai").exists()
+    assert not (sandbox["root"] / "uv-tools/babo").exists()
+    assert not (sandbox["root"] / "pipx/venvs/babo").exists()
     assert "INSTALLER_PROBE" not in result.stdout
-    receipt = sandbox["root"] / "managed/nanobot-install.json"
+    receipt = sandbox["root"] / "managed/babo-install.json"
     selection = receipt.read_bytes()
     _wheel(sandbox["wheels"], "0.0.1", installer_receipt=True)
     retried = _identity(_installer(sandbox))
     assert Path(retried["prefix"]).resolve() == sandbox["root"] / "managed"
     assert receipt.read_bytes() == selection
     assert json.loads(selection)["extras"] == []
-    assert not (sandbox["root"] / "uv-tools/nanobot-ai").exists()
-    assert not (sandbox["root"] / "pipx/venvs/nanobot-ai").exists()
+    assert not (sandbox["root"] / "uv-tools/babo").exists()
+    assert not (sandbox["root"] / "pipx/venvs/babo").exists()
 
 
 def test_dry_run_does_not_create_tool_environment(sandbox):
@@ -415,19 +415,19 @@ def _owner_environment(sandbox, owner, *, existing):
         _run([BASE_PYTHON, "-I", "-m", "venv", str(prefix)], sandbox)
         executable = str(_python(prefix))
         if existing:
-            _run([executable, "-I", "-m", "pip", "install", "nanobot-ai"], sandbox)
+            _run([executable, "-I", "-m", "pip", "install", "babo"], sandbox)
     else:
         executable = _expose(sandbox, owner)
-        prefix = sandbox["root"] / ("uv-tools/nanobot-ai" if owner == "uv" else "pipx/venvs/nanobot-ai")
+        prefix = sandbox["root"] / ("uv-tools/babo" if owner == "uv" else "pipx/venvs/babo")
         sandbox["env"]["UV_PYTHON"] = BASE_PYTHON
         if existing:
-            _run([executable, *(["tool"] if owner == "uv" else []), "install", "--python", BASE_PYTHON, "nanobot-ai"], sandbox)
+            _run([executable, *(["tool"] if owner == "uv" else []), "install", "--python", BASE_PYTHON, "babo"], sandbox)
     return executable, prefix
 
 
 def _verify_owner(sandbox, owner, prefix):
     if owner == "pip":
-        return _identity(_run([str(_python(prefix)), "-I", "-m", "nanobot", "--version"], sandbox))
+        return _identity(_run([str(_python(prefix)), "-I", "-m", "babo", "--version"], sandbox))
     command = verification_command(owner, windows=WINDOWS)
     shell = ["powershell", "-NoProfile", "-NonInteractive", "-Command"] if WINDOWS else ["/bin/sh", "-c"]
     return _identity(_run([*shell, command], sandbox))
@@ -474,10 +474,10 @@ def test_generated_command_hash_failure_leaves_existing_version(sandbox, owner):
 def test_exact_preview_does_not_silently_remove_manager_pin(sandbox, owner):
     executable, prefix = _owner_environment(sandbox, owner, existing=False)
     if owner == "uv":
-        _run([executable, "tool", "install", "nanobot-ai==0.0.1"], sandbox)
+        _run([executable, "tool", "install", "babo==0.0.1"], sandbox)
     else:
-        _run([executable, "install", "--skip-maintenance", "nanobot-ai"], sandbox)
-        _run([executable, "pin", "nanobot-ai"], sandbox)
+        _run([executable, "install", "--skip-maintenance", "babo"], sandbox)
+        _run([executable, "pin", "babo"], sandbox)
     manifest, artifact = _preview_manifest(sandbox)
     command = install_command(manifest, artifact, owner=owner, existing=True)
     result = _run_guide_command(sandbox, command, BASE_PYTHON, check=False)
@@ -489,7 +489,7 @@ def test_exact_preview_does_not_silently_remove_manager_pin(sandbox, owner):
 def test_exact_pipx_target_preserves_injected_package_and_records_new_spec(sandbox):
     pipx, prefix = _owner_environment(sandbox, "pipx", existing=True)
     _wheel(sandbox["wheels"], "1.0.0", package="fixture-helper")
-    _run([pipx, "inject", "--skip-maintenance", "nanobot-ai", "fixture-helper"], sandbox)
+    _run([pipx, "inject", "--skip-maintenance", "babo", "fixture-helper"], sandbox)
     receipt = prefix / "pipx_metadata.json"
     before = json.loads(receipt.read_text(encoding="utf-8"))
     manifest, artifact = _preview_manifest(sandbox)
@@ -498,7 +498,7 @@ def test_exact_pipx_target_preserves_injected_package_and_records_new_spec(sandb
     after = json.loads(receipt.read_text(encoding="utf-8"))
     assert after["injected_packages"] == before["injected_packages"]
     assert after["source_interpreter"] == before["source_interpreter"]
-    assert after["main_package"]["package_or_url"] == f"nanobot-ai @ {(sandbox['cwd'] / artifact.filename).as_uri()}"
+    assert after["main_package"]["package_or_url"] == f"babo @ {(sandbox['cwd'] / artifact.filename).as_uri()}"
     _run([str(_python(prefix)), "-I", "-c", "import fixture_helper"], sandbox)
     assert _verify_owner(sandbox, "pipx", prefix)["version"] == manifest.version
 
@@ -537,13 +537,13 @@ def test_public_installer_rejects_damaged_wheel_before_environment_creation(sand
     result = _installer(sandbox, *_wheel_arguments(sandbox, artifact), check=False)
     assert result.returncode != 0
     assert "SHA-256 mismatch" in result.stdout + result.stderr
-    assert not (sandbox["root"] / "uv-tools/nanobot-ai").exists()
+    assert not (sandbox["root"] / "uv-tools/babo").exists()
     assert not (sandbox["root"] / "managed").exists()
 
 
 def test_public_installer_does_not_report_pinned_skip_as_preview_success(sandbox):
     pipx, prefix = _owner_environment(sandbox, "pipx", existing=True)
-    _run([pipx, "pin", "nanobot-ai"], sandbox)
+    _run([pipx, "pin", "babo"], sandbox)
     _, artifact = _preview_manifest(sandbox)
     result = _installer(sandbox, *_wheel_arguments(sandbox, artifact), check=False)
     assert result.returncode != 0
@@ -557,25 +557,25 @@ def test_public_installer_wheel_dry_run_validates_but_does_not_install(sandbox):
     manifest, artifact = _preview_manifest(sandbox)
     result = _installer(sandbox, "--dry-run", *_wheel_arguments(sandbox, artifact))
     assert f"verified wheel {manifest.version}" in result.stdout
-    assert not (sandbox["root"] / "uv-tools/nanobot-ai").exists()
+    assert not (sandbox["root"] / "uv-tools/babo").exists()
 
 
 def test_public_installer_pipx_preview_preserves_requested_extras(sandbox):
     pipx = _expose(sandbox, "pipx")
-    prefix = sandbox["root"] / "pipx/venvs/nanobot-ai"
+    prefix = sandbox["root"] / "pipx/venvs/babo"
     _wheel(sandbox["wheels"], "0.0.1", extras=("feature",))
-    _run([pipx, "install", "--skip-maintenance", "nanobot-ai[feature]"], sandbox)
+    _run([pipx, "install", "--skip-maintenance", "babo[feature]"], sandbox)
     _, artifact = _preview_manifest(sandbox, extras=("feature",))
     _installer(sandbox, *_wheel_arguments(sandbox, artifact))
     record = json.loads((prefix / "pipx_metadata.json").read_text(encoding="utf-8"))
-    assert record["main_package"]["package_or_url"].startswith("nanobot-ai[feature] @ ")
+    assert record["main_package"]["package_or_url"].startswith("babo[feature] @ ")
 
 
 def test_public_installer_uv_preview_preserves_requested_extras(sandbox):
     uv = _expose(sandbox, "uv")
-    prefix = sandbox["root"] / "uv-tools/nanobot-ai"
+    prefix = sandbox["root"] / "uv-tools/babo"
     _wheel(sandbox["wheels"], "0.0.1", extras=("feature",))
-    _run([uv, "tool", "install", "--python", BASE_PYTHON, "nanobot-ai[feature]"], sandbox)
+    _run([uv, "tool", "install", "--python", BASE_PYTHON, "babo[feature]"], sandbox)
     _, artifact = _preview_manifest(sandbox, extras=("feature",))
     _installer(sandbox, *_wheel_arguments(sandbox, artifact))
     record = tomllib.loads((prefix / "uv-receipt.toml").read_text(encoding="utf-8"))
@@ -584,9 +584,9 @@ def test_public_installer_uv_preview_preserves_requested_extras(sandbox):
 
 def test_public_installer_refuses_missing_previously_requested_pipx_extra(sandbox):
     pipx = _expose(sandbox, "pipx")
-    prefix = sandbox["root"] / "pipx/venvs/nanobot-ai"
+    prefix = sandbox["root"] / "pipx/venvs/babo"
     _wheel(sandbox["wheels"], "0.0.1", extras=("feature",))
-    _run([pipx, "install", "--skip-maintenance", "nanobot-ai[feature]"], sandbox)
+    _run([pipx, "install", "--skip-maintenance", "babo[feature]"], sandbox)
     _, artifact = _preview_manifest(sandbox)
     result = _installer(sandbox, *_wheel_arguments(sandbox, artifact), check=False)
     assert result.returncode != 0
@@ -634,7 +634,7 @@ def published_release(tmp_path, monkeypatch):
     artifacts = []
     for name in sorted(releases.release_filenames(version)):
         if name.endswith(".whl"):
-            tag = name.removeprefix(f"nanobot_ai-{version}-py3-none-").removesuffix(".whl")
+            tag = name.removeprefix(f"babo-{version}-py3-none-").removesuffix(".whl")
             body = _wheel(tmp_path, version, platform=tag).read_bytes()
         else:
             body = b"not downloaded by the installer"
@@ -687,12 +687,12 @@ def test_bootstrap_downloads_only_target_wheel(published_release, monkeypatch, c
     monkeypatch.setattr(os, "confstr", lambda _: "glibc 2.17", raising=False)
     monkeypatch.setattr(sysconfig, "get_platform", lambda: "win-amd64")
     run(script)
-    filename = f"nanobot_ai-{manifest.version}-py3-none-{expected}.whl"
+    filename = f"babo-{manifest.version}-py3-none-{expected}.whl"
     assert len(requests) == 2 and requests[-1].endswith("/" + filename)
     files = list(cache.rglob("*.whl"))
     assert len(files) == 1 and files[0].name == filename
     assert files[0].read_bytes() == payloads[requests[-1]]
-    assert capsys.readouterr().out.strip() == f"nanobot-ai @ {files[0].as_uri()}|{manifest.version}"
+    assert capsys.readouterr().out.strip() == f"babo @ {files[0].as_uri()}|{manifest.version}"
     run(script)
     assert len(requests) == 3 and requests[-1].endswith("release-manifest.json")
     assert not list(cache.rglob("*.part"))
@@ -832,7 +832,7 @@ def test_public_installer_download_to_owner_upgrade_over_https(sandbox, release_
     assert identity["version"] == manifest.version
     assert Path(identity["prefix"]).resolve() == prefix
     assert len(requests) == 2
-    cached = list((sandbox["root"] / ".nanobot/downloads/releases").rglob("*.whl"))
+    cached = list((sandbox["root"] / ".babo/downloads/releases").rglob("*.whl"))
     assert len(cached) == 1 and requests[-1].endswith(cached[0].name)
 
 
@@ -843,7 +843,7 @@ def test_public_installer_release_dry_run_over_https_is_read_only(sandbox, relea
     assert "its wheel was not downloaded" in result.stdout
     assert len(requests) == 1
     assert not (sandbox["root"] / "managed").exists()
-    assert not (sandbox["root"] / ".nanobot/downloads/releases").exists()
+    assert not (sandbox["root"] / ".babo/downloads/releases").exists()
 
 
 def test_public_installer_damaged_https_download_never_updates_existing_package(sandbox, release_https):
@@ -857,7 +857,7 @@ def test_public_installer_damaged_https_download_never_updates_existing_package(
     assert result.returncode != 0 and "wheel size or SHA-256 mismatch" in result.stdout + result.stderr
     assert len(requests) == 2
     assert _verify_owner(sandbox, "uv", prefix)["version"] == "0.0.1"
-    cache = sandbox["root"] / ".nanobot/downloads/releases"
+    cache = sandbox["root"] / ".babo/downloads/releases"
     assert not list(cache.rglob("*.whl")) and not list(cache.rglob("*.part"))
 
 
@@ -865,11 +865,11 @@ def test_public_installer_damaged_https_download_never_updates_existing_package(
 def test_release_bootstrap_preserves_explicit_manager_pin(sandbox, release_https, owner):
     executable, prefix = _owner_environment(sandbox, owner, existing=False)
     if owner == "uv":
-        _run([executable, "tool", "install", "nanobot-ai==0.0.1"], sandbox)
+        _run([executable, "tool", "install", "babo==0.0.1"], sandbox)
         receipt = prefix / "uv-receipt.toml"
     else:
-        _run([executable, "install", "--skip-maintenance", "nanobot-ai"], sandbox)
-        _run([executable, "pin", "nanobot-ai"], sandbox)
+        _run([executable, "install", "--skip-maintenance", "babo"], sandbox)
+        _run([executable, "pin", "babo"], sandbox)
         receipt = prefix / "pipx_metadata.json"
     before = receipt.read_bytes()
     manifest, digest, _, requests, network = release_https
@@ -888,7 +888,7 @@ def test_generated_bootstrap_command_downloads_and_upgrades_original_owner(sandb
     manifest, digest, payloads, requests, network = release_https
     _expose(sandbox, "curl")
     _, prefix = _owner_environment(sandbox, "uv", existing=True)
-    installer_url = f"https://raw.githubusercontent.com/HKUDS/nanobot/{manifest.candidate_commit}/scripts/install.sh"
+    installer_url = f"https://raw.githubusercontent.com/bgrimes-me/babo/{manifest.candidate_commit}/scripts/install.sh"
     payloads[installer_url] = (SCRIPTS / "install.sh").read_bytes()
     sandbox["env"].update(network)
     unix, _ = bootstrap_commands(manifest, digest)

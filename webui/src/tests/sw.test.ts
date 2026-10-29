@@ -6,9 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Vitest runs with the webui/ directory as the working directory.
 const SW_SCRIPT = readFileSync(resolve(process.cwd(), "public/sw.js"), "utf8");
 
-const ORIGIN = "https://nanobot.test";
-const CACHE_NAME = "nanobot-static-v2";
-const ICON_CACHE_NAME = "nanobot-icons-v1";
+const ORIGIN = "https://babo.test";
+const CACHE_NAME = "babo-static-v2";
+const ICON_CACHE_NAME = "babo-icons-v1";
 const ICON_CACHE_LIMIT = 128;
 
 /** Minimal Cache-compatible in-memory store with SW-style URL normalization. */
@@ -77,7 +77,7 @@ function loadSw(noticeStore = new FakeCacheStore()): LoadedSw {
   const stores = new Map<string, FakeCacheStore>([
     [CACHE_NAME, store],
     [ICON_CACHE_NAME, iconStore],
-    ["nanobot-notification-receipts-v1", noticeStore],
+    ["babo-notification-receipts-v1", noticeStore],
   ]);
   const deletedCacheNames: string[] = [];
   const caches = {
@@ -98,8 +98,8 @@ function loadSw(noticeStore = new FakeCacheStore()): LoadedSw {
     keys: vi.fn(async () => [
       CACHE_NAME,
       ICON_CACHE_NAME,
-      "nanobot-static-v1",
-      "nanobot-icons-v0",
+      "babo-static-v1",
+      "babo-icons-v0",
       "other-app-cache",
     ]),
     delete: vi.fn(async (name: string) => {
@@ -145,7 +145,7 @@ function loadSw(noticeStore = new FakeCacheStore()): LoadedSw {
 describe("browser notification worker", () => {
   const source = { id: "tab-1", url: `${ORIGIN}/?token=private` };
   const url = `${ORIGIN}/#/chat/websocket%3Aone`;
-  const data = { type: "nanobot:notify", key: "turn-1", body: "Task completed", url };
+  const data = { type: "babo:notify", key: "turn-1", body: "Task completed", url };
   async function send(sw: LoadedSw, overrides = {}) {
     const reply = vi.fn();
     await sw.fire("message", { data: { ...data, ...overrides }, source, ports: [{ postMessage: reply }] });
@@ -154,7 +154,7 @@ describe("browser notification worker", () => {
 
   it("confirms notification support without displaying a test notification", async () => {
     const sw = loadSw();
-    const reply = await send(sw, { type: "nanobot:notification-probe" });
+    const reply = await send(sw, { type: "babo:notification-probe" });
     expect(reply).toHaveBeenCalledWith("ready");
     expect(sw.showNotification).not.toHaveBeenCalled();
   });
@@ -178,7 +178,7 @@ describe("browser notification worker", () => {
     const restarted = loadSw(sw.noticeStore);
     expect(await send(restarted)).toHaveBeenCalledWith("skipped");
     expect(restarted.showNotification).not.toHaveBeenCalled();
-    expect(sw.showNotification).toHaveBeenCalledWith("nanobot", expect.objectContaining({
+    expect(sw.showNotification).toHaveBeenCalledWith("babo", expect.objectContaining({
       body: "Task completed", data: { url, clientId: "tab-1" },
     }));
   });
@@ -198,7 +198,7 @@ describe("browser notification worker", () => {
     expect(await send(sw, { key: "test-1", test: true })).toHaveBeenCalledWith("submitted");
   });
 
-  it.each(["https://evil.test/#/chat/one", `${ORIGIN}/?token=secret#/chat/one`, `${ORIGIN}/admin`, `https://user:pass@nanobot.test/#/chat/one`])("rejects an unsafe destination %s", async (unsafe) => {
+  it.each(["https://evil.test/#/chat/one", `${ORIGIN}/?token=secret#/chat/one`, `${ORIGIN}/admin`, `https://user:pass@babo.test/#/chat/one`])("rejects an unsafe destination %s", async (unsafe) => {
     const sw = loadSw();
     expect(await send(sw, { url: unsafe })).toHaveBeenCalledWith("displayFailed");
     await sw.fire("notificationclick", { notification: { close: vi.fn(), data: { url: unsafe } } });
@@ -213,7 +213,7 @@ describe("browser notification worker", () => {
     const close = vi.fn();
     await sw.fire("notificationclick", { notification: { close, data: { url, clientId: "tab-1" } } });
     expect(close).toHaveBeenCalledOnce();
-    expect(tab.postMessage).toHaveBeenCalledWith({ type: "nanobot:notification-click", url });
+    expect(tab.postMessage).toHaveBeenCalledWith({ type: "babo:notification-click", url });
     expect(tab.focus).toHaveBeenCalledOnce();
     expect(sw.openWindow).not.toHaveBeenCalled();
   });
@@ -304,7 +304,7 @@ describe("service worker", () => {
 
     await sw.fire("activate");
 
-    expect(sw.deletedCacheNames).toEqual(["nanobot-static-v1", "nanobot-icons-v0"]);
+    expect(sw.deletedCacheNames).toEqual(["babo-static-v1", "babo-icons-v0"]);
     expect(sw.claimMock).toHaveBeenCalledTimes(1);
     expect(sw.store.entries.has(`${ORIGIN}/`)).toBe(true);
     expect(sw.store.entries.has(`${ORIGIN}/manifest.json`)).toBe(true);
@@ -321,8 +321,8 @@ describe("service worker", () => {
     const paths = [
       "/api/v1/models",
       "/auth/session",
-      "/__nanobot/ws",
-      "/__nanobot/socket.io",
+      "/__babo/ws",
+      "/__babo/socket.io",
       "/api/chat/completions",
       "/webui/bootstrap",
       "/webui/session/list",
@@ -465,7 +465,7 @@ describe("service worker", () => {
 
   it("keeps un-hashed brand assets on the network-first path", async () => {
     const sw = loadSw();
-    const iconUrl = `${ORIGIN}/brand/nanobot_icon_192.png`;
+    const iconUrl = `${ORIGIN}/brand/babo_icon_192.png`;
     const originalRequest = new Request(iconUrl);
     sw.fetchMock.mockResolvedValue(new Response("png bytes"));
 
@@ -482,7 +482,7 @@ describe("service worker", () => {
 
   it("clones network responses before yielding their body to the browser", async () => {
     const sw = loadSw();
-    const request = new Request(`${ORIGIN}/brand/nanobot_icon_192.png`);
+    const request = new Request(`${ORIGIN}/brand/babo_icon_192.png`);
     let browserOwnsBody = false;
     let clonedBeforeBrowser = false;
     const response = {

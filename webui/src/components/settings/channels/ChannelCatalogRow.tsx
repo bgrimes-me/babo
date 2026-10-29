@@ -13,7 +13,7 @@ import {
   localizedChannelDisplayName,
 } from "@/components/settings/channels/ChannelIdentity";
 import { Button } from "@/components/ui/button";
-import type { NanobotFeatureInfo } from "@/lib/types";
+import type { BaboFeatureInfo } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function ChannelCatalogRow({
@@ -26,7 +26,7 @@ export function ChannelCatalogRow({
   onRestart,
   isRestarting = false,
 }: {
-  feature: NanobotFeatureInfo;
+  feature: BaboFeatureInfo;
   showBrandLogos: boolean;
   onSelect: (connect?: boolean) => void;
   actionKey: string | null;

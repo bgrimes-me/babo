@@ -21,19 +21,19 @@ import httpx
 import pytest
 from packaging.tags import sys_tags
 
-from nanobot.config.home import get_selected_home_path, set_home_path
-from nanobot.data_access import data_access
-from nanobot.gateway.runtime import GatewayInstance, GatewayRuntime
-from nanobot.installation_lock import (
+from babo.config.home import get_selected_home_path, set_home_path
+from babo.data_access import data_access
+from babo.gateway.runtime import GatewayInstance, GatewayRuntime
+from babo.installation_lock import (
     InstallationBusyError,
     file_access,
     installation_access,
     installation_state_dir,
     pending_update_path,
 )
-from nanobot.process_runtime import process_is_running
-from nanobot.release_feed import CATALOGUE_URL, ReleaseFeed, ReleaseTarget
-from nanobot.releases import (
+from babo.process_runtime import process_is_running
+from babo.release_feed import CATALOGUE_URL, ReleaseFeed, ReleaseTarget
+from babo.releases import (
     PLATFORMS,
     ReleaseArtifact,
     ReleaseCatalogue,
@@ -41,9 +41,9 @@ from nanobot.releases import (
     ReleasePointer,
     release_filenames,
 )
-from nanobot.update_backup import BackupSource
-from nanobot.update_channel import UpdateChannelRequest, read_update_channel
-from nanobot.update_jobs import (
+from babo.update_backup import BackupSource
+from babo.update_channel import UpdateChannelRequest, read_update_channel
+from babo.update_jobs import (
     _recovery_command,
     prepare_job,
     retry_handoff,
@@ -51,11 +51,11 @@ from nanobot.update_jobs import (
     start_handoff,
     start_job,
 )
-from nanobot.update_plan import InstallationSnapshot, UpdatePlan, UpdatePlans
-from nanobot.update_process import PreparationProcess, inspect_python_environment
-from nanobot.update_profiles import inspect_profiles, record_gateway_profile
-from nanobot.update_service import UpdateJobService
-from nanobot.update_worker import (
+from babo.update_plan import InstallationSnapshot, UpdatePlan, UpdatePlans
+from babo.update_process import PreparationProcess, inspect_python_environment
+from babo.update_profiles import inspect_profiles, record_gateway_profile
+from babo.update_service import UpdateJobService
+from babo.update_worker import (
     ExecutionConfirmation,
     JobStatus,
     Phase,
@@ -70,10 +70,10 @@ _RESTART_PROBE = """
 # Synthetic installed handoff for worker/lease routing, not gateway readiness.
 import time
 from pathlib import Path
-import nanobot
-from _nanobot_update.data_access import data_access
-from _nanobot_update.installation_lock import InstallationBusyError, installation_access, pending_update_path
-from _nanobot_update.update_worker import JobStatus, Phase, WorkerSpec, write_record
+import babo
+from _babo_update.data_access import data_access
+from _babo_update.installation_lock import InstallationBusyError, installation_access, pending_update_path
+from _babo_update.update_worker import JobStatus, Phase, WorkerSpec, write_record
 
 def run_gateway(directory, participant):
     raise AssertionError('This routing fixture must not launch a gateway')
@@ -90,7 +90,7 @@ def run_restarts(directory):
             pass
         with data_access((item.path for item in spec.backup_sources), job_id=spec.plan_id) as data:
             write_record(directory / 'handoff-probe.json', {
-                'version': nanobot.__version__, 'package': str(Path(nanobot.__file__).resolve()),
+                'version': babo.__version__, 'package': str(Path(babo.__file__).resolve()),
                 'attempt': status.attempt, 'phase': status.phase.value,
             })
             if (directory / 'fail-restart').exists():
@@ -108,8 +108,8 @@ _HANDOFF_PROBE = """
 # Synthetic old-runtime preflight; release/stop contracts are tested separately.
 import time
 import traceback
-from _nanobot_update.installation_lock import InstallationBusyError, installation_access
-from _nanobot_update.update_worker import JobStatus, Phase, WorkerSpec, write_record
+from _babo_update.installation_lock import InstallationBusyError, installation_access
+from _babo_update.update_worker import JobStatus, Phase, WorkerSpec, write_record
 
 def prepare_handoff(directory):
     try:
@@ -147,26 +147,26 @@ def wheel(directory, name, version, *, requires=(), platform="any", broken=False
     package = name.replace("-", "_")
     dist = f"{package}-{version}.dist-info"
     files = {
-        f"{package if name != 'nanobot-ai' else 'nanobot'}/__init__.py": f"__version__ = '{version}'\n".encode(),
+        f"{package if name != 'babo' else 'babo'}/__init__.py": f"__version__ = '{version}'\n".encode(),
         f"{dist}/METADATA": (f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n"
                              + "".join(f"Provides-Extra: {extra}\n" for extra in extras)
                              + "".join(f"Requires-Dist: {requirement}\n" for requirement in requires)).encode(),
         f"{dist}/WHEEL": f"Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-{platform}\n".encode(),
     }
-    if name == "nanobot-ai":
+    if name == "babo":
         if entrypoint:
-            files["nanobot/__init__.py"] += b"def main(): pass\n"
-            files[f"{dist}/entry_points.txt"] = b"[console_scripts]\nnanobot = nanobot:main\n"
+            files["babo/__init__.py"] += b"def main(): pass\n"
+            files[f"{dist}/entry_points.txt"] = b"[console_scripts]\nbabo = babo:main\n"
         if broken:
-            files["nanobot/__init__.py"] = b"raise RuntimeError('broken release fixture')\n"
-        files["nanobot/web/dist/index.html"] = f"verified UI {version}".encode()
-        files["nanobot/tui/bin/fixture"] = b"fixture, not a native execution claim"
+            files["babo/__init__.py"] = b"raise RuntimeError('broken release fixture')\n"
+        files["babo/web/dist/index.html"] = f"verified UI {version}".encode()
+        files["babo/tui/bin/fixture"] = b"fixture, not a native execution claim"
         if restart:
-            files["nanobot/update_restart.py"] = _RESTART_PROBE.encode()
+            files["babo/update_restart.py"] = _RESTART_PROBE.encode()
             if restart_contract is not None:
-                files["nanobot/update_contract.json"] = restart_contract
+                files["babo/update_contract.json"] = restart_contract
         if handoff:
-            files["nanobot/update_handoff.py"] = _HANDOFF_PROBE.encode()
+            files["babo/update_handoff.py"] = _HANDOFF_PROBE.encode()
     records = []
     for filename, data in files.items():
         digest = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode()
@@ -215,12 +215,12 @@ def installation(tmp_path, monkeypatch, request, create_integration_env):
         restart_contract = mode.get("restart_contract", restart_contract)
         mode = "handoff" if "restart_contract" in mode else False
     previous_version, next_version = versions
-    previous = wheel(artifacts, "nanobot-ai", previous_version, requires=["fixture-update-dep==1.0.0"],
+    previous = wheel(artifacts, "babo", previous_version, requires=["fixture-update-dep==1.0.0"],
                      handoff=mode == "handoff")
     subprocess.run([python, "-I", "-m", "pip", "install", "--disable-pip-version-check", str(previous)],
                    check=True, capture_output=True, timeout=60)
     platform = next(tag.platform for tag in sys_tags() if tag.platform in PLATFORMS.values())
-    candidate = wheel(artifacts, "nanobot-ai", next_version, requires=["fixture-update-dep>=2.0.0"], platform=platform,
+    candidate = wheel(artifacts, "babo", next_version, requires=["fixture-update-dep>=2.0.0"], platform=platform,
                       broken=mode is True,
                       restart=mode in ("restart", "handoff"),
                       restart_contract=restart_contract)
@@ -228,7 +228,7 @@ def installation(tmp_path, monkeypatch, request, create_integration_env):
     site = Path(subprocess.check_output([python, "-I", "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"], text=True).strip())
     snapshot = InstallationSnapshot(
         environment=str(environment.resolve()), python=python, installed_version=previous_version, running_version=previous_version,
-        package_path=str(site / "nanobot/__init__.py"), running_package=str(site / "nanobot/__init__.py"),
+        package_path=str(site / "babo/__init__.py"), running_package=str(site / "babo/__init__.py"),
         owner="venv", records={"pyvenv.cfg": baseline.receipt_sha, **baseline.app_records},
     )
     profile, workspace = tmp_path / "gateway data", tmp_path / "user project"
@@ -236,7 +236,7 @@ def installation(tmp_path, monkeypatch, request, create_integration_env):
     workspace.mkdir()
     (profile / "config.json").write_text('{"fixture":"private credential"}')
     (profile / "sessions/chat.jsonl").write_text('{"content":"original conversation"}\n')
-    (workspace / "private-project.py").write_text("not nanobot state")
+    (workspace / "private-project.py").write_text("not babo state")
     selected_home = get_selected_home_path()
     try:
         set_home_path(profile)
@@ -297,7 +297,7 @@ def installation(tmp_path, monkeypatch, request, create_integration_env):
             return httpx.Response(200, content=candidate.read_bytes())
         if request.url.host == "files.pythonhosted.org":
             return httpx.Response(200, content=candidate.read_bytes())
-        assert request.url.path == f"/pypi/nanobot-ai/{next_version}/json", "execution re-resolved latest"
+        assert request.url.path == f"/pypi/babo/{next_version}/json", "execution re-resolved latest"
         files = []
         for filename in release_filenames(next_version):
             if filename.endswith((".whl", ".tar.gz")):
@@ -305,7 +305,7 @@ def installation(tmp_path, monkeypatch, request, create_integration_env):
                 files.append({"filename": filename, "size": target.artifact.size if selected else 1,
                               "url": f"https://files.pythonhosted.org/packages/{filename}", "yanked": False,
                               "digests": {"sha256": target.artifact.sha256 if selected else "a" * 64}})
-        return httpx.Response(200, json={"info": {"name": "nanobot-ai", "version": next_version, "requires_python": ">=3.11"}, "urls": files})
+        return httpx.Response(200, json={"info": {"name": "babo", "version": next_version, "requires_python": ">=3.11"}, "urls": files})
 
     return plan, candidate, site, requests, httpx.MockTransport(response)
 
@@ -313,18 +313,18 @@ def installation(tmp_path, monkeypatch, request, create_integration_env):
 @pytest.fixture
 def managed_installation(installation):
     plan, candidate, site, requests, transport = installation
-    receipt = Path(plan.installation.environment) / "nanobot-install.json"
-    write_record(receipt, {"schema_version": 1, "owner": "nanobot-installer",
+    receipt = Path(plan.installation.environment) / "babo-install.json"
+    write_record(receipt, {"schema_version": 1, "owner": "babo-installer",
                            "environment": plan.installation.environment, "extras": []})
     snapshot = plan.installation.model_copy(update={
-        "records": {**plan.installation.records, "nanobot-install.json": hashlib.sha256(receipt.read_bytes()).hexdigest()},
+        "records": {**plan.installation.records, "babo-install.json": hashlib.sha256(receipt.read_bytes()).hexdigest()},
     })
     return plan.model_copy(update={"installation": snapshot}), candidate, site, requests, transport
 
 
 @pytest.mark.parametrize("cancel_feed_close", [False, True])
 async def test_confirmed_service_prepares_exact_offline_pip_job_without_installing(installation, monkeypatch, cancel_feed_close):
-    from nanobot import update_service
+    from babo import update_service
 
     plan, _, _, requests, transport = installation
     monkeypatch.setattr(sys, "prefix", plan.installation.environment)
@@ -350,7 +350,7 @@ async def test_confirmed_service_prepares_exact_offline_pip_job_without_installi
     spec.verify_inputs(root / "jobs" / plan.id)
     assert spec.version == "0.3.5"
     assert inspect_environment(plan.installation.python).app_version == "0.3.4"
-    assert requests == ["https://pypi.org/pypi/nanobot-ai/0.3.5/json"] * 2 + [plan.target.url]
+    assert requests == ["https://pypi.org/pypi/babo/0.3.5/json"] * 2 + [plan.target.url]
     assert not (root / "jobs" / plan.id / "approval.json").exists()
     assert not (root / "stop.json").exists()
 
@@ -410,18 +410,18 @@ async def test_real_channel_upgrade_installs_verified_bytes_and_keeps_user_data(
         await wait_worker(await start_job(directory, feed))
     assert JobStatus.read(directory).phase == Phase.INSTALLED
     assert inspect_environment(plan.installation.python).app_version == plan.target.version
-    assert (site / "nanobot/web/dist/index.html").read_text() == f"verified UI {plan.target.version}"
+    assert (site / "babo/web/dist/index.html").read_text() == f"verified UI {plan.target.version}"
     assert all(path.read_bytes() == value for path, value in original.items())
     assert not pending_update_path(plan.installation.environment).exists()
 
 
 def test_recovery_command_uses_base_python_and_exact_launcher_without_shell_home(monkeypatch, tmp_path):
-    import nanobot.update_jobs as jobs
+    import babo.update_jobs as jobs
 
     python = "/opt/Python tools/user's python/bin/python3"
     monkeypatch.setattr(jobs.sys, "_base_executable", python)
     monkeypatch.setattr(jobs.platform, "system", lambda: "Linux")
-    state = tmp_path / "user's private home/.nanobot/updates/installation"
+    state = tmp_path / "user's private home/.babo/updates/installation"
     monkeypatch.setattr(jobs, "installation_state_dir", lambda: state)
     job_id = str(uuid4())
     assert shlex.split(_recovery_command(job_id)) == [
@@ -430,16 +430,16 @@ def test_recovery_command_uses_base_python_and_exact_launcher_without_shell_home
 
 
 def test_recovery_command_quotes_windows_base_python_for_powershell(monkeypatch):
-    import nanobot.update_jobs as jobs
+    import babo.update_jobs as jobs
 
     monkeypatch.setattr(jobs.sys, "_base_executable", r"C:\Python tools\user's Python\python.exe")
     monkeypatch.setattr(jobs.platform, "system", lambda: "Windows")
     monkeypatch.setattr(jobs, "installation_state_dir", lambda: PureWindowsPath(
-        r"C:\Users\user's private home\.nanobot\updates\installation"))
+        r"C:\Users\user's private home\.babo\updates\installation"))
     job_id = str(uuid4())
     assert _recovery_command(job_id) == (
         r"& 'C:\Python tools\user''s Python\python.exe' -I -S "
-        rf"'C:\Users\user''s private home\.nanobot\updates\recover.py' {job_id} --repair"
+        rf"'C:\Users\user''s private home\.babo\updates\recover.py' {job_id} --repair"
     )
 
 
@@ -536,7 +536,7 @@ async def test_target_restart_contract_is_checked_before_preparation_commits(ins
 
 @pytest.mark.parametrize("installation", [{"restart_contract": None}], indirect=True)
 async def test_previously_staged_target_cannot_bypass_restart_contract(installation, tmp_path, monkeypatch):
-    from nanobot import update_jobs
+    from babo import update_jobs
 
     plan, _, _, _, transport = installation
     # Model a job committed by the older filename-only preparer. Execution must
@@ -594,7 +594,7 @@ async def test_confirmed_handoff_is_consumed_once_even_after_failure(installatio
 
 @pytest.mark.parametrize("installation", ["handoff"], indirect=True)
 async def test_retry_consumes_one_failed_confirmation_and_rechecks_ownership_and_expiry(installation, tmp_path, monkeypatch):
-    from nanobot import update_jobs
+    from babo import update_jobs
 
     plan, _, _, _, transport = installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -641,7 +641,7 @@ async def test_retry_consumes_one_failed_confirmation_and_rechecks_ownership_and
 
 @pytest.mark.parametrize("installation", ["handoff"], indirect=True)
 async def test_settled_failed_handoff_rejects_delayed_worker_and_keeps_original_files(installation, tmp_path):
-    from nanobot.update_stop import settle_uncommitted_handoff
+    from babo.update_stop import settle_uncommitted_handoff
 
     plan, _, _, _, transport = installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -670,7 +670,7 @@ async def test_settled_failed_handoff_rejects_delayed_worker_and_keeps_original_
 
 @pytest.mark.parametrize("installation", ["handoff"], indirect=True)
 async def test_confirmed_launch_failure_is_not_retry_authority(installation, tmp_path, monkeypatch):
-    from nanobot import update_jobs
+    from babo import update_jobs
 
     plan, _, _, _, transport = installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -696,7 +696,7 @@ async def test_confirmed_launch_failure_is_not_retry_authority(installation, tmp
 
 @pytest.mark.parametrize("installation", ["handoff"], indirect=True)
 async def test_late_launch_failure_cannot_overwrite_new_retry_confirmation(installation, tmp_path, monkeypatch):
-    from nanobot import update_jobs
+    from babo import update_jobs
 
     plan, _, _, _, transport = installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -724,7 +724,7 @@ async def test_late_launch_failure_cannot_overwrite_new_retry_confirmation(insta
 
 @pytest.mark.parametrize("installation", ["handoff"], indirect=True)
 async def test_late_confirmed_children_cannot_use_replaced_approval(installation, tmp_path, monkeypatch):
-    from nanobot import update_jobs
+    from babo import update_jobs
 
     plan, _, _, _, transport = installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -761,7 +761,7 @@ async def test_detached_handoff_outlives_requester_and_installs_after_preflight_
     pause.touch()
     launcher = (
         f"import sys; sys.path.insert(0, {str(Path(__file__).resolve().parents[1])!r})\n"
-        "from pathlib import Path\nfrom nanobot.update_jobs import start_handoff\n"
+        "from pathlib import Path\nfrom babo.update_jobs import start_handoff\n"
         f"start_handoff(Path({str(directory)!r}))\n"
     )
     subprocess.run([sys.executable, "-c", launcher], check=True, timeout=10,
@@ -786,8 +786,8 @@ async def test_detached_handoff_outlives_requester_and_installs_after_preflight_
     error = directory / "preflight-error.txt"
     assert state.phase == Phase.SUCCEEDED, (state, error.read_text() if error.exists() else "")
     assert inspect_environment(plan.installation.python).app_version == "0.3.5"
-    assert read_record(directory / "handoff-probe.json")["package"] == str((site / "nanobot/__init__.py").resolve())
-    assert not (site / "nanobot/update_handoff.py").exists(), "Old preflight source was not replaced"
+    assert read_record(directory / "handoff-probe.json")["package"] == str((site / "babo/__init__.py").resolve())
+    assert not (site / "babo/update_handoff.py").exists(), "Old preflight source was not replaced"
 
 
 @pytest.mark.parametrize("installation", ["handoff"], indirect=True)
@@ -900,7 +900,7 @@ async def test_orphan_preflight_keeps_lease_and_cannot_approve_installation(inst
 
 @pytest.mark.parametrize("refuse", [False, True, "unfinished"])
 async def test_old_runtime_preflight_revalidates_before_shutdown(installation, tmp_path, monkeypatch, refuse):
-    from nanobot import update_handoff
+    from babo import update_handoff
 
     plan, _, _, requests, transport = installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -937,7 +937,7 @@ async def test_old_runtime_preflight_revalidates_before_shutdown(installation, t
     monkeypatch.setattr(update_handoff, "current_environment", lambda **kwargs: baseline)
     JobStatus(plan.id, Phase.CHECKING, 0, False, "Testing preflight", int(time.time())).save(directory)
     if refuse == "unfinished":
-        from nanobot.data_access import data_access
+        from babo.data_access import data_access
 
         with data_access([tmp_path / "other-installation-data"], updating=True, job_id=str(uuid4())) as lease:
             lease.reserve()
@@ -950,7 +950,7 @@ async def test_old_runtime_preflight_revalidates_before_shutdown(installation, t
     else:
         await asyncio.to_thread(update_handoff.prepare_handoff, directory)
         assert events == ["revalidate", "closed", "stop"]
-        assert requests[-1].endswith("/pypi/nanobot-ai/0.3.5/json")
+        assert requests[-1].endswith("/pypi/babo/0.3.5/json")
     assert not (directory / "approval.json").exists()
     assert inspect_environment(plan.installation.python).app_version == "0.3.4"
 
@@ -969,11 +969,11 @@ async def test_installed_runtime_failure_repairs_handoff_without_reinstalling(in
         assert status.phase == Phase.RESTART_FAILED and status.attempt == 1
         assert status.mutation_started
         probe = read_record(directory / "handoff-probe.json")
-        assert probe == {"version": "0.3.5", "package": str((site / "nanobot/__init__.py").resolve()),
+        assert probe == {"version": "0.3.5", "package": str((site / "babo/__init__.py").resolve()),
                          "attempt": 1, "phase": "restarting"}
         assert inspect_environment(plan.installation.python).app_version == "0.3.5"
         backup = (directory / "backup/data.zip").read_bytes()
-        record = (site / "nanobot_ai-0.3.5.dist-info/RECORD").read_bytes()
+        record = (site / "babo-0.3.5.dist-info/RECORD").read_bytes()
         with pytest.raises(InstallationBusyError):
             with installation_access(environment=plan.installation.environment):
                 pytest.fail("Runtime failure released the installation fence")
@@ -1004,7 +1004,7 @@ async def test_installed_runtime_failure_repairs_handoff_without_reinstalling(in
     assert JobStatus.read(directory).attempt == 1
     assert read_record(directory / "handoff-probe.json")["phase"] == "restart_failed"
     assert (directory / "backup/data.zip").read_bytes() == backup
-    assert (site / "nanobot_ai-0.3.5.dist-info/RECORD").read_bytes() == record
+    assert (site / "babo-0.3.5.dist-info/RECORD").read_bytes() == record
     with installation_access(environment=plan.installation.environment), data_access([plan.profiles[0].receipt.config]):
         pass
 
@@ -1062,25 +1062,25 @@ async def test_real_job_stages_then_installs_exact_app_and_dependency(installati
         spec = WorkerSpec.read(directory)
         # The detached archive may load the target runtime only after acquiring
         # its installation lease. Its frozen helpers must remain separate from
-        # the real installed nanobot package, not supply an empty __init__.
+        # the real installed babo package, not supply an empty __init__.
         probe_command = [
             plan.installation.python, "-I", "-c", """
 import json, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
-from _nanobot_update.installation_lock import installation_access
-from _nanobot_update.update_worker import JobStatus
+from _babo_update.installation_lock import installation_access
+from _babo_update.update_worker import JobStatus
 with installation_access():
-    import nanobot
-    print(json.dumps([nanobot.__version__, nanobot.__file__, JobStatus.read(Path(sys.argv[2])).phase.value]))
+    import babo
+    print(json.dumps([babo.__version__, babo.__file__, JobStatus.read(Path(sys.argv[2])).phase.value]))
 """, str(directory / "worker.pyz"), str(directory),
         ]
         probe = subprocess.run(probe_command, check=True, capture_output=True, text=True, timeout=20)
         loaded_version, loaded_path, phase = json.loads(probe.stdout)
         assert loaded_version == "0.3.4" and phase == "ready"
-        assert Path(loaded_path).resolve() == (site / "nanobot/__init__.py").resolve()
+        assert Path(loaded_path).resolve() == (site / "babo/__init__.py").resolve()
         assert {(item.name, item.version) for item in spec.wheels} == {
-            ("nanobot-ai", "0.3.5"), ("fixture-update-dep", "2.0.0"),
+            ("babo", "0.3.5"), ("fixture-update-dep", "2.0.0"),
         }
         assert await prepare_job(plan, feed) == directory
         # Installer configuration cannot redirect writes or the final dependency
@@ -1096,8 +1096,8 @@ with installation_access():
     probe = subprocess.run(probe_command, check=True, capture_output=True, text=True, timeout=20)
     loaded_version, loaded_path, phase = json.loads(probe.stdout)
     assert loaded_version == "0.3.5" and phase == "installed"
-    assert Path(loaded_path).resolve() == (site / "nanobot/__init__.py").resolve()
-    assert (site / "nanobot/web/dist/index.html").read_text() == "verified UI 0.3.5"
+    assert Path(loaded_path).resolve() == (site / "babo/__init__.py").resolve()
+    assert (site / "babo/web/dist/index.html").read_text() == "verified UI 0.3.5"
     assert not unintended.exists()
     with ZipFile(directory / "backup/data.zip") as archive:
         entries = json.loads(archive.read("manifest.json"))["entries"]
@@ -1138,7 +1138,7 @@ async def test_planning_probe_retains_lease_after_caller_loss(installation, tmp_
     pth = site / "hold_planning_probe.pth"
     pth.write_text("import hold_planning_probe\n")
     caller = (
-        "import os,sys\nfrom pathlib import Path\nfrom nanobot.update_plan import inspect_installation\n"
+        "import os,sys\nfrom pathlib import Path\nfrom babo.update_plan import inspect_installation\n"
         f"sys.prefix={plan.installation.environment!r}\n"
         f"sys.executable={plan.installation.python!r}\n"
         f"Path({str(caller_pid)!r}).write_text(str(os.getpid()))\n"
@@ -1283,14 +1283,14 @@ async def test_worker_survives_coordinator_loss_without_unlocking_live_pip(insta
         assert "original pre-update backup is missing" in JobStatus.read(directory).message
         assert not (directory / "backup").exists()
         retained.rename(directory / "backup")
-        (site / "nanobot/web/dist/index.html").unlink()
+        (site / "babo/web/dist/index.html").unlink()
         with pytest.raises(ValueError, match="explicit repair"):
             await start_job(directory, feed)
         await wait_worker(await start_job(directory, feed, repair=True))
         assert (directory / "backup/data.zip").read_bytes() == backup
     assert JobStatus.read(directory).attempt == 2
     assert JobStatus.read(directory).phase == Phase.INSTALLED
-    assert (site / "nanobot/web/dist/index.html").read_text() == "verified UI 0.3.5"
+    assert (site / "babo/web/dist/index.html").read_text() == "verified UI 0.3.5"
     with data_access([Path(plan.profiles[0].receipt.data_dir) / "sessions"]):
         pass  # Successful repair releases both the live lease and persistent fence.
 
@@ -1314,7 +1314,7 @@ async def test_other_installation_writer_refuses_job_before_approval_or_backup(i
 
 @pytest.mark.asyncio
 async def test_cancel_interrupted_handoff_releases_data_without_installing(installation, tmp_path, monkeypatch):
-    from nanobot import update_jobs
+    from babo import update_jobs
 
     plan, _, _, _, transport = installation
     ready = tmp_path / "coordinator-ready"
@@ -1323,7 +1323,7 @@ async def test_cancel_interrupted_handoff_releases_data_without_installing(insta
 import sys, time
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
-from _nanobot_update import update_worker
+from _babo_update import update_worker
 original_run = update_worker.subprocess.run
 def run(command, *args, **kwargs):
     if '--install' in command:
@@ -1449,14 +1449,14 @@ async def test_broken_release_keeps_recovery_record_and_never_overwrites_an_exte
         assert "does not import" in state.message
         assert pending_update_path(plan.installation.environment).exists()
         spec = WorkerSpec.read(directory)
-        # The status command is usable even though importing nanobot now fails.
+        # The status command is usable even though importing babo now fails.
         result = subprocess.run([spec.baseline.base_python, "-I", str(directory / "worker.pyz"), "--status", str(directory)],
                                 capture_output=True, text=True, timeout=20)
         assert result.returncode == 0
         assert json.loads(result.stdout)["phase"] == "failed"
         with pytest.raises(ValueError, match="not cancellation"):
             cancel_job(directory)
-        newer = wheel(candidate.parent, "nanobot-ai", "0.3.6", requires=["fixture-update-dep>=2.0.0"])
+        newer = wheel(candidate.parent, "babo", "0.3.6", requires=["fixture-update-dep>=2.0.0"])
         subprocess.run([plan.installation.python, "-I", "-m", "pip", "install", "--disable-pip-version-check", str(newer)],
                        capture_output=True, check=True, timeout=30)
         with pytest.raises(ValueError, match="cannot overwrite"):
@@ -1465,7 +1465,7 @@ async def test_broken_release_keeps_recovery_record_and_never_overwrites_an_exte
 
 
 def test_program_copy_flushes_writable_handle_and_preserves_read_only_mode(tmp_path, monkeypatch):
-    from nanobot.update_fallback import _copy_program_file
+    from babo.update_fallback import _copy_program_file
 
     source, destination = tmp_path / "license.txt", tmp_path / "copied-license.txt"
     source.write_bytes(b"Installed package license\n")
@@ -1488,7 +1488,7 @@ def test_program_copy_flushes_writable_handle_and_preserves_read_only_mode(tmp_p
 
 @pytest.mark.parametrize("installation", ["handoff"], indirect=True)
 async def test_job_recovery_capability_comes_from_its_saved_worker(managed_installation, tmp_path, monkeypatch):
-    from nanobot.update_jobs import read_update_job
+    from babo.update_jobs import read_update_job
 
     plan, _, _, _, transport = managed_installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -1508,7 +1508,7 @@ async def test_job_recovery_capability_comes_from_its_saved_worker(managed_insta
 @pytest.mark.parametrize("installation", ["handoff"], indirect=True)
 async def test_stale_first_supervisor_cannot_take_new_confirmation(managed_installation, tmp_path, monkeypatch):
     """Real frozen supervisor/worker/pip; synthetic preflight and restart bodies."""
-    from nanobot import update_jobs
+    from babo import update_jobs
 
     plan, _, _, _, transport = managed_installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -1565,8 +1565,8 @@ async def test_stale_first_supervisor_cannot_take_new_confirmation(managed_insta
 @pytest.mark.parametrize("installation", ["handoff"], indirect=True)
 @pytest.mark.parametrize("restarting", [False, True])
 async def test_service_restore_keeps_confirmation_identity_after_expiry(managed_installation, tmp_path, monkeypatch, restarting):
-    from nanobot import update_jobs, update_worker
-    from nanobot.update_fallback import restore_service
+    from babo import update_jobs, update_worker
+    from babo.update_fallback import restore_service
 
     plan, _, _, _, transport = managed_installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -1604,7 +1604,7 @@ async def test_service_restore_keeps_confirmation_identity_after_expiry(managed_
 @pytest.mark.parametrize("installation", [True], indirect=True)
 @pytest.mark.parametrize("interrupted", [None, "rename", "journal", "metadata"])
 async def test_program_restore_after_real_broken_install_preserves_user_data(installation, tmp_path, monkeypatch, interrupted):
-    from nanobot.update_fallback import (
+    from babo.update_fallback import (
         preserve_program,
         require_unchanged_user_data,
         restore_program,
@@ -1622,13 +1622,13 @@ async def test_program_restore_after_real_broken_install_preserves_user_data(ins
         assert await asyncio.to_thread(process.wait, 40) != 0
         assert JobStatus.read(directory).mutation_started
         if interrupted == "metadata":
-            from nanobot.update_fallback import _inspect_metadata
-            from nanobot.update_worker import check_environment
+            from babo.update_fallback import _inspect_metadata
+            from babo.update_worker import check_environment
 
             # A killed installer can leave dist-info after removing METADATA.
             # Same-target import probes fail, but restoring the saved program
             # must not depend on importing or parsing the damaged package.
-            next(Path(spec.baseline.environment).rglob(f"nanobot_ai-{spec.version}.dist-info/METADATA")).unlink()
+            next(Path(spec.baseline.environment).rglob(f"babo-{spec.version}.dist-info/METADATA")).unlink()
             check_environment(spec, repairing=True, current=_inspect_metadata(spec))
         config = Path(plan.profiles[0].receipt.config)
         chat = Path(plan.profiles[0].receipt.data_dir) / "sessions/chat.jsonl"
@@ -1637,12 +1637,12 @@ async def test_program_restore_after_real_broken_install_preserves_user_data(ins
               data_access((s.path for s in spec.backup_sources), updating=True, job_id=spec.plan_id)):
             require_unchanged_user_data(directory, spec)
             if interrupted in {"rename", "journal"}:
-                from nanobot import update_worker
+                from babo import update_worker
 
                 rename = os.rename
                 publish = update_worker.write_record
                 def interrupt_switch(source, destination):
-                    if Path(source).name == f".nanobot-original-{spec.plan_id}":
+                    if Path(source).name == f".babo-original-{spec.plan_id}":
                         raise OSError("Injected interruption between program renames")
                     return rename(source, destination)
                 def interrupt_publish(path, value, **kwargs):
@@ -1675,7 +1675,7 @@ async def test_program_restore_after_real_broken_install_preserves_user_data(ins
     ("repaired", False), ("restored", False), ("unsafe", False), ("restored", True),
 ])
 async def test_supervisor_has_one_repair_budget_and_replays_transient_restore(installation, tmp_path, monkeypatch, outcome, confirmed):
-    from nanobot import update_fallback
+    from babo import update_fallback
 
     plan, _, _, _, transport = installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -1729,7 +1729,7 @@ async def test_supervisor_has_one_repair_budget_and_replays_transient_restore(in
 
 
 async def test_service_restore_refuses_an_activated_candidate(installation, tmp_path):
-    from nanobot.update_fallback import restore_service
+    from babo.update_fallback import restore_service
 
     plan, _, _, _, transport = installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -1744,7 +1744,7 @@ async def test_service_restore_refuses_an_activated_candidate(installation, tmp_
 
 
 async def test_supervisor_finishes_refused_stop_without_waiting_for_live_gateway(installation, tmp_path, monkeypatch):
-    from nanobot import update_fallback
+    from babo import update_fallback
 
     plan, _, _, _, transport = installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -1770,8 +1770,8 @@ async def test_supervisor_finishes_refused_stop_without_waiting_for_live_gateway
 
 @pytest.mark.parametrize("installation", ["restart"], indirect=True)
 async def test_service_restore_completes_reservation_after_interrupted_journal(installation, tmp_path, monkeypatch):
-    from nanobot import update_worker
-    from nanobot.update_fallback import restore_service
+    from babo import update_worker
+    from babo.update_fallback import restore_service
 
     plan, _, _, _, transport = installation
     async with ReleaseFeed(tmp_path / "feed", transport=transport) as feed:
@@ -1800,7 +1800,7 @@ async def test_service_restore_completes_reservation_after_interrupted_journal(i
 @pytest.mark.asyncio
 @pytest.mark.parametrize("stage", ["baseline", "dependencies", "final-probe"])
 async def test_cancelled_preparation_keeps_lease_until_native_work_exits(installation, monkeypatch, tmp_path, stage):
-    from nanobot import update_jobs
+    from babo import update_jobs
 
     plan, _, _, _, transport = installation
     entered, finish = threading.Event(), threading.Event()
@@ -1895,10 +1895,10 @@ import asyncio, os, sys
 from pathlib import Path
 sys.path.insert(0, {str(source)!r})
 import httpx
-from nanobot import update_jobs, update_worker
-from nanobot.release_feed import ReleaseFeed
-from nanobot.update_plan import UpdatePlan
-from nanobot.releases import release_filenames
+from babo import update_jobs, update_worker
+from babo.release_feed import ReleaseFeed
+from babo.update_plan import UpdatePlan
+from babo.releases import release_filenames
 async def private_fixture_approval(self, target):
     # Unsigned lifecycle fixture; public publication authority is tested separately.
     pass
@@ -1908,12 +1908,12 @@ plan = UpdatePlan.model_validate_json({plan.model_dump_json()!r})
 def response(request):
     if request.url.host == 'files.pythonhosted.org':
         return httpx.Response(200, content=Path({str(candidate)!r}).read_bytes())
-    assert request.url.path == '/pypi/nanobot-ai/0.3.5/json'
+    assert request.url.path == '/pypi/babo/0.3.5/json'
     files = [dict(filename=name, size=plan.target.artifact.size if name == plan.target.artifact.filename else 1,
                   url='https://files.pythonhosted.org/packages/' + name, yanked=False,
                   digests=dict(sha256=plan.target.artifact.sha256 if name == plan.target.artifact.filename else 'a' * 64))
              for name in release_filenames(plan.target.version) if name.endswith(('.whl', '.tar.gz'))]
-    return httpx.Response(200, json=dict(info=dict(name='nanobot-ai', version=plan.target.version,
+    return httpx.Response(200, json=dict(info=dict(name='babo', version=plan.target.version,
                                                   requires_python='>=3.11'), urls=files))
 async def run():
     async with ReleaseFeed(Path({str(cache)!r}), transport=httpx.MockTransport(response)) as feed:
@@ -2140,7 +2140,7 @@ async def test_admission_probe_keeps_its_leases_after_caller_loss(installation, 
             "import os\nfrom pathlib import Path\n"
             f"Path({str(caller_pid)!r}).write_text(str(os.getpid()))\n"
             "import asyncio\n"
-            "from nanobot.update_jobs import start_job\n"
+            "from babo.update_jobs import start_job\n"
             "class Feed:\n"
             "    async def revalidate(self, target): pass\n"
             f"asyncio.run(start_job(Path({str(directory)!r}), Feed()))\n"
@@ -2288,7 +2288,7 @@ async def test_installed_cleanup_recovery_reverifies_without_reinstalling(instal
 import os, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
-from _nanobot_update import update_worker
+from _babo_update import update_worker
 original_save = update_worker.JobStatus.save
 def save(status, directory):
     original_save(status, directory)
@@ -2314,7 +2314,7 @@ update_worker.run_job(Path(sys.argv[2]))
     pending = pending_update_path(plan.installation.environment)
     assert pending.exists()
     checkpoint = (directory / "verification.json").read_bytes()
-    record = site / "nanobot_ai-0.3.5.dist-info/RECORD"
+    record = site / "babo-0.3.5.dist-info/RECORD"
     record_time = record.stat().st_mtime_ns
     backup = (directory / "backup/data.zip").read_bytes()
     spec = WorkerSpec.read(directory)

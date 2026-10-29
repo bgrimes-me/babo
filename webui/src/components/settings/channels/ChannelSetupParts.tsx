@@ -8,14 +8,14 @@ import {
   type ChannelSetupPresentation,
 } from "@/channel-plugins/catalog";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import type { NanobotFeatureInfo } from "@/lib/types";
+import type { BaboFeatureInfo } from "@/lib/types";
 
 export function ChannelSetupActions({
   feature,
   setup,
   onNotice,
 }: {
-  feature: NanobotFeatureInfo;
+  feature: BaboFeatureInfo;
   setup: ChannelSetupPresentation;
   onNotice: (message: string | null) => void;
 }) {

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { AutomationChat, AutomationChatsPayload, AutomationChatUpdate, NanobotFeatureInfo, SessionAutomationJob } from "@/lib/types";
+import type { AutomationChat, AutomationChatsPayload, AutomationChatUpdate, BaboFeatureInfo, SessionAutomationJob } from "@/lib/types";
 
 export type ChangeAutomationChat = (job: SessionAutomationJob, values: AutomationChatUpdate) => Promise<void>;
 export type AutomationChatNames = ReadonlyMap<string, { title: string; handle: string }>;
@@ -18,13 +18,13 @@ function ChatIdentity({ chat, title, showBrandLogos }: { chat: AutomationChat; t
   const presentation = channelUiPresentation(chat.channel);
   const platform = chat.channel === "websocket" ? t("settings.automations.chat.web")
     : channelTranslator(t, owner)("displayName", presentation?.displayName ?? chat.channel);
-  const feature: NanobotFeatureInfo = {
+  const feature: BaboFeatureInfo = {
     name: chat.channel, display_name: platform, type: "channel", enabled: true,
     installed: true, ready: true, status: "ready", install_supported: false, requires_restart: false,
   };
   return <span className="flex min-w-0 items-center gap-2.5 text-start">
     <span aria-hidden className="relative h-6 w-6 shrink-0">
-      {chat.channel === "websocket" ? <img src="/brand/nanobot_mark.svg" alt="" className="h-6 w-6" />
+      {chat.channel === "websocket" ? <img src="/brand/babo_mark.svg" alt="" className="h-6 w-6" />
         : <span className="absolute left-0 top-0 origin-top-left scale-75"><ChannelLogo feature={feature} showBrandLogos={showBrandLogos} /></span>}
     </span>
     <span className="flex min-w-0 flex-col gap-0.5">

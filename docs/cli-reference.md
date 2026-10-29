@@ -6,154 +6,154 @@ Use this page when you know what you want to run and need the command shape. For
 
 | Goal | Command | Notes |
 |---|---|---|
-| Check the install | `nanobot --version` | If this fails, try `python -m nanobot --version` |
-| Update an ordinary Python venv | `nanobot update` | Latest stable PyPI release; use the [installation-specific route](./updating.md#installation-owners) for other methods |
-| Create or refresh config | `nanobot onboard` | Creates `~/.nanobot/config.json` and `~/.nanobot/workspace/` |
-| Refresh config non-interactively | `nanobot onboard --refresh` | Preserves existing values and adds missing default fields without prompting |
-| Use guided setup | `nanobot onboard --wizard` | Best when you prefer prompts over hand-editing JSON |
-| Open the browser workbench | `nanobot webui` | Prepares local WebUI settings, starts the gateway, and opens the browser |
-| Check readiness without calling a model | `nanobot status` | Summarizes config/workspace and validates the active provider/model configuration |
-| Send one test message | `nanobot -m "Hello!"` | First proof that install, config, provider, model, and workspace all work |
-| Chat in the terminal | `nanobot` | Interactive local chat; `nanobot agent` remains an explicit alias |
-| Run the gateway directly | `nanobot gateway` | Service/ops command for WebUI, chat apps, cron, and heartbeat |
-| Deliver a local trigger | `nanobot trigger <id> "message"` | Created first with `/trigger <name>` in the target chat/session |
-| Serve an OpenAI-compatible API | `nanobot serve` | Starts `/v1/chat/completions`, `/v1/models`, and `/health` |
-| Check chat channel setup | `nanobot channels status` | Useful before starting `nanobot gateway` |
-| Manage optional features | `nanobot plugins list` | Shows channels and optional capabilities you can turn on |
-| Log in to QR/OAuth-style channels | `nanobot channels login <channel>` | Used by channels such as WhatsApp and WeChat |
-| Log in to OAuth model providers | `nanobot provider login <provider>` | Used by OpenAI Codex, xAI subscription, and GitHub Copilot providers |
+| Check the install | `babo --version` | If this fails, try `python -m babo --version` |
+| Update an ordinary Python venv | `babo update` | Latest stable PyPI release; use the [installation-specific route](./updating.md#installation-owners) for other methods |
+| Create or refresh config | `babo onboard` | Creates `~/.babo/config.json` and `~/.babo/workspace/` |
+| Refresh config non-interactively | `babo onboard --refresh` | Preserves existing values and adds missing default fields without prompting |
+| Use guided setup | `babo onboard --wizard` | Best when you prefer prompts over hand-editing JSON |
+| Open the browser workbench | `babo webui` | Prepares local WebUI settings, starts the gateway, and opens the browser |
+| Check readiness without calling a model | `babo status` | Summarizes config/workspace and validates the active provider/model configuration |
+| Send one test message | `babo -m "Hello!"` | First proof that install, config, provider, model, and workspace all work |
+| Chat in the terminal | `babo` | Interactive local chat; `babo agent` remains an explicit alias |
+| Run the gateway directly | `babo gateway` | Service/ops command for WebUI, chat apps, cron, and heartbeat |
+| Deliver a local trigger | `babo trigger <id> "message"` | Created first with `/trigger <name>` in the target chat/session |
+| Serve an OpenAI-compatible API | `babo serve` | Starts `/v1/chat/completions`, `/v1/models`, and `/health` |
+| Check chat channel setup | `babo channels status` | Useful before starting `babo gateway` |
+| Manage optional features | `babo plugins list` | Shows channels and optional capabilities you can turn on |
+| Log in to QR/OAuth-style channels | `babo channels login <channel>` | Used by channels such as WhatsApp and WeChat |
+| Log in to OAuth model providers | `babo provider login <provider>` | Used by OpenAI Codex, xAI subscription, and GitHub Copilot providers |
 
 ## Global
 
 ```bash
-nanobot --help
-nanobot --version
-nanobot --home ~/.nanobot-work onboard
-python -m nanobot --help
-python -m nanobot --version
+babo --help
+babo --version
+babo --home ~/.babo-work onboard
+python -m babo --help
+python -m babo --version
 ```
 
-`python -m nanobot ...` is useful when the package is installed but the `nanobot` script is not on `PATH`.
+`python -m babo ...` is useful when the package is installed but the `babo` script is not on `PATH`.
 
 `--home <directory>` is a global option; place it before the subcommand. It selects `<directory>/config.json` and the default `<directory>/workspace/`. Explicit `--config` and workspace settings still apply. See [Multiple Instances](./multiple-instances.md) for runtime data locations and port selection. `-h` and `--help` display help.
 
-### Coexisting with Nanobot Desktop
+### Coexisting with Babo Desktop
 
-The Python package and Nanobot Desktop keep separate runtimes, configuration, workspaces, and state. When a running Desktop release publishes its private terminal-access descriptor, an interactive bare `nanobot` or `nanobot webui` asks which installation to use after authenticating a ready Desktop target. Use `Up`/`Down` to highlight an installation and `Enter` to confirm. `Ctrl+C` cancels with exit code 130 without attaching to Desktop or starting a Python backend. If Desktop is absent, busy, unavailable, or cannot be authenticated, the command reports the current Python executable and continues normally. A virtual environment's executable is shown without resolving it to its base interpreter.
+The Python package and Babo Desktop keep separate runtimes, configuration, workspaces, and state. When a running Desktop release publishes its private terminal-access descriptor, an interactive bare `babo` or `babo webui` asks which installation to use after authenticating a ready Desktop target. Use `Up`/`Down` to highlight an installation and `Enter` to confirm. `Ctrl+C` cancels with exit code 130 without attaching to Desktop or starting a Python backend. If Desktop is absent, busy, unavailable, or cannot be authenticated, the command reports the current Python executable and continues normally. A virtual environment's executable is shown without resolving it to its base interpreter.
 
-Choosing Desktop for `nanobot webui` opens its already-running browser workbench and exits; closing the browser never stops the Desktop gateway. Choosing Desktop for bare `nanobot` opens the terminal UI against that same running backend when the Desktop host, gateway and terminal client support terminal protocol 1. Older versions fail explicitly with update guidance. Use explicit `nanobot agent` for the original Python terminal UI. After Desktop is selected, a disconnect or incompatible reply ends that invocation with an error; it never silently switches to Python or launches a replacement. On macOS, browser URLs are delivered through native Launch Services rather than command-line arguments. A failed native handoff does not fall back to `open` or a `BROWSER` command, keeping bootstrap credentials out of launcher arguments.
+Choosing Desktop for `babo webui` opens its already-running browser workbench and exits; closing the browser never stops the Desktop gateway. Choosing Desktop for bare `babo` opens the terminal UI against that same running backend when the Desktop host, gateway and terminal client support terminal protocol 1. Older versions fail explicitly with update guidance. Use explicit `babo agent` for the original Python terminal UI. After Desktop is selected, a disconnect or incompatible reply ends that invocation with an error; it never silently switches to Python or launches a replacement. On macOS, browser URLs are delivered through native Launch Services rather than command-line arguments. A failed native handoff does not fall back to `open` or a `BROWSER` command, keeping bootstrap credentials out of launcher arguments.
 
-On Windows, the shared browser launcher uses a private HTML redirect rather than passing a credential-bearing URL to a browser command. A short-lived, windowless Python helper receives the URL over an anonymous pipe, opens the redirect through the system's HTTP association, and attempts file cleanup after two minutes. The calling CLI can exit immediately after the launch acknowledgement; this helper does not start, stop, or keep a gateway alive. It does not honor `BROWSER` overrides. Redirects are stored in the current user's Windows Local AppData known folder, under `NanobotBrowserHandoff-v1`, with an explicit current-user-only protected ACL. An ACL-enforcing local filesystem and a non-reparse storage path are required; unsafe existing storage or failed browser handoff fails without raw-URL fallback. Abnormal termination can leave a private redirect behind. Later invocations retry cleanup of verified redirect files older than ten minutes, excluding active files; cleanup is not a guarantee of physical erasure or secrecy from same-user programs or administrators. No Python/Desktop settings, credentials, or history are imported between installations.
+On Windows, the shared browser launcher uses a private HTML redirect rather than passing a credential-bearing URL to a browser command. A short-lived, windowless Python helper receives the URL over an anonymous pipe, opens the redirect through the system's HTTP association, and attempts file cleanup after two minutes. The calling CLI can exit immediately after the launch acknowledgement; this helper does not start, stop, or keep a gateway alive. It does not honor `BROWSER` overrides. Redirects are stored in the current user's Windows Local AppData known folder, under `BaboBrowserHandoff-v1`, with an explicit current-user-only protected ACL. An ACL-enforcing local filesystem and a non-reparse storage path are required; unsafe existing storage or failed browser handoff fails without raw-URL fallback. Abnormal termination can leave a private redirect behind. Later invocations retry cleanup of verified redirect files older than ten minutes, excluding active files; cleanup is not a guarantee of physical erasure or secrecy from same-user programs or administrators. No Python/Desktop settings, credentials, or history are imported between installations.
 
-Any explicit subcommand or option—including `nanobot agent`, `nanobot webui --no-open`, config/workspace selectors, help, version, completion, and gateway lifecycle commands—keeps its existing Python meaning and never opens the Desktop picker. Target choices are not remembered, and Desktop settings are not copied into the Python installation.
+Any explicit subcommand or option—including `babo agent`, `babo webui --no-open`, config/workspace selectors, help, version, completion, and gateway lifecycle commands—keeps its existing Python meaning and never opens the Desktop picker. Target choices are not remembered, and Desktop settings are not copied into the Python installation.
 
 Desktop terminal credentials are short-lived WebSocket/API tokens obtained through the authenticated current-user rendezvous. The TUI receives them through a bounded anonymous pipe, not command arguments, environment variables or temporary files. Its environment contains only a trusted resolver command and public instance IDs. The resolver verifies the selected Desktop and gateway again for every credential refresh. The gateway identity is also checked before any WebSocket mutation. This mode does not acquire a gateway lifecycle lease: client exit leaves Desktop running, and disconnect never automatically reconnects or replays an uncertain task.
 
-Desktop-only distributions use the narrow `nanobot-desktop-tui` entrypoint inside their existing private runtime; it is not a replacement for the full Python CLI. They must ship this engine entrypoint and a matching terminal client together. The client cache can be kept inside Desktop's data root without reading or writing the separate Python installation's config. No additional system Python is needed.
+Desktop-only distributions use the narrow `babo-desktop-tui` entrypoint inside their existing private runtime; it is not a replacement for the full Python CLI. They must ship this engine entrypoint and a matching terminal client together. The client cache can be kept inside Desktop's data root without reading or writing the separate Python installation's config. No additional system Python is needed.
 
 ## Common Patterns
 
 ### Updating
 
 ```bash
-nanobot update --check       # Check the latest stable PyPI release; do not install
-nanobot update               # Install it in an ordinary Python venv
-nanobot update --dev         # Update source and prepare its matching interfaces
-nanobot update --plan        # Save an exact review; do not install or restart
+babo update --check       # Check the latest stable PyPI release; do not install
+babo update               # Install it in an ordinary Python venv
+babo update --dev         # Update source and prepare its matching interfaces
+babo update --plan        # Save an exact review; do not install or restart
 ```
 
-The first two commands target stable PyPI releases, not the saved Preview subscription. `--dev` (`--update-dev`) selects source, not Preview. `--plan --channel stable` or `--plan --channel preview` inspects that channel without changing the subscription; `--channel` requires `--plan`. Saved plans are not executed by `nanobot update`.
+The first two commands target stable PyPI releases, not the saved Preview subscription. `--dev` (`--update-dev`) selects source, not Preview. `--plan --channel stable` or `--plan --channel preview` inspects that channel without changing the subscription; `--channel` requires `--plan`. Saved plans are not executed by `babo update`.
 
 Before an in-place update, back up configuration, workspace files and chat history, then stop all processes sharing that Python environment. New versions may migrate stored data. Use the original [installation-specific route](./updating.md#installation-owners) for uv, pipx, containers, system packages and Desktop; do not overwrite a manager-owned environment with pip. Already-satisfying dependencies remain installed.
 
-Source updates require Git. Existing editable checkouts fast-forward their current branch to its upstream; resolve local changes, detached HEADs and divergence manually. Updating a package with `--dev` creates an editable checkout under `~/.nanobot/src/` on the official `main` branch. nanobot downloads its pinned Bun when needed; Node is not required. To return to a release, install it in a separate environment and launch outside the checkout; in-place source-to-release switching is refused.
+Source updates require Git. Existing editable checkouts fast-forward their current branch to its upstream; resolve local changes, detached HEADs and divergence manually. Updating a package with `--dev` creates an editable checkout under `~/.babo/src/` on the official `main` branch. babo downloads its pinned Bun when needed; Node is not required. To return to a release, install it in a separate environment and launch outside the checkout; in-place source-to-release switching is refused.
 
-After installation, restart nanobot and verify the **running** gateway's version and behavior. The CLI checks the installation, not the live process. Downgrading requires `--allow-downgrade` and compatible data; back up before using it.
+After installation, restart babo and verify the **running** gateway's version and behavior. The CLI checks the installation, not the live process. Downgrading requires `--allow-downgrade` and compatible data; back up before using it.
 
-In-place CLI updates have no automatic rollback. A failed or interrupted installation leaves an incomplete-update marker under `~/.nanobot/run/`. Stop nanobot and retry the same update from that environment. On Windows, stop processes holding installation files and retry with that environment's `python -m nanobot update` (add `--dev` for source).
+In-place CLI updates have no automatic rollback. A failed or interrupted installation leaves an incomplete-update marker under `~/.babo/run/`. Stop babo and retry the same update from that environment. On Windows, stop processes holding installation files and retry with that environment's `python -m babo update` (add `--dev` for source).
 
-The WebUI's **Settings → About** uses a separate reviewed update-and-restart flow for supported installations and shows owner-specific instructions for others. See [Updating nanobot](./updating.md) for Preview selection, recovery and permission limits. Source updates remain CLI-only. To inspect a saved WebUI job, use `nanobot update --job <plan-id>`; [explicit handoff retry](./updating.md#explicit-recovery-before-package-mutation) requires additional consent and an intact installation, not a post-install repair.
+The WebUI's **Settings → About** uses a separate reviewed update-and-restart flow for supported installations and shows owner-specific instructions for others. See [Updating babo](./updating.md) for Preview selection, recovery and permission limits. Source updates remain CLI-only. To inspect a saved WebUI job, use `babo update --job <plan-id>`; [explicit handoff retry](./updating.md#explicit-recovery-before-package-mutation) requires additional consent and an intact installation, not a post-install repair.
 
 Most day-to-day commands use the default config and workspace. Advanced or multi-instance runs usually pass both paths explicitly:
 
 ```bash
-nanobot agent --config ./bot-a/config.json --workspace ./bot-a/workspace -m "Hello"
-nanobot gateway --config ./bot-a/config.json --workspace ./bot-a/workspace
-nanobot serve --config ./bot-a/config.json --workspace ./bot-a/workspace
+babo agent --config ./bot-a/config.json --workspace ./bot-a/workspace -m "Hello"
+babo gateway --config ./bot-a/config.json --workspace ./bot-a/workspace
+babo serve --config ./bot-a/config.json --workspace ./bot-a/workspace
 ```
 
 Use `--verbose` on long-running processes when you need startup or runtime logs:
 
 ```bash
-nanobot gateway --verbose
-nanobot serve --verbose
+babo gateway --verbose
+babo serve --verbose
 ```
 
-Long-running commands keep working until you stop them. Press `Ctrl+C` in that terminal to stop foreground `nanobot gateway` or `nanobot serve`. If you started the gateway with `--background`, use `nanobot gateway stop`.
+Long-running commands keep working until you stop them. Press `Ctrl+C` in that terminal to stop foreground `babo gateway` or `babo serve`. If you started the gateway with `--background`, use `babo gateway stop`.
 
 ## Setup
 
 | Command | Description |
 |---|---|
-| `nanobot onboard` | Initialize or refresh the default config and workspace |
-| `nanobot onboard --refresh` | Refresh an existing config without prompting, preserving existing values |
-| `nanobot onboard --wizard` | Use the interactive setup wizard |
-| `nanobot onboard --config <path> --workspace <path>` | Initialize or refresh a specific instance |
+| `babo onboard` | Initialize or refresh the default config and workspace |
+| `babo onboard --refresh` | Refresh an existing config without prompting, preserving existing values |
+| `babo onboard --wizard` | Use the interactive setup wizard |
+| `babo onboard --config <path> --workspace <path>` | Initialize or refresh a specific instance |
 
 Default paths:
 
 | Path | Default |
 |---|---|
-| Config | `~/.nanobot/config.json` |
-| Workspace | `~/.nanobot/workspace/` |
+| Config | `~/.babo/config.json` |
+| Workspace | `~/.babo/workspace/` |
 
 ## Status
 
 | Command | Description |
 |---|---|
-| `nanobot status` | Summarize the default config/workspace and check Agent provider/model readiness |
-| `nanobot status --config <path>` | Check a specific config file |
-| `nanobot status --workspace <path>` | Show status with a workspace override |
+| `babo status` | Summarize the default config/workspace and check Agent provider/model readiness |
+| `babo status --config <path>` | Check a specific config file |
+| `babo status --workspace <path>` | Show status with a workspace override |
 
-Status does not send a model request. On success, run the printed `nanobot agent -m "Hello!"` command to verify network access and credentials. On failure, follow the printed WebUI **Settings → Models** or `nanobot onboard --wizard` route.
+Status does not send a model request. On success, run the printed `babo agent -m "Hello!"` command to verify network access and credentials. On failure, follow the printed WebUI **Settings → Models** or `babo onboard --wizard` route.
 
 ## Agent CLI
 
 | Command | Description |
 |---|---|
-| `nanobot -m "Hello!"` | Send one message and exit |
-| `nanobot` | Start interactive terminal chat |
-| `nanobot --session <id>` | Use a WebSocket session key; add `--classic` for another channel |
-| `nanobot --workspace <path>` | Override workspace |
-| `nanobot --config <path>` | Use a specific config file |
-| `nanobot --classic` | Use the classic Python prompt instead of the native terminal UI |
-| `nanobot --theme auto\|dark\|light` | Auto-detect the terminal appearance or force a TUI palette |
-| `nanobot --no-markdown` | Use the classic prompt and print plain text instead of Markdown |
-| `nanobot --logs` | Use the classic prompt and show runtime logs while chatting |
+| `babo -m "Hello!"` | Send one message and exit |
+| `babo` | Start interactive terminal chat |
+| `babo --session <id>` | Use a WebSocket session key; add `--classic` for another channel |
+| `babo --workspace <path>` | Override workspace |
+| `babo --config <path>` | Use a specific config file |
+| `babo --classic` | Use the classic Python prompt instead of the native terminal UI |
+| `babo --theme auto\|dark\|light` | Auto-detect the terminal appearance or force a TUI palette |
+| `babo --no-markdown` | Use the classic prompt and print plain text instead of Markdown |
+| `babo --logs` | Use the classic prompt and show runtime logs while chatting |
 
-Inside the native TUI, `/sessions` switches saved conversations, `/new-chat` starts another saved conversation, and `/context` explains the compacted summary and raw session suffix available to the next agent turn. `/branch` forks a saved conversation from a completed reply, and `/diff` opens the latest turn's file changes as a full-screen unified diff. `PageUp` loads older transcript pages when you reach the top. By default, each launch starts a new session using the launch directory as its workspace. `--session` selects a specific existing session, and `--workspace` overrides the launch directory. When the TUI exits, it prints a ready-to-run `nanobot agent --session ...` command for the current session.
+Inside the native TUI, `/sessions` switches saved conversations, `/new-chat` starts another saved conversation, and `/context` explains the compacted summary and raw session suffix available to the next agent turn. `/branch` forks a saved conversation from a completed reply, and `/diff` opens the latest turn's file changes as a full-screen unified diff. `PageUp` loads older transcript pages when you reach the top. By default, each launch starts a new session using the launch directory as its workspace. `--session` selects a specific existing session, and `--workspace` overrides the launch directory. When the TUI exits, it prints a ready-to-run `babo agent --session ...` command for the current session.
 
 ## Session Storage
 
 Session state lives in `<config-dir>/sessions/<workspace-id>/sessions.sqlite3`, outside the agent-readable workspace. Existing JSONL conversations are imported on the first startup. JSONL migration is available from 0.3.6 through 0.4.x and is removed in **0.5.0**; installations with only JSONL data must upgrade through that window before using 0.5.0.
 
-After a successful import, JSONL files and their checkpoints from `<workspace>/sessions/` move to `<config-dir>/sessions/<workspace-id>/jsonl-backup/`, preserving their contents outside the agent-readable workspace. JSONL files already in the private session directory remain there. An interrupted migration resumes on startup before nanobot serves conversations; failed imports leave their source files unchanged.
+After a successful import, JSONL files and their checkpoints from `<workspace>/sessions/` move to `<config-dir>/sessions/<workspace-id>/jsonl-backup/`, preserving their contents outside the agent-readable workspace. JSONL files already in the private session directory remain there. An interrupted migration resumes on startup before babo serves conversations; failed imports leave their source files unchanged.
 
 WebUI chat history is saved in the same session database. The gateway automatically imports old `<config-dir>/webui/*.jsonl` files and numbered JSONL files inside `<config-dir>/webui/*.segments/` directories. If old history is damaged or cannot be matched to one conversation, startup stops with an error; resolve the reported problem before restarting.
 
 The old WebUI history files remain unchanged as backups. Imported chats deleted after the upgrade stay deleted on restart. Keep the `webui` directory: it still contains sidebar preferences and other saved WebUI state.
 
-Before changing versions, stop all nanobot instances using the same config directory and back up that entire directory and the workspace together. Copying only `sessions.sqlite3` while nanobot is running can miss recent messages. To downgrade, restore a complete pre-upgrade backup compatible with the older release. Older releases cannot read newly saved WebUI history; do not combine the current session database with old WebUI history files.
+Before changing versions, stop all babo instances using the same config directory and back up that entire directory and the workspace together. Copying only `sessions.sqlite3` while babo is running can miss recent messages. To downgrade, restore a complete pre-upgrade backup compatible with the older release. Older releases cannot read newly saved WebUI history; do not combine the current session database with old WebUI history files.
 
-Interactive mode uses nanobot's native TypeScript terminal UI. It talks to the same local gateway as the WebUI, so streaming, tool progress, and WebSocket sessions share one protocol instead of maintaining a second agent loop. If no gateway is running, either client starts it on demand. The TUI paints immediately while the local gateway starts, then obtains fresh bootstrap credentials and connects in the background. Exiting one TUI or WebUI launcher releases only that client; the last interactive launcher stops the on-demand gateway. A small gateway watchdog also reclaims an on-demand process if its last client crashes. `/detach` promotes the shared gateway to persistent background mode before closing the TUI, so active agent work continues without a connected client. An explicit `nanobot gateway --background` starts or promotes the gateway the same way before opening a client. `nanobot gateway restart` restarts a detached gateway without changing that lifetime; restart an attached foreground gateway in its owning terminal. `nanobot gateway stop` ends either mode.
+Interactive mode uses babo's native TypeScript terminal UI. It talks to the same local gateway as the WebUI, so streaming, tool progress, and WebSocket sessions share one protocol instead of maintaining a second agent loop. If no gateway is running, either client starts it on demand. The TUI paints immediately while the local gateway starts, then obtains fresh bootstrap credentials and connects in the background. Exiting one TUI or WebUI launcher releases only that client; the last interactive launcher stops the on-demand gateway. A small gateway watchdog also reclaims an on-demand process if its last client crashes. `/detach` promotes the shared gateway to persistent background mode before closing the TUI, so active agent work continues without a connected client. An explicit `babo gateway --background` starts or promotes the gateway the same way before opening a client. `babo gateway restart` restarts a detached gateway without changing that lifetime; restart an attached foreground gateway in its owning terminal. `babo gateway stop` ends either mode.
 
 The default `--theme auto` mode paints first with the terminal's default background, probes the real foreground and background colors asynchronously, and follows supported live appearance changes. Use `--theme light` or `--theme dark` when a terminal or multiplexer does not report its colors reliably. The model preset and workspace access labels above the composer can be clicked to open their selectors; arrow keys, `Enter`, and `Esc` provide the same controls without a mouse. Access changes still pass through the gateway's local-trust and active-turn policy checks.
 
-`Enter` sends the current message. While nanobot is working, `Enter` sends immediately, `Tab` waits until the current response is finished, and `Option+Up` on macOS (`Alt+Up` on Windows/Linux) returns the latest waiting message to the composer. Press `Shift+Enter` to add a newline; `Ctrl+J` is the universal fallback when a terminal cannot distinguish modified Enter keys. `Alt+Enter` and `Ctrl+Enter` are also accepted when distinguishable. Use `Up`/`Down` at the composer edge to recall prompts from the current saved session. Large pastes appear as a compact placeholder in the composer but are sent unchanged. Type `/` to discover nanobot commands and terminal navigation in one palette, or type `@` to complete installed apps, configured MCP servers, and saved sessions. Use the arrow keys to choose an item and `Tab` to complete it. `/sessions` opens a searchable conversation picker, `/new-chat` preserves the current conversation and starts another one, and `/branch` forks from a completed reply. `/diff` opens a read-only unified diff for the newest turn; use `Left`/`Right` to switch edits and `Esc` to close it. The core `/new` command retains its cross-channel behavior and resets the current chat. `Ctrl+C` copies a selection, stops a running turn, clears a non-empty composer, or exits when idle. Use `PageUp`/`PageDown` to scroll, `Ctrl+Home`/`Ctrl+End` to jump to the transcript edges, and `Ctrl+O` to expand or collapse long tool traces. When you leave the bottom, the TUI shows a scrollbar and a `Ctrl+End` hint until you return. The footer reports provider token/cache usage when available. Selections copy through OSC 52 when the terminal supports it. The transcript reflows when the terminal is resized, and exiting restores the previous screen.
+`Enter` sends the current message. While babo is working, `Enter` sends immediately, `Tab` waits until the current response is finished, and `Option+Up` on macOS (`Alt+Up` on Windows/Linux) returns the latest waiting message to the composer. Press `Shift+Enter` to add a newline; `Ctrl+J` is the universal fallback when a terminal cannot distinguish modified Enter keys. `Alt+Enter` and `Ctrl+Enter` are also accepted when distinguishable. Use `Up`/`Down` at the composer edge to recall prompts from the current saved session. Large pastes appear as a compact placeholder in the composer but are sent unchanged. Type `/` to discover babo commands and terminal navigation in one palette, or type `@` to complete installed apps, configured MCP servers, and saved sessions. Use the arrow keys to choose an item and `Tab` to complete it. `/sessions` opens a searchable conversation picker, `/new-chat` preserves the current conversation and starts another one, and `/branch` forks from a completed reply. `/diff` opens a read-only unified diff for the newest turn; use `Left`/`Right` to switch edits and `Esc` to close it. The core `/new` command retains its cross-channel behavior and resets the current chat. `Ctrl+C` copies a selection, stops a running turn, clears a non-empty composer, or exits when idle. Use `PageUp`/`PageDown` to scroll, `Ctrl+Home`/`Ctrl+End` to jump to the transcript edges, and `Ctrl+O` to expand or collapse long tool traces. When you leave the bottom, the TUI shows a scrollbar and a `Ctrl+End` hint until you return. The footer reports provider token/cache usage when available. Selections copy through OSC 52 when the terminal supports it. The transcript reflows when the terminal is resized, and exiting restores the previous screen.
 
-Platform wheels bundle the matching native terminal executable for macOS 13+ (Apple Silicon and Intel), glibc 2.17+ Linux (x64 and ARM64), and Windows x64. The x64 runtime requires SSE4.2. Its licenses, third-party notices, source offer, relinking instructions, and corresponding TUI source are installed alongside it in `nanobot/tui/bin/`. The launcher uses this bundled executable without downloading from GitHub or requiring Bun.
+Platform wheels bundle the matching native terminal executable for macOS 13+ (Apple Silicon and Intel), glibc 2.17+ Linux (x64 and ARM64), and Windows x64. The x64 runtime requires SSE4.2. Its licenses, third-party notices, source offer, relinking instructions, and corresponding TUI source are installed alongside it in `babo/tui/bin/`. The launcher uses this bundled executable without downloading from GitHub or requiring Bun.
 
-Source-distribution builds do not contain a native executable; where supported, their launcher can still fetch the version-matched GitHub release archive. `NANOBOT_TUI_NO_DOWNLOAD=1` disables that fallback, not the bundled TUI. Use `--classic` to explicitly select the Python prompt. Windows ARM64 and musl-based Linux (such as Alpine) do not have a supported native TUI wheel; use the classic prompt or WebUI. In particular, Windows ARM64 cannot run OpenTUI because Bun disables the required FFI there. A local editable source install requires Bun and runs its own `tui/` source while the original checkout remains available; it never silently falls back to a release binary.
+Source-distribution builds do not contain a native executable; where supported, their launcher can still fetch the version-matched GitHub release archive. `BABO_TUI_NO_DOWNLOAD=1` disables that fallback, not the bundled TUI. Use `--classic` to explicitly select the Python prompt. Windows ARM64 and musl-based Linux (such as Alpine) do not have a supported native TUI wheel; use the classic prompt or WebUI. In particular, Windows ARM64 cannot run OpenTUI because Bun disables the required FFI there. A local editable source install requires Bun and runs its own `tui/` source while the original checkout remains available; it never silently falls back to a release binary.
 
 Non-interactive input/output, `--logs`, and `--no-markdown` automatically retain the classic prompt so existing scripts and diagnostic workflows do not acquire terminal control sequences or silently ignore their options.
 
@@ -163,15 +163,15 @@ Interactive mode exits with `exit`, `quit`, `/exit`, `/quit`, `:q`, or `Ctrl+D`.
 
 | Command | Description |
 |---|---|
-| `nanobot webui` | Prepare local WebUI settings and open the browser; installer-managed environments launch persistently, other installations remain attached and follow gateway logs |
-| `nanobot webui --detach` | Explicitly start or join a persistent gateway, open the browser and return control to the terminal |
-| `nanobot webui --background` | Deprecated; prints the equivalent explicit `nanobot gateway --background` command and exits |
-| `nanobot webui --dev` | Start the gateway and Vite together at `http://127.0.0.1:5173`, with live frontend updates |
-| `nanobot webui --no-open` | Prepare and start the WebUI without opening a browser |
-| `nanobot webui --no-dock` | Suppress the macOS Dock icon; detached mode remembers this choice until the next WebUI launch |
-| `nanobot webui --port <port>` | Set the WebUI/WebSocket port |
-| `nanobot webui --gateway-port <port>` | Override the gateway health port |
-| `nanobot webui --yes` | Apply safe localhost WebUI defaults without confirmation; configure provider credentials in **Settings → Models** |
+| `babo webui` | Prepare local WebUI settings and open the browser; installer-managed environments launch persistently, other installations remain attached and follow gateway logs |
+| `babo webui --detach` | Explicitly start or join a persistent gateway, open the browser and return control to the terminal |
+| `babo webui --background` | Deprecated; prints the equivalent explicit `babo gateway --background` command and exits |
+| `babo webui --dev` | Start the gateway and Vite together at `http://127.0.0.1:5173`, with live frontend updates |
+| `babo webui --no-open` | Prepare and start the WebUI without opening a browser |
+| `babo webui --no-dock` | Suppress the macOS Dock icon; detached mode remembers this choice until the next WebUI launch |
+| `babo webui --port <port>` | Set the WebUI/WebSocket port |
+| `babo webui --gateway-port <port>` | Override the gateway health port |
+| `babo webui --yes` | Apply safe localhost WebUI defaults without confirmation; configure provider credentials in **Settings → Models** |
 
 First-run WebUI setup binds to `127.0.0.1` by default. Use manual configuration and a WebUI password before exposing the WebSocket channel beyond localhost.
 
@@ -179,34 +179,34 @@ First-run WebUI setup binds to `127.0.0.1` by default. Use manual configuration 
 
 ## Gateway
 
-`nanobot gateway` starts enabled chat channels, WebUI/WebSocket when configured, cron-backed system jobs, Dream, heartbeat, and the health endpoint. Most local browser users should start with `nanobot webui`; use `gateway` directly for service management, chat app operation, and advanced deployment. By default it runs in the foreground, which keeps existing scripts and terminal workflows unchanged. Use `--background` when you want a local macOS, Linux, or Windows process that you can manage from the CLI.
+`babo gateway` starts enabled chat channels, WebUI/WebSocket when configured, cron-backed system jobs, Dream, heartbeat, and the health endpoint. Most local browser users should start with `babo webui`; use `gateway` directly for service management, chat app operation, and advanced deployment. By default it runs in the foreground, which keeps existing scripts and terminal workflows unchanged. Use `--background` when you want a local macOS, Linux, or Windows process that you can manage from the CLI.
 
 | Command | Description |
 |---|---|
-| `nanobot gateway` | Start the gateway in the foreground with config defaults |
-| `nanobot gateway --verbose` | Show verbose runtime output |
-| `nanobot gateway --port <port>` | Override `gateway.port` for the health endpoint |
-| `nanobot gateway --workspace <path>` | Override workspace |
-| `nanobot gateway --config <path>` | Use a specific config file |
-| `nanobot gateway --background` | Start the gateway as a background process |
-| `nanobot gateway status` | Show PID, foreground/background launch mode, explicit/on-demand lifetime, live client count, state, and logs |
-| `nanobot gateway logs --no-follow` | Print recent background gateway logs and exit |
-| `nanobot gateway logs` | Follow background gateway logs |
-| `nanobot gateway restart` | Restart the recorded background gateway with the current config |
-| `nanobot gateway stop` | Stop the recorded background gateway |
-| `nanobot gateway install-service` | Install a systemd user service or macOS LaunchAgent |
-| `nanobot gateway install-service --dry-run` | Preview the generated service file and system commands |
-| `nanobot gateway uninstall-service` | Remove the installed system service |
+| `babo gateway` | Start the gateway in the foreground with config defaults |
+| `babo gateway --verbose` | Show verbose runtime output |
+| `babo gateway --port <port>` | Override `gateway.port` for the health endpoint |
+| `babo gateway --workspace <path>` | Override workspace |
+| `babo gateway --config <path>` | Use a specific config file |
+| `babo gateway --background` | Start the gateway as a background process |
+| `babo gateway status` | Show PID, foreground/background launch mode, explicit/on-demand lifetime, live client count, state, and logs |
+| `babo gateway logs --no-follow` | Print recent background gateway logs and exit |
+| `babo gateway logs` | Follow background gateway logs |
+| `babo gateway restart` | Restart the recorded background gateway with the current config |
+| `babo gateway stop` | Stop the recorded background gateway |
+| `babo gateway install-service` | Install a systemd user service or macOS LaunchAgent |
+| `babo gateway install-service --dry-run` | Preview the generated service file and system commands |
+| `babo gateway uninstall-service` | Remove the installed system service |
 
 On Windows, `gateway stop` waits up to `--timeout` seconds (default: 20) for the gateway to stop normally. If a forced stop is needed, the command displays a warning. Forced stops can interrupt active work.
 
 For custom instances, pass the same selector flags after the management subcommand, as shown below. `--config` and `--workspace` before a management subcommand are rejected with a usage error; they are not inherited.
 
 ```bash
-nanobot gateway --background --config ./bot-a/config.json --workspace ./bot-a/workspace
-nanobot gateway status --config ./bot-a/config.json --workspace ./bot-a/workspace
-nanobot gateway stop --config ./bot-a/config.json --workspace ./bot-a/workspace
-nanobot gateway install-service --config ./bot-a/config.json --workspace ./bot-a/workspace --name bot-a
+babo gateway --background --config ./bot-a/config.json --workspace ./bot-a/workspace
+babo gateway status --config ./bot-a/config.json --workspace ./bot-a/workspace
+babo gateway stop --config ./bot-a/config.json --workspace ./bot-a/workspace
+babo gateway install-service --config ./bot-a/config.json --workspace ./bot-a/workspace --name bot-a
 ```
 
 `--background` is a lightweight detached process. `install-service` is for login/startup integration: Linux uses a systemd user service; macOS uses a LaunchAgent plist. System services run the foreground gateway under the OS supervisor rather than nesting another background process.
@@ -221,34 +221,34 @@ The bundled WebUI is served by the WebSocket channel, usually on port `8765`, no
 
 ## Local Triggers
 
-`nanobot trigger` delivers one local message to a trigger that was created from a chat/session with `/trigger <name>`.
+`babo trigger` delivers one local message to a trigger that was created from a chat/session with `/trigger <name>`.
 
 ```bash
-nanobot trigger trg_8K4P2Q9X "Review PR #4502"
+babo trigger trg_8K4P2Q9X "Review PR #4502"
 ```
 
-Keep `nanobot gateway` running so the message can be delivered to the linked chat/session. The message is recorded as an automation turn in that session, not as a normal chat message typed by the user.
+Keep `babo gateway` running so the message can be delivered to the linked chat/session. The message is recorded as an automation turn in that session, not as a normal chat message typed by the user.
 
-The command writes to a workspace-local durable queue. If `nanobot gateway` is not running yet, the message waits in that workspace. If the target session is already running a turn, the trigger waits for that session to become idle. If the gateway exits after claiming a delivery but before the linked turn completes, the next gateway start requeues that delivery. The queue is at-least-once, not exactly-once, so the same message can be delivered again after an interrupted process. If the agent receives the delivery and the turn fails, the delivery is marked failed instead of retried indefinitely. Each delivery also writes an audit record under `<workspace>/triggers/runs`. Run one gateway consumer per workspace; this local queue is not a distributed multi-consumer queue.
+The command writes to a workspace-local durable queue. If `babo gateway` is not running yet, the message waits in that workspace. If the target session is already running a turn, the trigger waits for that session to become idle. If the gateway exits after claiming a delivery but before the linked turn completes, the next gateway start requeues that delivery. The queue is at-least-once, not exactly-once, so the same message can be delivered again after an interrupted process. If the agent receives the delivery and the turn fails, the delivery is marked failed instead of retried indefinitely. Each delivery also writes an audit record under `<workspace>/triggers/runs`. Run one gateway consumer per workspace; this local queue is not a distributed multi-consumer queue.
 
 Use stdin when another local process generates the message:
 
 ```bash
-generate-report | nanobot trigger trg_8K4P2Q9X
+generate-report | babo trigger trg_8K4P2Q9X
 ```
 
 Options:
 
 | Command | Description |
 |---|---|
-| `nanobot trigger <id> "message"` | Deliver one message through a trigger |
-| `nanobot trigger <id>` | Read the message from stdin |
-| `nanobot trigger --config <path> <id> "message"` | Use the workspace from a specific config |
-| `nanobot trigger --workspace <path> <id> "message"` | Use a specific workspace |
+| `babo trigger <id> "message"` | Deliver one message through a trigger |
+| `babo trigger <id>` | Read the message from stdin |
+| `babo trigger --config <path> <id> "message"` | Use the workspace from a specific config |
+| `babo trigger --workspace <path> <id> "message"` | Use a specific workspace |
 
 Triggers are managed in the WebUI Automations view instead of through separate `list`, `revoke`, or `delete` CLI subcommands. From there you can pause/resume, rename, delete, search, and copy the command for each trigger.
 
-For webhooks or other external systems, run your own small service and have it call this CLI after it decides what message nanobot should receive.
+For webhooks or other external systems, run your own small service and have it call this CLI after it decides what message babo should receive.
 
 See [Automations](./automations.md) for the broader automation model, WebUI management, and delivery behavior.
 
@@ -256,13 +256,13 @@ See [Automations](./automations.md) for the broader automation model, WebUI mana
 
 | Command | Description |
 |---|---|
-| `nanobot serve` | Start `/v1/chat/completions`, `/v1/models`, and `/health` |
-| `nanobot serve --host <host>` | Override API bind host |
-| `nanobot serve --port <port>` | Override API port |
-| `nanobot serve --timeout <seconds>` | Override per-request timeout |
-| `nanobot serve --verbose` | Show runtime logs |
-| `nanobot serve --workspace <path>` | Override workspace |
-| `nanobot serve --config <path>` | Use a specific config file |
+| `babo serve` | Start `/v1/chat/completions`, `/v1/models`, and `/health` |
+| `babo serve --host <host>` | Override API bind host |
+| `babo serve --port <port>` | Override API port |
+| `babo serve --timeout <seconds>` | Override per-request timeout |
+| `babo serve --verbose` | Show runtime logs |
+| `babo serve --workspace <path>` | Override workspace |
+| `babo serve --config <path>` | Use a specific config file |
 
 Default API endpoint:
 
@@ -277,47 +277,47 @@ See [`openai-api.md`](./openai-api.md) for request examples.
 ## Status
 
 ```bash
-nanobot status
+babo status
 ```
 
 Shows the config path, workspace path, active model, and provider summary without calling a model.
 
 | Command | Description |
 |---|---|
-| `nanobot status` | Inspect the default instance |
-| `nanobot status --config <path>` | Inspect a specific config |
-| `nanobot status --config <path> --workspace <path>` | Inspect a specific config with a workspace override |
+| `babo status` | Inspect the default instance |
+| `babo status --config <path>` | Inspect a specific config |
+| `babo status --config <path> --workspace <path>` | Inspect a specific config with a workspace override |
 
 ## Channels
 
 | Command | Description |
 |---|---|
-| `nanobot channels status` | Show configured channel status |
-| `nanobot channels status --config <path>` | Show channel status for a specific config |
-| `nanobot channels login <channel>` | Run interactive login for supported channels |
-| `nanobot channels login <channel> --force` | Re-authenticate even if credentials already exist |
-| `nanobot channels login <channel> --config <path>` | Use a specific config file |
-| `nanobot plugins list --config <path>` | Show plugin/channel enabled state for a specific config |
+| `babo channels status` | Show configured channel status |
+| `babo channels status --config <path>` | Show channel status for a specific config |
+| `babo channels login <channel>` | Run interactive login for supported channels |
+| `babo channels login <channel> --force` | Re-authenticate even if credentials already exist |
+| `babo channels login <channel> --config <path>` | Use a specific config file |
+| `babo plugins list --config <path>` | Show plugin/channel enabled state for a specific config |
 
 Examples:
 
 ```bash
-nanobot channels login whatsapp
-nanobot channels login weixin
-nanobot channels status
+babo channels login whatsapp
+babo channels login weixin
+babo channels status
 ```
 
 See [`chat-apps.md`](./chat-apps.md) for channel-specific setup.
 
 ## Optional Features
 
-Use these commands when you want nanobot to add or remove a built-in capability without hand-editing JSON. Enabling may install the support package first. Disabling is for channels such as Telegram, Matrix, or Slack; it keeps your saved settings and turns the channel off.
+Use these commands when you want babo to add or remove a built-in capability without hand-editing JSON. Enabling may install the support package first. Disabling is for channels such as Telegram, Matrix, or Slack; it keeps your saved settings and turns the channel off.
 
-The `plugins` command name is retained for compatibility, but these entries are nanobot runtime support packages, not the user-invokable tools shown in WebUI Apps. They cannot be attached to a chat turn with `@`.
+The `plugins` command name is retained for compatibility, but these entries are babo runtime support packages, not the user-invokable tools shown in WebUI Apps. They cannot be attached to a chat turn with `@`.
 
 | Feature name | What it enables |
 |---|---|
-| `api` | Dependencies required by the OpenAI-compatible `nanobot serve` process |
+| `api` | Dependencies required by the OpenAI-compatible `babo serve` process |
 | `azure` | Azure identity support for Azure-hosted models |
 | `bedrock` | AWS Bedrock model provider support |
 | `langfuse` | Langfuse tracing support for OpenAI-compatible providers and the Codex OAuth provider |
@@ -326,35 +326,35 @@ The `plugins` command name is retained for compatibility, but these entries are 
 
 | Command | Description |
 |---|---|
-| `nanobot plugins list` | Show available channels and optional capabilities |
-| `nanobot plugins enable <name>` | Install missing support and enable the feature or channel |
-| `nanobot plugins enable <name> --logs` | Show package install logs while enabling |
-| `nanobot plugins disable <channel>` | Turn off a channel without deleting its saved settings |
-| `nanobot plugins list --config <path>` | Read a specific config file |
-| `nanobot plugins enable <name> --config <path>` | Update a specific config file |
-| `nanobot plugins disable <channel> --config <path>` | Turn off a channel in a specific config file |
+| `babo plugins list` | Show available channels and optional capabilities |
+| `babo plugins enable <name>` | Install missing support and enable the feature or channel |
+| `babo plugins enable <name> --logs` | Show package install logs while enabling |
+| `babo plugins disable <channel>` | Turn off a channel without deleting its saved settings |
+| `babo plugins list --config <path>` | Read a specific config file |
+| `babo plugins enable <name> --config <path>` | Update a specific config file |
+| `babo plugins disable <channel> --config <path>` | Turn off a channel in a specific config file |
 
-Document and PDF reading are included in the standard installation. The old `nanobot plugins enable documents` and `nanobot plugins enable pdf` commands remain accepted as no-op compatibility aliases.
+Document and PDF reading are included in the standard installation. The old `babo plugins enable documents` and `babo plugins enable pdf` commands remain accepted as no-op compatibility aliases.
 
 ## Provider OAuth
 
 | Command | Description |
 |---|---|
-| `nanobot provider login openai-codex --set-main` | Authenticate Codex and select its current default model |
-| `nanobot provider login xai-grok --set-main` | Authenticate an eligible X Premium / Grok subscription and select Grok 4.6; hosted X Search is enabled for models that advertise support |
-| `nanobot provider login github-copilot --set-main` | Authenticate GitHub Copilot and select its current default model |
-| `nanobot provider logout openai-codex` | Remove OpenAI Codex OAuth state |
-| `nanobot provider logout xai-grok --config <path>` | Remove the selected nanobot instance's xAI OAuth state |
-| `nanobot provider logout github-copilot` | Remove GitHub Copilot OAuth state |
+| `babo provider login openai-codex --set-main` | Authenticate Codex and select its current default model |
+| `babo provider login xai-grok --set-main` | Authenticate an eligible X Premium / Grok subscription and select Grok 4.6; hosted X Search is enabled for models that advertise support |
+| `babo provider login github-copilot --set-main` | Authenticate GitHub Copilot and select its current default model |
+| `babo provider logout openai-codex` | Remove OpenAI Codex OAuth state |
+| `babo provider logout xai-grok --config <path>` | Remove the selected babo instance's xAI OAuth state |
+| `babo provider logout github-copilot` | Remove GitHub Copilot OAuth state |
 
 See [`providers.md`](./providers.md#oauth-providers) for when OAuth providers need explicit provider/model selection.
 
 ## Useful First Checks
 
 ```bash
-nanobot --version
-nanobot status
-nanobot agent -m "Hello!"
+babo --version
+babo status
+babo agent -m "Hello!"
 ```
 
 If these fail, use [`troubleshooting.md`](./troubleshooting.md) before debugging WebUI, chat apps, Docker, systemd, or SDK integrations.

@@ -10,4 +10,4 @@ https://www.apache.org/licenses/LICENSE-2.0
 
 These use Sigstore's staging root and contain a public artifact, public certificate and transparency proof, not
 a private key or token. They prove cryptographic validation and rejection of a
-valid but unauthorized publisher. They are **not** nanobot release approvals.
+valid but unauthorized publisher. They are **not** babo release approvals.

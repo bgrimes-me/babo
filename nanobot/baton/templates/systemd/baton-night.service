@@ -1,9 +1,0 @@
-[Unit]
-Description=Baton night cycle (folds, Archivist, Inspector, the night's commit)
-After=baton-queue.service
-Wants=baton-queue.service
-
-[Service]
-Type=oneshot
-ExecStart={{ distrobox }} enter {{ box }} -- {{ nanobot }} baton night
-TimeoutStartSec=6h

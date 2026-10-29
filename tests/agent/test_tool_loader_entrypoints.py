@@ -5,10 +5,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from nanobot.agent.tools.base import Tool
-from nanobot.agent.tools.context import ToolContext
-from nanobot.agent.tools.loader import ToolLoader
-from nanobot.agent.tools.registry import ToolRegistry, is_tool_error_result
+from babo.agent.tools.base import Tool
+from babo.agent.tools.context import ToolContext
+from babo.agent.tools.loader import ToolLoader
+from babo.agent.tools.registry import ToolRegistry, is_tool_error_result
 
 
 def test_loader_discovers_entry_point_tools(tmp_path, monkeypatch):
@@ -51,11 +51,11 @@ def test_loader_discovers_entry_point_tools(tmp_path, monkeypatch):
         "Metadata-Version: 2.1\nName: test-tool-plugin\nVersion: 1.0\n", encoding="utf-8",
     )
     (distribution / "entry_points.txt").write_text(
-        "[nanobot.tools]\nmy_plugin = test_tool_plugin:FakeTool\n"
+        "[babo.tools]\nmy_plugin = test_tool_plugin:FakeTool\n"
         "[other.tools]\nother_plugin = test_tool_plugin:FakeTool\n", encoding="utf-8",
     )
     monkeypatch.syspath_prepend(str(tmp_path))
-    monkeypatch.setattr("nanobot.agent.tools.loader.entry_points", entry_points)
+    monkeypatch.setattr("babo.agent.tools.loader.entry_points", entry_points)
     discovered = ToolLoader()._discover_plugins()
 
     assert "my_plugin" in discovered
@@ -85,7 +85,7 @@ def test_loader_skips_abstract_entry_point_tools():
 
     mock_ep.load.return_value = _AbstractTool
 
-    with patch("nanobot.agent.tools.loader.entry_points", return_value=[mock_ep]):
+    with patch("babo.agent.tools.loader.entry_points", return_value=[mock_ep]):
         loader = ToolLoader()
         discovered = loader._discover_plugins()
 
@@ -136,7 +136,7 @@ async def test_loader_entry_point_error_wrapper_preserves_tool_api(tmp_path):
     mock_ep.load.return_value = _ApiPluginTool
 
     registry = ToolRegistry()
-    with patch("nanobot.agent.tools.loader.entry_points", return_value=[mock_ep]):
+    with patch("babo.agent.tools.loader.entry_points", return_value=[mock_ep]):
         ToolLoader(test_classes=[]).load(
             ToolContext(config=None, workspace=str(tmp_path)),
             registry,

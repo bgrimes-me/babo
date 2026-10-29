@@ -11,12 +11,12 @@ import pytest
 from baton.mock_llama import MockLlama
 
 # Baton targets Linux only (Squid's house has no Windows). Upstream's Windows CI
-# jobs still run nanobot's own suite; they just don't collect Baton's.
+# jobs still run babo's own suite; they just don't collect Baton's.
 if sys.platform == "win32":
     collect_ignore_glob = ["test_*.py"]
-from nanobot.baton.founding import found_town
-from nanobot.baton.tools.core import Toolbox
-from nanobot.baton.town import Town
+from babo.baton.founding import found_town
+from babo.baton.tools.core import Toolbox
+from babo.baton.town import Town
 
 
 @pytest.fixture(autouse=True)
@@ -77,7 +77,7 @@ def config_dict(town: Town, resident: str, *, api_base: str, index_path: Path, *
 
 @pytest.fixture
 def make_config(town: Town, index_path: Path, mock_llama: MockLlama):
-    from nanobot.config.schema import Config
+    from babo.config.schema import Config
 
     def make(resident: str = "mayor", **overrides: Any) -> Config:
         return Config.model_validate(config_dict(town, resident, api_base=mock_llama.v1, index_path=index_path, **overrides))
@@ -87,8 +87,8 @@ def make_config(town: Town, index_path: Path, mock_llama: MockLlama):
 
 @pytest.fixture
 def make_loop(make_config):
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.agent.tools.registry import ToolRegistry
+    from babo.agent.loop import AgentLoop
+    from babo.agent.tools.registry import ToolRegistry
 
     def make(resident: str = "mayor", **overrides: Any) -> AgentLoop:
         return AgentLoop.from_config(make_config(resident, **overrides), tool_registry=ToolRegistry())

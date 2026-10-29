@@ -3,16 +3,16 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from agent.runner_helpers import failed_test_consolidator
-from nanobot.agent.runner import AgentRunner, AgentRunSpec
-from nanobot.config.schema import AgentDefaults
-from nanobot.providers.base import (
+from babo.agent.runner import AgentRunner, AgentRunSpec
+from babo.config.schema import AgentDefaults
+from babo.providers.base import (
     GenerationSettings,
     LLMProvider,
     LLMResponse,
     ProviderCallContext,
     ToolCallRequest,
 )
-from nanobot.utils.llm_runtime import LLMRuntime
+from babo.utils.llm_runtime import LLMRuntime
 
 
 @pytest.mark.asyncio

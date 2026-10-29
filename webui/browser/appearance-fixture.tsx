@@ -19,8 +19,8 @@ export function AppearanceFixture() {
   return <ThemeProvider theme={theme}>
     <main className="h-full overflow-y-auto bg-background" data-appearance-fixture>
       <header className="flex items-center gap-2 text-caption text-muted-foreground" style={{ maxWidth: 800, margin: "0 auto", padding: "28px 32px" }}>
-        <img src="/brand/nanobot_mark.svg" className="h-5 w-5" alt="" />
-        <span className="font-medium text-foreground">nanobot</span><span aria-hidden>/</span><span>{t("settings.nav.appearance")}</span>
+        <img src="/brand/babo_mark.svg" className="h-5 w-5" alt="" />
+        <span className="font-medium text-foreground">babo</span><span aria-hidden>/</span><span>{t("settings.nav.appearance")}</span>
       </header>
       <div style={{ containerType: "inline-size", maxWidth: 800, margin: "0 auto", padding: "0 16px 64px" }}>
         <div className="settings-grid" style={{ margin: 0, width: "100%", maxWidth: "none" }}>

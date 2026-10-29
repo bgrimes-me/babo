@@ -6,19 +6,19 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from nanobot.bus.events import OutboundMessage
-from nanobot.bus.outbound_events import (
+from babo.bus.events import OutboundMessage
+from babo.bus.outbound_events import (
     ProgressEvent,
     RetryWaitEvent,
     StreamDeltaEvent,
     StreamEndEvent,
     outbound_message_for_event,
 )
-from nanobot.bus.queue import MessageBus
-from nanobot.channels.base import BaseChannel
-from nanobot.channels.manager import ChannelManager
-from nanobot.channels.mattermost.runtime import MattermostChannel
-from nanobot.config.schema import Config
+from babo.bus.queue import MessageBus
+from babo.channels.base import BaseChannel
+from babo.channels.manager import ChannelManager
+from babo.channels.mattermost.runtime import MattermostChannel
+from babo.config.schema import Config
 
 
 class MockChannel(BaseChannel):

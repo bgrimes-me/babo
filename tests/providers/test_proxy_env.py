@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 
-import nanobot.providers.openai_compat_provider as openai_compat_provider
-from nanobot.providers.openai_compat_provider import OpenAICompatProvider
+import babo.providers.openai_compat_provider as openai_compat_provider
+from babo.providers.openai_compat_provider import OpenAICompatProvider
 
 
 def _make_spec(is_local: bool = False) -> MagicMock:
@@ -56,7 +56,7 @@ class TestCloudEndpointProxyEnabled:
         spec.env_key = ""
         spec.default_api_base = "https://api.openai.com/v1"
         proxy = "http://127.0.0.1:23458"
-        monkeypatch.delenv("NANOBOT_OPENAI_COMPAT_TIMEOUT_S", raising=False)
+        monkeypatch.delenv("BABO_OPENAI_COMPAT_TIMEOUT_S", raising=False)
 
         http_client = MagicMock()
         async_client = MagicMock(return_value=http_client)

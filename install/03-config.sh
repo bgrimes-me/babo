@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# 03-config.sh — BOX. Writes the town's settings into ~/.nanobot/config.json, using the recon report.
+# 03-config.sh — BOX. Writes the town's settings into ~/.babo/config.json, using the recon report.
 # Backs the old config up first. Safe to run again.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need_box
-bin="$(nanobot_bin)" || fail "nanobot is not installed; run 02-install-nanobot.sh first"
+bin="$(babo_bin)" || fail "babo is not installed; run 02-install-babo.sh first"
 report="$(ls -1t "$INSTALL_DIR"/reports/00-recon-*.md 2>/dev/null | head -1 || true)"
 [ -n "$report" ] || fail "no recon report found in install/reports/; run 00-recon.sh on the host first"
 
@@ -23,6 +23,6 @@ PY
 )" || fail "could not read the recon report $report"
 read -r endpoint model nctx slots bwrap <<<"$values"
 flag="--no-bwrap"; [ "$bwrap" = "yes" ] && flag="--bwrap"
-"$bin" baton init-config --upstream "$endpoint" --model "$model" --ctx "$nctx" --slots "$slots" --box "$BOX" "$flag" \
-  || fail "nanobot baton init-config failed"
+"$bin" init-config --upstream "$endpoint" --model "$model" --ctx "$nctx" --slots "$slots" --box "$BOX" "$flag" \
+  || fail "babo init-config failed"
 ok "config written (llama-server $endpoint, model $model, n_ctx $nctx, slots $slots, bwrap $bwrap)"

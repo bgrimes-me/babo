@@ -1271,7 +1271,7 @@ test("history Blocks use muted loading and destructive error colors in light and
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme });
     const page = await context.newPage();
     const history = await installHistory(page);
-    await page.goto(`http://127.0.0.1:${process.env.NANOBOT_BROWSER_TEST_PORT ?? 4178}/browser/fixture.html?case=history-boundary`);
+    await page.goto(`http://127.0.0.1:${process.env.BABO_BROWSER_TEST_PORT ?? 4178}/browser/fixture.html?case=history-boundary`);
     if (colorScheme === "dark") await page.locator("html").evaluate((node) => node.classList.add("dark"));
     const body = page.getByTestId("thread-message-region");
     await expect(body).toBeVisible();

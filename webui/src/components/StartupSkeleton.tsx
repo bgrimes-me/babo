@@ -9,12 +9,12 @@ export function readStartupLayout() {
   let sidebarWidth = 272;
   try {
     if ((!hash || hash === "/" || hash === "/new")
-      && Date.now() - Number(localStorage.getItem("nanobot-webui.restartStartedAt") || 0) < 300_000) {
-      hash = (localStorage.getItem("nanobot-webui.restartRoute") || hash).replace(/^#/, "");
+      && Date.now() - Number(localStorage.getItem("babo-webui.restartStartedAt") || 0) < 300_000) {
+      hash = (localStorage.getItem("babo-webui.restartRoute") || hash).replace(/^#/, "");
     }
-    const stored = localStorage.getItem("nanobot-webui.sidebar");
+    const stored = localStorage.getItem("babo-webui.sidebar");
     sidebarExpanded = stored === null || stored === "1";
-    const width = Number(localStorage.getItem("nanobot-webui.sidebar.width"));
+    const width = Number(localStorage.getItem("babo-webui.sidebar.width"));
     if (Number.isFinite(width) && width >= 220) sidebarWidth = Math.min(480, width);
   } catch {
     // Storage can be unavailable in private browsing; use the shell's defaults.
@@ -50,7 +50,7 @@ function Block({ className = "" }: { className?: string }) {
 /** One markup/CSS contract for the HTML first paint and React's loading boundaries. */
 export function StartupSkeleton({
   surface = "chat", section = "overview", sidebarExpanded = true, sidebarWidth = 272,
-  existingChat = false, calendarWeeks = 5, embedded = false, label = "Loading nanobot…",
+  existingChat = false, calendarWeeks = 5, embedded = false, label = "Loading babo…",
 }: StartupSkeletonProps) {
   const Root = embedded ? "section" : "main";
   return (

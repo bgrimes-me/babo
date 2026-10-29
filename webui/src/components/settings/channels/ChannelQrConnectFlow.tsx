@@ -8,7 +8,7 @@ import {
 } from "@/lib/api";
 import type {
   ChannelConnectPayload,
-  NanobotFeaturesPayload,
+  BaboFeaturesPayload,
 } from "@/lib/types";
 import { useClient } from "@/providers/ClientProvider";
 
@@ -52,7 +52,7 @@ export function ChannelQrConnectFlow({
   /** Browser-based authorization can reuse the flow without generating or showing a QR code. */
   showQrCode?: boolean;
   labels: ChannelQrConnectLabels;
-  onFeaturesUpdate: (payload: NanobotFeaturesPayload) => void;
+  onFeaturesUpdate: (payload: BaboFeaturesPayload) => void;
   pausePolling?: (payload: ChannelConnectPayload) => boolean;
   renderPending?: (context: ChannelQrConnectPendingContext) => ReactNode;
   resolveMessage?: (payload: ChannelConnectPayload) => string | undefined;
@@ -102,8 +102,8 @@ export function ChannelQrConnectFlow({
           ...payload,
           qr_url: payload.qr_url ?? current?.qr_url,
         }));
-        if (payload.nanobot_features) {
-          onFeaturesUpdate(payload.nanobot_features);
+        if (payload.babo_features) {
+          onFeaturesUpdate(payload.babo_features);
         }
         setError((current) => payload.status !== "pending" || current?.action === "poll" ? null : current);
       } catch (err) {
@@ -143,8 +143,8 @@ export function ChannelQrConnectFlow({
         ...(force ? { force: true } : {}),
       });
       setConnect(payload);
-      if (payload.nanobot_features) {
-        onFeaturesUpdate(payload.nanobot_features);
+      if (payload.babo_features) {
+        onFeaturesUpdate(payload.babo_features);
       }
     } catch (err) {
       setError({ action: "start", message: (err as Error).message });
@@ -200,8 +200,8 @@ export function ChannelQrConnectFlow({
         ...payload,
         qr_url: payload.qr_url ?? current?.qr_url,
       }));
-      if (payload.nanobot_features) {
-        onFeaturesUpdate(payload.nanobot_features);
+      if (payload.babo_features) {
+        onFeaturesUpdate(payload.babo_features);
       }
       if (payload.status !== "pending") {
         setError(null);

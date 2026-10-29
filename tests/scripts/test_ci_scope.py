@@ -37,25 +37,25 @@ def selected(result):
         ("tests/fixtures/sigstore/README.md", set()),
         ("tests/fixtures/sigstore/LICENSE", set()),
         ("webui/package.json", {"webui", "docker"}),
-        ("nanobot/channels/discord/webui/index.ts", {"webui", "docker"}),
+        ("babo/channels/discord/webui/index.ts", {"webui", "docker"}),
         ("tui/package.json", {"tui", "native"}),
         ("tui/scripts/build.ts", {"tui", "native"}),
         ("tui/src/composer/textarea.ts", {"tui"}),
-        ("nanobot/channels/websocket/runtime.py", {"python", "webui", "tui", "docker", "native"}),
-        ("nanobot/providers/registry.py", {"python", "docker"}),
-        ("nanobot/webui/native_file_picker.py", {"python", "webui", "docker"}),
-        ("nanobot/webui/client_contract.py", {"python", "webui", "tui", "docker"}),
-        ("nanobot/webui/forking.py", {"python", "webui", "tui", "docker"}),
-        ("nanobot/cli/webui.py", {"python", "docker", "native"}),
-        ("nanobot/webui/ws_http.py", {"python", "webui", "tui", "docker"}),
-        ("nanobot/session/session_messages.py", {"python", "webui", "tui", "docker"}),
+        ("babo/channels/websocket/runtime.py", {"python", "webui", "tui", "docker", "native"}),
+        ("babo/providers/registry.py", {"python", "docker"}),
+        ("babo/webui/native_file_picker.py", {"python", "webui", "docker"}),
+        ("babo/webui/client_contract.py", {"python", "webui", "tui", "docker"}),
+        ("babo/webui/forking.py", {"python", "webui", "tui", "docker"}),
+        ("babo/cli/webui.py", {"python", "docker", "native"}),
+        ("babo/webui/ws_http.py", {"python", "webui", "tui", "docker"}),
+        ("babo/session/session_messages.py", {"python", "webui", "tui", "docker"}),
         ("packages/client-events/notifications.ts", {"webui", "tui", "docker"}),
-        ("nanobot/update_recovery.py", {"python", "docker", "native"}),
-        ("nanobot/release_trust.py", {"python", "docker", "native"}),
-        ("nanobot/gateway/runtime.py", {"python", "docker", "native"}),
-        ("nanobot/process_runtime.py", {"python", "docker", "native"}),
-        ("nanobot/cli/entry.py", {"python", "docker", "native"}),
-        ("nanobot/utils/atomic_file.py", {"python", "docker", "native"}),
+        ("babo/update_recovery.py", {"python", "docker", "native"}),
+        ("babo/release_trust.py", {"python", "docker", "native"}),
+        ("babo/gateway/runtime.py", {"python", "docker", "native"}),
+        ("babo/process_runtime.py", {"python", "docker", "native"}),
+        ("babo/cli/entry.py", {"python", "docker", "native"}),
+        ("babo/utils/atomic_file.py", {"python", "docker", "native"}),
         ("tests/test_update_backup.py", {"python", "native"}),
         ("tests/test_install_scripts.py", {"python", "native"}),
         ("tests/providers/test_cached_tokens.py", {"python"}),
@@ -71,8 +71,8 @@ def selected(result):
         ("scripts/install_channel_dependencies.py", {"python", "webui", "tui", "docker", "native"}),
         (".github/workflows/ci.yml", {"python", "webui", "tui", "docker", "native"}),
         ("scripts/ci_scope.py", {"python", "webui", "tui", "docker", "native"}),
-        ("nanobot/webui/build.py", {"python", "webui", "tui", "docker", "native"}),
-        ("nanobot/webui/local_client_assets.py", {"python", "webui", "docker", "native"}),
+        ("babo/webui/build.py", {"python", "webui", "tui", "docker", "native"}),
+        ("babo/webui/local_client_assets.py", {"python", "webui", "docker", "native"}),
     ],
 )
 def test_existing_path_policy(path, expected):
@@ -92,7 +92,7 @@ def test_new_or_cross_domain_paths_require_every_job(path):
 
 
 def test_union_preserves_each_reason():
-    result = classify_paths(["docs/releasing.md", "tui/package.json", "nanobot/providers/registry.py"])
+    result = classify_paths(["docs/releasing.md", "tui/package.json", "babo/providers/registry.py"])
     assert selected(result) == {"python", "docker", "tui", "native"}
     assert len(result["paths"]) == 3
 
@@ -102,7 +102,7 @@ def test_union_preserves_each_reason():
     [
         (["tests/webui/fixtures/runtime-config-keys.json", "tests/session/fixtures/sqlite_v1.sql"],
          {"python", "webui"}),
-        (["tests/webui/fixtures/runtime-config-keys.json", "nanobot/webui/settings_runtime.py",
+        (["tests/webui/fixtures/runtime-config-keys.json", "babo/webui/settings_runtime.py",
           "webui/src/tests/settings-runtime-config.test.tsx"],
          {"python", "webui", "tui", "docker"}),
         (["tests/webui/fixtures/runtime-config-keys.json", "tests/fixtures/sigstore/bundle_v3.txt"],
@@ -142,7 +142,7 @@ def repo(tmp_path):
 def test_push_includes_all_commits_not_only_last(repo):
     cwd, _, commit = repo
     base = commit("docs/guide.md", "initial")
-    commit("nanobot/providers/new.py", "production")
+    commit("babo/providers/new.py", "production")
     head = commit("webui/src/new.ts", "frontend")
     result = select_scope("push", base, head, cwd=cwd)
     assert selected(result) == {"python", "webui", "docker"}
@@ -162,18 +162,18 @@ def test_pr_uses_merge_base_not_base_tip(repo):
 
 def test_rename_and_delete_keep_old_domain(repo):
     cwd, git, commit = repo
-    commit("nanobot/providers/old.py", "production")
+    commit("babo/providers/old.py", "production")
     base = commit("tui/src/removed.ts", "native package")
     target = cwd / "docs" / "renamed file.md"
     target.parent.mkdir()
-    (cwd / "nanobot/providers/old.py").rename(target)
+    (cwd / "babo/providers/old.py").rename(target)
     (cwd / "tui/src/removed.ts").unlink()
     git("add", "--all")
     git("commit", "-m", "rename and delete")
     result = select_scope("push", base, git("rev-parse", "HEAD"), cwd=cwd)
     assert selected(result) == {"python", "docker", "tui"}
     assert {item["path"] for item in result["paths"]} == {
-        "nanobot/providers/old.py", "tui/src/removed.ts", "docs/renamed file.md",
+        "babo/providers/old.py", "tui/src/removed.ts", "docs/renamed file.md",
     }
 
 
@@ -222,14 +222,14 @@ def test_cli_emits_only_fixed_boolean_outputs_and_escaped_summary(repo):
 
 
 def test_every_frozen_worker_source_selects_native_acceptance(tmp_path):
-    from nanobot.update_jobs import _worker_archive
+    from babo.update_jobs import _worker_archive
 
     archive = tmp_path / "worker.pyz"
     _worker_archive(archive)
     with ZipFile(archive) as bundle:
-        sources = ["nanobot/" + name.removeprefix("_nanobot_update/")
+        sources = ["babo/" + name.removeprefix("_babo_update/")
                    for name in bundle.namelist()
-                   if name.startswith("_nanobot_update/") and not name.endswith("__init__.py")]
+                   if name.startswith("_babo_update/") and not name.endswith("__init__.py")]
     assert sources
     for path in sources:
         assert classify_paths([path])["outputs"]["native_required"], path

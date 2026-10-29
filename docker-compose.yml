@@ -3,18 +3,18 @@ x-common-config: &common-config
     context: .
     dockerfile: Dockerfile
     args:
-      NANOBOT_CHANNELS: ${NANOBOT_CHANNELS:-whatsapp}
+      BABO_CHANNELS: ${BABO_CHANNELS:-whatsapp}
   environment:
     # Bootstrap a working config.json on first boot (binds that work across
     # the container boundary; secrets generated if not provided).
-    NANOBOT_DOCKER_BOOTSTRAP: "1"
-    NANOBOT_WEB_TOKEN: ${NANOBOT_WEB_TOKEN:-}
-    NANOBOT_API_KEY: ${NANOBOT_API_KEY:-}
+    BABO_DOCKER_BOOTSTRAP: "1"
+    BABO_WEB_TOKEN: ${BABO_WEB_TOKEN:-}
+    BABO_API_KEY: ${BABO_API_KEY:-}
   volumes:
-    - ~/.nanobot:/home/nanobot/.nanobot
+    - ~/.babo:/home/babo/.babo
   cap_drop:
     - ALL
-  # Entrypoint uses these to fix bind-mount ownership and drop to the nanobot user.
+  # Entrypoint uses these to fix bind-mount ownership and drop to the babo user.
   cap_add:
     - CHOWN
     - SETGID
@@ -25,8 +25,8 @@ x-common-config: &common-config
     - no-new-privileges:true
 
 services:
-  nanobot-gateway:
-    container_name: nanobot-gateway
+  babo-gateway:
+    container_name: babo-gateway
     <<: *common-config
     command: ["gateway"]
     restart: unless-stopped
@@ -42,11 +42,11 @@ services:
           cpus: "0.25"
           memory: 256M
 
-  nanobot-api:
-    container_name: nanobot-api
+  babo-api:
+    container_name: babo-api
     <<: *common-config
     command:
-      ["serve", "--host", "0.0.0.0", "-w", "/home/nanobot/.nanobot/api-workspace"]
+      ["serve", "--host", "0.0.0.0", "-w", "/home/babo/.babo/api-workspace"]
     restart: unless-stopped
     ports:
       - 127.0.0.1:8900:8900
@@ -59,7 +59,7 @@ services:
           cpus: "0.25"
           memory: 256M
 
-  nanobot-cli:
+  babo-cli:
     <<: *common-config
     profiles:
       - cli

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { QQConnectFlowView } from "../../../../nanobot/channels/qq/webui/QQConnectFlowView";
+import { QQConnectFlowView } from "../../../../babo/channels/qq/webui/QQConnectFlowView";
 import type { ChannelConnectPayload } from "@/lib/types";
 import { StatePicker, type ComponentExample } from "./example";
 import { useGalleryTranslation } from "./i18n";
@@ -26,7 +26,7 @@ function QQConnectionPreview() {
 
 export const qqChannelExamples: ComponentExample[] = [{
   title: "previews.qqConnect.title",
-  files: ["nanobot/channels/qq/webui/index.tsx", "nanobot/channels/qq/webui/QQConnectFlowView.tsx"],
+  files: ["babo/channels/qq/webui/index.tsx", "babo/channels/qq/webui/QQConnectFlowView.tsx"],
   description: "previews.qqConnect.description",
   options: "previews.qqConnect.options",
   code: "<QQConnectFlowView connect={connect} busy={busy} error={error} configured={configured} onStart={start} onCancel={cancel} onPoll={poll} />",

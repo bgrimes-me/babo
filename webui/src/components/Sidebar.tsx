@@ -188,7 +188,7 @@ export function Sidebar(props: SidebarProps) {
           )}
         >
           <img
-            src="/brand/nanobot_mark.svg"
+            src="/brand/babo_mark.svg"
             alt=""
             className="h-8 w-8 select-none object-contain"
             draggable={false}

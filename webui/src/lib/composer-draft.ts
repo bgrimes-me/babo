@@ -9,7 +9,7 @@ export interface ComposerDraft {
   quotedContext: string | null;
 }
 
-const STORAGE_PREFIX = "nanobot.composer-draft.v1.";
+const STORAGE_PREFIX = "babo.composer-draft.v1.";
 const MAX_STORED_CHARS = 512 * 1024;
 
 function isRecord(value: unknown): value is Record<string, unknown> {

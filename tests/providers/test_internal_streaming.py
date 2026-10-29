@@ -9,15 +9,15 @@ import pytest
 from agent.runner_helpers import failed_test_consolidator
 from openai import AsyncOpenAI
 
-from nanobot.agent.hook import AgentHook
-from nanobot.agent.memory import MemoryArchiver, MemoryStore
-from nanobot.agent.runner import AgentRunner, AgentRunSpec
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.providers.azure_openai_provider import AzureOpenAIProvider
-from nanobot.providers.base import LLMProvider, LLMResponse, ToolCallRequest
-from nanobot.providers.openai_compat_provider import OpenAICompatProvider
-from nanobot.providers.registry import ModelAPICapabilities, find_by_name
-from nanobot.utils.llm_runtime import LLMRuntime
+from babo.agent.hook import AgentHook
+from babo.agent.memory import MemoryArchiver, MemoryStore
+from babo.agent.runner import AgentRunner, AgentRunSpec
+from babo.agent.tools.registry import ToolRegistry
+from babo.providers.azure_openai_provider import AzureOpenAIProvider
+from babo.providers.base import LLMProvider, LLMResponse, ToolCallRequest
+from babo.providers.openai_compat_provider import OpenAICompatProvider
+from babo.providers.registry import ModelAPICapabilities, find_by_name
+from babo.utils.llm_runtime import LLMRuntime
 
 
 class _EventStream(httpx.AsyncByteStream):
@@ -85,7 +85,7 @@ async def make_provider(monkeypatch):
         api: str, kind: str, *, stall_at: int | None = None,
         event_delay: float = 0, idle_timeout: float = 5,
     ):
-        monkeypatch.setenv("NANOBOT_STREAM_IDLE_TIMEOUT_S", str(idle_timeout))
+        monkeypatch.setenv("BABO_STREAM_IDLE_TIMEOUT_S", str(idle_timeout))
         stream = _EventStream(_events(api, kind), stall_at=stall_at, event_delay=event_delay)
 
         def handler(request: httpx.Request) -> httpx.Response:
@@ -202,7 +202,7 @@ async def test_archive_preserves_raw_history_after_truncated_stream_retries(
 async def test_runner_streams_past_old_wall_limit_with_optional_ui(
     make_provider, monkeypatch, show_deltas,
 ):
-    monkeypatch.setenv("NANOBOT_LLM_TIMEOUT_S", "0.01")
+    monkeypatch.setenv("BABO_LLM_TIMEOUT_S", "0.01")
     provider, _ = await make_provider("chat", "reasoning", event_delay=0.05)
     content_deltas = []
 
@@ -227,7 +227,7 @@ async def test_runner_streams_past_old_wall_limit_with_optional_ui(
 
 @pytest.mark.parametrize("finalize", [False, True], ids=["model-request", "finalization"])
 async def test_chat_only_provider_still_has_a_timeout(monkeypatch, finalize):
-    monkeypatch.setenv("NANOBOT_STREAM_IDLE_TIMEOUT_S", "0.05")
+    monkeypatch.setenv("BABO_STREAM_IDLE_TIMEOUT_S", "0.05")
 
     class ChatOnlyProvider(LLMProvider):
         _CHAT_RETRY_DELAYS = ()

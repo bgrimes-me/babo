@@ -17,7 +17,7 @@ for (const locale of locales) {
   test(`gallery switches to ${locale.code} without replacing preview state`, async ({ page }) => {
     await page.setViewportSize({ width: locale.code === "en" || locale.code.startsWith("zh") ? 1280 : 390, height: 960 });
     let inventoryRequests = 0;
-    page.on("request", (request) => { if (new URL(request.url()).pathname === "/__nanobot_components") inventoryRequests += 1; });
+    page.on("request", (request) => { if (new URL(request.url()).pathname === "/__babo_components") inventoryRequests += 1; });
     await page.goto("/gallery.html#component=webui%2Fsrc%2Fcomponents%2Fui%2Finput.tsx");
     const input = page.getByRole("region", { name: "Component preview", exact: true }).getByRole("textbox").first();
     await input.fill("Keep this draft 中文");
@@ -36,7 +36,7 @@ for (const locale of locales) {
     await expect(page.locator(".gallery-code").first()).toHaveText(code);
     expect(inventoryRequests).toBe(1);
     await expect(page.locator("html")).toHaveAttribute("lang", locale.code);
-    expect(await page.evaluate(() => localStorage.getItem("nanobot.locale"))).toBe(locale.code);
+    expect(await page.evaluate(() => localStorage.getItem("babo.locale"))).toBe(locale.code);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
     await page.reload();
@@ -46,14 +46,14 @@ for (const locale of locales) {
 }
 
 test("gallery localizes an existing error and retries in the selected language", async ({ page }) => {
-  await page.route("**/__nanobot_components", (route) => route.fulfill({ status: 503, body: "unavailable" }));
+  await page.route("**/__babo_components", (route) => route.fulfill({ status: 503, body: "unavailable" }));
   await page.goto("/gallery.html");
   await expect(page.getByRole("alert")).toContainText("Could not load the inventory");
   await page.locator(".gallery-header").getByRole("combobox").click();
   await page.getByRole("option", { name: "简体中文", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("无法加载组件目录");
 
-  await page.unroute("**/__nanobot_components");
+  await page.unroute("**/__babo_components");
   await page.getByRole("button", { name: "刷新目录" }).click();
   await expect(page.getByRole("region", { name: "组件预览", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "全部源码", exact: true }).click();

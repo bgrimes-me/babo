@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ComposerDraftStore, clearStoredComposerDrafts, type ComposerDraft } from "@/lib/composer-draft";
 
 const key = "websocket:draft-storage-test";
-const storageKey = `nanobot.composer-draft.v1.${key}`;
+const storageKey = `babo.composer-draft.v1.${key}`;
 const draft: ComposerDraft = {
   text: "  Keep this draft\n继续编辑",
   quotedContext: "Quoted answer",
@@ -84,12 +84,12 @@ describe("composer draft storage", () => {
     expect(new ComposerDraftStore().get(key, true)).toBeUndefined();
     store.set(key, draft, true);
     store.set("new:chat", draft, true);
-    localStorage.setItem("nanobot.test.other", "keep");
+    localStorage.setItem("babo.test.other", "keep");
     clearStoredComposerDrafts();
     expect(new ComposerDraftStore().get(key, true)).toBeUndefined();
     expect(new ComposerDraftStore().get("new:chat", true)).toBeUndefined();
-    expect(localStorage.getItem("nanobot.test.other")).toBe("keep");
-    localStorage.removeItem("nanobot.test.other");
+    expect(localStorage.getItem("babo.test.other")).toBe("keep");
+    localStorage.removeItem("babo.test.other");
   });
 
   it.each(["{", "null", '{"text":42}', '{"text":"draft","quotedContext":{},"sessionMentions":[]}'])(

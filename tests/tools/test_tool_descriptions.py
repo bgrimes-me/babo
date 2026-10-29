@@ -1,10 +1,10 @@
 import sys
 
-from nanobot.agent.tools.apply_patch import ApplyPatchTool
-from nanobot.agent.tools.exec_session import ExecSessionTool, ListExecSessionsTool
-from nanobot.agent.tools.filesystem import EditFileTool, ReadFileTool, WriteFileTool
-from nanobot.agent.tools.search import FindFilesTool, GrepTool
-from nanobot.agent.tools.shell import ExecTool
+from babo.agent.tools.apply_patch import ApplyPatchTool
+from babo.agent.tools.exec_session import ExecSessionTool, ListExecSessionsTool
+from babo.agent.tools.filesystem import EditFileTool, ReadFileTool, WriteFileTool
+from babo.agent.tools.search import FindFilesTool, GrepTool
+from babo.agent.tools.shell import ExecTool
 
 
 def test_coding_tool_descriptions_steer_editing_priority() -> None:

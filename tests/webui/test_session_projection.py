@@ -2,10 +2,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.providers.base import LLMUsage
-from nanobot.session.model_selection import SESSION_MODEL_PRESET_METADATA_KEY
-from nanobot.session.recovery import RECOVERY_METADATA_KEY
-from nanobot.webui.session_projection import WebUISessionProjection
+from babo.providers.base import LLMUsage
+from babo.session.model_selection import SESSION_MODEL_PRESET_METADATA_KEY
+from babo.session.recovery import RECOVERY_METADATA_KEY
+from babo.webui.session_projection import WebUISessionProjection
 
 
 async def test_attach_fields_restore_session_runtime_metadata() -> None:
@@ -67,11 +67,11 @@ async def test_hydration_events_restore_goal_and_running_turn(
         }
     }
     monkeypatch.setattr(
-        "nanobot.webui.session_projection.websocket_turn_wall_started_at",
+        "babo.webui.session_projection.websocket_turn_wall_started_at",
         lambda _chat_id: 42.5,
     )
     monkeypatch.setattr(
-        "nanobot.webui.session_projection.websocket_turn_id",
+        "babo.webui.session_projection.websocket_turn_id",
         lambda _chat_id: "turn-1",
     )
 
@@ -108,7 +108,7 @@ async def test_hydration_events_are_quiet_without_actionable_state(
     sessions.state.read_metadata = AsyncMock(side_effect=lambda key: sessions.read_session_metadata(key))
     sessions.read_session_metadata.return_value = {"metadata": {}}
     monkeypatch.setattr(
-        "nanobot.webui.session_projection.websocket_turn_wall_started_at",
+        "babo.webui.session_projection.websocket_turn_wall_started_at",
         lambda _chat_id: None,
     )
 
@@ -127,7 +127,7 @@ async def test_hydration_yields_during_metadata_read_and_reads_live_turn_on_loop
     loop_thread = threading.get_ident()
     entered = threading.Event()
     release = threading.Event()
-    from nanobot.session.manager import SessionManager
+    from babo.session.manager import SessionManager
     sessions = SessionManager(tmp_path)
 
     def read_metadata(_key):
@@ -142,7 +142,7 @@ async def test_hydration_yields_during_metadata_read_and_reads_live_turn_on_loop
 
     monkeypatch.setattr(sessions._store, "read_metadata", read_metadata)
     monkeypatch.setattr(
-        "nanobot.webui.session_projection.websocket_turn_wall_started_at", active_turn,
+        "babo.webui.session_projection.websocket_turn_wall_started_at", active_turn,
     )
     projection = WebUISessionProjection(sessions)
     task = asyncio.create_task(projection.hydration_events("websocket:chat-io", "chat-io"))

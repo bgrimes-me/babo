@@ -7,9 +7,9 @@ import warnings
 
 import pytest
 
-from nanobot.agent.model_presets import load_model_preset_catalog
-from nanobot.config.errors import ConfigLoadError
-from nanobot.config.schema import Config
+from babo.agent.model_presets import load_model_preset_catalog
+from babo.config.errors import ConfigLoadError
+from babo.config.schema import Config
 
 
 def test_resolve_preset_returns_defaults_when_no_preset() -> None:
@@ -27,7 +27,7 @@ def test_model_preset_catalog_missing_env_reports_explicit_config_path(
     tmp_path,
     monkeypatch,
 ) -> None:
-    name = "NANOBOT_TEST_CATALOG_MISSING_KEY"
+    name = "BABO_TEST_CATALOG_MISSING_KEY"
     monkeypatch.delenv(name, raising=False)
     config_path = tmp_path / "custom.json"
     config_path.write_text(
@@ -51,7 +51,7 @@ def test_agent_timezones_use_packaged_data_without_system_database() -> None:
         """\
         from zoneinfo import TZPATH
 
-        from nanobot.config.schema import Config
+        from babo.config.schema import Config
 
         assert not TZPATH
         for name in ("UTC", "Asia/Shanghai"):
@@ -75,7 +75,7 @@ def test_agent_timezones_use_packaged_data_without_system_database() -> None:
 @pytest.mark.parametrize("field", ["apiType", "api_type"])
 @pytest.mark.parametrize("legacy", ["auto", "chat_completions", "responses"])
 def test_legacy_provider_api_migrates_and_saves_current_format(tmp_path, field, legacy):
-    from nanobot.config.loader import load_config, save_config
+    from babo.config.loader import load_config, save_config
 
     path = tmp_path / "config.json"
     path.write_text(json.dumps({"providers": {"openai": {"apiKey": "sk-test", field: legacy}}}), encoding="utf-8")

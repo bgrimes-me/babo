@@ -65,7 +65,7 @@ describe("host switcher", () => {
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Connecting to Server 1");
     expect(within(trigger).getByRole("status")).toHaveTextContent("Local, My-Mac, Connected. Connecting to Server 1");
     await userEvent.click(trigger);
-    expect(screen.getByRole("menuitem", { name: "Local nanobot My-Mac" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("menuitem", { name: "Local babo My-Mac" })).toHaveAttribute("aria-current", "true");
     expect(screen.getByRole("menuitem", { name: "Server 1 ubuntu@host-1.test" })).not.toHaveAttribute("aria-current");
   });
 
@@ -126,7 +126,7 @@ describe("host switcher", () => {
     fireEvent.change(input, { target: { value: "研发" } });
     expect(screen.getByRole("menuitem", { name: "研发服务器 ubuntu@host-2.test" })).toBeVisible();
     fireEvent.change(input, { target: { value: "My-Mac" } });
-    expect(screen.getByRole("menuitem", { name: "Local nanobot My-Mac" })).toBeVisible();
+    expect(screen.getByRole("menuitem", { name: "Local babo My-Mac" })).toBeVisible();
     expect(screen.queryByText("Server 20")).not.toBeInTheDocument();
   });
 
@@ -208,7 +208,7 @@ describe("host switcher", () => {
     value.recentIds = [value.profiles[8].id, value.currentId, "deleted-id"];
     const rendered = await openMenu(value);
     const names = () => within(screen.getByRole("group")).getAllByRole("menuitem").map((item) => item.getAttribute("aria-label") || item.textContent);
-    expect(names().slice(0, 4)).toEqual(["Local nanobotMy-Mac", "Server 20 ubuntu@host-20.test", "Server 9 ubuntu@host-9.test", "Server 1 ubuntu@host-1.test"]);
+    expect(names().slice(0, 4)).toEqual(["Local baboMy-Mac", "Server 20 ubuntu@host-20.test", "Server 9 ubuntu@host-9.test", "Server 1 ubuntu@host-1.test"]);
     const before = names();
     rendered.rerender(<HostNavigationContext.Provider value={{ ...value, recentIds: [value.profiles[5].id] }}><HostSwitcher /></HostNavigationContext.Provider>);
     expect(names()).toEqual(before);
@@ -259,10 +259,10 @@ describe("host switcher", () => {
 
 describe("recent host preferences", () => {
   it("keeps only bounded, unique profile IDs and ignores malformed storage", () => {
-    window.localStorage.setItem("nanobot.recent-remote-instances", "not json");
+    window.localStorage.setItem("babo.recent-remote-instances", "not json");
     expect(readRecentRemotes()).toEqual([]);
     const ids = picker(25).profiles.map(({ id }) => id);
-    window.localStorage.setItem("nanobot.recent-remote-instances", JSON.stringify([null, "http://secret", ids[0], ...ids]));
+    window.localStorage.setItem("babo.recent-remote-instances", JSON.stringify([null, "http://secret", ids[0], ...ids]));
     expect(readRecentRemotes()).toEqual(ids.slice(0, 20));
     const next = rememberRecentRemote(ids[5], readRecentRemotes());
     expect(next).toHaveLength(20);

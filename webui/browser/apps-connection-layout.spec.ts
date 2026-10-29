@@ -22,7 +22,7 @@ for (const width of [314, 390, 1280]) {
   for (const locale of ["en", "zh-CN", "fr"] as const) {
     test(`MCP connection controls stay on one row at ${width}px in ${locale}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 850 });
-      await page.addInitScript((language) => localStorage.setItem("nanobot.locale", language), locale);
+      await page.addInitScript((language) => localStorage.setItem("babo.locale", language), locale);
       await page.goto("/browser/fixture.html?case=apps&connection-layout");
       const body = page.getByRole("button", { name: "Linear", exact: true });
       const row = page.locator("article").filter({ has: body });

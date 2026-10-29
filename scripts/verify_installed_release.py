@@ -99,13 +99,13 @@ def gateway_probe(version: str, directory: Path) -> dict[str, object]:
     def get(port: int, path: str) -> tuple[int, bytes]:
         connection = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
         try:
-            connection.request("GET", path, headers={"X-Nanobot-Auth": token})
+            connection.request("GET", path, headers={"X-Babo-Auth": token})
             response = connection.getresponse()
             return response.status, response.read(2 * 1024 * 1024)
         finally:
             connection.close()
 
-    command = [sys.executable, "-I", "-m", "nanobot", "gateway", "--foreground", "--config", str(config)]
+    command = [sys.executable, "-I", "-m", "babo", "gateway", "--foreground", "--config", str(config)]
     # A file avoids pipe backpressure; print only a bounded, redacted tail on failure.
     with (directory / "gateway.log").open("w+b") as log:
         process = subprocess.Popen(command, cwd=directory, stdout=log, stderr=log)
@@ -169,23 +169,23 @@ async def verify_installed_release(
     from aiohttp import ClientTimeout, web
     from aiohttp.test_utils import TestClient, TestServer
 
-    import nanobot
-    from nanobot.build_info import COMMIT
-    from nanobot.cli.tui_launcher import resolve_tui_command
-    from nanobot.webui.build import inspect_webui_bundle
-    from nanobot.webui.local_client_assets import LocalClientAssets
+    import babo
+    from babo.build_info import COMMIT
+    from babo.cli.tui_launcher import resolve_tui_command
+    from babo.webui.build import inspect_webui_bundle
+    from babo.webui.local_client_assets import LocalClientAssets
 
     prefix = Path(sys.prefix).resolve()
-    package = Path(nanobot.__file__).resolve()
-    distribution = importlib.metadata.distribution("nanobot-ai")
+    package = Path(babo.__file__).resolve()
+    distribution = importlib.metadata.distribution("babo")
     if (not package.is_relative_to(prefix)
-            or package != Path(str(distribution.locate_file("nanobot/__init__.py"))).resolve()):
+            or package != Path(str(distribution.locate_file("babo/__init__.py"))).resolve()):
         raise ValueError("Probe imported a checkout or another environment, not the installed wheel")
-    if nanobot.__version__ != version or distribution.version != version or COMMIT != commit:
+    if babo.__version__ != version or distribution.version != version or COMMIT != commit:
         raise ValueError("Installed package version/commit differs from the expected candidate")
     if any(shutil.which(tool) for tool in ("bun", "node", "npm", "git")):
         raise ValueError("Frontend development tools must not be on the probe PATH")
-    if os.environ.get("NANOBOT_TUI_NO_DOWNLOAD") != "1":
+    if os.environ.get("BABO_TUI_NO_DOWNLOAD") != "1":
         raise ValueError("The installed TUI probe must disable fallback downloads")
 
     bundle = inspect_webui_bundle()
@@ -207,7 +207,7 @@ async def verify_installed_release(
     ) as client:
         for filename in ["index.html", "asset-manifest.json", *sorted(files)]:
             response = await client.get("/" if filename == "index.html" else f"/{filename}")
-            if response.status != 200 or response.headers.get("X-Nanobot-UI") != "local":
+            if response.status != 200 or response.headers.get("X-Babo-UI") != "local":
                 raise ValueError(f"Installed WebUI asset was not served: {filename}")
             if await response.read() != (assets.directory / filename).read_bytes():
                 raise ValueError(f"Installed WebUI response differs from its file: {filename}")
@@ -242,15 +242,15 @@ def install_and_probe(wheel: Path, *, version: str, commit: str, gateway: bool, 
     wheel = wheel.resolve(strict=True)
     scripts = Path(__file__).resolve().parent
     digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
-    with tempfile.TemporaryDirectory(prefix="nanobot-release-install-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="babo-release-install-") as temporary:
         root = Path(temporary).resolve()
         # platform.machine() on Windows reads these OS-provided variables.
         # Removing them creates an artificial unknown-architecture host, not a
         # clean installation. Keep host identity, never user package/tool paths.
         system = host_environment(dict(os.environ))
         system.update(HOME=str(root), USERPROFILE=str(root), PYTHON=sys._base_executable,
-                      NANOBOT_VENV=str(root / "managed"), NANOBOT_BIN_DIR=str(root / "bin"),
-                      NANOBOT_SKIP_WIZARD="1", PIP_CONFIG_FILE=os.devnull, PIP_ONLY_BINARY=":all:",
+                      BABO_VENV=str(root / "managed"), BABO_BIN_DIR=str(root / "bin"),
+                      BABO_SKIP_WIZARD="1", PIP_CONFIG_FILE=os.devnull, PIP_ONLY_BINARY=":all:",
                       PIP_DISABLE_PIP_VERSION_CHECK="1", PIP_NO_INPUT="1", PYTHONUTF8="1",
                       XDG_CONFIG_HOME=str(root / "config"), XDG_CACHE_HOME=str(root / "cache"),
                       XDG_DATA_HOME=str(root / "data"), APPDATA=str(root / "config"),
@@ -266,8 +266,8 @@ def install_and_probe(wheel: Path, *, version: str, commit: str, gateway: bool, 
             command = ["/bin/sh", str(scripts / "install.sh"), "--wheel", str(wheel), "--sha256", digest]
             python = root / "managed/bin/python"
         subprocess.run(command, check=True, cwd=root, env=system, timeout=600)
-        receipt = json.loads((root / "managed/nanobot-install.json").read_bytes())
-        if receipt != {"schema_version": 1, "owner": "nanobot-installer",
+        receipt = json.loads((root / "managed/babo-install.json").read_bytes())
+        if receipt != {"schema_version": 1, "owner": "babo-installer",
                        "environment": str((root / "managed").resolve()), "extras": []}:
             raise ValueError("The public installer did not establish its managed update identity")
         command = [str(python), "-I", str(Path(__file__).resolve()), "--version", version, "--commit", commit]
@@ -302,7 +302,7 @@ def main() -> None:
     if report is not None and report.exists():
         parser.error("Use a new report path; prior evidence must not be overwritten")
     original_env, original_cwd = dict(os.environ), Path.cwd()
-    with tempfile.TemporaryDirectory(prefix="nanobot-installed-probe-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="babo-installed-probe-") as temporary:
         root = Path(temporary).resolve()
         empty_path = root / "empty-path"
         empty_path.mkdir()
@@ -311,7 +311,7 @@ def main() -> None:
             "PATH": str(empty_path), "HOME": str(root), "USERPROFILE": str(root),
             "XDG_CONFIG_HOME": str(root / "config"), "XDG_CACHE_HOME": str(root / "cache"),
             "XDG_DATA_HOME": str(root / "data"), "TMPDIR": str(root), "TMP": str(root),
-            "TEMP": str(root), "NANOBOT_TUI_NO_DOWNLOAD": "1", "NO_COLOR": "1",
+            "TEMP": str(root), "BABO_TUI_NO_DOWNLOAD": "1", "NO_COLOR": "1",
         })
         os.environ.clear()
         os.environ.update(env)

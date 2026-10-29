@@ -5,7 +5,7 @@ const tile = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><re
 const mark = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="12" fill="#E87D0D"/></svg>';
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+  await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
   await page.route("https://icons.duckduckgo.com/ip3/linear.app.ico", route => route.fulfill({ contentType: "image/svg+xml", body: tile }));
   await page.route("https://cdn.simpleicons.org/blender", route => route.fulfill({ contentType: "image/svg+xml", body: mark }));
   await page.route("**/api/**", route => route.fulfill({ json: {} }));

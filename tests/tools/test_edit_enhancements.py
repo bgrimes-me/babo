@@ -5,9 +5,9 @@ import os
 
 import pytest
 
-from nanobot.agent.tools import file_state
-from nanobot.agent.tools.apply_patch import ApplyPatchTool
-from nanobot.agent.tools.filesystem import EditFileTool, ReadFileTool
+from babo.agent.tools import file_state
+from babo.agent.tools.apply_patch import ApplyPatchTool
+from babo.agent.tools.filesystem import EditFileTool, ReadFileTool
 
 # ---------------------------------------------------------------------------
 # Helpers

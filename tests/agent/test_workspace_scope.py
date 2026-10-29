@@ -8,18 +8,18 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from nanobot.agent.context import ContextBuilder
-from nanobot.agent.tools.cli_apps import CliAppsTool
-from nanobot.agent.tools.context import RequestContext, ToolContext, request_context
-from nanobot.agent.tools.filesystem import ReadFileTool, WriteFileTool
-from nanobot.agent.tools.image_generation import ImageGenerationError, ImageGenerationTool
-from nanobot.agent.tools.message import MessageTool
-from nanobot.agent.tools.search import GrepTool
-from nanobot.agent.tools.shell import ExecTool
-from nanobot.agent.tools.subagent import SubagentTool
-from nanobot.apps.cli.service import CliAppManager, CliAppsRuntimeConfig
-from nanobot.config.schema import ImageGenerationToolConfig, ProviderConfig, ToolsConfig
-from nanobot.security.workspace_access import (
+from babo.agent.context import ContextBuilder
+from babo.agent.tools.cli_apps import CliAppsTool
+from babo.agent.tools.context import RequestContext, ToolContext, request_context
+from babo.agent.tools.filesystem import ReadFileTool, WriteFileTool
+from babo.agent.tools.image_generation import ImageGenerationError, ImageGenerationTool
+from babo.agent.tools.message import MessageTool
+from babo.agent.tools.search import GrepTool
+from babo.agent.tools.shell import ExecTool
+from babo.agent.tools.subagent import SubagentTool
+from babo.apps.cli.service import CliAppManager, CliAppsRuntimeConfig
+from babo.config.schema import ImageGenerationToolConfig, ProviderConfig, ToolsConfig
+from babo.security.workspace_access import (
     WORKSPACE_SCOPE_METADATA_KEY,
     WorkspaceScopeError,
     WorkspaceScopeResolver,
@@ -486,9 +486,9 @@ async def test_cli_app_scope_controls_working_dir(
     CliAppManager(workspace=project, data_dir=data_dir)._save_installed(
         {"demo": {"entry_point": "demo-cli"}}
     )
-    monkeypatch.setattr("nanobot.apps.cli.service.get_runtime_subdir", lambda _name: data_dir)
+    monkeypatch.setattr("babo.apps.cli.service.get_runtime_subdir", lambda _name: data_dir)
     monkeypatch.setattr(
-        "nanobot.apps.cli.service.shutil.which",
+        "babo.apps.cli.service.shutil.which",
         lambda entry: "/usr/bin/demo-cli" if entry == "demo-cli" else None,
     )
 
@@ -498,7 +498,7 @@ async def test_cli_app_scope_controls_working_dir(
         seen["cwd"] = kwargs["cwd"]
         return SimpleNamespace(returncode=0, stdout="ok", stderr="")
 
-    monkeypatch.setattr("nanobot.apps.cli.service.subprocess.run", fake_run)
+    monkeypatch.setattr("babo.apps.cli.service.subprocess.run", fake_run)
     tool = CliAppsTool(
         workspace=tmp_path,
         restrict_to_workspace=True,

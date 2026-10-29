@@ -1,7 +1,7 @@
 import type { SkillsPayload } from "@/lib/types";
 
-export const SKILLS_CHANGED_EVENT = "nanobot:skills-changed";
-export const SKILLS_REFRESH_EVENT = "nanobot:skills-refresh";
+export const SKILLS_CHANGED_EVENT = "babo:skills-changed";
+export const SKILLS_REFRESH_EVENT = "babo:skills-refresh";
 
 export function requestSkillsRefresh(): void {
   if (typeof window === "undefined") return;

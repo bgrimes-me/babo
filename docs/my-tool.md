@@ -25,7 +25,7 @@ tools:
 
 To allow the agent to set its configuration (e.g. switch models, adjust parameters), set `tools.my.allow_set: true`.
 
-Legacy `tools.myEnabled` / `tools.mySet` keys are auto-migrated on load, and rewritten in-place the next time `nanobot onboard` refreshes the config.
+Legacy `tools.myEnabled` / `tools.mySet` keys are auto-migrated on load, and rewritten in-place the next time `babo onboard` refreshes the config.
 
 Most modifications are held in memory only. `model_preset` is the exception: it is stored in the current session so the selection survives a restart.
 

@@ -3,7 +3,7 @@ import { expect, it, vi } from "vitest";
 import { HostNavigationContext } from "@/components/remote/HostSwitcher";
 import { AboutSettings } from "@/components/settings/overview/OverviewSettings";
 import { VersionCheckRowView } from "@/components/settings/overview/VersionCheckRowView";
-import { NanobotClient } from "@/lib/nanobot-client";
+import { BaboClient } from "@/lib/babo-client";
 import { ClientProvider } from "@/providers/ClientProvider";
 import type { SettingsPayload } from "@/lib/types";
 import { DEFAULT_LOCAL_PREFS, LOCAL_PREFS_STORAGE_KEY, readLocalPreferences, writeLocalPreferences } from "@/lib/local-preferences";
@@ -23,7 +23,7 @@ describe("Settings overview and appearance", () => {
       }));
       vi.stubGlobal("fetch", fetcher);
       render(
-        <ClientProvider client={new NanobotClient({ url: "ws://localhost:8765" })} token="tok"
+        <ClientProvider client={new BaboClient({ url: "ws://localhost:8765" })} token="tok"
           webuiCapabilities={capabilities}>
           <AboutSettings settings={settingsPayload()} />
         </ClientProvider>,
@@ -38,9 +38,9 @@ describe("Settings overview and appearance", () => {
   it("displays a caller-owned version result and delegates checking without a client provider", () => {
     const check = vi.fn();
     const { rerender } = render(<VersionCheckRowView currentVersion="0.3.5" checking={false}
-      result={{ type: "update", latestVersion: "0.3.6", pypiUrl: "https://pypi.org/project/nanobot-ai/" }} onCheck={check} />);
+      result={{ type: "update", latestVersion: "0.3.6", pypiUrl: "https://pypi.org/project/babo/" }} onCheck={check} />);
     expect(screen.getByText("v0.3.6")).toBeVisible();
-    expect(screen.getByRole("link", { name: "PyPI" })).toHaveAttribute("href", "https://pypi.org/project/nanobot-ai/");
+    expect(screen.getByRole("link", { name: "PyPI" })).toHaveAttribute("href", "https://pypi.org/project/babo/");
     rerender(<VersionCheckRowView currentVersion="0.3.5" checking={false} result={{ type: "up-to-date" }} onCheck={check} />);
     expect(screen.getByText("You're up to date")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
@@ -53,10 +53,10 @@ describe("Settings overview and appearance", () => {
       onRequestUpdate: requestUpdate };
     const { rerender } = render(<VersionCheckRowView {...props}
       result={{ type: "update", latestVersion: "0.3.7.dev2026101501",
-        releaseUrl: "https://github.com/HKUDS/nanobot/releases/tag/v0.3.7.dev2026101501" }} />);
+        releaseUrl: "https://github.com/bgrimes-me/babo/releases/tag/v0.3.7.dev2026101501" }} />);
     expect(screen.getByText("v0.3.7.dev2026101501")).toBeVisible();
     expect(screen.getByRole("link", { name: "Release notes" })).toHaveAttribute("href",
-      "https://github.com/HKUDS/nanobot/releases/tag/v0.3.7.dev2026101501");
+      "https://github.com/bgrimes-me/babo/releases/tag/v0.3.7.dev2026101501");
     expect(requestUpdate).not.toHaveBeenCalled();
     expect(screen.queryByRole("link", { name: "Installation guide" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Update$/ }));
@@ -118,10 +118,10 @@ describe("Settings overview and appearance", () => {
     });
     expect(screen.getByText("v0.3.5")).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "abcdef1" });
-    expect(link).toHaveAttribute("href", `https://github.com/HKUDS/nanobot/commit/${commit}`);
+    expect(link).toHaveAttribute("href", `https://github.com/bgrimes-me/babo/commit/${commit}`);
     expect(link).toHaveAttribute("title", commit);
     const reportUrl = new URL(screen.getByRole("link", { name: "Report an issue" }).getAttribute("href")!);
-    expect(reportUrl.origin + reportUrl.pathname).toBe("https://github.com/HKUDS/nanobot/issues/new");
+    expect(reportUrl.origin + reportUrl.pathname).toBe("https://github.com/bgrimes-me/babo/issues/new");
     expect(reportUrl.searchParams.get("template")).toBe("bug_report.yml");
     expect(reportUrl.searchParams.get("version")).toBe(`0.3.5 (commit ${commit})`);
   });
@@ -151,7 +151,7 @@ describe("Settings overview and appearance", () => {
       environment: { python_version: "3.14.2", os: "Darwin", os_version: "24.4.0", architecture: "arm64" },
     };
     render(
-      <ClientProvider client={new NanobotClient({ url: "ws://localhost:8765" })} token="tok">
+      <ClientProvider client={new BaboClient({ url: "ws://localhost:8765" })} token="tok">
         <HostNavigationContext.Provider value={{ kind: "embedded", name: "Remote", hostname: "private-host", open: vi.fn() }}>
           <AboutSettings settings={payload} />
         </HostNavigationContext.Provider>
@@ -265,7 +265,7 @@ describe("Settings overview and appearance", () => {
     fireEvent.click(screen.getByRole("button", { name: "Diff" }));
 
     await waitFor(() => {
-      const saved = JSON.parse(localStorage.getItem("nanobot-webui.settings-preferences") || "{}");
+      const saved = JSON.parse(localStorage.getItem("babo-webui.settings-preferences") || "{}");
       expect(saved.fileEditDisplayMode).toBe("diff");
     });
   });

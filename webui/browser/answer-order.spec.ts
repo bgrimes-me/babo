@@ -9,7 +9,7 @@ const base = { chat_id: chatId, turn_id: turnId };
 async function openThread(page: Page, events: ThreadProjectionEvent[] = [], locale = "en") {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.addInitScript((language) => { localStorage.setItem("nanobot.locale", language); }, locale);
+  await page.addInitScript((language) => { localStorage.setItem("babo.locale", language); }, locale);
   await page.route("**/api/**", (route) => route.fulfill({ status: 404, json: {} }));
   await page.route("**/api/commands", (route) => route.fulfill({ json: { commands: [] } }));
   await page.route("**/api/sessions/*/webui-thread?*", (route) => {

@@ -8,14 +8,14 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from babo.baton import founding
+from babo.baton.checkpoint import CheckpointService
+from babo.baton.clock import ago, clock_lines, stamp
+from babo.baton.config import BatonConfig
+from babo.baton.founding import found_town, template_text
+from babo.baton.registry import Registry
+from babo.baton.town import BatonError, Town
 from baton.mock_llama import MockLlama, text
-from nanobot.baton import founding
-from nanobot.baton.checkpoint import CheckpointService
-from nanobot.baton.clock import ago, clock_lines, stamp
-from nanobot.baton.config import BatonConfig
-from nanobot.baton.founding import found_town, template_text
-from nanobot.baton.registry import Registry
-from nanobot.baton.town import BatonError, Town
 
 OSLO = timezone(timedelta(hours=1))
 

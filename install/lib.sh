@@ -21,8 +21,8 @@ need_host() {
   return 0
 }
 
-nanobot_bin() {
-  if command -v nanobot >/dev/null 2>&1; then command -v nanobot; return; fi
-  if [ -x "$HOME/.local/bin/nanobot" ]; then echo "$HOME/.local/bin/nanobot"; return; fi
+babo_bin() {
+  if command -v babo >/dev/null 2>&1; then command -v babo; return; fi
+  if [ -x "$HOME/.local/bin/babo" ]; then echo "$HOME/.local/bin/babo"; return; fi
   return 1
 }

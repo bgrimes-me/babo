@@ -1,10 +1,10 @@
-# AI Agent Memory in nanobot
+# AI Agent Memory in babo
 
-nanobot keeps recent conversation history separate from longer-term information such as your preferences. Conversations are summarized as they grow or when you run `/compact`; if Dream is enabled, it can use those summaries to update long-term memory on its schedule, or when you run `/dream`. You can inspect and correct saved preferences. A reply saying it understood your preference does not by itself confirm that the preference was saved.
+babo keeps recent conversation history separate from longer-term information such as your preferences. Conversations are summarized as they grow or when you run `/compact`; if Dream is enabled, it can use those summaries to update long-term memory on its schedule, or when you run `/dream`. You can inspect and correct saved preferences. A reply saying it understood your preference does not by itself confirm that the preference was saved.
 
 ## The Design
 
-nanobot does not treat memory as one giant file.
+babo does not treat memory as one giant file.
 
 It separates memory into layers, because different kinds of remembering deserve different tools:
 
@@ -21,13 +21,13 @@ Long-term memory is updated in two stages.
 
 ### Stage 1: Consolidator
 
-When a conversation grows large, nanobot summarizes the conversation covered by compaction and appends the result to `memory/history.jsonl`. The model continues with the summary and any messages after it. The original messages remain in your saved chat history, but messages covered by the summary are no longer sent to the model verbatim. Each summary preserves useful long-term facts and a short handoff for active work.
+When a conversation grows large, babo summarizes the conversation covered by compaction and appends the result to `memory/history.jsonl`. The model continues with the summary and any messages after it. The original messages remain in your saved chat history, but messages covered by the summary are no longer sent to the model verbatim. Each summary preserves useful long-term facts and a short handoff for active work.
 
 Compaction also runs after a configured period of inactivity, or when you send `/compact`. See [Auto Compact](./configuration.md#auto-compact) for idle timing and how to disable automatic idle compaction.
 
 Automatic compaction does not post lifecycle notices to built-in chat channels by default. This only silences chat messages: compaction still runs, and WebUI/TUI retain structured status and history. Manual `/compact` keeps its start and outcome feedback. Set `channels.showCompactionNotices: true` to enable automatic notices globally, or set `showCompactionNotices` in a channel's configuration to override that default. Omitted or `null` channel overrides inherit the global value; existing explicit QQ overrides are preserved.
 
-This file is updated as conversations are summarized. It uses one JSON record per line so nanobot can track which summaries have already been processed; it is primarily an internal working history, not a permanent archive.
+This file is updated as conversations are summarized. It uses one JSON record per line so babo can track which summaries have already been processed; it is primarily an internal working history, not a permanent archive.
 
 Each line is a JSON object:
 
@@ -35,7 +35,7 @@ Each line is a JSON object:
 {"cursor": 42, "timestamp": "2026-04-03 00:02", "content": "- User prefers dark mode\n- Decided to use PostgreSQL"}
 ```
 
-After scheduled or manual Dream runs, nanobot can prune the oldest entries already processed by Dream and atomically rewrite the file. The default retention target is 1000 entries; entries Dream has not processed are retained even when this exceeds the target. The journal is therefore not a permanent archive of every summary.
+After scheduled or manual Dream runs, babo can prune the oldest entries already processed by Dream and atomically rewrite the file. The default retention target is 1000 entries; entries Dream has not processed are retained even when this exceeds the target. The journal is therefore not a permanent archive of every summary.
 
 It is not the final memory. It is the material from which final memory is shaped.
 
@@ -52,11 +52,11 @@ Dream reads:
 
 Then it edits the long-term files surgically in a single pass — not by rewriting everything, but by making the smallest honest change that keeps memory coherent.
 
-This is why nanobot's memory is not just archival. It is interpretive.
+This is why babo's memory is not just archival. It is interpretive.
 
 ## The Files
 
-In this page, `workspace` means the configured **agent workspace** (the default is `~/.nanobot/workspace/`, or the path passed with `--workspace`). Selecting a different project in the WebUI changes that chat's project context and tool working directory; it does not relocate the files below.
+In this page, `workspace` means the configured **agent workspace** (the default is `~/.babo/workspace/`, or the path passed with `--workspace`). Selecting a different project in the WebUI changes that chat's project context and tool working directory; it does not relocate the files below.
 
 ```text
 workspace/
@@ -77,7 +77,7 @@ A selected project may provide its own `AGENTS.md`, but project-local `SOUL.md`,
 
 These files play different roles:
 
-- `SOUL.md` remembers how nanobot should sound.
+- `SOUL.md` remembers how babo should sound.
 - `USER.md` remembers who the user is and what they prefer.
 - `MEMORY.md` remembers what remains true about the work itself.
 - `history.jsonl` remembers what happened on the way there.
@@ -86,7 +86,7 @@ These files play different roles:
 
 The old `HISTORY.md` format was pleasant for casual reading, but it was too fragile as an operational substrate.
 
-`history.jsonl` gives nanobot:
+`history.jsonl` gives babo:
 
 - stable incremental cursors
 - safer machine parsing
@@ -159,7 +159,7 @@ For separate clients with private context, create separate [instances](multiple-
 
 ## Versioned Memory
 
-After Dream changes long-term memory files, nanobot can record that change with `GitStore`.
+After Dream changes long-term memory files, babo can record that change with `GitStore`.
 
 This gives memory a history of its own:
 
@@ -171,7 +171,7 @@ That turns memory from a silent mutation into an auditable process.
 
 ## Guiding Dream
 
-Dream decides what to keep, update, or forget using nanobot's built-in memory instructions. Most users can leave this alone.
+Dream decides what to keep, update, or forget using babo's built-in memory instructions. Most users can leave this alone.
 
 If one workspace needs a different memory style, create an editable guide:
 
@@ -187,9 +187,9 @@ workspace/prompts/dream.md
 
 Edit that file in plain Markdown. When it has content, Dream follows it for this workspace before reading the latest conversation history. You do not need to paste history into the file; Dream adds the current `## Conversation History` block automatically.
 
-To return to nanobot's default behavior, delete `prompts/dream.md` or leave it empty.
+To return to babo's default behavior, delete `prompts/dream.md` or leave it empty.
 
-Each workspace has its own guide. Changing this file does not affect other nanobot workspaces.
+Each workspace has its own guide. Changing this file does not affect other babo workspaces.
 
 ## Configuration
 

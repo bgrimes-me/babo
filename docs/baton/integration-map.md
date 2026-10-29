@@ -1,6 +1,6 @@
 # Baton integration map
 
-Phase 0 deliverable. It records what upstream nanobot actually does today, where each part of the Baton spec attaches to it, what the spec assumed that the code contradicts, and the routing decision.
+Phase 0 deliverable, written when Babo was still a fork that tracked nanobot. "Upstream" below means [nanobot](https://github.com/HKUDS/nanobot); since the rename Babo no longer tracks it, and module paths are shown with their current `babo.` names. It records how the runtime was put together, where each part of the town attaches to it, what the spec assumed that the code contradicted, and the routing decision.
 
 - Upstream read: `HKUDS/nanobot` at `b1cc89e` (version 0.4.0).
 - Reference read: `RecursiveRabbit/nanobot`, branch `context-window`, at `bcd562a` (MIT). Ideas borrowed are credited in the table at the end. No code is copied.
@@ -22,8 +22,8 @@ Phase 0 deliverable. It records what upstream nanobot actually does today, where
 | Workspace bootstrap | `utils/helpers.py` `sync_workspace_templates` | Called by `agent`/`serve`/onboard. Writes `AGENTS.md`, `SOUL.md`, `USER.md`, `HEARTBEAT.md`, `memory/MEMORY.md`, `memory/history.jsonl`, `skills/` and **initialises a git repo inside the workspace**. |
 | Shell | `agent/tools/shell.py`, `agent/tools/sandbox.py` | With `tools.restrictToWorkspace`, a best-effort guard blocks `../` and absolute paths outside the workspace. Real isolation needs `tools.exec.sandbox: "bwrap"`. |
 | Provider | `providers/openai_compat_provider.py` | llama.cpp goes through the OpenAI-compatible provider. **No per-call `response_format`** is exposed. |
-| Config | `config/schema.py` `Config` | Pydantic settings, camelCase aliases, `NANOBOT_` env prefix. Dream is `agents.defaults.dream.enabled`. |
-| CLI | `cli/entry.py` (fast dispatch), `cli/commands.py` (Typer app), `cli/agent.py` | Sub-apps are added with `app.add_typer(...)`. `nanobot agent` is dispatched early by `entry.py`. Interactive `agent` attaches to a per-(config, workspace) background gateway. |
+| Config | `config/schema.py` `Config` | Pydantic settings, camelCase aliases, `BABO_` env prefix. Dream is `agents.defaults.dream.enabled`. |
+| CLI | `cli/entry.py` (fast dispatch), `cli/commands.py` (Typer app), `cli/agent.py` | Sub-apps are added with `app.add_typer(...)`. `babo agent` is dispatched early by `entry.py`. Interactive `agent` attaches to a per-(config, workspace) background gateway. |
 | Cron | `cron/service.py` | Workspace-scoped `cron/jobs.json`. |
 
 ## 2. Where the spec and the code disagree (trusting the code)
@@ -41,7 +41,7 @@ Phase 0 deliverable. It records what upstream nanobot actually does today, where
 
 ## 3. Routing decision
 
-**Decision: one workspace per resident (`baton-town/residents/<id>/` *is* that resident's nanobot workspace), selected by `--workspace`. Resident identity is derived from the workspace path, never from a session key. Processes follow upstream's existing rule: one gateway per (config, workspace).**
+**Decision: one workspace per resident (`baton-town/residents/<id>/` *is* that resident's babo workspace), selected by `--workspace`. Resident identity is derived from the workspace path, never from a session key. Processes follow upstream's existing rule: one gateway per (config, workspace).**
 
 Why this, and not one gateway that switches resident per session:
 
@@ -55,36 +55,36 @@ How the required behaviours map onto it:
 | Requirement | How |
 |---|---|
 | Channels and CLI default to the Mayor | The town config sets `agents.defaults.workspace` to `residents/mayor`. The always-on gateway (systemd user unit) is the Mayor's. |
-| `nanobot agent --as <resident>` | `cli/entry.py` rewrites `--as <id>` to `--workspace <town>/residents/<id>` (after checking the registry). Upstream then starts/attaches that workspace's own gateway. |
-| Bind a channel to a resident | `baton.channelBindings: {"telegram": "archivist"}`. `nanobot baton serve` starts one gateway per resident that has a binding, each with a generated per-resident config containing only its bound channels; the Mayor's config gets the rest. Generated configs live under `~/.nanobot/baton/` (they hold secrets), never in the town repo. |
+| `babo agent --as <resident>` | `cli/entry.py` rewrites `--as <id>` to `--workspace <town>/residents/<id>` (after checking the registry). Upstream then starts/attaches that workspace's own gateway. |
+| Bind a channel to a resident | `baton.channelBindings: {"telegram": "archivist"}`. `babo serve` starts one gateway per resident that has a binding, each with a generated per-resident config containing only its bound channels; the Mayor's config gets the rest. Generated configs live under `~/.babo/baton/` (they hold secrets), never in the town repo. |
 | Visits, night turns, checkpoint/fold turns | Run in-process by Baton through the SDK-style `AgentLoop` for the target workspace, on a dedicated session key (`visit:<from>`, `night:<date>`, etc.) so they never contend with a live chat session in another process. |
-| Global model queue | `nanobot baton queue`: a tiny local OpenAI-compatible proxy in front of llama-server (aiohttp, already a dependency). Every resident config points at it. It holds a semaphore of `slots` (default 1), orders requests by priority (interactive > visit > night), groups by turn via a header Baton sets, and enforces timeouts. Because it is a process boundary, it covers every process and will cover OpenCode in phase two. Run as a systemd user unit next to the Mayor's gateway. `doctor` checks it. |
+| Global model queue | `babo queue`: a tiny local OpenAI-compatible proxy in front of llama-server (aiohttp, already a dependency). Every resident config points at it. It holds a semaphore of `slots` (default 1), orders requests by priority (interactive > visit > night), groups by turn via a header Baton sets, and enforces timeouts. Because it is a process boundary, it covers every process and will cover OpenCode in phase two. Run as a systemd user unit next to the Mayor's gateway. `doctor` checks it. |
 | Everything tagged with resident id | The event log, checkpoints and exports live inside the resident's directory and also carry `resident` in every record; queue logs carry it from the header. |
 
 Cost: each live gateway is a separate Python process (~150–250 MB RAM). Only the Mayor's runs all the time by default; others start on `--as`, on a channel binding, or for the night.
 
 ## 4. Upstream edits (all marked `# BATON:` / `// BATON:`)
 
-| File | Edit | Why it can't live in `nanobot/baton/` |
+| File | Edit | Why it can't live in `babo/baton/` |
 |---|---|---|
-| `nanobot/config/schema.py` | `baton: BatonConfig` field on `Config`; Dream `enabled` defaults to `false` | Root schema assembles sub-configs; `BatonConfig` itself lives in `nanobot/baton/config.py`. |
-| `nanobot/agent/loop.py` | (a) `loop_classes(...)` picks `BatonContextBuilder`/`BatonConsolidator` for a resident (and fails closed for an unfounded one); (b) `attach(loop, config)` at the end of `from_config` | Only point every composition root shares; both classes must be chosen at construction because `AutoCompact` and `SubagentManager` keep references to them. Ordinary workspaces get upstream's own classes back, so upstream tests that patch them are unaffected. |
-| `nanobot/session/location.py` | refuse to create session storage for a workspace inside `residents/` that isn't a founded resident | The one place every composition root creates a workspace directory; keeps "nothing creates a resident" true even for a mistyped `--workspace`. |
-| `nanobot/utils/helpers.py` | skip `sync_workspace_templates` for resident workspaces | Avoids SOUL/USER duplicates and a nested git repo. |
-| `nanobot/cli/commands.py` | `app.add_typer(baton_app, name="baton")` | CLI registration. |
-| `nanobot/cli/entry.py` | `--as <id>` → `--workspace …` rewrite | `agent` is dispatched before the Typer app loads. |
-| `nanobot/command/builtin.py`, `nanobot/channels/telegram/runtime.py` | Dream commands neither offered nor routed | Dream is off **and hidden** (Squid's decision). |
-| `nanobot/webui/settings_runtime.py`, `webui/src/components/settings/SettingsPage.tsx`, `webui/src/components/settings/system/runtime-config-fields.ts` | no Dream switch in Settings; the setting is not editable from the WebUI | Same. |
-| `pyproject.toml` | ship `nanobot/baton/templates/**` in the wheel | Packaging. |
+| `babo/config/schema.py` | `baton: BatonConfig` field on `Config`; Dream `enabled` defaults to `false` | Root schema assembles sub-configs; `BatonConfig` itself lives in `babo/baton/config.py`. |
+| `babo/agent/loop.py` | (a) `loop_classes(...)` picks `BatonContextBuilder`/`BatonConsolidator` for a resident (and fails closed for an unfounded one); (b) `attach(loop, config)` at the end of `from_config` | Only point every composition root shares; both classes must be chosen at construction because `AutoCompact` and `SubagentManager` keep references to them. Ordinary workspaces get upstream's own classes back, so upstream tests that patch them are unaffected. |
+| `babo/session/location.py` | refuse to create session storage for a workspace inside `residents/` that isn't a founded resident | The one place every composition root creates a workspace directory; keeps "nothing creates a resident" true even for a mistyped `--workspace`. |
+| `babo/utils/helpers.py` | skip `sync_workspace_templates` for resident workspaces | Avoids SOUL/USER duplicates and a nested git repo. |
+| `babo/cli/commands.py` | `app.add_typer(baton_app, name="baton")` | CLI registration. |
+| `babo/cli/entry.py` | `--as <id>` → `--workspace …` rewrite | `agent` is dispatched before the Typer app loads. |
+| `babo/command/builtin.py`, `babo/channels/telegram/runtime.py` | Dream commands neither offered nor routed | Dream is off **and hidden** (Squid's decision). |
+| `babo/webui/settings_runtime.py`, `webui/src/components/settings/SettingsPage.tsx`, `webui/src/components/settings/system/runtime-config-fields.ts` | no Dream switch in Settings; the setting is not editable from the WebUI | Same. |
+| `pyproject.toml` | ship `babo/baton/templates/**` in the wheel | Packaging. |
 | upstream tests | tests updated to expect Dream off and hidden: `tests/command/*`, `tests/cli/test_commands.py` (gateway stubs), `tests/webui/test_settings_*.py`, the runtime-config keys fixture, one WebSocket channel test, two WebUI settings tests | They asserted the old default (Dream on and visible). |
 
-Everything else — hooks, tools, gate, queue, search, night, review, MCP server, installer — is new code under `nanobot/baton/`, `install/`, `docs/baton/` and `tests/baton/`.
+Everything else — hooks, tools, gate, queue, search, night, review, MCP server, installer — is new code under `babo/baton/`, `install/`, `docs/baton/` and `tests/baton/`.
 
 ## Decisions made with Squid after phase 0
 
 - **Dream:** left in the code (rebase-friendly) but off by default and hidden from menus, help, Telegram's command list and the WebUI settings.
 - **Projects:** every resident has a private `residents/<id>/projects/<name>/`. A promoted project moves to `commons/projects/<name>/`, where every resident can work on it. Project folders are their own git repositories and are ignored by the town repo, so the town's history never embeds another repository.
-- **Tools: one implementation, two adapters.** Residents get the Baton tools in-process (identity is the loop's workspace, so it can't be spoofed, and there's no extra process per resident). `nanobot baton mcp --as <id>` serves the same tools over MCP for OpenCode. This is how upstream nanobot treats its own tools (in-process registry, MCP for external servers) and how the reference fork treats its house tools (an MCP server with identity resolved from the environment).
+- **Tools: one implementation, two adapters.** Residents get the Baton tools in-process (identity is the loop's workspace, so it can't be spoofed, and there's no extra process per resident). `babo mcp --as <id>` serves the same tools over MCP for OpenCode. This is how upstream babo treats its own tools (in-process registry, MCP for external servers) and how the reference fork treats its house tools (an MCP server with identity resolved from the environment).
 - **Tool budget:** to stay near ~12 tools, `read_skill` is folded into `read_note("skill:<name>")`.
 
 ## 5. Spec → module map
@@ -99,17 +99,17 @@ Everything else — hooks, tools, gate, queue, search, night, review, MCP server
 | 3.3 Checkpoint turns + mechanical fallback | `baton/checkpoint.py`, `baton/schema_client.py`, `baton/schemas.py` | hook `after_run` / `after_execute_tool` |
 | 3.4 Commit gate | `baton/gate.py` | shell tools wrapped in the registry |
 | 3.5 Restore-or-nothing | `baton/compaction.py` (`BatonConsolidator`) | loop edit (a) |
-| 3.6 Exact-context view | `baton/context_view.py` | `nanobot baton context <id>` builds messages exactly as `AgentLoop` would, prints bytes |
+| 3.6 Exact-context view | `baton/context_view.py` | `babo context <id>` builds messages exactly as `AgentLoop` would, prints bytes |
 | 4 Night cycle | `baton/night/*.py`, `install/systemd/*` | CLI + systemd user timer |
 | 5 Search | `baton/search.py` (FTS5, one `SearchBackend` interface) | tools + `reindex` |
-| 5 Tools / `baton-mcp` | `baton/tools/core.py` (one implementation), `baton/tools/nanobot_adapter.py`, `baton/mcp_server.py` (stdio adapter) | registered in-process for residents; MCP server for OpenCode/phase two |
+| 5 Tools / `baton-mcp` | `baton/tools/core.py` (one implementation), `baton/tools/babo_adapter.py`, `baton/mcp_server.py` (stdio adapter) | registered in-process for residents; MCP server for OpenCode/phase two |
 | 5 Start bundle | `baton/bundle.py` | `BatonContextBuilder` |
 | 6 Growth, review, notes, town | `baton/growth.py`, `baton/review.py`, `baton/cli.py` | CLI |
 | 7 Charter, HOUSE | `baton/templates/CHARTER.md`, `HOUSE.md` | founding |
 | 8 Mock server | `tests/baton/mock_llama.py` | tests |
 | 9 Install kit, doctor | `install/NN-*.sh`, `baton/doctor.py` | runbook |
 
-**Baton tools: in-process, not a subprocess.** The spec puts the resident tools in an MCP server. For residents inside nanobot, Baton registers the same tool implementations directly in the loop's registry: identity comes from the loop's workspace (it can't be spoofed by a tool argument), there is no extra process per resident, and failures surface as ordinary tool errors. `nanobot baton mcp --as <id>` exposes the identical tools over stdio for OpenCode (phase two) and for `doctor`. One implementation, two adapters.
+**Baton tools: in-process, not a subprocess.** The spec puts the resident tools in an MCP server. For residents inside babo, Baton registers the same tool implementations directly in the loop's registry: identity comes from the loop's workspace (it can't be spoofed by a tool argument), there is no extra process per resident, and failures surface as ordinary tool errors. `babo mcp --as <id>` exposes the identical tools over stdio for OpenCode (phase two) and for `doctor`. One implementation, two adapters.
 
 ## 6. Ideas borrowed from the reference fork
 
@@ -124,17 +124,17 @@ Not brought over: the signing/witness system, the newspaper (townline), the Even
 
 ## 7. Phase-two design constraints (OpenCode plugin)
 
-Kept callable from outside nanobot so `integrations/opencode/` can reuse them without nanobot's loop: town layout and registry (`baton/town.py`), event-log record format (`baton/events.py`, JSONL, documented schema), checkpoint schema (`baton/schemas.py`, plain JSON Schema), bundle assembly (`baton/bundle.py`, a pure function of the town directory and resident id), and the tools via `baton mcp`.
+Kept callable from outside babo so `integrations/opencode/` can reuse them without babo's loop: town layout and registry (`baton/town.py`), event-log record format (`baton/events.py`, JSONL, documented schema), checkpoint schema (`baton/schemas.py`, plain JSON Schema), bundle assembly (`baton/bundle.py`, a pure function of the town directory and resident id), and the tools via `baton mcp`.
 
 
 ## 8. What was built, by phase
 
 | Phase | Modules |
 |---|---|
-| 1 | `town`, `registry`, `founding`, `scope`, `notes`, `search`, `ledger`, `inbox`, `bundle`, `context`, `tools/core`, `tools/nanobot_adapter`, `mcp_server`, `attach`, `loop_support`, `cli_support`, templates |
+| 1 | `town`, `registry`, `founding`, `scope`, `notes`, `search`, `ledger`, `inbox`, `bundle`, `context`, `tools/core`, `tools/babo_adapter`, `mcp_server`, `attach`, `loop_support`, `cli_support`, templates |
 | 2 | `events`, `secrets`, `runtime_state`, `schemas`, `model_client`, `checkpoint`, `hooks`, `gate`, `compaction`, `queue`, `context_view` |
 | 3 | `night`, `tooltest`, `units`, systemd templates |
 | 4 | `growth` (review decisions, project promotion, notes, flags), `tools/active`, `configs` (channel bindings), visits in `attach` |
 | 5 | `setup` (init-config), `doctor`, `install/`, `docs/baton/RUNBOOK.md`, `docs/baton/README.md` |
 
-Commands: `nanobot baton found | residents | town | bundle | context | search | reindex | mcp | queue | night | review | note | units | configs | init-config | doctor | restore-session`, and `nanobot agent --as <resident>`.
+Commands: `babo found | residents | town | bundle | context | search | reindex | mcp | queue | night | review | note | units | configs | init-config | doctor | restore-session`, and `babo agent --as <resident>`.

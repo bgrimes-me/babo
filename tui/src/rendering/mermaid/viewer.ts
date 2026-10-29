@@ -39,7 +39,7 @@ export class DiagramViewer {
   constructor(private readonly renderer: CliRenderer, private readonly owner: DiagramOwner) {
     const colors = owner.colors()
     this.root = new BoxRenderable(renderer, {
-      id: "nanobot-tui-diagrams", position: "absolute", top: 0, left: 0,
+      id: "babo-tui-diagrams", position: "absolute", top: 0, left: 0,
       width: "100%", height: "100%", zIndex: 110, padding: 1,
       flexDirection: "column", backgroundColor: RGBA.defaultBackground(), visible: false,
     })

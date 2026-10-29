@@ -1,0 +1,9 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<title>babo mark</title>
+<rect x="16" y="16" width="480" height="480" rx="112" fill="#1F5F6B"/>
+<path d="M256 104L408 228V396C408 409.255 397.255 420 384 420H128C114.745 420 104 409.255 104 396V228L256 104Z" fill="#F6E7C8"/>
+<path d="M224 420V324C224 310.745 234.745 300 248 300H264C277.255 300 288 310.745 288 324V420" fill="#1F5F6B"/>
+<rect x="96" y="216" width="320" height="44" rx="22" transform="rotate(-24 256 238)" fill="#F2A541"/>
+<rect x="96" y="216" width="64" height="44" rx="22" transform="rotate(-24 256 238)" fill="#D9792B"/>
+<rect x="352" y="216" width="64" height="44" rx="22" transform="rotate(-24 256 238)" fill="#D9792B"/>
+</svg>

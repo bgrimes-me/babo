@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-import nanobot.session.sqlite_store as sqlite_store
-from nanobot.providers.base import ProviderConversationState
-from nanobot.session.manager import Session
-from nanobot.session.sqlite_store import SqliteSessionStore
+import babo.session.sqlite_store as sqlite_store
+from babo.providers.base import ProviderConversationState
+from babo.session.manager import Session
+from babo.session.sqlite_store import SqliteSessionStore
 
 
 def _session() -> Session:

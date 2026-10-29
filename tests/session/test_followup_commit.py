@@ -6,16 +6,16 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.context import TranscriptInput
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import RequestContext
-from nanobot.bus.events import INBOUND_META_TURN_ID, InboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.providers.base import GenerationSettings, LLMResponse
-from nanobot.runtime_context import public_history_message
-from nanobot.session.manager import SessionManager
-from nanobot.session.recovery import PENDING_FOLLOWUP_ID_KEY, pending_followups
-from nanobot.webui.recovery import RecoveryCoordinator
+from babo.agent.context import TranscriptInput
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import RequestContext
+from babo.bus.events import INBOUND_META_TURN_ID, InboundMessage
+from babo.bus.queue import MessageBus
+from babo.providers.base import GenerationSettings, LLMResponse
+from babo.runtime_context import public_history_message
+from babo.session.manager import SessionManager
+from babo.session.recovery import PENDING_FOLLOWUP_ID_KEY, pending_followups
+from babo.webui.recovery import RecoveryCoordinator
 
 
 def _loop(sessions):
@@ -35,7 +35,7 @@ def _input(text, turn_id):
 @pytest.mark.parametrize("count", [1, 2])
 @pytest.mark.parametrize("leave_unconsumed", [False, True])
 async def test_late_consumption_commits_history_and_only_its_ids(tmp_path, monkeypatch, count, leave_unconsumed):
-    monkeypatch.setattr("nanobot.webui.history.get_webui_dir", lambda: tmp_path / "webui")
+    monkeypatch.setattr("babo.webui.history.get_webui_dir", lambda: tmp_path / "webui")
     sessions = SessionManager(tmp_path / "workspace", sessions_root=tmp_path / "sessions")
     state = sessions.state
     try:

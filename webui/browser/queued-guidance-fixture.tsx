@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { ThreadComposer } from "@/components/thread/ThreadComposer";
-import type { SendAttachment, SendOptions } from "@/hooks/useNanobotStream";
+import type { SendAttachment, SendOptions } from "@/hooks/useBaboStream";
 
 export function QueuedGuidanceFixture() {
   const [away, setAway] = useState(false);

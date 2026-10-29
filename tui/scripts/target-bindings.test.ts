@@ -11,7 +11,7 @@ afterEach(async () => {
 })
 
 async function fixture(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "nanobot-target-bindings-"))
+  const root = await mkdtemp(join(tmpdir(), "babo-target-bindings-"))
   roots.push(root)
   await writeFile(join(root, "package.json"), "{}")
   const wrapper = join(root, "node_modules", "@resvg", "resvg-js")

@@ -7,7 +7,7 @@ from zipfile import ZipFile
 
 import pytest
 
-from nanobot.releases import ReleaseArtifact, ReleaseManifest, release_filenames
+from babo.releases import ReleaseArtifact, ReleaseManifest, release_filenames
 from scripts import release_candidate
 from scripts.release_candidate import (
     _candidate_identity,
@@ -27,11 +27,11 @@ def git(root, *args):
 def source(tmp_path):
     root = tmp_path / "source"
     root.mkdir()
-    (root / "nanobot").mkdir()
+    (root / "babo").mkdir()
     (root / "pyproject.toml").write_text(
-        '[project]\nname = "nanobot-ai"\nversion = "0.3.5"\nrequires-python = ">=3.11"\n\n'
+        '[project]\nname = "babo"\nversion = "0.3.5"\nrequires-python = ">=3.11"\n\n'
     )
-    (root / "nanobot/__init__.py").write_text(
+    (root / "babo/__init__.py").write_text(
         'def _resolve_version():\n    return _read_pyproject_version() or "0.3.5"\n\n'
     )
     git(root, "init", "-q")
@@ -61,23 +61,23 @@ def test_same_source_and_sequence_produce_same_candidate_without_mutating_source
 def test_dirty_source_is_not_accidentally_included_in_candidate(tmp_path, source):
     root, source_commit = source
     (root / "secret.txt").write_text("local data")
-    (root / "nanobot/__init__.py").write_text("uncommitted work")
+    (root / "babo/__init__.py").write_text("uncommitted work")
     prepare_preview(root, tmp_path / "candidate", source_commit=source_commit, base="0.3.6", sequence=1)
     assert not (tmp_path / "candidate/secret.txt").exists()
-    assert "0.3.6.dev1" in (tmp_path / "candidate/nanobot/__init__.py").read_text()
-    assert (root / "nanobot/__init__.py").read_text() == "uncommitted work"
+    assert "0.3.6.dev1" in (tmp_path / "candidate/babo/__init__.py").read_text()
+    assert (root / "babo/__init__.py").read_text() == "uncommitted work"
 
 
 def test_stable_preparation_preserves_exact_source_and_ignores_local_changes(tmp_path, source):
     root, commit = source
-    (root / "nanobot/__init__.py").write_text("uncommitted work")
+    (root / "babo/__init__.py").write_text("uncommitted work")
     target = tmp_path / "stable"
     result = prepare_stable(root, target, source_commit=commit, version="0.3.5")
     assert result == {"version": "0.3.5", "source_commit": commit, "candidate_commit": commit}
     assert git(target, "rev-parse", "HEAD") == commit
     assert git(target, "status", "--porcelain") == ""
     assert _candidate_identity(target, commit) == ("0.3.5", ">=3.11", commit)
-    assert (root / "nanobot/__init__.py").read_text() == "uncommitted work"
+    assert (root / "babo/__init__.py").read_text() == "uncommitted work"
 
 
 def test_stable_preparation_refuses_version_mismatch_and_published_identity(tmp_path, source):
@@ -118,7 +118,7 @@ def test_verification_rejects_changes_after_candidate_commit(tmp_path, source):
     root, commit = source
     target = tmp_path / "candidate"
     prepare_preview(root, target, source_commit=commit, base="0.3.6", sequence=1)
-    with (target / "nanobot/__init__.py").open("a") as stream:
+    with (target / "babo/__init__.py").open("a") as stream:
         stream.write("# unchecked change\n")
     with pytest.raises(ValueError, match="uncommitted"):
         _candidate_identity(target, commit)
@@ -142,9 +142,9 @@ def test_candidate_verifies_bundled_documentation_against_its_tracked_source(sou
     hook = WebUIBuildHook(str(root), {}, None, {}, "", "wheel",
                           SimpleNamespace(display_info=lambda message: None))
     hook.initialize("editable", {})
-    reference = "nanobot/skills/nanobot-document/references/README.md"
-    names = ["nanobot/__init__.py", "docs/README.md", reference]
-    prefix = "nanobot_ai-0.3.5/"
+    reference = "babo/skills/babo-document/references/README.md"
+    names = ["babo/__init__.py", "docs/README.md", reference]
+    prefix = "babo-0.3.5/"
     packaged = {prefix + name: (root / name).read_bytes() for name in names}
     payload = _source_payload(root, packaged, prefix)
     assert payload[reference] == (root / "docs/README.md").read_bytes()

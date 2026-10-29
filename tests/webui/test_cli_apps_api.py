@@ -10,9 +10,9 @@ from typing import Any
 
 import pytest
 
-from nanobot.apps.cli import service as cli_service
-from nanobot.config import home, loader
-from nanobot.webui import cli_apps_api
+from babo.apps.cli import service as cli_service
+from babo.config import home, loader
+from babo.webui import cli_apps_api
 
 
 class _FakeManager:
@@ -179,7 +179,7 @@ def test_cli_apps_payload_reports_not_pending_when_refresh_is_throttled(monkeypa
 
 @pytest.fixture
 def _local_cli_apps(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    instance = tmp_path / "home" / ".nanobot"
+    instance = tmp_path / "home" / ".babo"
     workspace = tmp_path / "workspace"
     bin_dir = tmp_path / "bin"
     for path in (instance, workspace, bin_dir):

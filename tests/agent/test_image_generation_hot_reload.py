@@ -4,19 +4,19 @@ from __future__ import annotations
 
 import pytest
 
-from nanobot.agent.tools.image_generation import (
+from babo.agent.tools.image_generation import (
     ImageGenerationTool,
     register_image_generation_tool,
     reload_image_generation_tool,
 )
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.config.loader import load_config, save_config
-from nanobot.webui.settings_models import create_provider_settings
+from babo.agent.tools.registry import ToolRegistry
+from babo.config.loader import load_config, save_config
+from babo.webui.settings_models import create_provider_settings
 
 
 async def test_dynamic_image_overrides_reload_without_changing_inflight_client(tmp_path, monkeypatch):
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", tmp_path / "other-instance.json")
+    monkeypatch.setattr("babo.config.loader._current_config_path", tmp_path / "other-instance.json")
     config = load_config(config_path)
     name = create_provider_settings(config, {"name": ["Image gateway"], "apiBase": ["https://images.test/v1"]})
     connection = getattr(config.providers, name)
@@ -59,7 +59,7 @@ async def test_image_generation_reload_replaces_and_removes_live_tool(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     config_path = tmp_path / "config.json"
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", tmp_path / "other-instance.json")
+    monkeypatch.setattr("babo.config.loader._current_config_path", tmp_path / "other-instance.json")
     config = load_config(config_path)
     config.providers.openrouter.api_key = "first-key"
     config.tools.image_generation.enabled = True
@@ -118,7 +118,7 @@ async def test_image_generation_reload_failure_preserves_live_tool(
     working_tool = registry.get("generate_image")
     definitions = registry.get_definitions()
 
-    missing_env = "NANOBOT_TEST_IMAGE_RELOAD_KEY"
+    missing_env = "BABO_TEST_IMAGE_RELOAD_KEY"
     monkeypatch.delenv(missing_env, raising=False)
     config.providers.openrouter.api_key = f"${{{missing_env}}}"
     save_config(config, config_path)

@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { BoxRenderable, CliRenderEvents, StyledText, TextareaRenderable, TextAttributes, TextRenderable, rgbToHex } from "@opentui/core"
 import { MockTreeSitterClient, TestRecorder, setRendererCapabilities, createTestRenderer, type TestRendererSetup } from "@opentui/core/testing"
-import { NanobotTui } from "./app"
+import { BaboTui } from "./app"
 import type { Transcript } from "../rendering/transcript"
 import { options, client, mount, waitUntil, occurrences, contrastRatio, HiddenScrollBox } from "./test-support"
 
-describe("NanobotTui layout and themes", () => {
+describe("BaboTui layout and themes", () => {
   let setup: TestRendererSetup | undefined
 
   afterEach(() => {
@@ -71,7 +71,7 @@ describe("NanobotTui layout and themes", () => {
 
       expect(setup.renderer.width).toBe(width)
       expect(setup.renderer.height).toBe(height)
-      expect(occurrences(frame, "Ask nanobot anything")).toBe(1)
+      expect(occurrences(frame, "Ask babo anything")).toBe(1)
       expect(occurrences(frame, "Ready")).toBe(0)
       expect(occurrences(frame, "Getting ready…")).toBe(1)
       expect(occurrences(frame, "default ▾")).toBe(1)
@@ -108,7 +108,7 @@ describe("NanobotTui layout and themes", () => {
 
   test("keeps model and access details in the composer controls only", async () => {
     setup = await createRenderer({ width: 100, height: 24, screenMode: "alternate-screen" })
-    NanobotTui.mount(
+    BaboTui.mount(
       setup.renderer,
       {
         ...options,
@@ -130,8 +130,8 @@ describe("NanobotTui layout and themes", () => {
 
   test("uses the available transcript width before wrapping the workspace", async () => {
     setup = await createRenderer({ width: 100, height: 24, screenMode: "alternate-screen" })
-    const workspace = String.raw`D:\Documents\GitHub\nanobot\.worktrees\responsive-header-fixture`
-    NanobotTui.mount(
+    const workspace = String.raw`D:\Documents\GitHub\babo\.worktrees\responsive-header-fixture`
+    BaboTui.mount(
       setup.renderer,
       { ...options, workspace },
       client(),
@@ -162,9 +162,9 @@ describe("NanobotTui layout and themes", () => {
       chat_id: "chat",
       text: [
         "中文、emoji 👨‍💻 and combining text é reflow with the terminal.",
-        "https://nanobot.test/a-very-long-unbroken-path-that-must-not-break-the-layout",
+        "https://babo.test/a-very-long-unbroken-path-that-must-not-break-the-layout",
         "```ts",
-        "const greeting = '你好，nanobot'",
+        "const greeting = '你好，babo'",
         "```",
       ].join("\n\n"),
     })
@@ -205,7 +205,7 @@ describe("NanobotTui layout and themes", () => {
       event: "delta",
       chat_id: "chat",
       text: Array.from({ length: 80 }, (_, index) => (
-        `### Section ${index + 1}\n中文长回答、**bold** and [link](https://nanobot.test/${index + 1})`
+        `### Section ${index + 1}\n中文长回答、**bold** and [link](https://babo.test/${index + 1})`
       )).join("\n\n"),
     })
     app.accept({ event: "stream_end", chat_id: "chat" })
@@ -281,8 +281,8 @@ describe("NanobotTui layout and themes", () => {
   test("keeps finalized streamed Markdown link labels clickable", async () => {
     setup = await createRenderer({ width: 100, height: 24, screenMode: "alternate-screen" })
     setRendererCapabilities(setup.renderer, { hyperlinks: true })
-    const label = "HKUDS/nanobot#1234"
-    const url = "https://github.com/HKUDS/nanobot/pull/1234"
+    const label = "bgrimes-me/babo#1234"
+    const url = "https://github.com/bgrimes-me/babo/pull/1234"
     const content = `PR updated: [${label}](${url})`
     const labelStart = content.indexOf(label)
     const urlStart = content.indexOf(url)
@@ -296,7 +296,7 @@ describe("NanobotTui layout and themes", () => {
         [urlStart + url.length, content.length, "markup.link"],
       ],
     })
-    const app = NanobotTui.mount(setup.renderer, options, client(), treeSitterClient)
+    const app = BaboTui.mount(setup.renderer, options, client(), treeSitterClient)
 
     app.accept({ event: "attached", chat_id: "chat" })
     app.accept({ event: "delta", chat_id: "chat", text: content })
@@ -355,7 +355,7 @@ describe("NanobotTui layout and themes", () => {
 
   test("renders fenced plain text from light-theme history", async () => {
     setup = await createRenderer({ width: 100, height: 30, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       { ...options, theme: "light" },
       client(),
@@ -490,7 +490,7 @@ describe("NanobotTui layout and themes", () => {
 
   test("distinguishes the composer with a quiet focus edge", async () => {
     setup = await createRenderer({ width: 72, height: 20, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       { ...options, theme: "light" },
       client(),
@@ -520,7 +520,7 @@ describe("NanobotTui layout and themes", () => {
     await setup.renderOnce()
 
     const composerLine = setup.captureCharFrame().split("\n")
-      .find((line) => line.includes("Ask nanobot anything")) || ""
+      .find((line) => line.includes("Ask babo anything")) || ""
     expect(composerLine).toContain("│")
     expect(composerLine).not.toContain("┌")
     expect(composerLine).not.toContain("┐")
@@ -530,7 +530,7 @@ describe("NanobotTui layout and themes", () => {
     "keeps the %s composer cursor cell readable at the end of input",
     async (theme) => {
       setup = await createRenderer({ width: 72, height: 20, screenMode: "alternate-screen" })
-      const app = NanobotTui.mount(
+      const app = BaboTui.mount(
         setup.renderer,
         { ...options, theme },
         client(),
@@ -577,7 +577,7 @@ describe("NanobotTui layout and themes", () => {
     "keeps %s conversation selections readable across Markdown blocks",
     async (theme) => {
       setup = await createRenderer({ width: 96, height: 48, screenMode: "alternate-screen" })
-      const app = NanobotTui.mount(
+      const app = BaboTui.mount(
         setup.renderer,
         { ...options, theme },
         client(),
@@ -640,7 +640,7 @@ describe("NanobotTui layout and themes", () => {
 
   test("uses asymmetric roles instead of chat bubbles", async () => {
     setup = await createRenderer({ width: 72, height: 24, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       { ...options, theme: "dark" },
       client(),
@@ -656,7 +656,7 @@ describe("NanobotTui layout and themes", () => {
     const frame = setup.captureCharFrame()
     const userLine = frame.split("\n").find((line) => line.includes("User question")) || ""
     const agentLine = frame.split("\n").find((line) => line.includes("Agent **answer**")) || ""
-    const headerLine = frame.split("\n").find((line) => line.includes(">_  nanobot")) || ""
+    const headerLine = frame.split("\n").find((line) => line.includes(">_  babo")) || ""
     const headerBorder = frame.split("\n").find((line) => line.includes("╭")) || ""
 
     expect(userLine).toContain("› User question")
@@ -702,13 +702,13 @@ describe("NanobotTui layout and themes", () => {
       return line
     }
     const messageLine = lineContaining("Aligned message")
-    const composerLine = lineContaining("Ask nanobot anything")
+    const composerLine = lineContaining("Ask babo anything")
     const contentColumn = messageLine.indexOf("Aligned message")
 
     expect(lineContaining("default ▾").indexOf("default ▾")).toBe(contentColumn)
     expect(lineContaining("Ready").indexOf("Ready")).toBe(contentColumn)
     expect(composerLine.indexOf("│")).toBe(messageLine.indexOf("›"))
-    expect(composerLine.indexOf("Ask nanobot anything")).toBe(contentColumn)
+    expect(composerLine.indexOf("Ask babo anything")).toBe(contentColumn)
   })
 
   test("shows context usage in the idle footer", async () => {
@@ -733,7 +733,7 @@ describe("NanobotTui layout and themes", () => {
 
   test("keeps an explicit theme stable when the terminal reports another mode", async () => {
     setup = await createRenderer({ width: 72, height: 20, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       { ...options, theme: "light" },
       client(),
@@ -762,7 +762,7 @@ describe("NanobotTui layout and themes", () => {
     Object.defineProperty(setup.renderer, "themeMode", { configurable: true, value: "light" })
     const transport = client()
     transport.connect = () => { connected = true }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       transport,
@@ -786,7 +786,7 @@ describe("NanobotTui layout and themes", () => {
     Object.defineProperty(setup.renderer, "themeMode", { configurable: true, value: null })
     const transport = client()
     transport.connect = () => { connected = true }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       transport,

@@ -15,7 +15,7 @@ vi.mock("@/lib/imageEncode", () => ({
   })),
 }));
 
-const STORAGE_KEY = "nanobot.webui.composerQueuedGuidance.v1:chat-a";
+const STORAGE_KEY = "babo.webui.composerQueuedGuidance.v1:chat-a";
 const PNG = { dataUrl: "data:image/png;base64,aW1hZ2U=", kind: "image", name: "first.png" };
 const DOCUMENT = { dataUrl: "data:text/plain;base64,aGVsbG8=", kind: "file", name: "second.txt" };
 

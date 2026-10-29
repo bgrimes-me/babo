@@ -13,7 +13,7 @@ import { IdleCompactionControl } from "@/components/settings/system/IdleCompacti
 import { Input } from "@/components/ui/input";
 import { RUNTIME_CONFIG_FIELDS, RUNTIME_CONFIG_GROUPS, type RuntimeConfigField, type RuntimeConfigPage } from "@/components/settings/system/runtime-config-fields";
 import { updateRuntimeConfigSettings } from "@/lib/api";
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 import type { RuntimeConfigValue, SettingsPayload } from "@/lib/types";
 import type { ApplySettingsPayload } from "@/components/settings/contracts";
 
@@ -27,7 +27,7 @@ function displayValue(value: RuntimeConfigValue | undefined): Draft {
 
 export function useRuntimeConfigSettings(
   settings: SettingsPayload | null,
-  client: NanobotClient,
+  client: BaboClient,
   applyPayload: ApplySettingsPayload,
 ) {
   const { t } = useTranslation();

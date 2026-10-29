@@ -27,10 +27,10 @@ import { Sample, StatePicker, type ComponentExample } from "./example";
 import { useGalleryTranslation } from "./i18n";
 
 const cliApp: CliAppInfo = {
-  name: "nanobot", display_name: "Nanobot", category: "assistant", description: "Local assistant",
-  requires: "Python", source: "local", entry_point: "nanobot", install_supported: true,
+  name: "babo", display_name: "Babo", category: "assistant", description: "Local assistant",
+  requires: "Python", source: "local", entry_point: "babo", install_supported: true,
   installed: true, available: true, status: "installed", skill_installed: true,
-  logo_url: "/brand/nanobot_icon_512.png", brand_color: "var(--inline-token-highlight)",
+  logo_url: "/brand/babo_icon_512.png", brand_color: "var(--inline-token-highlight)",
 };
 const mcpPreset: McpPresetInfo = {
   name: "files", display_name: "Workspace files", category: "files", description: "Workspace files",
@@ -114,7 +114,7 @@ function SessionLinksPreview({ children }: { children: ReactNode }) {
 
 function UserTextPreview() {
   const { t } = useGalleryTranslation();
-  const [text, setText] = useState("用 $review 检查 @nanobot 的修改，参考 @design 和 @files。");
+  const [text, setText] = useState("用 $review 检查 @babo 的修改，参考 @design 和 @files。");
   return <SessionLinksPreview>
     <label className="grid gap-2 text-xs text-muted-foreground">{t("previews.userText.message")}
       <Textarea value={text} onChange={(event) => setText(event.target.value)} />
@@ -128,7 +128,7 @@ function CapabilityTokensPreview() {
   const { t } = useGalleryTranslation();
   const [variant, setVariant] = useState<"message" | "composer">("message");
   const segments: Array<Exclude<CapabilityMentionSegment, { kind: "text" }>> = [
-    { kind: "cli", text: "@nanobot", app: cliApp },
+    { kind: "cli", text: "@babo", app: cliApp },
     { kind: "mcp", text: "@files", preset: mcpPreset },
     { kind: "session", text: "@design", mention: sessionMention },
   ];
@@ -165,7 +165,7 @@ function FileActionsPreview() {
   return <>
     <StatePicker label={t("previews.fileActions.scope")} value={scope} options={["workspace", "outside", "unresolved"]} onChange={setScope} />
     <FileActions path={path} metadata={scope === "unresolved" ? undefined : {
-      path: scope === "workspace" ? "D:/workspace/nanobot/src/app.tsx" : "D:/documents/report.tsx",
+      path: scope === "workspace" ? "D:/workspace/babo/src/app.tsx" : "D:/documents/report.tsx",
       relative_path: scope === "workspace" ? path : null,
     }}><Button variant="outline">{path}</Button></FileActions>
     <p className="mt-4 text-xs text-muted-foreground">{t("previews.fileActions.hint")}</p>
@@ -227,7 +227,7 @@ function CompatibilityPreview() {
   const [open, setOpen] = useState(false);
   const profile: RemoteProfile = {
     id: "gallery-host", name: "开发主机", host: "dev.example", port: 22, ssh_config: "", identity_file: "",
-    config_path: "~/.nanobot/config.json", runtime_user: "developer", connected: false,
+    config_path: "~/.babo/config.json", runtime_user: "developer", connected: false,
     compatibility: status === "unchecked" ? undefined : {
       status, client_version: "0.3.0", host_version: status === "update_host" ? "0.2.0" : status === "update_client" ? "0.4.0" : "0.3.0",
     },
@@ -255,7 +255,7 @@ export const shellExamples: ComponentExample[] = [
     code: '<UserMessageText text={text} cliApps={apps} mcpPresets={presets} sessionMentions={sessions} />' },
   { title: "previews.capabilityTokens.title", files: ["CliAppMentionText"], Preview: CapabilityTokensPreview,
     description: "previews.capabilityTokens.description", options: "previews.capabilityTokens.options",
-    code: '<CapabilityMentionToken segment={{ kind: "cli", text: "@nanobot", app }} variant="message" />' },
+    code: '<CapabilityMentionToken segment={{ kind: "cli", text: "@babo", app }} variant="message" />' },
   { title: "previews.productIcons.title", files: ["icons/product-icons"], Preview: ProductIconsPreview,
     description: "previews.productIcons.description", options: "previews.productIcons.options",
     code: '<ConversationIcon size={20} />\n<SettingsIcon className="text-muted-foreground" />' },

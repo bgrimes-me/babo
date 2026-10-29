@@ -4,15 +4,15 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from nanobot.cli.commands import app
-from nanobot.cli.runtime_config import _load_runtime_config
+from babo.cli.commands import app
+from babo.cli.runtime_config import _load_runtime_config
 
 runner = CliRunner()
 
 
 @pytest.fixture(autouse=True)
 def isolate_config_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("nanobot.config.loader._current_config_path", None)
+    monkeypatch.setattr("babo.config.loader._current_config_path", None)
 
 
 @pytest.mark.parametrize(
@@ -30,7 +30,7 @@ def test_startup_rejects_nested_sessions_before_writing_files(
     tmp_path: Path, args: list[str], override: bool
 ) -> None:
     workspace = tmp_path / "work [personal]"
-    config_path = workspace / "_nanobot" / "config.json"
+    config_path = workspace / "_babo" / "config.json"
     config_path.parent.mkdir(parents=True)
     configured_workspace = tmp_path / "safe-workspace" if override else workspace
     config_path.write_text(

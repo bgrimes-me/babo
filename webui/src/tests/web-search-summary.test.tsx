@@ -10,7 +10,7 @@ afterEach(cleanup);
 
 it.each(entrypoints)("keeps multiline search summaries single-line with full hover details (%s)", async (entrypoint) => {
   const domain = "research-and-development.platform.example.com";
-  const query = "nanobot release notes\nweb search activity regression coverage";
+  const query = "babo release notes\nweb search activity regression coverage";
   const args = { query: `site:${domain} ${query}` };
   const line = `web_search(${JSON.stringify(args)})`;
   const label = `Searched ${domain}`;

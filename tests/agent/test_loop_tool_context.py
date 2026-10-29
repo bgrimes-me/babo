@@ -5,21 +5,21 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.context import TranscriptInput
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import (
+from babo.agent.context import TranscriptInput
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import (
     RequestContext,
     bind_request_context,
     current_request_context,
     reset_request_context,
 )
-from nanobot.agent.tools.image_generation import ImageGenerationTool, register_image_generation_tool
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.bus.events import InboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.config.schema import Config
-from nanobot.providers.base import LLMResponse, ToolCallRequest
-from nanobot.session.turn_continuation import INTERNAL_CONTINUATION_META
+from babo.agent.tools.image_generation import ImageGenerationTool, register_image_generation_tool
+from babo.agent.tools.registry import ToolRegistry
+from babo.bus.events import InboundMessage
+from babo.bus.queue import MessageBus
+from babo.config.schema import Config
+from babo.providers.base import LLMResponse, ToolCallRequest
+from babo.session.turn_continuation import INTERNAL_CONTINUATION_META
 
 
 class _ContextRecordingTool:

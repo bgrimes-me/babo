@@ -1,4 +1,4 @@
-export const SESSION_DRAG_TYPE = "application/x-nanobot-session-key";
+export const SESSION_DRAG_TYPE = "application/x-babo-session-key";
 
 let activeSessionKey: string | null = null;
 

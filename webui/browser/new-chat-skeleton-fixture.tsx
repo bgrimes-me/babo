@@ -18,7 +18,7 @@ export function NewChatSkeletonFixture() {
     {params.has("loading") ? <StartupSkeleton sidebarExpanded={sidebarExpanded} sidebarWidth={sidebarWidth} /> : <>
       <aside className="hidden shrink-0 bg-sidebar lg:block" style={{ width: sidebarExpanded ? sidebarWidth : 56 }} />
       <main className="thread-workspace relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <ThreadShell session={null} title="nanobot" onToggleSidebar={noop} theme={dark ? "dark" : "light"}
+        <ThreadShell session={null} title="babo" onToggleSidebar={noop} theme={dark ? "dark" : "light"}
           hideSidebarToggleForHostChrome onTemporaryChatEnabledChange={noop} settingsSnapshot={settings}
           workspaceScope={workspaceScope}
           workspaceDefaultScope={{ project_path: "/workspace", access_mode: "full" }}

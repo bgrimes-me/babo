@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { CliRenderEvents, TextareaRenderable, TextRenderable, rgbToHex } from "@opentui/core"
 import { MockTreeSitterClient, createTestRenderer, type TestRendererSetup } from "@opentui/core/testing"
-import { NanobotTui } from "./app"
+import { BaboTui } from "./app"
 import type { RecoveryState, SlashCommand, WorkspaceScopePayload } from "../client"
 import { options, client, mount, waitUntil, occurrences, contrastRatio } from "./test-support"
 
-describe("NanobotTui session navigation", () => {
+describe("BaboTui session navigation", () => {
   let setup: TestRendererSetup | undefined
 
   afterEach(() => {
@@ -39,9 +39,9 @@ describe("NanobotTui session navigation", () => {
     const attached: string[] = []
     const newChats: string[] = []
     const transport = client([], attached, newChats)
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "secret" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "secret" },
       transport,
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -116,9 +116,9 @@ describe("NanobotTui session navigation", () => {
         activeChatId = chatId
       },
     }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "secret" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "secret" },
       transport,
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -188,7 +188,7 @@ describe("NanobotTui session navigation", () => {
       if (url.endsWith("/webui/bootstrap")) {
         bootstrapRequests += 1
         return new Response(JSON.stringify({
-          ws_url: "ws://nanobot.test/ws",
+          ws_url: "ws://babo.test/ws",
           token: "fresh-websocket-token",
           api_token: "fresh-api-token",
         }))
@@ -204,13 +204,13 @@ describe("NanobotTui session navigation", () => {
       }
       return new Response("{}")
     }) as typeof fetch
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       {
         ...options,
-        bootstrapUrl: "http://nanobot.test/webui/bootstrap",
+        bootstrapUrl: "http://babo.test/webui/bootstrap",
         bootstrapSecret: "bootstrap-secret",
-        apiUrl: "http://nanobot.test",
+        apiUrl: "http://babo.test",
         apiToken: "expired-api-token",
       },
       client(),
@@ -267,7 +267,7 @@ describe("NanobotTui session navigation", () => {
 
   test("returns a default-following chat to the canonical default preset", async () => {
     setup = await createRenderer({ width: 96, height: 20, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       { ...options, model: "openai/gpt-5.6", modelPreset: "Codex" },
       client(),
@@ -299,9 +299,9 @@ describe("NanobotTui session navigation", () => {
       })))
     }) as typeof fetch
     const sent: string[] = []
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "secret" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "secret" },
       client(sent),
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -364,9 +364,9 @@ describe("NanobotTui session navigation", () => {
       return new Response(JSON.stringify({ sessions: [] }))
     }) as typeof fetch
     setup = await createRenderer({ width: 96, height: 24, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "secret" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "secret" },
       client(sent, [], [], [], [], scopes),
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -429,7 +429,7 @@ describe("NanobotTui session navigation", () => {
       expect(ui.composer.focused).toBe(true)
 
       expect(scopes).toEqual([{
-        project_path: "/tmp/nanobot-workspace",
+        project_path: "/tmp/babo-workspace",
         access_mode: "full",
         restrict_to_workspace: false,
       }])
@@ -485,9 +485,9 @@ describe("NanobotTui session navigation", () => {
       return new Response(JSON.stringify({ sessions: [] }))
     }) as typeof fetch
     setup = await createRenderer({ width: 96, height: 24, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "secret" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "secret" },
       client(sent),
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -543,9 +543,9 @@ describe("NanobotTui session navigation", () => {
     }) as typeof fetch
     const attached: string[] = []
     setup = await createRenderer({ width: 96, height: 24, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "secret" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "secret" },
       client([], attached),
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -595,7 +595,7 @@ describe("NanobotTui session navigation", () => {
       }
       return new Promise((resolve) => { deferredResolve = resolve })
     }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       recoveryClient,
@@ -766,9 +766,9 @@ describe("NanobotTui session navigation", () => {
       })
     }) as typeof fetch
     const sent: string[] = []
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "secret" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "secret" },
       client(sent),
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -812,9 +812,9 @@ describe("NanobotTui session navigation", () => {
         resolveFetch = resolve
       })
     }) as typeof fetch
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "secret" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "secret" },
       client(),
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -862,9 +862,9 @@ describe("NanobotTui session navigation", () => {
         archived_summary_at: "2026-08-13T10:00:00Z",
       })))
     }) as typeof fetch
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
-      { ...options, apiUrl: "http://nanobot.test", apiToken: "secret" },
+      { ...options, apiUrl: "http://babo.test", apiToken: "secret" },
       client(),
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -890,7 +890,7 @@ describe("NanobotTui session navigation", () => {
       await setup.renderOnce()
       const compact = setup.captureCharFrame()
       expect(compact).not.toContain("The earlier turns agreed")
-      expect(occurrences(compact, "Ask nanobot anything")).toBe(1)
+      expect(occurrences(compact, "Ask babo anything")).toBe(1)
 
       setup.mockInput.pressEscape()
       await waitUntil(() => !ui.contextPanel.visible)
@@ -964,7 +964,7 @@ describe("NanobotTui session navigation", () => {
     expect(frame).toContain("1/2  src/first.ts  +2 -1")
     expect(frame).toContain("const newValue = 2")
     expect(frame).toContain("Diff truncated by the gateway")
-    expect(frame).not.toContain("Ask nanobot anything")
+    expect(frame).not.toContain("Ask babo anything")
 
     const rows = frame.split("\n")
     const y = rows.findIndex((row) => row.includes("const newValue = 2"))
@@ -1001,6 +1001,6 @@ describe("NanobotTui session navigation", () => {
     setup.mockInput.pressEscape()
     await waitUntil(() => !ui.diffViewer.visible)
     await setup.flush()
-    expect(setup.captureCharFrame()).toContain("Ask nanobot anything")
+    expect(setup.captureCharFrame()).toContain("Ask babo anything")
   })
 })

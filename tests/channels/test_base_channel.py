@@ -2,9 +2,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from nanobot.bus.events import OutboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.channels.base import BaseChannel
+from babo.bus.events import OutboundMessage
+from babo.bus.queue import MessageBus
+from babo.channels.base import BaseChannel
 
 
 class _DummyChannel(BaseChannel):
@@ -60,7 +60,7 @@ def test_is_allowed_star_allows_all() -> None:
 def test_is_allowed_pairing_fallback(monkeypatch) -> None:
     channel = _DummyChannel({"allowFrom": []}, MessageBus())
     monkeypatch.setattr(
-        "nanobot.channels.base.is_approved", lambda _ch, sid: sid == "paired"
+        "babo.channels.base.is_approved", lambda _ch, sid: sid == "paired"
     )
     assert channel.is_allowed("paired") is True
     assert channel.is_allowed("unknown") is False
@@ -70,7 +70,7 @@ def test_is_allowed_pairing_fallback(monkeypatch) -> None:
 async def test_handle_message_dm_sends_pairing_code(monkeypatch) -> None:
     channel = _DummyChannel({"allowFrom": []}, MessageBus())
     monkeypatch.setattr(
-        "nanobot.channels.base.generate_code", lambda _ch, sid, **_kwargs: "ABCD-EFGH"
+        "babo.channels.base.generate_code", lambda _ch, sid, **_kwargs: "ABCD-EFGH"
     )
 
     await channel._handle_message(
@@ -96,7 +96,7 @@ async def test_dm_during_transient_store_failure_keeps_approvals(
     import builtins
     from pathlib import Path
 
-    from nanobot.pairing import store
+    from babo.pairing import store
 
     path = tmp_path / "pairing.json"
     monkeypatch.setattr(store, "_store_path", lambda: path)
@@ -172,8 +172,8 @@ async def test_handle_message_rejects_when_authorization_id_is_not_allowed() -> 
 
 @pytest.mark.asyncio
 async def test_dm_publishes_pairing_changes_without_a_file_watcher(monkeypatch, tmp_path) -> None:
-    from nanobot.pairing import store
-    from nanobot.pairing.events import PairingChanged
+    from babo.pairing import store
+    from babo.pairing.events import PairingChanged
 
     monkeypatch.setattr(store, "_store_path", lambda: tmp_path / "pairing.json")
     bus = MessageBus()

@@ -1,6 +1,6 @@
 import type { ChatSummary, WorkspaceScopePayload } from "./types";
 
-const PREFIX = "nanobot.reload.v1.";
+const PREFIX = "babo.reload.v1.";
 const MAX_CHARS = 512 * 1024;
 let scope: string | null = null;
 

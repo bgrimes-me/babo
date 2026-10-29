@@ -20,14 +20,14 @@ import { channelValidationMessage } from "@/components/settings/channels/validat
 import { useLogoFallback } from "@/hooks/useLogoFallback";
 import { normalizeLocale } from "@/i18n/config";
 import { logoFallbackUrls } from "@/lib/provider-brand";
-import type { ChannelRuntimeStatus, NanobotFeatureInfo } from "@/lib/types";
+import type { ChannelRuntimeStatus, BaboFeatureInfo } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const CHANNEL_SETUP_PANEL_CLASS_NAME =
   "min-h-full rounded-panel bg-settings-surface p-6";
 
 export function channelSetup(
-  feature: NanobotFeatureInfo,
+  feature: BaboFeatureInfo,
   locale = "en",
 ): ChannelSetupPresentation {
   const definition = channelUiPresentation(feature.name, feature.webui)?.setup;
@@ -147,7 +147,7 @@ export function ChannelLogo({
   feature,
   showBrandLogos,
 }: {
-  feature: NanobotFeatureInfo;
+  feature: BaboFeatureInfo;
   showBrandLogos: boolean;
 }) {
   const presentation = channelUiPresentation(feature.name, feature.webui)
@@ -199,28 +199,28 @@ export function ChannelLogo({
   );
 }
 
-function channelDisplayName(feature: NanobotFeatureInfo): string {
+function channelDisplayName(feature: BaboFeatureInfo): string {
   return channelUiPresentation(feature.name, feature.webui)?.displayName ?? feature.display_name;
 }
 
 export function localizedChannelDisplayName(
-  feature: NanobotFeatureInfo,
+  feature: BaboFeatureInfo,
   t: ReturnType<typeof useTranslation>["t"],
 ): string {
   const fallback = channelDisplayName(feature);
   return channelTranslator(t, channelUiOwner(feature.name))("displayName", fallback);
 }
 
-export function channelIsRunning(feature: NanobotFeatureInfo): boolean {
+export function channelIsRunning(feature: BaboFeatureInfo): boolean {
   return feature.runtime_status === "running";
 }
 
-export function channelToggleChecked(feature: NanobotFeatureInfo): boolean {
+export function channelToggleChecked(feature: BaboFeatureInfo): boolean {
   return feature.runtime_status === "running" || feature.runtime_status === "starting";
 }
 
 export function channelStatusLabel(
-  feature: NanobotFeatureInfo,
+  feature: BaboFeatureInfo,
   tx: (key: string, fallback: string) => string,
 ): string {
   if (feature.runtime_status === "failed") {
@@ -232,7 +232,7 @@ export function channelStatusLabel(
   if (channelIsRunning(feature)) return tx("settings.values.on", "On");
   if (feature.enabled) return tx("settings.channels.runtimeStopped", "Not running");
   if (feature.configured === false) return tx("settings.channels.needsConfig", "Needs setup");
-  if (feature.configured === true) return tx("settings.nanobotFeatures.ready", "Ready");
+  if (feature.configured === true) return tx("settings.baboFeatures.ready", "Ready");
   return tx("settings.values.off", "Off");
 }
 

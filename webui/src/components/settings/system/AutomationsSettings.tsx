@@ -44,7 +44,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { displayTitle } from "@/lib/chat-groups";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { fmtDateTime, relativeTime } from "@/lib/format-time";
-import type { SendAttachment, SendOptions } from "@/hooks/useNanobotStream";
+import type { SendAttachment, SendOptions } from "@/hooks/useBaboStream";
 import type {
   AutomationsPayload,
   AutomationUpdatePayload,
@@ -245,7 +245,7 @@ export function AutomationsSettings({
               inputAriaLabel={tx("settings.automations.createInput", "Describe an automation")}
               placeholder={tx(
                 "settings.automations.createPrompt",
-                "What would you like nanobot to automate?",
+                "What would you like babo to automate?",
               )}
               variant="thread"
               compactWhenIdle

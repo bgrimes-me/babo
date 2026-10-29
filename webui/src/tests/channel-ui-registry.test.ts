@@ -44,7 +44,7 @@ describe("channel UI contributions", () => {
       assert(Array.isArray(config.content));
       // Keep production channel globs and exclusions without rebuilding unrelated app/test CSS.
       const content = config.content.filter((entry) => typeof entry === "string"
-        && (entry.includes("../nanobot/channels/") || entry.startsWith("!")));
+        && (entry.includes("../babo/channels/") || entry.startsWith("!")));
       const result = await postcss([tailwindcss({ ...config, content })]).process("@tailwind utilities;", { from: undefined });
 
       // Linear's connecting indicator uses a channel-only arbitrary color.

@@ -15,9 +15,9 @@ import os
 import httpx
 import pytest
 
-from nanobot.baton.config import BatonModelConfig
-from nanobot.baton.model_client import BatonModelClient
-from nanobot.baton.schemas import CHECKPOINT_SCHEMA, parse_reply
+from babo.baton.config import BatonModelConfig
+from babo.baton.model_client import BatonModelClient
+from babo.baton.schemas import CHECKPOINT_SCHEMA, parse_reply
 
 URL = os.environ.get("BATON_REAL_MODEL_URL", "").rstrip("/")
 

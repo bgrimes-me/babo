@@ -135,7 +135,7 @@ export function AboutSettings({ settings, onRequestUpdate: requestUpdate }: { se
   const currentVersion = settings.version?.current;
   const currentCommit = settings.version?.commit;
   const environment = settings.environment;
-  const reportIssueUrl = new URL("https://github.com/HKUDS/nanobot/issues/new");
+  const reportIssueUrl = new URL("https://github.com/bgrimes-me/babo/issues/new");
   reportIssueUrl.searchParams.set("template", "bug_report.yml");
   const reportedVersion = [currentVersion, currentCommit && `(commit ${currentCommit})`]
     .filter(Boolean).join(" ");

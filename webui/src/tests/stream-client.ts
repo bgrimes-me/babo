@@ -1,4 +1,4 @@
-import { NanobotClient } from "@/lib/nanobot-client";
+import { BaboClient } from "@/lib/babo-client";
 import type { InboundEvent } from "@/lib/types";
 
 /** Real lifecycle and dispatch with an in-memory transport. */
@@ -10,7 +10,7 @@ export function createStreamClient() {
     send() {},
     close() {},
   };
-  const client = new NanobotClient({
+  const client = new BaboClient({
     url: "ws://test", reconnect: false,
     socketFactory: () => socket as unknown as WebSocket,
   });

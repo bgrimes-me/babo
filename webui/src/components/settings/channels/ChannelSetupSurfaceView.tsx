@@ -10,12 +10,12 @@ import { ChannelRuntimeError } from "./ChannelIdentity";
 import { ChannelProviderPresets, ChannelSetupActions } from "./ChannelSetupParts";
 import { ChannelValidationProgress } from "./ChannelValidationProgress";
 import { Button } from "@/components/ui/button";
-import type { ChannelValidationPayload, NanobotFeatureInfo } from "@/lib/types";
+import type { ChannelValidationPayload, BaboFeatureInfo } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export interface ChannelSetupSurfaceViewProps {
   header: ReactNode;
-  feature: NanobotFeatureInfo;
+  feature: BaboFeatureInfo;
   setup: ChannelSetupPresentation;
   primaryFields: ChannelConfigField[];
   advancedFields: ChannelConfigField[];

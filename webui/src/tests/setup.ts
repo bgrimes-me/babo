@@ -81,6 +81,6 @@ beforeAll(async () => {
 beforeEach(async () => {
   await i18n.changeLanguage("en");
   document.documentElement.lang = "en";
-  document.title = "nanobot";
-  localStorage.setItem("nanobot.locale", "en");
+  document.title = "babo";
+  localStorage.setItem("babo.locale", "en");
 });

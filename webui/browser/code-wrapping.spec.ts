@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("numbered Markdown code keeps mixed text flowing after stream completion", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.addInitScript(() => localStorage.setItem("nanobot.locale", "en"));
+  await page.addInitScript(() => localStorage.setItem("babo.locale", "en"));
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/browser/fixture.html?case=code-wrapping");
   const source = await page.getByRole("textbox", { name: "Code source" }).inputValue();

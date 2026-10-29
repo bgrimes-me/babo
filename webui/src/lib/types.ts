@@ -1097,7 +1097,7 @@ export interface CliAppsPayload {
   };
 }
 
-export interface NanobotFeatureInfo {
+export interface BaboFeatureInfo {
   name: string;
   display_name: string;
   capabilities?: string[];
@@ -1112,7 +1112,7 @@ export interface NanobotFeatureInfo {
   config_values?: Record<string, string>;
   configured_fields?: string[];
   setup?: ChannelSetupContract;
-  instances?: NanobotChannelInstanceInfo[];
+  instances?: BaboChannelInstanceInfo[];
     installed: boolean;
     requires_dependencies?: boolean;
     ready: boolean;
@@ -1143,7 +1143,7 @@ interface ChannelSetupContractRequirement {
   alternatives: string[][];
 }
 
-export interface NanobotChannelInstanceInfo {
+export interface BaboChannelInstanceInfo {
   id: string;
   name: string;
   display_name?: string;
@@ -1159,8 +1159,8 @@ export interface NanobotChannelInstanceInfo {
 
 export type ChannelRuntimeStatus = "running" | "starting" | "failed" | "stopped" | string;
 
-export interface NanobotFeaturesPayload {
-  features: NanobotFeatureInfo[];
+export interface BaboFeaturesPayload {
+  features: BaboFeatureInfo[];
   enabled_count: number;
   requires_restart?: boolean;
   last_action?: {
@@ -1338,14 +1338,14 @@ export interface ChannelConnectPayload {
   interval_ms?: number;
   expires_at_ms?: number;
   retrying?: boolean;
-  nanobot_features?: NanobotFeaturesPayload;
+  babo_features?: BaboFeaturesPayload;
 }
 
 export interface ChannelConfigurePayload {
   name: string;
   saved: boolean;
   saved_keys?: string[];
-  nanobot_features?: NanobotFeaturesPayload;
+  babo_features?: BaboFeaturesPayload;
 }
 
 export interface ModelConfigurationCreate {

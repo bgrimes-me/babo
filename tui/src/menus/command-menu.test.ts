@@ -114,7 +114,7 @@ describe("CommandMenu", () => {
     menu.setCommands(commands, [{
       command: "/help",
       title: "Local help",
-      description: "Must not replace nanobot help",
+      description: "Must not replace babo help",
       action: "sessions",
     }, {
       command: "/sessions",

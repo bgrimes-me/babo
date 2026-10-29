@@ -1,4 +1,4 @@
-# Working on nanobot
+# Working on babo
 
 The Python gateway owns agent execution, sessions, tools, memory, and security policy. WebUI and TUI share that runtime; keep execution and policy out of the clients.
 

@@ -1,24 +1,24 @@
-# Connect Telegram to nanobot
+# Connect Telegram to babo
 
-This guide connects one Telegram bot to nanobot. Messages sent to that bot use your normal nanobot model, tools, memory, and workspace.
+This guide connects one Telegram bot to babo. Messages sent to that bot use your normal babo model, tools, memory, and workspace.
 
 ## What this guide builds
 
 - a Telegram bot created through BotFather
-- the `telegram` channel enabled in nanobot
-- a running nanobot gateway
+- the `telegram` channel enabled in babo
+- a running babo gateway
 - one pairing-approved Telegram account
 
 ## Prerequisites
 
-- A normal reply in your existing nanobot WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
+- A normal reply in your existing babo WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
 
 - A Telegram account.
 - A bot token: open Telegram, find `@BotFather`, send `/newbot`, follow its name/username prompts, and copy the returned token. Keep the token private.
 
 ## Continue from your running instance
 
-If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `nanobot webui` command; there is no need to install nanobot again.
+If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `babo webui` command; there is no need to install babo again.
 
 For terminal or server setup, use the manual configuration section below. Reuse the config/home and executable from your working instance. Docker users should use the [container commands](../deployment.md#docker-compose).
 
@@ -43,10 +43,10 @@ Saved tokens and proxy URLs are masked. **Use proxy** applies the shared address
 For a headless installation, install Telegram support:
 
 ```bash
-nanobot plugins enable telegram
+babo plugins enable telegram
 ```
 
-Then merge this snippet into `~/.nanobot/config.json`:
+Then merge this snippet into `~/.babo/config.json`:
 
 ```json
 {
@@ -73,7 +73,7 @@ Telegram uses long polling by default. Webhook mode is available for public HTTP
 
 In the WebUI, follow any restart prompt and keep the launcher running for the first test. You do not need to start another gateway. For unattended operation afterward, use [background or service mode](../cli-reference.md#gateway).
 
-For manual config changes, restart the existing gateway through its owning terminal, `nanobot gateway restart` for background mode, or its service/container supervisor. If none is running, start `nanobot gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
+For manual config changes, restart the existing gateway through its owning terminal, `babo gateway restart` for background mode, or its service/container supervisor. If none is running, start `babo gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
 
 ## Test a message
 
@@ -91,7 +91,7 @@ The bot should reply with a pairing code. Return to the WebUI pairing prompt and
 In a separate local terminal, using the same instance:
 
 ```bash
-nanobot agent -m "/pairing approve ABCD-EFGH"
+babo agent -m "/pairing approve ABCD-EFGH"
 ```
 
 Replace the example code with your actual code.
@@ -109,7 +109,7 @@ Send the message again after approval. Confirm that your private chat now receiv
 
 ## Troubleshooting
 
-- If the channel is not listed, run `nanobot plugins enable telegram` again in the same Python environment.
+- If the channel is not listed, run `babo plugins enable telegram` again in the same Python environment.
 - If the WebUI shows a saved configuration but the live check cannot reach Telegram, the token is still saved. Confirm the gateway can reach `api.telegram.org`, or configure **Settings → Advanced → Shared proxy** and turn on Telegram's **Use proxy** switch.
 - If Telegram rejects the token, copy the current token from BotFather or regenerate it.
 - If messages do not arrive, check the Telegram runtime status in **Channels** and the logs of the running gateway. Confirm it is enabled and can reach Telegram; do not start a second gateway to diagnose the first.

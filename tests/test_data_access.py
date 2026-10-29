@@ -9,17 +9,17 @@ from uuid import uuid4
 
 import pytest
 
-from nanobot.data_access import (
+from babo.data_access import (
     DataStartupGrant,
     data_access,
     profile_data_access,
     profile_data_paths,
 )
-from nanobot.installation_lock import InstallationBusyError
+from babo.installation_lock import InstallationBusyError
 
 _CHILD = """
 import json, os, sys
-from nanobot.data_access import DataStartupGrant, data_access
+from babo.data_access import DataStartupGrant, data_access
 sys.prefix = sys.argv[1]
 grant = DataStartupGrant(**json.loads(os.environ['TEST_DATA_GRANT'])) if 'TEST_DATA_GRANT' in os.environ else None
 with data_access(sys.argv[4:], updating=sys.argv[2] == 'update', job_id=sys.argv[3] or None, grant=grant) as lease:
@@ -226,7 +226,7 @@ def test_crashed_handoff_keeps_fence_and_child_lease_until_recovery(private_home
         sys.executable, "-c", """
 import json, sys
 from dataclasses import asdict
-from nanobot.data_access import data_access
+from babo.data_access import data_access
 with data_access([sys.argv[1]], job_id=sys.argv[2]) as handoff:
     grant = handoff.grant_startup(sys.argv[3], [sys.argv[1]])
     print(json.dumps(asdict(grant)), flush=True)

@@ -3,13 +3,13 @@ import { useState } from "react";
 import { SettingsView } from "@/components/settings/SettingsView";
 import { RUNTIME_CONFIG_FIELDS } from "@/components/settings/system/runtime-config-fields";
 import { settings } from "@/dev/gallery/settings";
-import { NanobotClient } from "@/lib/nanobot-client";
+import { BaboClient } from "@/lib/babo-client";
 import type { RuntimeConfigValue, SettingsPayload } from "@/lib/types";
 import { ClientProvider } from "@/providers/ClientProvider";
 
 const path = "agents.defaults.session_ttl_minutes";
 const storageKey = "fixture.idle-compaction-minutes";
-const client = new NanobotClient({ url: "ws://127.0.0.1:1", reconnect: false });
+const client = new BaboClient({ url: "ws://127.0.0.1:1", reconnect: false });
 let failNext = false;
 const initial: SettingsPayload = {
   ...settings,
@@ -41,9 +41,9 @@ export function installIdleCompactionApi() {
     if (url.origin !== location.origin || !url.pathname.startsWith("/api/")) return fetch(input, init);
     const bodies: Record<string, unknown> = {
       "/api/settings": persisted,
-      "/api/settings/nanobot-features": { features: [], enabled_count: 0, requires_restart: false },
+      "/api/settings/babo-features": { features: [], enabled_count: 0, requires_restart: false },
       "/api/settings/api-service": { installed: false, running: false, managed: false, host: "127.0.0.1",
-        port: 8900, timeout: 120, endpoint: "http://127.0.0.1:8900/v1", command: "nanobot serve" },
+        port: 8900, timeout: 120, endpoint: "http://127.0.0.1:8900/v1", command: "babo serve" },
     };
     return Response.json(bodies[url.pathname] ?? {});
   };

@@ -1,11 +1,11 @@
 #!/bin/sh
 set -eu
 
-package="nanobot-ai"
+package="babo"
 install_target="$package"
 install_source="PyPI"
 dry_run="0"
-nanobot_python=""
+babo_python=""
 release_wheel=""
 release_sha256=""
 release_kind=""
@@ -23,7 +23,7 @@ fail() {
 }
 
 install_failure_hint() {
-  printf '%s\n' "Error: could not install nanobot from $install_source." >&2
+  printf '%s\n' "Error: could not install babo from $install_source." >&2
   if [ -n "$expected_version" ]; then
     printf '%s\n' "Inspect the original manager error and retry this exact handoff. No setup or other installation was attempted." >&2
     exit 1
@@ -31,10 +31,10 @@ install_failure_hint() {
   printf '%s\n' "If pip mentioned externally-managed-environment, use uv, pipx, or a virtual environment instead of system pip." >&2
   printf '%s\n' "You can also run manually:" >&2
   printf '  %s\n' "uv tool install --force --upgrade $install_target" >&2
-  printf '  %s\n' "$python_bin -m venv ~/.nanobot/venv" >&2
-  printf '  %s\n' "~/.nanobot/venv/bin/python -m pip install --upgrade $install_target" >&2
+  printf '  %s\n' "$python_bin -m venv ~/.babo/venv" >&2
+  printf '  %s\n' "~/.babo/venv/bin/python -m pip install --upgrade $install_target" >&2
   printf '%s\n' "Then start setup with:" >&2
-  printf '  %s\n' "nanobot onboard --wizard" >&2
+  printf '  %s\n' "babo onboard --wizard" >&2
   exit 1
 }
 
@@ -43,7 +43,7 @@ usage() {
 Usage: install.sh [--dry-run] [--wheel PATH --sha256 HASH]
        install.sh [--dry-run] --release VERSION --manifest-sha256 HASH
 
-By default this installs or upgrades nanobot-ai from PyPI.
+By default this installs or upgrades babo from PyPI.
 Use --dry-run to print what would happen without installing or starting setup.
 For a verified release handoff, use --wheel and --sha256 together. Keep that
 downloaded wheel in place; your manager may record it as the installation source.
@@ -106,11 +106,11 @@ select_install_method() {
       existing_count=$((existing_count + 1))
     fi
   fi
-  if [ -n "${NANOBOT_VENV:-}${HOME:-}" ] && [ -f "${NANOBOT_VENV:-${HOME:-}/.nanobot/venv}/pyvenv.cfg" ]; then
+  if [ -n "${BABO_VENV:-}${HOME:-}" ] && [ -f "${BABO_VENV:-${HOME:-}/.babo/venv}/pyvenv.cfg" ]; then
     install_method="managed"
     existing_count=$((existing_count + 1))
   fi
-  [ "$existing_count" -le 1 ] || fail "Multiple nanobot installations were found. Use the intended environment's package manager; this installer changed none of them."
+  [ "$existing_count" -le 1 ] || fail "Multiple babo installations were found. Use the intended environment's package manager; this installer changed none of them."
   if [ -z "$install_method" ]; then
     install_method="managed"
   fi
@@ -129,38 +129,38 @@ ensure_pip() {
 select_installed_python() {
   # Keep the venv interpreter path (resolving its symlink would select base Python).
   # Isolated mode also prevents a checkout/PYTHONPATH from shadowing the new package.
-  nanobot_python="$("$1" -I - "$2" "$expected_version" <<'PY'
+  babo_python="$("$1" -I - "$2" "$expected_version" <<'PY'
 import sys
 from importlib.metadata import distribution
 from pathlib import Path
 
-import nanobot
+import babo
 
 prefix = Path(sys.prefix).resolve()
-package = Path(nanobot.__file__).resolve()
+package = Path(babo.__file__).resolve()
 expected = sys.argv[1]
 if sys.prefix == sys.base_prefix or (expected and prefix != Path(expected).resolve()):
     raise SystemExit("The installed interpreter does not belong to the expected virtual environment")
-if not package.is_relative_to(prefix) or package != Path(distribution("nanobot-ai").locate_file("nanobot/__init__.py")).resolve():
-    raise SystemExit("nanobot imports from outside the installed package")
-if sys.argv[2] and distribution("nanobot-ai").version != sys.argv[2]:
+if not package.is_relative_to(prefix) or package != Path(distribution("babo").locate_file("babo/__init__.py")).resolve():
+    raise SystemExit("babo imports from outside the installed package")
+if sys.argv[2] and distribution("babo").version != sys.argv[2]:
     raise SystemExit("The requested version was not installed. Check manager pins or locks; no setup was started.")
 print(Path(sys.executable).absolute())
 PY
-  )" || fail "The installed nanobot environment could not be verified. No setup or other installation was attempted."
+  )" || fail "The installed babo environment could not be verified. No setup or other installation was attempted."
 }
 
-run_nanobot() {
-  "$nanobot_python" -I -m nanobot "$@"
+run_babo() {
+  "$babo_python" -I -m babo "$@"
 }
 
-nanobot_try_command() {
-  "$python_bin" -I -c 'import shlex, sys; print(shlex.quote(sys.argv[1]) + " -I -m nanobot")' "$nanobot_python"
+babo_try_command() {
+  "$python_bin" -I -c 'import shlex, sys; print(shlex.quote(sys.argv[1]) + " -I -m babo")' "$babo_python"
 }
 
-is_fresh_nanobot_install() {
+is_fresh_babo_install() {
   [ -n "${HOME:-}" ] || return 1
-  [ ! -e "$HOME/.nanobot/config.json" ]
+  [ ! -e "$HOME/.babo/config.json" ]
 }
 
 has_browser_session() {
@@ -190,22 +190,22 @@ install_with_active_python() {
 }
 
 install_with_uv() {
-  info "Installing or upgrading nanobot from $install_source with uv tool..."
+  info "Installing or upgrading babo from $install_source with uv tool..."
   tool_dir="$(uv tool dir)" || fail "Could not locate the uv tools directory"
   [ -n "$tool_dir" ] || fail "uv returned an empty tools directory"
   if [ -f "$tool_dir/$package/uv-receipt.toml" ]; then
-    uv tool upgrade "$install_target" || fail "uv could not upgrade nanobot. Resolve the error above and retry; no other installation was attempted."
+    uv tool upgrade "$install_target" || fail "uv could not upgrade babo. Resolve the error above and retry; no other installation was attempted."
   elif [ -e "$tool_dir/$package" ]; then
     fail "The uv environment exists without its installation record. Repair it with uv before rerunning this installer."
   else
     uv tool install --python "$python_bin" "$install_target" ||
-      fail "uv could not install nanobot. Resolve the error above and retry; no other installation was attempted."
+      fail "uv could not install babo. Resolve the error above and retry; no other installation was attempted."
   fi
   select_installed_python "$tool_dir/$package/bin/python" "$tool_dir/$package"
 }
 
 install_with_pipx() {
-  info "Installing or upgrading nanobot from $install_source with pipx..."
+  info "Installing or upgrading babo from $install_source with pipx..."
   tool_dir="$(pipx environment --value PIPX_LOCAL_VENVS)" || fail "Could not locate the pipx environments directory"
   [ -n "$tool_dir" ] || fail "pipx returned an empty environments directory"
   if [ -f "$tool_dir/$package/pipx_metadata.json" ]; then
@@ -222,7 +222,7 @@ try:
         raise ValueError
     record = json.loads(path.read_text(encoding="utf-8"))
     main = record["main_package"]
-    name = r"(?i)nanobot[-_.]ai(?:\[[a-z0-9_., -]+\])?"
+    name = r"(?i)babo(?:\[[a-z0-9_., -]+\])?"
     spec = main["package_or_url"]
     # An explicit wheel may replace an earlier wheel source, but not discard
     # registry constraints, lock workflows or recorded installer options.
@@ -233,47 +233,47 @@ except (OSError, ValueError, KeyError, TypeError):
     raise SystemExit("Cannot safely reuse pipx installation settings; inspect the original requirement and options.") from None
 PY
     if [ -n "$expected_version" ]; then
-      pipx install --skip-maintenance --upgrade "$install_target" || fail "pipx could not upgrade nanobot. Resolve the error above and retry; no other installation was attempted."
+      pipx install --skip-maintenance --upgrade "$install_target" || fail "pipx could not upgrade babo. Resolve the error above and retry; no other installation was attempted."
     else
-      pipx upgrade "$package" || fail "pipx could not upgrade nanobot. Resolve the error above and retry; no other installation was attempted."
+      pipx upgrade "$package" || fail "pipx could not upgrade babo. Resolve the error above and retry; no other installation was attempted."
     fi
   elif [ -e "$tool_dir/$package" ]; then
     fail "The pipx environment exists without its installation record. Repair it with pipx before rerunning this installer."
   else
     pipx install --python "$python_bin" "$install_target" ||
-      fail "pipx could not install nanobot. Resolve the error above and retry; no other installation was attempted."
+      fail "pipx could not install babo. Resolve the error above and retry; no other installation was attempted."
   fi
   select_installed_python "$tool_dir/$package/bin/python" "$tool_dir/$package"
 }
 
 write_managed_wrapper() {
-  bin_dir="${NANOBOT_BIN_DIR:-$HOME/.local/bin}"
-  wrapper="$bin_dir/nanobot"
+  bin_dir="${BABO_BIN_DIR:-$HOME/.local/bin}"
+  wrapper="$bin_dir/babo"
   mkdir -p "$bin_dir" || return 0
 
-  if [ -e "$wrapper" ] && ! grep -q "Generated by nanobot installer" "$wrapper" 2>/dev/null; then
+  if [ -e "$wrapper" ] && ! grep -q "Generated by babo installer" "$wrapper" 2>/dev/null; then
     info "Not updating $wrapper because it already exists."
     return 0
   fi
 
-  nanobot_command="$(nanobot_try_command)"
+  babo_command="$(babo_try_command)"
   cat > "$wrapper" <<EOF
 #!/bin/sh
-# Generated by nanobot installer.
-exec $nanobot_command "\$@"
+# Generated by babo installer.
+exec $babo_command "\$@"
 EOF
   chmod +x "$wrapper" || return 0
 
-  if ! command -v nanobot >/dev/null 2>&1; then
-    info "Installed a nanobot launcher at $wrapper."
-    info "Add $bin_dir to PATH to run nanobot directly."
+  if ! command -v babo >/dev/null 2>&1; then
+    info "Installed a babo launcher at $wrapper."
+    info "Add $bin_dir to PATH to run babo directly."
   fi
 }
 
 install_with_managed_venv() {
   [ -n "${HOME:-}" ] || fail "HOME is not set; cannot create a managed virtual environment"
 
-  venv_dir="${NANOBOT_VENV:-$HOME/.nanobot/venv}"
+  venv_dir="${BABO_VENV:-$HOME/.babo/venv}"
   venv_python="$venv_dir/bin/python"
   if [ ! -x "$venv_python" ]; then
     info "Creating a dedicated virtual environment at $venv_dir..."
@@ -287,8 +287,8 @@ prefix = Path(sys.argv[1]).resolve()
 if any((prefix / name).exists() for name in ('uv-receipt.toml', 'pipx_metadata.json')):
     raise SystemExit('This environment belongs to another package manager.')
 prefix.mkdir(parents=True, exist_ok=True)
-path = prefix / 'nanobot-install.json'
-record = {'schema_version': 1, 'owner': 'nanobot-installer', 'environment': str(prefix), 'extras': []}
+path = prefix / 'babo-install.json'
+record = {'schema_version': 1, 'owner': 'babo-installer', 'environment': str(prefix), 'extras': []}
 if path.is_symlink():
     raise SystemExit('The installation selection is invalid; no receipt was replaced.')
 if path.exists():
@@ -305,12 +305,12 @@ PY
     "$python_bin" -m venv "$venv_dir" || return 1
   fi
 
-  "$venv_python" - <<'PY' >/dev/null 2>&1 || fail "The managed venv uses Python older than 3.11. Remove it or set NANOBOT_VENV to a new path."
+  "$venv_python" - <<'PY' >/dev/null 2>&1 || fail "The managed venv uses Python older than 3.11. Remove it or set BABO_VENV to a new path."
 import sys
 raise SystemExit(0 if sys.version_info >= (3, 11) else 1)
 PY
 
-  info "Installing or upgrading nanobot from $install_source in $venv_dir..."
+  info "Installing or upgrading babo from $install_source in $venv_dir..."
   ensure_pip "$venv_python" || return 1
   "$venv_python" -m pip install --upgrade "$install_target" || return 1
 
@@ -354,7 +354,7 @@ python_bin="${PYTHON:-}"
 
 if [ -n "$python_bin" ]; then
   command -v "$python_bin" >/dev/null 2>&1 || fail "PYTHON=$python_bin was not found"
-  "$python_bin" - <<'PY' >/dev/null 2>&1 || fail "nanobot requires Python 3.11 or newer"
+  "$python_bin" - <<'PY' >/dev/null 2>&1 || fail "babo requires Python 3.11 or newer"
 import sys
 raise SystemExit(0 if sys.version_info >= (3, 11) else 1)
 PY
@@ -378,13 +378,13 @@ if [ -n "$release_kind" ]; then
     uv) [ ! -x "$uv_dir/$package/bin/python" ] || target_python="$uv_dir/$package/bin/python" ;;
     pipx) [ ! -x "$pipx_dir/$package/bin/python" ] || target_python="$pipx_dir/$package/bin/python" ;;
     managed)
-      candidate_python="${NANOBOT_VENV:-${HOME:-}/.nanobot/venv}/bin/python"
+      candidate_python="${BABO_VENV:-${HOME:-}/.babo/venv}/bin/python"
       [ ! -x "$candidate_python" ] || target_python="$candidate_python"
       ;;
   esac
   owner_record="-"
   if [ "$install_method" = "pipx" ]; then owner_record="$pipx_dir/$package/pipx_metadata.json"; fi
-  wheel_identity="$("$target_python" -I - "$release_wheel" "$release_sha256" "$owner_record" "$release_version" "$manifest_sha256" "${NANOBOT_RELEASE_CACHE:-${HOME:-}/.nanobot/downloads/releases}" "$dry_run" <<'PY'
+  wheel_identity="$("$target_python" -I - "$release_wheel" "$release_sha256" "$owner_record" "$release_version" "$manifest_sha256" "${BABO_RELEASE_CACHE:-${HOME:-}/.babo/downloads/releases}" "$dry_run" <<'PY'
 import hashlib
 import json
 import re
@@ -401,7 +401,7 @@ import tempfile
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-# Bootstrap has no installed nanobot/packaging dependency. This closed platform
+# Bootstrap has no installed babo/packaging dependency. This closed platform
 # set matches the five published wheel tags; the owner still checks compatibility.
 def native_platform():
     if struct.calcsize("P") != 8:
@@ -449,7 +449,7 @@ def fetch_release(version, manifest_hash, cache, dry_run):
     if not re.fullmatch(r"[0-9a-f]{64}", manifest_hash):
         raise SystemExit("A trusted published manifest SHA-256 is required")
     selected_platform = native_platform()
-    base = "https://github.com/HKUDS/nanobot/releases/download/v" + version + "/"
+    base = "https://github.com/bgrimes-me/babo/releases/download/v" + version + "/"
     opener = build_opener(ReleaseRedirect())
     with opener.open(Request(checked_url(base + "release-manifest.json"),
                              headers={"Accept-Encoding": "identity"}), timeout=20) as response:
@@ -470,10 +470,10 @@ def fetch_release(version, manifest_hash, cache, dry_run):
     targets = {"darwin-arm64": "macosx_13_0_arm64", "darwin-x64": "macosx_13_0_x86_64",
                "linux-arm64": "manylinux_2_17_aarch64", "linux-x64": "manylinux_2_17_x86_64",
                "win32-x64": "win_amd64"}
-    expected = {f"nanobot_ai-{version}-py3-none-{tag}.whl" for tag in targets.values()}
-    expected.add(f"nanobot_ai-{version}.tar.gz")
+    expected = {f"babo-{version}-py3-none-{tag}.whl" for tag in targets.values()}
+    expected.add(f"babo-{version}.tar.gz")
     for target in targets:
-        name = "nanobot-tui-" + target + (".exe" if target == "win32-x64" else "") + ".zip"
+        name = "babo-tui-" + target + (".exe" if target == "win32-x64" else "") + ".zip"
         expected.update((name, name + ".sha256"))
     artifacts = manifest["artifacts"]
     if (not isinstance(artifacts, list) or len(artifacts) != 16
@@ -484,10 +484,10 @@ def fetch_release(version, manifest_hash, cache, dry_run):
                    for item in artifacts)
             or {item["filename"] for item in artifacts} != expected):
         raise SystemExit("Release manifest does not contain the complete matching artifact set")
-    filename = f"nanobot_ai-{version}-py3-none-{selected_platform}.whl"
+    filename = f"babo-{version}-py3-none-{selected_platform}.whl"
     artifact = next(item for item in artifacts if item["filename"] == filename)
     if dry_run:
-        print("nanobot-ai @ " + base + filename + "#sha256=" + artifact["sha256"] + "|" + version)
+        print("babo @ " + base + filename + "#sha256=" + artifact["sha256"] + "|" + version)
         raise SystemExit(0)
     directory = Path(cache).expanduser().absolute() / version / artifact["sha256"]
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -526,19 +526,19 @@ if sys.argv[4] not in ("", "-"):
     path, expected_hash = fetch_release(sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7] == "1")
 else:
     path = Path(sys.argv[1]).absolute()
-match = re.fullmatch(r"nanobot_ai-(\d+\.\d+\.\d+(?:\.dev\d+|\.post\d+)?)-py3-none-(macosx_13_0_(?:arm64|x86_64)|manylinux_2_17_(?:aarch64|x86_64)|win_amd64)\.whl", path.name)
+match = re.fullmatch(r"babo-(\d+\.\d+\.\d+(?:\.dev\d+|\.post\d+)?)-py3-none-(macosx_13_0_(?:arm64|x86_64)|manylinux_2_17_(?:aarch64|x86_64)|win_amd64)\.whl", path.name)
 if not match or path.is_symlink() or not path.is_file() or not re.fullmatch(r"[0-9a-f]{64}", expected_hash):
-    raise SystemExit("Expected a saved native nanobot wheel and its published SHA-256")
+    raise SystemExit("Expected a saved native babo wheel and its published SHA-256")
 with path.open("rb") as stream:
     if hashlib.file_digest(stream, "sha256").hexdigest() != expected_hash:
         raise SystemExit("Wheel SHA-256 mismatch; no package manager was started")
 version = match[1]
 with ZipFile(path) as wheel:
-    metadata_path = f"nanobot_ai-{version}.dist-info/METADATA"
+    metadata_path = f"babo-{version}.dist-info/METADATA"
     if wheel.getinfo(metadata_path).file_size > 256 * 1024:
         raise SystemExit("Wheel metadata exceeds its size limit")
     metadata = BytesParser().parsebytes(wheel.read(metadata_path))
-    if metadata["Name"] != "nanobot-ai" or metadata["Version"] != version:
+    if metadata["Name"] != "babo" or metadata["Version"] != version:
         raise SystemExit("Wheel identity does not match its filename")
 extras = []
 record = Path(sys.argv[3])
@@ -546,7 +546,7 @@ if sys.argv[3] != "-" and record.is_file():
     if record.stat().st_size > 1024 * 1024:
         raise SystemExit("pipx installation record is too large; inspect it before updating")
     spec = json.loads(record.read_text(encoding="utf-8"))["main_package"]["package_or_url"]
-    extra_match = re.match(r"(?i)^nanobot[-_.]ai\[([a-z0-9_., -]+)\]", spec)
+    extra_match = re.match(r"(?i)^babo\[([a-z0-9_., -]+)\]", spec)
     if extra_match:
         extras = sorted({re.sub(r"[-_.]+", "-", extra.strip().lower()) for extra in extra_match[1].split(",")})
         if any(not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", extra) for extra in extras):
@@ -556,7 +556,7 @@ if sys.argv[3] != "-" and record.is_file():
     provided = {re.sub(r"[-_.]+", "-", extra.lower()) for extra in metadata.get_all("Provides-Extra", [])}
     if not set(extras) <= provided:
         raise SystemExit("The target wheel does not provide all existing pipx extras")
-requirement = "nanobot-ai" + ("[" + ",".join(extras) + "]" if extras else "")
+requirement = "babo" + ("[" + ",".join(extras) + "]" if extras else "")
 print(requirement + " @ " + path.as_uri() + "|" + version)
 PY
   )" || fail "Release verification failed; no installation was attempted."
@@ -564,32 +564,32 @@ PY
   expected_version="${wheel_identity##*|}"
   install_source="verified wheel $expected_version"
   if [ "$release_kind" = "release" ] && [ "$dry_run" = "1" ]; then
-    info "Selected nanobot $expected_version from verified release metadata; its wheel was not downloaded."
+    info "Selected babo $expected_version from verified release metadata; its wheel was not downloaded."
   else
-    info "Verified nanobot $expected_version. Keep the downloaded wheel at its current path."
+    info "Verified babo $expected_version. Keep the downloaded wheel at its current path."
   fi
 fi
 
 if [ "$dry_run" = "1" ]; then
-  info "Dry run: would install or upgrade nanobot from $install_source."
+  info "Dry run: would install or upgrade babo from $install_source."
   if [ "$install_method" = "python" ]; then
     info "Dry run: active virtual environment detected; would run: $python_bin -m pip install --upgrade $install_target"
-    info "Dry run: would start nanobot with this environment's Python in isolated mode."
+    info "Dry run: would start babo with this environment's Python in isolated mode."
   elif [ "$install_method" = "uv" ]; then
     info "Dry run: would install with uv tool install, or use uv tool upgrade for an existing installation."
-    info "Dry run: would start nanobot from its persistent uv tool environment."
+    info "Dry run: would start babo from its persistent uv tool environment."
   elif [ "$install_method" = "pipx" ]; then
     info "Dry run: would review pipx installation settings before upgrading an existing environment."
-    info "Dry run: would start nanobot from its persistent pipx environment."
+    info "Dry run: would start babo from its persistent pipx environment."
   else
-    venv_dir="${NANOBOT_VENV:-$HOME/.nanobot/venv}"
+    venv_dir="${BABO_VENV:-$HOME/.babo/venv}"
     info "Dry run: would create or reuse a dedicated virtual environment: $venv_dir"
     info "Dry run: would run: $venv_dir/bin/python -m pip install --upgrade $install_target"
-    info "Dry run: would start nanobot with $venv_dir/bin/python in isolated mode."
+    info "Dry run: would start babo with $venv_dir/bin/python in isolated mode."
   fi
-  if [ "${NANOBOT_SKIP_WIZARD:-}" = "1" ]; then
-    info "Dry run: would skip automatic setup because NANOBOT_SKIP_WIZARD=1."
-  elif is_fresh_nanobot_install && has_browser_session; then
+  if [ "${BABO_SKIP_WIZARD:-}" = "1" ]; then
+    info "Dry run: would skip automatic setup because BABO_SKIP_WIZARD=1."
+  elif is_fresh_babo_install && has_browser_session; then
     info "Dry run: would start the WebUI for this fresh desktop install."
     info "Dry run: would fall back to the setup wizard for older releases."
   else
@@ -610,36 +610,36 @@ else
   install_with_managed_venv || install_failure_hint
 fi
 
-info "Installed nanobot:"
-run_nanobot --version
+info "Installed babo:"
+run_babo --version
 
-if [ "${NANOBOT_SKIP_WIZARD:-}" = "1" ]; then
-  info "Skipping automatic setup because NANOBOT_SKIP_WIZARD=1."
-  info "Run this later: $(nanobot_try_command) webui"
+if [ "${BABO_SKIP_WIZARD:-}" = "1" ]; then
+  info "Skipping automatic setup because BABO_SKIP_WIZARD=1."
+  info "Run this later: $(babo_try_command) webui"
   exit 0
 fi
 
-if is_fresh_nanobot_install && has_browser_session; then
-  if run_nanobot webui --help >/dev/null 2>&1; then
-    info "Starting nanobot WebUI..."
+if is_fresh_babo_install && has_browser_session; then
+  if run_babo webui --help >/dev/null 2>&1; then
+    info "Starting babo WebUI..."
     info "Configure your first provider and model in Settings > Models."
-    info "Run this later: $(nanobot_try_command) webui"
-    run_nanobot webui --yes
+    info "Run this later: $(babo_try_command) webui"
+    run_babo webui --yes
     exit 0
   fi
-  info "The installed release does not support nanobot webui yet."
+  info "The installed release does not support babo webui yet."
   info "Falling back to the setup wizard..."
 fi
 
 if [ -t 0 ]; then
   info "Starting setup wizard..."
-  run_nanobot onboard --wizard
+  run_babo onboard --wizard
 elif : 2>/dev/null < /dev/tty; then
   info "Starting setup wizard..."
-  run_nanobot onboard --wizard < /dev/tty
+  run_babo onboard --wizard < /dev/tty
 else
   info "Skipping setup wizard because no interactive terminal is available."
-  info "Run this later: $(nanobot_try_command) onboard --wizard"
+  info "Run this later: $(babo_try_command) onboard --wizard"
 fi
 
-info "Done. Try: $(nanobot_try_command) agent -m \"Hello!\""
+info "Done. Try: $(babo_try_command) agent -m \"Hello!\""

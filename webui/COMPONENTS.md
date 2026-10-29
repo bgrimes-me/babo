@@ -41,13 +41,13 @@ Channel fixture fields, defaults, and requirements come from the Python channel 
 | `src/components/remote/` | Host selection and connection interfaces | Host switcher, pairing and remote connections |
 | `src/components/workbench/` | Pane layout and its interaction model | `PaneWorkbench` |
 | `src/components/icons/` | Product-specific icon vocabulary | `product-icons.tsx` |
-| `nanobot/channels/<channel>/webui/` | Channel-owned screens, components, and translations | Feishu assistants, Linear setup, Weixin connection |
+| `babo/channels/<channel>/webui/` | Channel-owned screens, components, and translations | Feishu assistants, Linear setup, Weixin connection |
 
 Supporting hooks and display-model helpers stay near the feature that owns them. Common theme tokens and reusable CSS treatments live in `src/globals.css`, `tailwind.config.js`, and the relevant `ui/` modules. The component inventory lists `.tsx` modules; pure `.ts` helpers remain discoverable through their callers and source imports.
 
-`NanobotClient` adapts WebSocket frames into observations for its `ClientRunLedger`. The ledger owns each chat's message delivery, run identities, clocks, and completion records, and returns effects for the client to apply to its queues and subscribers. A dropped connection makes unconfirmed delivery unknown while durable runs remain unresolved. Wire completion still permits late final messages; canonical completion records suppress matching top-level turn events. `useNanobotStream` owns message projection and render batching, while `ThreadShell` adopts canonical history and confirms completion after the messages commit.
+`BaboClient` adapts WebSocket frames into observations for its `ClientRunLedger`. The ledger owns each chat's message delivery, run identities, clocks, and completion records, and returns effects for the client to apply to its queues and subscribers. A dropped connection makes unconfirmed delivery unknown while durable runs remain unresolved. Wire completion still permits late final messages; canonical completion records suppress matching top-level turn events. `useBaboStream` owns message projection and render batching, while `ThreadShell` adopts canonical history and confirms completion after the messages commit.
 
-`onChat` provides live events to task and model observers. `useNanobotStream` uses `onTranscript` as the single transcript owner, receiving queued events once followed by live events.
+`onChat` provides live events to task and model observers. `useBaboStream` uses `onTranscript` as the single transcript owner, receiving queued events once followed by live events.
 
 ## History-boundary motion
 

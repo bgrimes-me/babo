@@ -17,7 +17,7 @@ import {
   updateTranscriptionSettings,
   updateWebSearchSettings,
 } from "@/lib/api";
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 import type { ImageGenerationSettingsUpdate, SettingsPayload, WebSearchSettingsUpdate } from "@/lib/types";
 import { imageGenerationFormFromPayload } from "@/components/settings/capabilities/ImageGenerationSettings";
 import { transcriptionFormFromPayload } from "@/components/settings/capabilities/TranscriptionSettings";
@@ -26,7 +26,7 @@ import { networkSafetyFormFromPayload } from "@/components/settings/capabilities
 interface CapabilitySettingsActionsOptions {
   state: CapabilitySettingsState;
   settings: SettingsPayload | null;
-  client: NanobotClient;
+  client: BaboClient;
   t: TFunction;
   applyPayload: ApplySettingsPayload;
   maybeRestartHostEngine: MaybeRestartHostEngine;

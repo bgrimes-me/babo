@@ -1,6 +1,6 @@
 // The embedded UI may ask to open the host menu, never execute SSH actions.
 // Host lists, paths and credentials remain exclusively in the local shell.
-export const HOST_BRIDGE = "nanobot.host-navigation.v1";
+export const HOST_BRIDGE = "babo.host-navigation.v1";
 export interface HostAnchor { left: number; top: number; width: number; height: number }
 export interface EmbeddedHost { name: string; hostname: string; pendingName?: string; error?: string }
 

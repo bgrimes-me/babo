@@ -6,14 +6,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from nanobot.config.schema import Config
-from nanobot.webui.settings_contracts import WebUISettingsError
-from nanobot.webui.settings_models import (
+from babo.config.schema import Config
+from babo.webui.settings_contracts import WebUISettingsError
+from babo.webui.settings_models import (
     complete_oauth_provider,
     login_oauth_provider,
     logout_oauth_provider,
 )
-from nanobot.webui.settings_services import WebUIOAuthFlowRegistry
+from babo.webui.settings_services import WebUIOAuthFlowRegistry
 
 
 def test_copilot_prompt_poll_and_owned_cancellation(monkeypatch):
@@ -26,7 +26,7 @@ def test_copilot_prompt_poll_and_owned_cancellation(monkeypatch):
         stopped.set()
         raise RuntimeError("cancelled")
 
-    monkeypatch.setattr("nanobot.providers.github_copilot_oauth.login_github_copilot", login)
+    monkeypatch.setattr("babo.providers.github_copilot_oauth.login_github_copilot", login)
     registry = WebUIOAuthFlowRegistry()
     payload = login_oauth_provider(
         Config(), {"provider": ["github_copilot"]}, oauth_flows=registry,
@@ -68,8 +68,8 @@ def test_cancels_copilot_login_while_device_prompt_is_loading(monkeypatch, tmp_p
         on_authorization("https://github.com/login/device", "ABCD-EFGH", 60)
         return SimpleNamespace(access="late-account-secret")
 
-    monkeypatch.setattr("nanobot.providers.github_copilot_oauth.login_github_copilot", login)
-    monkeypatch.setattr("nanobot.providers.github_copilot_provider.get_storage", lambda: SimpleNamespace(
+    monkeypatch.setattr("babo.providers.github_copilot_oauth.login_github_copilot", login)
+    monkeypatch.setattr("babo.providers.github_copilot_provider.get_storage", lambda: SimpleNamespace(
         get_token_path=lambda: tmp_path / "copilot.json", save=saved.append,
     ))
     registry = WebUIOAuthFlowRegistry()
@@ -96,7 +96,7 @@ def test_cancels_copilot_login_while_device_prompt_is_loading(monkeypatch, tmp_p
 
 
 def test_failed_copilot_start_removes_registered_flow(monkeypatch):
-    from nanobot.providers.github_copilot_oauth import GitHubCopilotOAuthFlow
+    from babo.providers.github_copilot_oauth import GitHubCopilotOAuthFlow
 
     registered = []
     registry = WebUIOAuthFlowRegistry()

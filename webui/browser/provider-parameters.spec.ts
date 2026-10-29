@@ -4,7 +4,7 @@ for (const locale of ["en", "zh-CN"]) {
   for (const width of [390, 1280]) {
     test(`request parameter text aligns in ${locale} at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      await page.addInitScript((language) => localStorage.setItem("nanobot.locale", language), locale);
+      await page.addInitScript((language) => localStorage.setItem("babo.locale", language), locale);
       await page.goto("/gallery.html#component=webui%2Fsrc%2Fcomponents%2Fsettings%2Fmodels%2FProviderParameterFields.tsx");
       const preview = page.getByRole("region", { name: locale === "en" ? "Component preview" : "组件预览" });
       const rows = preview.getByRole("button");

@@ -15,33 +15,33 @@ import pytest
 from websockets.datastructures import Headers
 from websockets.http11 import Request
 
-from nanobot.agent.memory import Consolidator
-from nanobot.agent.runner import AgentRunResult
-from nanobot.agent.subagent import SubagentControlError, SubagentManager
-from nanobot.agent.subagent_sessions import SUBAGENT, TASK_METADATA_KEY, SubagentSessions
-from nanobot.agent.tools.context import RequestContext, current_request_context, request_context
-from nanobot.agent.tools.session_messages import ListSessionsTool, SendSessionMessageTool
-from nanobot.agent.tools.sessions import ReadSessionTool, SearchSessionsTool
-from nanobot.agent.tools.subagent import SubagentTool
-from nanobot.bus.queue import MessageBus
-from nanobot.bus.runtime_events import SubagentTaskChanged
-from nanobot.channels.websocket.runtime import WebSocketChannel, WebSocketConfig
-from nanobot.providers.base import (
+from babo.agent.memory import Consolidator
+from babo.agent.runner import AgentRunResult
+from babo.agent.subagent import SubagentControlError, SubagentManager
+from babo.agent.subagent_sessions import SUBAGENT, TASK_METADATA_KEY, SubagentSessions
+from babo.agent.tools.context import RequestContext, current_request_context, request_context
+from babo.agent.tools.session_messages import ListSessionsTool, SendSessionMessageTool
+from babo.agent.tools.sessions import ReadSessionTool, SearchSessionsTool
+from babo.agent.tools.subagent import SubagentTool
+from babo.bus.queue import MessageBus
+from babo.bus.runtime_events import SubagentTaskChanged
+from babo.channels.websocket.runtime import WebSocketChannel, WebSocketConfig
+from babo.providers.base import (
     GenerationSettings,
     LLMProvider,
     LLMResponse,
     ProviderConversationState,
     ToolCallRequest,
 )
-from nanobot.session.jsonl_migration import WORKSPACE_BACKUP_DIR
-from nanobot.session.location import SessionLocation
-from nanobot.session.manager import SessionManager
-from nanobot.session.session_handles import SessionHandleResolver
-from nanobot.session.summary import SessionSummaryCheckpoint, is_summary_checkpoint
-from nanobot.session.types import PARENT_SESSION_KEY, SESSION_TYPE_KEY
-from nanobot.session.webui_turns import WebuiTurnCoordinator
-from nanobot.utils.llm_runtime import LLMRuntime
-from nanobot.webui.gateway_services import build_gateway_services
+from babo.session.jsonl_migration import WORKSPACE_BACKUP_DIR
+from babo.session.location import SessionLocation
+from babo.session.manager import SessionManager
+from babo.session.session_handles import SessionHandleResolver
+from babo.session.summary import SessionSummaryCheckpoint, is_summary_checkpoint
+from babo.session.types import PARENT_SESSION_KEY, SESSION_TYPE_KEY
+from babo.session.webui_turns import WebuiTurnCoordinator
+from babo.utils.llm_runtime import LLMRuntime
+from babo.webui.gateway_services import build_gateway_services
 
 
 def manager_with_storage(workspace, sessions_root):
@@ -311,7 +311,7 @@ async def test_provider_hosted_activity_is_visible_before_response_and_replays_i
         assert all(not ({"tool_events", "file_edit_events"} & message.keys()) for message in messages)
         activity = {
             "kind": "hosted_tool", "call_id": "hosted-search", "name": "web_search",
-            "arguments": {"query": "nanobot"},
+            "arguments": {"query": "babo"},
         }
         await on_tool_call_delta({**activity, "phase": "start"})
         entered.set()
@@ -451,14 +451,14 @@ async def test_abrupt_process_exit_preserves_terminal_records_and_interrupts_pen
         import asyncio, json, os, sys
         from pathlib import Path
         from unittest.mock import AsyncMock, MagicMock
-        from nanobot.agent.hook import AgentHookContext
-        from nanobot.agent.memory import Consolidator
-        from nanobot.agent.runner import AgentRunResult
-        from nanobot.agent.subagent import SubagentManager
-        from nanobot.bus.queue import MessageBus
-        from nanobot.providers.base import GenerationSettings, LLMProvider, LLMResponse, LLMUsage
-        from nanobot.session.manager import SessionManager
-        from nanobot.utils.llm_runtime import LLMRuntime
+        from babo.agent.hook import AgentHookContext
+        from babo.agent.memory import Consolidator
+        from babo.agent.runner import AgentRunResult
+        from babo.agent.subagent import SubagentManager
+        from babo.bus.queue import MessageBus
+        from babo.providers.base import GenerationSettings, LLMProvider, LLMResponse, LLMUsage
+        from babo.session.manager import SessionManager
+        from babo.utils.llm_runtime import LLMRuntime
 
         async def main():
             workspace = Path(sys.argv[1])

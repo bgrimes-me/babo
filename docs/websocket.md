@@ -1,6 +1,6 @@
 # WebSocket Server Channel
 
-Nanobot can act as a WebSocket server, allowing external clients (web apps, CLIs, scripts) to interact with the agent in real time via persistent connections.
+Babo can act as a WebSocket server, allowing external clients (web apps, CLIs, scripts) to interact with the agent in real time via persistent connections.
 
 ## Features
 
@@ -16,7 +16,7 @@ Nanobot can act as a WebSocket server, allowing external clients (web apps, CLIs
 
 ### 1. Configure
 
-For normal browser setup, run `nanobot webui`; the launcher prepares the local channel and opens the WebUI. Configure models in **Settings → Models**. The listener and protocol fields below are for custom clients and deployments and have no graphical editor.
+For normal browser setup, run `babo webui`; the launcher prepares the local channel and opens the WebUI. Configure models in **Settings → Models**. The listener and protocol fields below are for custom clients and deployments and have no graphical editor.
 
 The WebSocket channel is enabled by default. Add only the fields you want to override under `channels.websocket`:
 
@@ -42,7 +42,7 @@ The WebSocket channel is enabled by default. Add only the fields you want to ove
 Replace `your-webui-password` with a private secret before using the configuration. Restart the gateway that owns this config if it is already running. If none is running, start it with the same installation and config:
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 Keep it running while connecting clients from another terminal.
@@ -60,7 +60,7 @@ curl --fail -H "Authorization: Bearer your-webui-password" http://127.0.0.1:8765
 websocat "ws://127.0.0.1:8765/?client_id=alice&token=TOKEN_FROM_RESPONSE"
 ```
 
-After the `ready` event, send `{"content":"Hello nanobot!"}`. Obtain another token before reconnecting. Do not share the secret or the token URL.
+After the `ready` event, send `{"content":"Hello babo!"}`. Obtain another token before reconnecting. Do not share the secret or the token URL.
 
 Alternatively, save and run this Python example in an environment with `websockets` installed. It asks for the configured secret, obtains its own token, and prints server events until you press Ctrl+C:
 
@@ -85,7 +85,7 @@ async def main():
     query = urlencode({"client_id": "alice", "token": token})
     async with websockets.connect("ws://127.0.0.1:8765/?" + query) as ws:
         print(json.loads(await ws.recv()))  # ready event
-        await ws.send(json.dumps({"content": "Hello nanobot!"}))
+        await ws.send(json.dumps({"content": "Hello babo!"}))
         async for frame in ws:
             print(json.loads(frame))
 
@@ -215,11 +215,11 @@ The event contains no pairing codes or account data. Read the current state from
 **Legacy (default chat):** send a plain string, or a JSON object with a recognized text field:
 
 ```json
-"Hello nanobot!"
+"Hello babo!"
 ```
 
 ```json
-{"content": "Hello nanobot!"}
+{"content": "Hello babo!"}
 ```
 
 Recognized fields: `content`, `text`, `message` (checked in that order). Invalid JSON is treated as plain text. These frames route to the connection's default `chat_id` (the one announced in `ready`).
@@ -280,7 +280,7 @@ All fields go under `channels.websocket` in `config.json`. Unrecognized options 
 | `tokenIssueSecret` | string | `""` | Secret required to obtain tokens via the issue endpoint. If empty, any client can obtain WebSocket connection tokens from `tokenIssuePath` (logged as a warning). `/webui/bootstrap` issues tokens for local/secret-authenticated requests; trusted-proxy requests intentionally receive no bootstrap or API token. |
 | `trustedProxyAuth` | object or `null` | `null` | Optional two-part no-token authorization for a directly connected upstream proxy. Both `trustedPeerCidrs` and a non-empty `assertionHeader` value must match; a CIDR alone never authorizes bootstrap or WebSocket/API access. |
 | `trustedProxyAuth.trustedPeerCidrs` | list of CIDR strings | — | Direct TCP peer networks that may present the assertion. IPv4, IPv6, and IPv4-mapped IPv6 peers are supported; universal CIDRs (`0.0.0.0/0`, `::/0`) are rejected. |
-| `trustedProxyAuth.assertionHeader` | string | — | Header injected by the identity-aware proxy after successful authentication. Routing/client metadata headers (`Host`, `Forwarded`, `X-Forwarded-*`, `X-Real-IP`, `CF-Connecting-IP`) are rejected; nanobot trusts the remaining header's non-empty value but does not cryptographically validate it. |
+| `trustedProxyAuth.assertionHeader` | string | — | Header injected by the identity-aware proxy after successful authentication. Routing/client metadata headers (`Host`, `Forwarded`, `X-Forwarded-*`, `X-Real-IP`, `CF-Connecting-IP`) are rejected; babo trusts the remaining header's non-empty value but does not cryptographically validate it. |
 | `tokenTtlS` | int | `300` | Time-to-live for issued tokens in seconds (30 – 86,400). |
 
 ### Access Control
@@ -315,7 +315,7 @@ For production deployments where `websocketRequiresToken: true`, use short-lived
 
 ### How it works
 
-1. Client sends `GET {tokenIssuePath}` with `Authorization: Bearer {tokenIssueSecret}` (or `X-Nanobot-Auth` header).
+1. Client sends `GET {tokenIssuePath}` with `Authorization: Bearer {tokenIssueSecret}` (or `X-Babo-Auth` header).
 2. Server responds with a one-time-use token:
 
 ```json
@@ -329,9 +329,9 @@ The embedded WebUI's `/webui/bootstrap` route returns a WebSocket token and REST
 
 ### Trusted proxy no-token bootstrap
 
-`trustedProxyAuth` is an opt-in alternative for deployments where an identity-aware reverse proxy authenticates the user before connecting to nanobot. The proxy assertion becomes the authentication boundary for the entire WebUI surface: `/webui/bootstrap`, the WebSocket handshake, and REST API routes. Bootstrap is accepted only when **both** the direct TCP peer matches one of `trustedPeerCidrs` and the configured assertion header is present and non-empty. A trusted address by itself is never sufficient.
+`trustedProxyAuth` is an opt-in alternative for deployments where an identity-aware reverse proxy authenticates the user before connecting to babo. The proxy assertion becomes the authentication boundary for the entire WebUI surface: `/webui/bootstrap`, the WebSocket handshake, and REST API routes. Bootstrap is accepted only when **both** the direct TCP peer matches one of `trustedPeerCidrs` and the configured assertion header is present and non-empty. A trusted address by itself is never sufficient.
 
-Nanobot deliberately uses only `connection.remote_address` for the peer check. It never uses `X-Forwarded-For`, `Forwarded`, `X-Real-IP`, `CF-Connecting-IP`, or `X-Forwarded-Host` to decide whether the proxy is trusted. Nanobot trusts the assertion supplied by the explicitly trusted peer, but does not cryptographically validate or interpret the JWT/assertion contents. Do not enable this option if untrusted clients can connect directly to the nanobot listener.
+Babo deliberately uses only `connection.remote_address` for the peer check. It never uses `X-Forwarded-For`, `Forwarded`, `X-Real-IP`, `CF-Connecting-IP`, or `X-Forwarded-Host` to decide whether the proxy is trusted. Babo trusts the assertion supplied by the explicitly trusted peer, but does not cryptographically validate or interpret the JWT/assertion contents. Do not enable this option if untrusted clients can connect directly to the babo listener.
 
 The configured assertion header must be a proxy-generated authentication assertion, not a routing or client metadata header. Headers such as `Host`, `Forwarded`, `X-Forwarded-*`, `X-Real-IP`, and `CF-Connecting-IP` are rejected by configuration; use the identity provider's post-authentication assertion header instead (for example, `Cf-Access-Jwt-Assertion`).
 
@@ -342,7 +342,7 @@ For example, a local Cloudflare Tunnel with Cloudflare Access can validate the u
   "channels": {
     "websocket": {
       "host": "127.0.0.1",
-      "publicWsUrl": "wss://nanobot.example.com/",
+      "publicWsUrl": "wss://babo.example.com/",
       "trustedProxyAuth": {
         "trustedPeerCidrs": ["127.0.0.1/32", "::1/128"],
         "assertionHeader": "Cf-Access-Jwt-Assertion"
@@ -352,7 +352,7 @@ For example, a local Cloudflare Tunnel with Cloudflare Access can validate the u
 }
 ```
 
-This works only when the directly connected `cloudflared` process reaches nanobot over the configured loopback address and supplies a non-empty assertion. Keep nanobot firewalled from untrusted clients; this configuration is not a CIDR-based bootstrap bypass.
+This works only when the directly connected `cloudflared` process reaches babo over the configured loopback address and supplies a non-empty assertion. Keep babo firewalled from untrusted clients; this configuration is not a CIDR-based bootstrap bypass.
 
 ### Example setup
 
@@ -429,7 +429,7 @@ Legacy clients that only send plain text or `{"content": ...}` keep working unch
 
 ### Security boundary
 
-`chat_id` is a *capability*: anyone holding a valid WebSocket auth credential and the chat_id can attach to that conversation and see its output. This is safe for nanobot's local, single-user model. Namespacing chat IDs alone does not enforce ownership. An application serving multiple users must authorize access before forwarding requests; separate instances and appropriate host permissions are needed when workspace files, memory, and tools must also be isolated. Nanobot does not provide per-user WebSocket authorization.
+`chat_id` is a *capability*: anyone holding a valid WebSocket auth credential and the chat_id can attach to that conversation and see its output. This is safe for babo's local, single-user model. Namespacing chat IDs alone does not enforce ownership. An application serving multiple users must authorize access before forwarding requests; separate instances and appropriate host permissions are needed when workspace files, memory, and tools must also be isolated. Babo does not provide per-user WebSocket authorization.
 
 ## Security Notes
 
@@ -444,7 +444,7 @@ Legacy clients that only send plain text or `{"content": ...}` keep working unch
 Outbound `message` events may include a `media` field containing local filesystem paths. Remote clients cannot access these files directly — they need either:
 
 - A shared filesystem mount, or
-- An HTTP file server serving the nanobot media directory
+- An HTTP file server serving the babo media directory
 
 ## Common Patterns
 

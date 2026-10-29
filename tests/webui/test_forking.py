@@ -5,7 +5,7 @@ from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 
-import nanobot.webui.forking as forking
+import babo.webui.forking as forking
 
 
 @pytest.mark.parametrize(

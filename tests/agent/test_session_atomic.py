@@ -3,8 +3,8 @@
 import json
 from pathlib import Path
 
-from nanobot.providers.base import ProviderConversationState
-from nanobot.session.manager import Session, SessionManager
+from babo.providers.base import ProviderConversationState
+from babo.session.manager import Session, SessionManager
 
 
 def test_provider_state_round_trips_in_private_record_only(tmp_path: Path):

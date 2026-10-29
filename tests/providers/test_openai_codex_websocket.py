@@ -21,13 +21,13 @@ from loguru import logger
 from PIL import Image
 from pypdf import PdfWriter
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.model_runtime import ModelRuntimeResolver
-from nanobot.bus.queue import MessageBus
-from nanobot.providers.base import LLMResponse, ProviderCallContext
-from nanobot.providers.factory import ProviderSnapshot
-from nanobot.providers.openai_codex_provider import OpenAICodexProvider
-from nanobot.utils.llm_runtime import LLMRuntime
+from babo.agent.loop import AgentLoop
+from babo.agent.model_runtime import ModelRuntimeResolver
+from babo.bus.queue import MessageBus
+from babo.providers.base import LLMResponse, ProviderCallContext
+from babo.providers.factory import ProviderSnapshot
+from babo.providers.openai_codex_provider import OpenAICodexProvider
+from babo.utils.llm_runtime import LLMRuntime
 
 
 @dataclass
@@ -116,9 +116,9 @@ async def codex_peer(monkeypatch):
     site = web.TCPSite(runner, "127.0.0.1", 0)
     await site.start()
     url = f"http://127.0.0.1:{runner.addresses[0][1]}/responses"
-    monkeypatch.setattr("nanobot.providers.openai_codex_provider.DEFAULT_CODEX_URL", url)
+    monkeypatch.setattr("babo.providers.openai_codex_provider.DEFAULT_CODEX_URL", url)
     token = SimpleNamespace(account_id="acct", access="test-token")
-    monkeypatch.setattr("nanobot.providers.openai_codex_provider.get_codex_token", lambda **_: token)
+    monkeypatch.setattr("babo.providers.openai_codex_provider.get_codex_token", lambda **_: token)
     monkeypatch.setenv("NO_PROXY", "127.0.0.1,localhost")
     monkeypatch.setenv("no_proxy", "127.0.0.1,localhost")
     provider = OpenAICodexProvider(default_model="gpt-6-astra")
@@ -129,7 +129,7 @@ async def codex_peer(monkeypatch):
         await runner.cleanup()
 
 
-def _messages(text="hello", instructions="You are nanobot."):
+def _messages(text="hello", instructions="You are babo."):
     return [{"role": "system", "content": instructions}, {"role": "user", "content": text}]
 
 
@@ -151,7 +151,7 @@ async def test_codex_exports_langfuse_usage(codex_peer, reject_upgrade):
 
     from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceRequest
 
-    import nanobot.providers.openai_codex_provider as codex
+    import babo.providers.openai_codex_provider as codex
 
     _, server, _ = codex_peer
     server.reject_upgrade = reject_upgrade
@@ -185,8 +185,8 @@ async def test_codex_exports_langfuse_usage(codex_peer, reject_upgrade):
             from types import SimpleNamespace
 
             from langfuse import Langfuse
-            import nanobot.providers.openai_codex_provider as codex
-            from nanobot.providers.base import ProviderCallContext
+            import babo.providers.openai_codex_provider as codex
+            from babo.providers.base import ProviderCallContext
 
             os.environ.pop("OTEL_EXPORTER_OTLP_HEADERS", None)
             os.environ.pop("OTEL_EXPORTER_OTLP_TRACES_HEADERS", None)
@@ -713,7 +713,7 @@ async def test_codex_transport_fallback_does_not_repeat_partial_output(codex_pee
 async def test_codex_idle_timeout_budget_switches_session_to_http(codex_peer, monkeypatch):
     provider, server, _ = codex_peer
     monkeypatch.setattr(provider, "_CHAT_RETRY_DELAYS", (0, 0, 0))
-    monkeypatch.setenv("NANOBOT_STREAM_IDLE_TIMEOUT_S", "0.05")
+    monkeypatch.setenv("BABO_STREAM_IDLE_TIMEOUT_S", "0.05")
 
     async def respond(_peer, _body):
         pass

@@ -5,13 +5,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.skills import SkillsLoader
-from nanobot.bus.events import InboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.command.builtin import cmd_skill, register_builtin_commands
-from nanobot.command.router import CommandContext, CommandRouter
-from nanobot.config.schema import ModelPresetConfig
+from babo.agent.loop import AgentLoop
+from babo.agent.skills import SkillsLoader
+from babo.bus.events import InboundMessage
+from babo.bus.queue import MessageBus
+from babo.command.builtin import cmd_skill, register_builtin_commands
+from babo.command.router import CommandContext, CommandRouter
+from babo.config.schema import ModelPresetConfig
 
 
 def _provider(default_model: str = "test-model") -> MagicMock:

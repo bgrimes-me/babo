@@ -7,16 +7,16 @@ from pathlib import Path
 
 import pytest
 
-import nanobot.webui.session_list_index as session_list_index
-from nanobot.cron.session_turns import CRON_HISTORY_META
-from nanobot.providers.base import ProviderConversationState
-from nanobot.security.workspace_access import WORKSPACE_SCOPE_METADATA_KEY
-from nanobot.session.automation_turns import AUTOMATION_HISTORY_META
-from nanobot.session.history_visibility import HIDDEN_HISTORY_META
-from nanobot.session.manager import SessionManager
-from nanobot.session.model_selection import SESSION_MODEL_PRESET_METADATA_KEY
-from nanobot.session.recovery import RECOVERY_METADATA_KEY
-from nanobot.session.types import SESSION_TYPE_KEY, SessionType
+import babo.webui.session_list_index as session_list_index
+from babo.cron.session_turns import CRON_HISTORY_META
+from babo.providers.base import ProviderConversationState
+from babo.security.workspace_access import WORKSPACE_SCOPE_METADATA_KEY
+from babo.session.automation_turns import AUTOMATION_HISTORY_META
+from babo.session.history_visibility import HIDDEN_HISTORY_META
+from babo.session.manager import SessionManager
+from babo.session.model_selection import SESSION_MODEL_PRESET_METADATA_KEY
+from babo.session.recovery import RECOVERY_METADATA_KEY
+from babo.session.types import SESSION_TYPE_KEY, SessionType
 
 
 def test_webui_session_list_reads_previews_without_loading_history(tmp_path, monkeypatch):
@@ -300,11 +300,11 @@ async def test_sidebar_allocates_handles_then_reads_during_pending_write(tmp_pat
     from websockets.datastructures import Headers
     from websockets.http11 import Request
 
-    from nanobot.bus.queue import MessageBus
-    from nanobot.channels.websocket.runtime import WebSocketConfig
-    from nanobot.webui.gateway_services import build_gateway_services
+    from babo.bus.queue import MessageBus
+    from babo.channels.websocket.runtime import WebSocketConfig
+    from babo.webui.gateway_services import build_gateway_services
 
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path / "data")
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path / "data")
     manager = SessionManager(tmp_path / "workspace")
     state = manager.state
     key = "websocket:busy"

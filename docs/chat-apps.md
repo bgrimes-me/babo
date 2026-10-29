@@ -1,87 +1,87 @@
 # Chat Apps for Self-Hosted AI Agents
 
-Connect nanobot to Telegram, Discord, Slack, WeChat, Email, Mattermost, Linear, and other chat platforms. This page is the full chat-channel reference. If you want a focused setup path for one platform, start with a guide:
+Connect babo to Telegram, Discord, Slack, WeChat, Email, Mattermost, Linear, and other chat platforms. This page is the full chat-channel reference. If you want a focused setup path for one platform, start with a guide:
 
 | Platform | Guide |
 |---|---|
-| Telegram | [Build a Telegram AI Agent with nanobot](./guides/telegram-ai-agent.md) |
-| Discord | [Build a Discord AI Agent with nanobot](./guides/discord-ai-agent.md) |
-| Slack | [Build a Slack AI Agent with nanobot](./guides/slack-ai-agent.md) |
-| Feishu | [Build a Feishu AI Agent with nanobot](./guides/feishu-ai-agent.md) |
-| WhatsApp | [Build a WhatsApp AI Agent with nanobot](./guides/whatsapp-ai-agent.md) |
-| WhatsApp Agent Platform | [Connect nanobot to WhatsApp Agent Platform](./guides/whatsapp-agent-platform.md) |
-| WeChat | [Build a WeChat AI Agent with nanobot](./guides/wechat-ai-agent.md) |
-| QQ | [Build a QQ AI Agent with nanobot](./guides/qq-ai-agent.md) |
-| Email | [Build an Email AI Agent with nanobot](./guides/email-ai-agent.md) |
-| Mattermost | [Build a Mattermost AI Agent with nanobot](./guides/mattermost-ai-agent.md) |
-| Linear | [Use nanobot as a native Linear agent](./guides/linear-agent.md) |
+| Telegram | [Build a Telegram AI Agent with babo](./guides/telegram-ai-agent.md) |
+| Discord | [Build a Discord AI Agent with babo](./guides/discord-ai-agent.md) |
+| Slack | [Build a Slack AI Agent with babo](./guides/slack-ai-agent.md) |
+| Feishu | [Build a Feishu AI Agent with babo](./guides/feishu-ai-agent.md) |
+| WhatsApp | [Build a WhatsApp AI Agent with babo](./guides/whatsapp-ai-agent.md) |
+| WhatsApp Agent Platform | [Connect babo to WhatsApp Agent Platform](./guides/whatsapp-agent-platform.md) |
+| WeChat | [Build a WeChat AI Agent with babo](./guides/wechat-ai-agent.md) |
+| QQ | [Build a QQ AI Agent with babo](./guides/qq-ai-agent.md) |
+| Email | [Build an Email AI Agent with babo](./guides/email-ai-agent.md) |
+| Mattermost | [Build a Mattermost AI Agent with babo](./guides/mattermost-ai-agent.md) |
+| Linear | [Use babo as a native Linear agent](./guides/linear-agent.md) |
 
 Want to build your own channel? See the [Channel Package Guide](./channel-package-guide.md).
 
 Before configuring a chat app, make sure the local CLI path works:
 
 ```bash
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
-If that fails, fix installation, config, provider, or model setup first with [`quick-start.md`](./quick-start.md), [`providers.md`](./providers.md), and [`troubleshooting.md`](./troubleshooting.md). Chat apps require `nanobot gateway` to stay running after the channel is configured.
+If that fails, fix installation, config, provider, or model setup first with [`quick-start.md`](./quick-start.md), [`providers.md`](./providers.md), and [`troubleshooting.md`](./troubleshooting.md). Chat apps require `babo gateway` to stay running after the channel is configured.
 
 ## Recommended Setup in the WebUI
 
 For normal local setup, let the WebUI write and validate the channel config:
 
-1. Run `nanobot webui`.
+1. Run `babo webui`.
 2. Open **Channels**.
 3. Search for the platform and open its setup panel.
 4. Follow the credential fields or QR flow. The screen tells you which platform-side token, permission, account, or URL it needs.
-5. Let nanobot install the optional channel support when prompted.
+5. Let babo install the optional channel support when prompted.
 6. Restart from the WebUI if it reports that a restart is required.
 7. Send a private test message. If the channel returns a pairing code, approve the pending request in the WebUI and send the message again.
 
 If your installed stable release does not show **Channels**, continue with the [manual setup pattern](#manual-setup-pattern) below or install current source.
 
-Optional package installation is available to a same-machine WebUI by default. Remote browser clients cannot change the Python environment unless an administrator explicitly enables that capability. Run `nanobot plugins enable <channel>` locally when the guided install is unavailable.
+Optional package installation is available to a same-machine WebUI by default. Remote browser clients cannot change the Python environment unless an administrator explicitly enables that capability. Run `babo plugins enable <channel>` locally when the guided install is unavailable.
 
 The sections below explain what each chat platform requires and provide manual config for deployments that manage `config.json` directly.
 
 > [!NOTE]
-> If you are upgrading from a version where chat app SDKs were installed by default, enable the channel in the same Python environment so nanobot installs its manifest-declared dependencies:
+> If you are upgrading from a version where chat app SDKs were installed by default, enable the channel in the same Python environment so babo installs its manifest-declared dependencies:
 >
 > ```bash
-> nanobot plugins enable <channel>
+> babo plugins enable <channel>
 > ```
 >
-> Replace `<channel>` with names such as `telegram`, `slack`, `feishu`, `dingtalk`, `matrix`, `qq`, `napcat`, `weixin`, `wecom`, `msteams`, or `whatsapp_agent`. To turn a channel off later, run `nanobot plugins disable <channel>`. nanobot keeps the saved settings, but stops loading that channel after the next restart.
+> Replace `<channel>` with names such as `telegram`, `slack`, `feishu`, `dingtalk`, `matrix`, `qq`, `napcat`, `weixin`, `wecom`, `msteams`, or `whatsapp_agent`. To turn a channel off later, run `babo plugins disable <channel>`. babo keeps the saved settings, but stops loading that channel after the next restart.
 
 ## Manual Setup Pattern
 
 <details>
 <summary>Manual configuration</summary>
 
-Most examples below are snippets to merge into `~/.nanobot/config.json`. When a snippet includes `allowFrom`, it is showing a static allowlist. For pairing-based access on channels with a common sender allowlist, omit `allowFrom`. Slack and Mattermost instead use `dm.policy: "allowlist"` with an empty `dm.allowFrom` for DM pairing; their group policies are independent of DM approval.
+Most examples below are snippets to merge into `~/.babo/config.json`. When a snippet includes `allowFrom`, it is showing a static allowlist. For pairing-based access on channels with a common sender allowlist, omit `allowFrom`. Slack and Mattermost instead use `dm.policy: "allowlist"` with an empty `dm.allowFrom` for DM pairing; their group policies are independent of DM approval.
 
 Every chat app uses the same shape:
 
 1. Create or prepare the bot/account in the chat platform.
 2. Copy the token, secret, QR login state, webhook URL, or account ID that platform gives you.
-3. Merge that platform's JSON snippet into `~/.nanobot/config.json`.
+3. Merge that platform's JSON snippet into `~/.babo/config.json`.
 4. For DM pairing, use the channel-specific policy described above, let the first DM receive a pairing code, then approve it with `/pairing approve <code>`.
 5. For channels without pairing, such as Email, keep access narrow with `allowFrom` or the platform-specific allow list.
-6. Check that nanobot can see the configured channel:
+6. Check that babo can see the configured channel:
 
 ```bash
-nanobot channels status
+babo channels status
 ```
 
 7. Start the gateway and leave that terminal running:
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 8. Send a test DM. If the bot returns a pairing code, approve it and send the message again. In group chats, follow that channel's `groupPolicy` behavior: many channels default to mention-only, while Matrix and WhatsApp default to open group replies.
 
-If `nanobot channels status` does not show the channel as enabled, the config snippet is in the wrong place, the channel name is misspelled, or the config file you edited is not the one nanobot is reading. If the channel is enabled but messages do not arrive, run `nanobot gateway --verbose` and compare the platform-side credentials, event permissions, and allow lists.
+If `babo channels status` does not show the channel as enabled, the config snippet is in the wrong place, the channel name is misspelled, or the config file you edited is not the one babo is reading. If the channel is enabled but messages do not arrive, run `babo gateway --verbose` and compare the platform-side credentials, event permissions, and allow lists.
 
 > `allowFrom: ["*"]` bypasses pairing and allows anyone who can reach that channel to talk to the bot. Use it only when that is intentional, or temporarily while testing in a private sandbox.
 
@@ -89,15 +89,15 @@ If `nanobot channels status` does not show the channel as enabled, the config sn
 |---------|---------------|
 | **Telegram** | Bot token from @BotFather |
 | **Discord** | Bot token + Message Content intent |
-| **WhatsApp** | QR code scan (`nanobot channels login whatsapp`) |
+| **WhatsApp** | QR code scan (`babo channels login whatsapp`) |
 | **WhatsApp Agent Platform** | Agent API token from WhatsApp → Settings → Agents |
-| **WeChat (Weixin)** | QR code scan (`nanobot channels login weixin`) |
-| **Feishu** | QR code scan (`nanobot channels login feishu`) or App ID + App Secret |
+| **WeChat (Weixin)** | QR code scan (`babo channels login weixin`) |
+| **Feishu** | QR code scan (`babo channels login feishu`) or App ID + App Secret |
 | **DingTalk** | App Key + App Secret |
 | **Slack** | Bot token + App-Level token |
 | **Matrix** | Homeserver URL + Access token |
 | **Email** | IMAP/SMTP credentials |
-| **QQ** | QR code scan (`nanobot channels login qq`) or App ID + App Secret |
+| **QQ** | QR code scan (`babo channels login qq`) or App ID + App Secret |
 | **Napcat (QQ)** | Napcat Forward WebSocket URL + access token |
 | **Wecom** | Bot ID + Bot Secret |
 | **Microsoft Teams** | App ID + App Password + public HTTPS endpoint |
@@ -110,11 +110,11 @@ If `nanobot channels status` does not show the channel as enabled, the config sn
 <details id="linear">
 <summary><b>Linear</b></summary>
 
-Linear is a native Agent channel rather than a comment bot. A user starts a task by explicitly mentioning the installed nanobot app in an issue. Follow-up prompts inside that Agent Session continue the same nanobot session without another mention. Ordinary issue comments do not invoke nanobot.
+Linear is a native Agent channel rather than a comment bot. A user starts a task by explicitly mentioning the installed babo app in an issue. Follow-up prompts inside that Agent Session continue the same babo session without another mention. Ordinary issue comments do not invoke babo.
 
-The native Agent API is webhook-based. Linear must reach a public HTTPS URL. An HTTPS tunnel can forward requests to nanobot's local listener without a public IP; a publicly reachable server can use a reverse proxy. Use a fixed hostname for ongoing use. Temporary tunnels also work for testing, but a hostname change requires updating nanobot's public URL and the app's callback and webhook URLs.
+The native Agent API is webhook-based. Linear must reach a public HTTPS URL. An HTTPS tunnel can forward requests to babo's local listener without a public IP; a publicly reachable server can use a reverse proxy. Use a fixed hostname for ongoing use. Temporary tunnels also work for testing, but a hostname change requires updating babo's public URL and the app's callback and webhook URLs.
 
-The recommended setup is **Channels → Linear**. Enter the public URL and wait for automatic saving, select **Create prefilled Linear app**, create the app, then copy its Client ID, Client Secret, and Webhook Signing Secret back into nanobot. Leave each secret field to save it. Once the settings are saved, choose **Connect Linear**. OAuth requests only `read`, `write`, and `app:mentionable`; it deliberately does not request `app:assignable` so a new task must begin with an @mention.
+The recommended setup is **Channels → Linear**. Enter the public URL and wait for automatic saving, select **Create prefilled Linear app**, create the app, then copy its Client ID, Client Secret, and Webhook Signing Secret back into babo. Leave each secret field to save it. Once the settings are saved, choose **Connect Linear**. OAuth requests only `read`, `write`, and `app:mentionable`; it deliberately does not request `app:assignable` so a new task must begin with an @mention.
 
 See the [native Linear agent guide](./guides/linear-agent.md) for the complete setup, tunnel examples, security model, and troubleshooting.
 
@@ -126,11 +126,11 @@ See the [native Linear agent guide](./guides/linear-agent.md) for the complete s
 **Recommended WebUI setup**
 
 1. Create a bot with `@BotFather` and copy its token.
-2. Run `nanobot webui`, then open **Channels → Telegram**.
+2. Run `babo webui`, then open **Channels → Telegram**.
 3. Paste the token. If the gateway cannot reach Telegram directly, set the address in **Settings → Advanced → Shared proxy**, then enable **Use proxy** in Telegram's advanced options.
 4. Save and enable Telegram, then send the bot a direct message.
 
-The configuration badge means nanobot found a saved token. The live connection check is separate, so a temporary Telegram or proxy outage does not make an existing configuration disappear. Saved tokens and proxy URLs remain masked.
+The configuration badge means babo found a saved token. The live connection check is separate, so a temporary Telegram or proxy outage does not make an existing configuration disappear. Saved tokens and proxy URLs remain masked.
 
 See the [step-by-step Telegram guide](./guides/telegram-ai-agent.md) for pairing and troubleshooting.
 
@@ -139,7 +139,7 @@ See the [step-by-step Telegram guide](./guides/telegram-ai-agent.md) for pairing
 Install the optional channel dependency:
 
 ```bash
-nanobot plugins enable telegram
+babo plugins enable telegram
 ```
 
 **1. Create a bot**
@@ -184,12 +184,12 @@ HTTP, HTTPS, SOCKS5, and SOCKS5H proxy URLs are accepted. Treat a proxy URL cont
 **3. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 **Webhook mode (optional)**
 
-Telegram uses long polling by default. To receive updates through a webhook, expose a public HTTPS URL that forwards to nanobot's local listener and set `mode` to `webhook`:
+Telegram uses long polling by default. To receive updates through a webhook, expose a public HTTPS URL that forwards to babo's local listener and set `mode` to `webhook`:
 
 ```json
 {
@@ -210,9 +210,9 @@ Telegram uses long polling by default. To receive updates through a webhook, exp
 }
 ```
 
-> `webhookSecretToken` is required in webhook mode. Do not expose the local webhook listener directly to the public internet without a reverse proxy or tunnel in front of it. TLS/Host policy is handled by your proxy; nanobot only listens on `webhookListenHost:webhookListenPort` and validates Telegram's webhook secret token. `webhookMaxConnections` defaults to `4`; nanobot still serializes Telegram updates per conversation before forwarding them to the agent.
+> `webhookSecretToken` is required in webhook mode. Do not expose the local webhook listener directly to the public internet without a reverse proxy or tunnel in front of it. TLS/Host policy is handled by your proxy; babo only listens on `webhookListenHost:webhookListenPort` and validates Telegram's webhook secret token. `webhookMaxConnections` defaults to `4`; babo still serializes Telegram updates per conversation before forwarding them to the agent.
 >
-> `webhookUrl` is the public HTTPS URL registered with Telegram. `webhookPath` is the local path nanobot listens on. They often use the same path, but may differ when a reverse proxy or tunnel rewrites the request path.
+> `webhookUrl` is the public HTTPS URL registered with Telegram. `webhookPath` is the local path babo listens on. They often use the same path, but may differ when a reverse proxy or tunnel rewrites the request path.
 
 </details>
 
@@ -224,35 +224,35 @@ Uses **Socket.IO WebSocket** by default, with HTTP polling fallback.
 **Install the optional realtime dependency**
 
 ```bash
-nanobot plugins enable mochat
+babo plugins enable mochat
 ```
 
 Without these dependencies, Mochat still works through HTTP polling.
 
-**1. Ask nanobot to set up Mochat for you**
+**1. Ask babo to set up Mochat for you**
 
-Simply send this message to nanobot (replace `xxx@xxx` with your real email):
+Simply send this message to babo (replace `xxx@xxx` with your real email):
 
 ```
 Read https://raw.githubusercontent.com/HKUDS/MoChat/refs/heads/main/skills/nanobot/skill.md and register on MoChat. My Email account is xxx@xxx Bind me as your owner and DM me on MoChat.
 ```
 
-nanobot will automatically register, configure `~/.nanobot/config.json`, and connect to Mochat.
+babo will automatically register, configure `~/.babo/config.json`, and connect to Mochat.
 
 **2. Restart gateway**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
-That's it — nanobot handles the rest!
+That's it — babo handles the rest!
 
 <br>
 
 <details>
 <summary>Manual configuration (advanced)</summary>
 
-If you prefer to configure manually, add the following to `~/.nanobot/config.json`:
+If you prefer to configure manually, add the following to `~/.babo/config.json`:
 
 > Keep `claw_token` private. It should only be sent in `X-Claw-Token` header to your Mochat API endpoint.
 
@@ -331,7 +331,7 @@ If you prefer to configure manually, add the following to `~/.nanobot/config.jso
 **6. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 </details>
@@ -342,7 +342,7 @@ nanobot gateway
 Enable Matrix support first:
 
 ```bash
-nanobot plugins enable matrix
+babo plugins enable matrix
 ```
 
 > [!NOTE]
@@ -356,7 +356,7 @@ nanobot plugins enable matrix
 **2. Get credentials**
 
 - You need:
-  - `userId` (example: `@nanobot:matrix.org`)
+  - `userId` (example: `@babo:matrix.org`)
   - `password`
 
 (Note: `accessToken` and `deviceId` are still supported for legacy reasons, but for reliable encryption, password login is recommended instead. If the `password` is provided, `accessToken` and `deviceId` will be ignored.)
@@ -369,7 +369,7 @@ nanobot plugins enable matrix
     "matrix": {
       "enabled": true,
       "homeserver": "https://matrix.org",
-      "userId": "@nanobot:matrix.org",
+      "userId": "@babo:matrix.org",
       "password": "mypasswordhere",
       "e2eeEnabled": true,
       "sasVerification": true,
@@ -403,7 +403,7 @@ In `listen` mode the bot reads every message from allowed senders in the room bu
 **4. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 </details>
@@ -414,13 +414,13 @@ nanobot gateway
 Requires the WhatsApp optional dependencies:
 
 ```bash
-nanobot plugins enable whatsapp
+babo plugins enable whatsapp
 ```
 
 **1. Link device with QR**
 
 ```bash
-nanobot channels login whatsapp
+babo channels login whatsapp
 # Scan QR with WhatsApp → Settings → Linked Devices
 ```
 
@@ -445,7 +445,7 @@ Optional session database path:
 {
   "channels": {
     "whatsapp": {
-      "databasePath": "~/.nanobot/whatsapp-auth/neonize.db"
+      "databasePath": "~/.babo/whatsapp-auth/neonize.db"
     }
   }
 }
@@ -454,18 +454,18 @@ Optional session database path:
 **Migrating from the old bridge**
 
 - Remove `bridgeUrl` and `bridgeToken`; WhatsApp no longer runs a local Node.js bridge.
-- Re-run `nanobot channels login whatsapp`; old Baileys bridge auth data is not reused by neonize.
+- Re-run `babo channels login whatsapp`; old Baileys bridge auth data is not reused by neonize.
 - Update `allowFrom` entries to the WhatsApp sender ID without a leading `+`.
 
 **3. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 **Optional: static LID mappings**
 
-Modern WhatsApp can deliver a sender's LID instead of their phone number. nanobot learns LID to phone mappings at runtime when both identifiers are present, but you can also seed mappings up front so the phone number resolves from the very first message:
+Modern WhatsApp can deliver a sender's LID instead of their phone number. babo learns LID to phone mappings at runtime when both identifiers are present, but you can also seed mappings up front so the phone number resolves from the very first message:
 
 ```json
 {
@@ -484,9 +484,9 @@ Modern WhatsApp can deliver a sender's LID instead of their phone number. nanobo
 <details>
 <summary><b>WhatsApp Agent Platform</b></summary>
 
-Connects nanobot through the **official** WhatsApp Agent Platform API. The agent appears as its own chat in WhatsApp and can only talk to you, its creator. No QR pairing, no linked device, and no optional Python dependencies.
+Connects babo through the **official** WhatsApp Agent Platform API. The agent appears as its own chat in WhatsApp and can only talk to you, its creator. No QR pairing, no linked device, and no optional Python dependencies.
 
-This is a different channel from `whatsapp`. nanobot is an independent third-party project, not a WhatsApp product. See the [WhatsApp Agent Platform guide](./guides/whatsapp-agent-platform.md) for the full comparison and walkthrough.
+This is a different channel from `whatsapp`. babo is an independent third-party project, not a WhatsApp product. See the [WhatsApp Agent Platform guide](./guides/whatsapp-agent-platform.md) for the full comparison and walkthrough.
 
 **1. Create the agent in WhatsApp**
 
@@ -510,13 +510,13 @@ Open WhatsApp → **Settings → Agents → Create an agent**, then copy the key
 **3. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 **Notes**
 
 - At most one gateway may poll a given agent token. A second one causes `409` and is logged as a duplicate-poller error.
-- Agent conversations are not end-to-end encrypted. nanobot and your configured model provider process these messages; your other WhatsApp chats are unaffected. Review the [third-party agent terms](https://www.whatsapp.com/legal/third-party-agents-terms) before connecting.
+- Agent conversations are not end-to-end encrypted. babo and your configured model provider process these messages; your other WhatsApp chats are unaffected. Review the [third-party agent terms](https://www.whatsapp.com/legal/third-party-agents-terms) before connecting.
 - Replies are split at 4096 characters. Progress and tool-hint messages are off by default because every send spends the same 12-per-minute budget.
 - Ambiguous send outcomes (HTTP `500`, read timeouts) are not retried by default, because a duplicate is worse than a miss. Set `retryAmbiguousSends: true` to opt in.
 
@@ -530,12 +530,12 @@ Uses **WebSocket** long connection — no public IP required.
 **Quick setup: QR login**
 
 ```bash
-nanobot plugins enable feishu
-nanobot channels login feishu
+babo plugins enable feishu
+babo channels login feishu
 # Use --force to create/sign in with a new bot
 ```
 
-Open the printed URL or scan the QR code with Feishu/Lark on your phone. If the optional `qrcode` package is installed, nanobot shows a terminal QR code; otherwise it prints the login URL. nanobot writes `appId`, `appSecret`, `domain`, and `enabled` under `channels.feishu` in the active config file. Use `--config <path>` to update a non-default config.
+Open the printed URL or scan the QR code with Feishu/Lark on your phone. If the optional `qrcode` package is installed, babo shows a terminal QR code; otherwise it prints the login URL. babo writes `appId`, `appSecret`, `domain`, and `enabled` under `channels.feishu` in the active config file. Use `--config <path>` to update a non-default config.
 
 If QR login is unavailable for your account, use manual setup below.
 
@@ -546,10 +546,10 @@ If QR login is unavailable for your account, use manual setup below.
 - Create a new app → Enable **Bot** capability
 - **Permissions**:
   - `im:message` (send messages) and `im:message.p2p_msg:readonly` (receive messages)
-  - **Streaming replies** (default in nanobot): add **`cardkit:card:write`** (often labeled **Create and update cards** in the Feishu developer console). Required for CardKit entities and streamed assistant text. Older apps may not have it yet — open **Permission management**, enable the scope, then **publish** a new app version if the console requires it.
+  - **Streaming replies** (default in babo): add **`cardkit:card:write`** (often labeled **Create and update cards** in the Feishu developer console). Required for CardKit entities and streamed assistant text. Older apps may not have it yet — open **Permission management**, enable the scope, then **publish** a new app version if the console requires it.
   - If you **cannot** add `cardkit:card:write`, set `"streaming": false` under `channels.feishu` (see below). The bot still works; replies use normal interactive cards without token-by-token streaming.
 - **Events**: Add `im.message.receive_v1` (receive messages)
-  - Select **Long Connection** mode (requires running nanobot first to establish connection)
+  - Select **Long Connection** mode (requires running babo first to establish connection)
 - Get **App ID** and **App Secret** from "Credentials & Basic Info"
 - Publish the app
 
@@ -576,12 +576,12 @@ If QR login is unavailable for your account, use manual setup below.
 }
 ```
 
-> `streaming` defaults to `true`. Use `false` if your app does not have **`cardkit:card:write`** (see permissions above). `encryptKey` and `verificationToken` are optional for Long Connection mode. `allowFrom`: Add your open_id (find it in nanobot logs when you message the bot). Use `["*"]` to allow all users. `groupPolicy`: `"mention"` (default — respond only when @mentioned), `"open"` (respond to all group messages). Private chats always respond. `reactEmoji`: Emoji for "processing" status (default: `OnIt`). See [available emojis](https://open.larkoffice.com/document/server-docs/im-v1/message-reaction/emojis-introduce). `doneEmoji`: Optional emoji for "completed" status (e.g., `DONE`, `OK`, `HEART`). When set, bot adds this reaction after removing `reactEmoji`. `toolHintPrefix`: Prefix for inline tool hints in streaming cards (default: `🔧`). `domain`: `"feishu"` (default) for China (open.feishu.cn), `"lark"` for international Lark (open.larksuite.com).
+> `streaming` defaults to `true`. Use `false` if your app does not have **`cardkit:card:write`** (see permissions above). `encryptKey` and `verificationToken` are optional for Long Connection mode. `allowFrom`: Add your open_id (find it in babo logs when you message the bot). Use `["*"]` to allow all users. `groupPolicy`: `"mention"` (default — respond only when @mentioned), `"open"` (respond to all group messages). Private chats always respond. `reactEmoji`: Emoji for "processing" status (default: `OnIt`). See [available emojis](https://open.larkoffice.com/document/server-docs/im-v1/message-reaction/emojis-introduce). `doneEmoji`: Optional emoji for "completed" status (e.g., `DONE`, `OK`, `HEART`). When set, bot adds this reaction after removing `reactEmoji`. `toolHintPrefix`: Prefix for inline tool hints in streaming cards (default: `🔧`). `domain`: `"feishu"` (default) for China (open.feishu.cn), `"lark"` for international Lark (open.larksuite.com).
 
 **3. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 > [!TIP]
@@ -597,7 +597,7 @@ Uses **botpy SDK** with WebSocket — no public IP required. Currently supports 
 **Install the optional channel dependency**
 
 ```bash
-nanobot plugins enable qq
+babo plugins enable qq
 ```
 
 **1. Register & create bot**
@@ -615,12 +615,12 @@ nanobot plugins enable qq
 Run the QR login and scan with mobile QQ to save the AppID and AppSecret automatically. Scanning again replaces the App Secret and stops the previous secret from working:
 
 ```bash
-nanobot channels login qq
+babo channels login qq
 ```
 
 To enter them yourself, copy **AppID** and **AppSecret** from **开发设置 (Developer Settings)** into `channels.qq`:
 
-> - `allowFrom`: Add your openid (find it in nanobot logs when you message the bot). Use `["*"]` for public access.
+> - `allowFrom`: Add your openid (find it in babo logs when you message the bot). Use `["*"]` for public access.
 > - `msgFormat`: Optional. Use `"plain"` (default) for maximum compatibility with legacy QQ clients, or `"markdown"` for richer formatting on newer clients.
 > - For production: submit a review in the bot console and publish. See [QQ Bot Docs](https://bot.q.qq.com/wiki/) for the full publishing flow.
 
@@ -641,7 +641,7 @@ To enter them yourself, copy **AppID** and **AppSecret** from **开发设置 (De
 **4. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 Now send a message to the bot from QQ — it should respond!
@@ -663,7 +663,7 @@ Connects to a [Napcat](https://github.com/NapNeko/NapCatQQ) instance over its **
 **Install the optional channel dependency**
 
 ```bash
-nanobot plugins enable napcat
+babo plugins enable napcat
 ```
 
 **2. Configure**
@@ -706,7 +706,7 @@ Uses **Stream Mode** — no public IP required.
 **Install the optional channel dependency**
 
 ```bash
-nanobot plugins enable dingtalk
+babo plugins enable dingtalk
 ```
 
 **1. Create a DingTalk bot**
@@ -741,7 +741,7 @@ nanobot plugins enable dingtalk
 **3. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 </details>
@@ -754,7 +754,7 @@ Uses **Socket Mode** — no public URL required.
 **Install the optional channel dependency**
 
 ```bash
-nanobot plugins enable slack
+babo plugins enable slack
 ```
 
 **1. Create a Slack app**
@@ -768,9 +768,9 @@ nanobot plugins enable slack
 - **App Home**: Scroll to **Show Tabs** → Enable **Messages Tab** → Check **"Allow users to send Slash commands and messages from the messages tab"**
 - **Install App**: Click **Install to Workspace** → Authorize → copy the **Bot Token** (`xoxb-...`)
 
-> `files:read` is required to read files users send to nanobot. `files:write` is required for nanobot to send images, videos, and other file uploads. If you add either scope later, reinstall the Slack app to the workspace and restart nanobot so it uses the updated bot token.
+> `files:read` is required to read files users send to babo. `files:write` is required for babo to send images, videos, and other file uploads. If you add either scope later, reinstall the Slack app to the workspace and restart babo so it uses the updated bot token.
 
-**3. Configure nanobot**
+**3. Configure babo**
 
 ```json
 {
@@ -792,7 +792,7 @@ nanobot plugins enable slack
 **4. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 The listed Slack user can DM the bot directly. Other DM senders receive a pairing code. Group access is independent: with `groupPolicy: "mention"`, any member can invoke the bot by mentioning it in a channel it can see. For DM-only access, set `groupPolicy` to `"allowlist"` and leave `groupAllowFrom` empty.
@@ -808,10 +808,10 @@ The listed Slack user can DM the bot directly. Other DM senders receive a pairin
 <details>
 <summary><b>Email</b></summary>
 
-Give nanobot its own email account. It polls **IMAP** for incoming mail and replies via **SMTP** — like a personal email assistant.
+Give babo its own email account. It polls **IMAP** for incoming mail and replies via **SMTP** — like a personal email assistant.
 
 **1. Get credentials (Gmail example)**
-- Create a dedicated Gmail account for your bot (e.g. `my-nanobot@gmail.com`)
+- Create a dedicated Gmail account for your bot (e.g. `my-babo@gmail.com`)
 - Enable 2-Step Verification → Create an [App Password](https://myaccount.google.com/apppasswords)
 - Use this app password for both IMAP and SMTP
 
@@ -838,13 +838,13 @@ Give nanobot its own email account. It polls **IMAP** for incoming mail and repl
       "consentGranted": true,
       "imapHost": "imap.gmail.com",
       "imapPort": 993,
-      "imapUsername": "my-nanobot@gmail.com",
+      "imapUsername": "my-babo@gmail.com",
       "imapPassword": "your-app-password",
       "smtpHost": "smtp.gmail.com",
       "smtpPort": 587,
-      "smtpUsername": "my-nanobot@gmail.com",
+      "smtpUsername": "my-babo@gmail.com",
       "smtpPassword": "your-app-password",
-      "fromAddress": "my-nanobot@gmail.com",
+      "fromAddress": "my-babo@gmail.com",
       "allowFrom": ["your-real-email@gmail.com"],
       "trustedAuthservIds": ["mx.google.com"],
       "postAction": "move",
@@ -861,7 +861,7 @@ Give nanobot its own email account. It polls **IMAP** for incoming mail and repl
 **3. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 </details>
@@ -874,7 +874,7 @@ Uses **HTTP long-poll** with QR-code login via the ilinkai personal WeChat API. 
 **1. Enable WeChat support**
 
 ```bash
-nanobot plugins enable weixin
+babo plugins enable weixin
 ```
 
 **2. Configure**
@@ -890,28 +890,28 @@ nanobot plugins enable weixin
 }
 ```
 
-> - `allowFrom`: Add the sender ID you see in nanobot logs for your WeChat account. Use `["*"]` to allow all users.
-> - `token`: Optional. If omitted, log in interactively and nanobot will save the token for you.
-> - `routeTag`: Optional. When your upstream Weixin deployment requires request routing, nanobot will send it as the `SKRouteTag` header.
-> - `stateDir`: Optional. Defaults to nanobot's runtime directory for Weixin state.
+> - `allowFrom`: Add the sender ID you see in babo logs for your WeChat account. Use `["*"]` to allow all users.
+> - `token`: Optional. If omitted, log in interactively and babo will save the token for you.
+> - `routeTag`: Optional. When your upstream Weixin deployment requires request routing, babo will send it as the `SKRouteTag` header.
+> - `stateDir`: Optional. Defaults to babo's runtime directory for Weixin state.
 > - `pollTimeout`: Optional long-poll timeout in seconds.
 
 **3. Login**
 
 ```bash
-nanobot channels login weixin
+babo channels login weixin
 ```
 
 Use `--force` to re-authenticate and ignore any saved token:
 
 ```bash
-nanobot channels login weixin --force
+babo channels login weixin --force
 ```
 
 **4. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 </details>
@@ -926,7 +926,7 @@ nanobot gateway
 **1. Enable WeCom support**
 
 ```bash
-nanobot plugins enable wecom
+babo plugins enable wecom
 ```
 
 **2. Create a WeCom AI Bot**
@@ -951,7 +951,7 @@ Go to the WeCom admin console → Intelligent Robot → Create Robot → select 
 **4. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 </details>
@@ -964,7 +964,7 @@ nanobot gateway
 **1. Enable Microsoft Teams support**
 
 ```bash
-nanobot plugins enable msteams
+babo plugins enable msteams
 ```
 
 **2. Create a Teams / Azure bot app registration**
@@ -998,7 +998,7 @@ Create or reuse a Microsoft Teams / Azure bot app registration. Set the bot mess
 ```
 
 > - `replyInThread: true` replies to the triggering Teams activity when a stored `activity_id` is available.
-> - `mentionOnlyResponse` controls what Nanobot receives when a user sends only a bot mention (`<at>Nanobot</at>`). Set to `""` to ignore mention-only messages.
+> - `mentionOnlyResponse` controls what Babo receives when a user sends only a bot mention (`<at>Babo</at>`). Set to `""` to ignore mention-only messages.
 > - `validateInboundAuth: true` enables inbound Bot Framework bearer-token validation (signature, issuer, audience, lifetime, `serviceUrl`). This is the safe default for public deployments. Only set it to `false` for local development or tightly controlled testing.
 > - `refTtlDays` (default `30`) controls how old stored conversation refs can be before they are pruned.
 > - `pruneWebChatRefs` (default `true`) drops refs with `webchat.botframework.com` service URLs.
@@ -1008,7 +1008,7 @@ Create or reuse a Microsoft Teams / Azure bot app registration. Set the bot mess
 **4. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 </details>
@@ -1070,7 +1070,7 @@ signal-cli -a +1234567890 daemon --http localhost:8080
 **3. Run**
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 > [!TIP]

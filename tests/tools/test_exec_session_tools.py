@@ -13,9 +13,9 @@ from unittest.mock import AsyncMock
 import pytest
 from loguru import logger
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import RequestContext, bind_request_context, reset_request_context
-from nanobot.agent.tools.exec_session import (
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import RequestContext, bind_request_context, reset_request_context
+from babo.agent.tools.exec_session import (
     MAX_OUTPUT_CHARS,
     ExecSessionManager,
     ExecSessionTool,
@@ -25,8 +25,8 @@ from nanobot.agent.tools.exec_session import (
     _SessionPoll,
     _truncate_output,
 )
-from nanobot.agent.tools.registry import is_tool_error_result
-from nanobot.agent.tools.shell import ExecTool
+from babo.agent.tools.registry import is_tool_error_result
+from babo.agent.tools.shell import ExecTool
 
 
 def _python_command(code: str) -> str:
@@ -1110,7 +1110,7 @@ def test_result_retention_only_cleans_completed_sessions(tmp_path, monkeypatch):
     async def run() -> None:
         now = time.monotonic()
         monkeypatch.setattr(
-            "nanobot.agent.tools.exec_session.time",
+            "babo.agent.tools.exec_session.time",
             SimpleNamespace(monotonic=lambda: now),
         )
         manager = ExecSessionManager(result_retention=10)

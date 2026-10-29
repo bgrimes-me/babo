@@ -8,7 +8,7 @@ import { ThreadViewport } from "@/components/thread/ThreadViewport";
 import { PaneWorkbench } from "@/components/workbench/PaneWorkbench";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { ClientProvider } from "@/providers/ClientProvider";
-import { NanobotClient } from "@/lib/nanobot-client";
+import { BaboClient } from "@/lib/babo-client";
 import { fetchWebuiThread } from "@/lib/api";
 import { projectThreadEvents } from "@/lib/thread-event-projection";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -103,7 +103,7 @@ function SessionMessagesFixture() {
 }
 
 const parameters = new URLSearchParams(location.search);
-const railClient = new NanobotClient({ url: "ws://127.0.0.1:8765", reconnect: false });
+const railClient = new BaboClient({ url: "ws://127.0.0.1:8765", reconnect: false });
 const railHistory: UIMessage[] = Array.from({ length: 5 }, (_, index) => [
   { id: `u${1995 + index}`, role: "user" as const, content: `Question ${1995 + index}`, createdAt: index + 1 },
   { id: `a${1995 + index}`, role: "assistant" as const, content: "A synthetic answer.\n\n".repeat(8), createdAt: index + 1 },
@@ -133,7 +133,7 @@ function RailFixture() {
     return () => window.clearInterval(timer);
   }, [streaming]);
   const navigation = usePromptHistory(messages.length ? "websocket:rail" : null, version, messages);
-  const composer = <div style={{ height: parameters.has("tall-composer") ? 240 : 100, border: "1px solid #ddd", borderRadius: 20, padding: 20 }}>Message nanobot</div>;
+  const composer = <div style={{ height: parameters.has("tall-composer") ? 240 : 100, border: "1px solid #ddd", borderRadius: 20, padding: 20 }}>Message babo</div>;
   const viewport = (external: boolean, navigationFrame?: HTMLElement | null) => <ThreadViewport
     messages={messages} isStreaming={streaming} conversationKey="websocket:rail"
     navigation={parameters.has("short") ? undefined : navigation}
@@ -154,7 +154,7 @@ function RailFixture() {
   </main>;
 }
 const unbrandedPlugin: McpPresetInfo = {
-  name: "plugin-nanobot-workflows", display_name: "Nanobot Workflows", category: "Workflow",
+  name: "plugin-babo-workflows", display_name: "Babo Workflows", category: "Workflow",
   description: "Engineering workflows", docs_url: "", requires: "Project files", note: "", connection_summary: "",
   transport: "stdio", install_supported: false, installed: true, configured: true,
   enabled: true, available: true, status: "enabled", required_fields: [], source: "agent-plugin",

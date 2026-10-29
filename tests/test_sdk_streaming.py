@@ -4,8 +4,8 @@ import asyncio
 
 import pytest
 
-from nanobot.sdk.streaming import SDKStreamEmitter
-from nanobot.sdk.types import STREAM_EVENT_TEXT_DELTA, StreamEvent
+from babo.sdk.streaming import SDKStreamEmitter
+from babo.sdk.types import STREAM_EVENT_TEXT_DELTA, StreamEvent
 
 
 @pytest.mark.asyncio

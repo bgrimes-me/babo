@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.security.workspace_access import WorkspaceScopeError
-from nanobot.webui.workspace_browser import browse_workspace_directories
+from babo.security.workspace_access import WorkspaceScopeError
+from babo.webui.workspace_browser import browse_workspace_directories
 
 
 def test_directory_browser_filters_folders_and_exposes_navigation(tmp_path: Path) -> None:

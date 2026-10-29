@@ -9,7 +9,7 @@ import { SessionSearchDialog } from "@/components/SessionSearchDialog";
 import i18n from "@/i18n";
 import { ComposerDraftStore, clearStoredComposerDrafts } from "@/lib/composer-draft";
 import { CLI_APPS_CHANGED_EVENT } from "@/lib/cli-app-events";
-import type { CanonicalRunSnapshot, StreamError } from "@/lib/nanobot-client";
+import type { CanonicalRunSnapshot, StreamError } from "@/lib/babo-client";
 import { webuiThreadCache } from "@/lib/webui-thread-cache";
 import { ThreadMessageCache } from "@/lib/thread-message-cache";
 import { ThreadTranscript } from "@/lib/thread-transcript";
@@ -149,7 +149,7 @@ function wrap(
 ) {
   return (
     <ClientProvider
-      client={client as unknown as import("@/lib/nanobot-client").NanobotClient}
+      client={client as unknown as import("@/lib/babo-client").BaboClient}
       token={token}
       modelName={modelName ?? null}
       webuiCapabilities={webuiCapabilities}
@@ -1911,7 +1911,7 @@ describe("ThreadShell", () => {
     expect(client.sendMessage).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("group", { name: "Waiting to send" })).not.toBeInTheDocument();
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("/webui-thread"))).toBe(false);
-    expect(window.localStorage.getItem(`nanobot.webui.composerQueuedGuidance.v1:${chatId}`)).toBeNull();
+    expect(window.localStorage.getItem(`babo.webui.composerQueuedGuidance.v1:${chatId}`)).toBeNull();
   });
 
   it("keeps temporary messages across navigation and drops them after clear", async () => {
@@ -2009,7 +2009,7 @@ describe("ThreadShell", () => {
           client,
           <ThreadShell
             session={null}
-            title="nanobot"
+            title="babo"
             onToggleSidebar={() => {}}
           />,
         ),
@@ -2031,7 +2031,7 @@ describe("ThreadShell", () => {
         client,
         <ThreadShell
           session={null}
-          title="nanobot"
+          title="babo"
           onToggleSidebar={() => {}}
           onCreateChat={onCreateChat}
         />,
@@ -2062,7 +2062,7 @@ describe("ThreadShell", () => {
     const view = (currentSession: ReturnType<typeof session> | null) => wrap(client, (
       <ThreadShell
         session={currentSession}
-        title={currentSession ? "New chat" : "nanobot"}
+        title={currentSession ? "New chat" : "babo"}
         onToggleSidebar={() => {}}
         onCreateChat={onCreateChat}
         settingsSnapshot={settings}
@@ -2115,7 +2115,7 @@ describe("ThreadShell", () => {
         client,
         <ThreadShell
           session={null}
-          title="nanobot"
+          title="babo"
           onToggleSidebar={() => {}}
           onCreateChat={onCreateChat}
         />,
@@ -2226,7 +2226,7 @@ describe("ThreadShell", () => {
         client,
         <ThreadShell
           session={null}
-          title="nanobot"
+          title="babo"
           onToggleSidebar={() => {}}
           onCreateChat={onCreateChat}
         />,
@@ -2291,7 +2291,7 @@ describe("ThreadShell", () => {
         client,
         <ThreadShell
           session={null}
-          title="nanobot"
+          title="babo"
           onToggleSidebar={() => {}}
           onCreateChat={onCreateChat}
         />,
@@ -2359,7 +2359,7 @@ describe("ThreadShell", () => {
         client,
         <ThreadShell
           session={null}
-          title="nanobot"
+          title="babo"
           onToggleSidebar={() => {}}
         />,
       ),
@@ -2600,7 +2600,7 @@ describe("ThreadShell", () => {
           client,
           <ThreadShell
             session={null}
-            title="nanobot"
+            title="babo"
             onToggleSidebar={() => {}}
           />,
         ),
@@ -5055,7 +5055,7 @@ describe("ThreadShell", () => {
         client,
         <ThreadShell
           session={null}
-          title="nanobot"
+          title="babo"
           onToggleSidebar={() => {}}
         />,
       ),
@@ -5122,7 +5122,7 @@ describe("ThreadShell", () => {
         client,
         <ThreadShell
           session={null}
-          title="nanobot"
+          title="babo"
           onToggleSidebar={() => {}}
         />,
       ),

@@ -7,8 +7,8 @@ for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 1000 });
         await page.emulateMedia({ reducedMotion: "reduce" });
         await page.addInitScript(({ dark, locale }) => {
-          localStorage.setItem("nanobot.locale", locale);
-          localStorage.setItem("nanobot-webui.settings-preferences", JSON.stringify({ schemaVersion: 1, readingTextSize: "large" }));
+          localStorage.setItem("babo.locale", locale);
+          localStorage.setItem("babo-webui.settings-preferences", JSON.stringify({ schemaVersion: 1, readingTextSize: "large" }));
           document.addEventListener("DOMContentLoaded", () => {
             document.documentElement.classList.toggle("dark", dark);
           });
@@ -51,8 +51,8 @@ for (const width of [1440, 390]) {
     test(`image and quote retain the responsive message actions: ${size}, ${width}px`, async ({ page }, info) => {
       await page.setViewportSize({ width, height: 1000 });
       await page.addInitScript(({ size, locale }) => {
-        localStorage.setItem("nanobot.locale", locale);
-        localStorage.setItem("nanobot-webui.settings-preferences", JSON.stringify({ schemaVersion: 1, readingTextSize: size }));
+        localStorage.setItem("babo.locale", locale);
+        localStorage.setItem("babo-webui.settings-preferences", JSON.stringify({ schemaVersion: 1, readingTextSize: size }));
       }, { size, locale: width === 390 ? "zh-CN" : "en" });
       await page.goto("/browser/fixture.html?case=chat-failure");
       const image = page.getByAltText("Failure screenshot");

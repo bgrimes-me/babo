@@ -9,16 +9,16 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from agent.session_helpers import run_session
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.bus.events import InboundMessage
-from nanobot.bus.outbound_events import ContextCompactionEvent
-from nanobot.bus.queue import MessageBus
-from nanobot.bus.runtime_events import TurnCompleted
-from nanobot.command.builtin import cmd_compact, cmd_stop
-from nanobot.command.router import CommandContext
-from nanobot.providers.base import GenerationSettings, LLMResponse, ProviderConversationState
-from nanobot.runtime_context import public_history_message
-from nanobot.session.history_visibility import is_hidden_history_message
+from babo.agent.loop import AgentLoop
+from babo.bus.events import InboundMessage
+from babo.bus.outbound_events import ContextCompactionEvent
+from babo.bus.queue import MessageBus
+from babo.bus.runtime_events import TurnCompleted
+from babo.command.builtin import cmd_compact, cmd_stop
+from babo.command.router import CommandContext
+from babo.providers.base import GenerationSettings, LLMResponse, ProviderConversationState
+from babo.runtime_context import public_history_message
+from babo.session.history_visibility import is_hidden_history_message
 
 
 @pytest.fixture
@@ -103,7 +103,7 @@ async def test_compact_lock_contention_keeps_heartbeat_running(loop) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("command", ["/compact", " /COMPACT@nanobot ", "/summarize"])
+@pytest.mark.parametrize("command", ["/compact", " /COMPACT@babo ", "/summarize"])
 async def test_compact_emits_one_lifecycle_and_keeps_the_session(loop, command) -> None:
     bus = loop.bus
     session = loop.sessions.get_or_create("cli:test")
@@ -253,7 +253,7 @@ async def test_empty_compact_finishes_silently_and_does_not_schedule_idle_archiv
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("command", ["/COMPACT@nanobot", "/summarize"])
+@pytest.mark.parametrize("command", ["/COMPACT@babo", "/summarize"])
 async def test_compact_during_active_turn_waits_for_the_session_lock(loop, command) -> None:
     key = "websocket:test"
     msg = InboundMessage(

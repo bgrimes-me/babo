@@ -113,7 +113,7 @@ import { useClipboardAndDrop } from "@/hooks/useClipboardAndDrop";
 import { useComposerMentionInput } from "@/hooks/useComposerMentionInput";
 import { useLogoFallback } from "@/hooks/useLogoFallback";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import type { SendAttachment, SendOptions } from "@/hooks/useNanobotStream";
+import type { SendAttachment, SendOptions } from "@/hooks/useBaboStream";
 import { useVoiceRecorder, type VoiceRecorderErrorKey } from "@/hooks/useVoiceRecorder";
 import type {
   CliAppInfo,
@@ -309,9 +309,9 @@ const SLASH_PALETTE_GAP_PX = 8;
 const SLASH_PALETTE_MAX_HEIGHT_PX = 288;
 const SLASH_PALETTE_MIN_HEIGHT_PX = 144;
 const SLASH_PALETTE_CHROME_PX = 12;
-const SLASH_RECENTS_STORAGE_KEY = "nanobot.webui.slashCommandRecents";
+const SLASH_RECENTS_STORAGE_KEY = "babo.webui.slashCommandRecents";
 const SLASH_RECENTS_LIMIT = 5;
-const QUEUED_PROMPTS_STORAGE_PREFIX = "nanobot.webui.composerQueuedGuidance.v1:";
+const QUEUED_PROMPTS_STORAGE_PREFIX = "babo.webui.composerQueuedGuidance.v1:";
 const EMPTY_COMPLETED_TURN_IDS: readonly string[] = [];
 const QUEUED_PROMPTS_LIMIT = 20;
 const SESSION_MENTIONS_LIMIT = 8;
@@ -979,7 +979,7 @@ function GoalStateStrip({
       {goalPanelOpen && canExpandGoal && markdownBody ? (
         <div
           ref={panelRef}
-          id="nanobot-goal-panel-root"
+          id="babo-goal-panel-root"
           role="dialog"
           aria-modal="false"
           aria-label={t("thread.composer.goalStateSheetTitle")}
@@ -992,7 +992,7 @@ function GoalStateStrip({
           style={{ maxHeight: `${Math.round(panelMaxPx)}px` }}
         >
           <div
-            id="nanobot-goal-panel-scroll"
+            id="babo-goal-panel-scroll"
             className="min-h-0 flex-1 overflow-y-auto scrollbar-thin p-3"
           >
             <MarkdownText className="max-w-none text-foreground/90">
@@ -1026,7 +1026,7 @@ function GoalStateStrip({
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 )}
                 aria-expanded={goalPanelOpen}
-                aria-controls={goalPanelOpen ? "nanobot-goal-panel-root" : undefined}
+                aria-controls={goalPanelOpen ? "babo-goal-panel-root" : undefined}
                 aria-label={t("thread.composer.goalStateExpandAria")}
                 title={t("thread.composer.goalStateExpandAria")}
                 onClick={() => setGoalPanelOpen((o) => !o)}

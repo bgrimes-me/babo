@@ -34,7 +34,7 @@ describe("useTheme", () => {
     });
   }
 
-  function notifyStorageChange(key: string | null = "nanobot-webui.theme") {
+  function notifyStorageChange(key: string | null = "babo-webui.theme") {
     act(() => window.dispatchEvent(new StorageEvent("storage", { key })));
   }
 
@@ -47,7 +47,7 @@ describe("useTheme", () => {
       addEventListener: mediaEvents.addEventListener.bind(mediaEvents),
       removeEventListener: mediaEvents.removeEventListener.bind(mediaEvents),
     })));
-    localStorage.removeItem("nanobot-webui.theme");
+    localStorage.removeItem("babo-webui.theme");
     document.documentElement.classList.remove("dark");
 
     const themeColor = document.createElement("meta");
@@ -69,11 +69,11 @@ describe("useTheme", () => {
     delete document.documentElement.dataset.themeTransition;
     document.querySelector('meta[name="theme-color"]')?.remove();
     document.documentElement.classList.remove("dark");
-    localStorage.removeItem("nanobot-webui.theme");
+    localStorage.removeItem("babo-webui.theme");
   });
 
   it("keeps browser chrome in sync with the selected app theme", () => {
-    localStorage.setItem("nanobot-webui.theme", "dark");
+    localStorage.setItem("babo-webui.theme", "dark");
     const { result } = renderHook(useTheme);
     const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
 
@@ -84,18 +84,18 @@ describe("useTheme", () => {
 
     expect(document.documentElement).not.toHaveClass("dark");
     expect(themeColor?.content).toBe("#ffffff");
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe("light");
+    expect(localStorage.getItem("babo-webui.theme")).toBe("light");
     expect(result.current.preference).toBe("light");
   });
 
   it.each(["light", "dark"] as const)("preserves a previously saved %s choice", (saved) => {
     systemDark = saved === "light";
-    localStorage.setItem("nanobot-webui.theme", saved);
+    localStorage.setItem("babo-webui.theme", saved);
     const { result } = renderHook(useTheme);
 
     expect(result.current.preference).toBe(saved);
     expect(result.current.theme).toBe(saved);
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe(saved);
+    expect(localStorage.getItem("babo-webui.theme")).toBe(saved);
   });
 
   it("defaults to system and follows live changes without persisting the resolved theme", () => {
@@ -114,11 +114,11 @@ describe("useTheme", () => {
     expect(result.current.theme).toBe("light");
     expect(document.documentElement).not.toHaveClass("dark");
     expect(themeColor?.content).toBe("#ffffff");
-    expect(localStorage.getItem("nanobot-webui.theme")).toBeNull();
+    expect(localStorage.getItem("babo-webui.theme")).toBeNull();
   });
 
   it("restores system preference against the current system theme", () => {
-    localStorage.setItem("nanobot-webui.theme", "system");
+    localStorage.setItem("babo-webui.theme", "system");
     systemDark = true;
     const { result } = renderHook(useTheme);
 
@@ -126,7 +126,7 @@ describe("useTheme", () => {
     expect(result.current.theme).toBe("dark");
     changeSystemTheme(false);
     expect(result.current.theme).toBe("light");
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe("system");
+    expect(localStorage.getItem("babo-webui.theme")).toBe("system");
   });
 
   it("ignores system changes in explicit mode and resumes the latest system theme", () => {
@@ -142,7 +142,7 @@ describe("useTheme", () => {
     expect(result.current.preference).toBe("system");
     expect(result.current.theme).toBe("dark");
     expect(document.documentElement).toHaveClass("dark");
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe("system");
+    expect(localStorage.getItem("babo-webui.theme")).toBe("system");
   });
 
   it.each([false, true])("toggles the resolved system theme into an explicit choice: dark=%s", (dark) => {
@@ -153,7 +153,7 @@ describe("useTheme", () => {
     act(() => result.current.toggle());
     expect(result.current.preference).toBe(selected);
     expect(result.current.theme).toBe(selected);
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe(selected);
+    expect(localStorage.getItem("babo-webui.theme")).toBe(selected);
 
     changeSystemTheme(!dark);
     changeSystemTheme(dark);
@@ -168,10 +168,10 @@ describe("useTheme", () => {
   it("synchronizes other tabs and storage removal without writing back", () => {
     const { result } = renderHook(useTheme);
     const write = vi.spyOn(Storage.prototype, "setItem");
-    localStorage.setItem("nanobot-webui.theme", "dark");
+    localStorage.setItem("babo-webui.theme", "dark");
     write.mockClear();
 
-    notifyStorageChange("nanobot.locale");
+    notifyStorageChange("babo.locale");
     expect(result.current.preference).toBe("system");
     notifyStorageChange();
     expect(result.current.preference).toBe("dark");
@@ -179,12 +179,12 @@ describe("useTheme", () => {
     expect(document.documentElement).toHaveClass("dark");
     expect(write).not.toHaveBeenCalled();
 
-    localStorage.removeItem("nanobot-webui.theme");
+    localStorage.removeItem("babo-webui.theme");
     notifyStorageChange();
     expect(result.current.preference).toBe("system");
     expect(result.current.theme).toBe("light");
 
-    localStorage.setItem("nanobot-webui.theme", "dark");
+    localStorage.setItem("babo-webui.theme", "dark");
     notifyStorageChange();
     localStorage.clear();
     write.mockClear();
@@ -196,7 +196,7 @@ describe("useTheme", () => {
 
   it("uses system for unrecognized stored preferences", () => {
     systemDark = true;
-    localStorage.setItem("nanobot-webui.theme", "invalid");
+    localStorage.setItem("babo-webui.theme", "invalid");
     const { result } = renderHook(useTheme);
 
     expect(result.current.preference).toBe("system");
@@ -217,17 +217,17 @@ describe("useTheme", () => {
 
   it("can select system during a same-palette transition and still follows OS changes", () => {
     systemDark = true;
-    localStorage.setItem("nanobot-webui.theme", "light");
+    localStorage.setItem("babo-webui.theme", "light");
     const { result } = renderHook(useTheme);
     act(() => result.current.setTheme("dark"));
     expect(document.documentElement).toHaveAttribute("data-theme-transition", "dark");
     act(() => result.current.setTheme("system"));
     expect(result.current.preference).toBe("system");
     expect(result.current.theme).toBe("dark");
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe("system");
+    expect(localStorage.getItem("babo-webui.theme")).toBe("system");
     changeSystemTheme(false);
     expect(result.current.theme).toBe("light");
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe("system");
+    expect(localStorage.getItem("babo-webui.theme")).toBe("system");
     act(() => vi.advanceTimersByTime(600));
     expect(document.documentElement).not.toHaveAttribute("data-theme-transition");
     expect(result.current.theme).toBe("light");
@@ -235,24 +235,24 @@ describe("useTheme", () => {
 
   it("retains a same-palette System choice before a native capture commits", async () => {
     systemDark = true;
-    localStorage.setItem("nanobot-webui.theme", "light");
+    localStorage.setItem("babo-webui.theme", "light");
     const native = deferNativeCapture();
     const { result } = renderHook(useTheme);
 
     act(() => result.current.setTheme("dark"));
     expect(native.start).toHaveBeenCalledOnce();
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe("dark");
+    expect(localStorage.getItem("babo-webui.theme")).toBe("dark");
     act(() => result.current.setTheme("light"));
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe("dark");
+    expect(localStorage.getItem("babo-webui.theme")).toBe("dark");
     act(() => result.current.setTheme("system"));
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe("system");
+    expect(localStorage.getItem("babo-webui.theme")).toBe("system");
     act(() => native.capture());
     expect(result.current.preference).toBe("system");
     expect(result.current.theme).toBe("dark");
 
     changeSystemTheme(false);
     expect(result.current.theme).toBe("light");
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe("system");
+    expect(localStorage.getItem("babo-webui.theme")).toBe("system");
     await act(async () => native.finish());
     act(() => vi.advanceTimersByTime(600));
     expect(document.documentElement).not.toHaveAttribute("data-theme-snapshot");
@@ -260,12 +260,12 @@ describe("useTheme", () => {
   });
 
   it("keeps another tab's newer preference when a native capture is pending", async () => {
-    localStorage.setItem("nanobot-webui.theme", "light");
+    localStorage.setItem("babo-webui.theme", "light");
     const native = deferNativeCapture();
     const { result } = renderHook(useTheme);
     act(() => result.current.setTheme("dark"));
     const write = vi.spyOn(Storage.prototype, "setItem");
-    localStorage.removeItem("nanobot-webui.theme");
+    localStorage.removeItem("babo-webui.theme");
     notifyStorageChange();
     act(() => native.capture());
 
@@ -279,7 +279,7 @@ describe("useTheme", () => {
   });
 
   it("ignores rapid reversals for 600ms without replaying them later", () => {
-    localStorage.setItem("nanobot-webui.theme", "light");
+    localStorage.setItem("babo-webui.theme", "light");
     const { result } = renderHook(useTheme);
     expect(document.documentElement).not.toHaveAttribute("data-theme-transition");
 
@@ -293,7 +293,7 @@ describe("useTheme", () => {
     });
     act(() => result.current.toggle());
     expect(result.current.theme).toBe("dark");
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe("dark");
+    expect(localStorage.getItem("babo-webui.theme")).toBe("dark");
 
     act(() => vi.advanceTimersByTime(1));
     expect(document.documentElement).not.toHaveAttribute("data-theme-transition");
@@ -301,7 +301,7 @@ describe("useTheme", () => {
     expect(result.current.theme).toBe("dark");
     act(() => result.current.toggle());
     expect(result.current.theme).toBe("light");
-    expect(localStorage.getItem("nanobot-webui.theme")).toBe("light");
+    expect(localStorage.getItem("babo-webui.theme")).toBe("light");
   });
 
   it("releases the temporary transition styles when its owner unmounts", () => {

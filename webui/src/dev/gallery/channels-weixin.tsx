@@ -4,14 +4,14 @@ import { useTranslation } from "react-i18next";
 import { channelTranslator } from "@/channel-plugins/i18n";
 import { defaultChannelFieldValues } from "@/components/settings/channels/CredentialForm";
 import type { ChannelConnectPayload } from "@/lib/types";
-import { WeixinPanelView } from "../../../../nanobot/channels/weixin/webui/WeixinPanelView";
-import { WeixinConnectFlowView } from "../../../../nanobot/channels/weixin/webui/WeixinConnectFlowView";
+import { WeixinPanelView } from "../../../../babo/channels/weixin/webui/WeixinPanelView";
+import { WeixinConnectFlowView } from "../../../../babo/channels/weixin/webui/WeixinConnectFlowView";
 import {
   localizeBooleanFields,
   WEIXIN_AUTH_EXPIRED_MESSAGE,
   weixinSetupFields,
   type WeixinVerificationPayload,
-} from "../../../../nanobot/channels/weixin/webui/presentation";
+} from "../../../../babo/channels/weixin/webui/presentation";
 
 import { channelFeatures } from "./channel-fixtures";
 import { StatePicker, type ComponentExample } from "./example";
@@ -102,11 +102,11 @@ function WeixinPanelPreview() {
 }
 
 export const weixinChannelExamples: ComponentExample[] = [
-  { title: "previews.weixinPanel.title", files: ["nanobot/channels/weixin/webui/WeixinPanelView.tsx"],
+  { title: "previews.weixinPanel.title", files: ["babo/channels/weixin/webui/WeixinPanelView.tsx"],
     Preview: WeixinPanelPreview, description: "previews.weixinPanel.description",
     options: "previews.weixinPanel.options",
     code: '<WeixinPanelView feature={feature} primaryFields={primary} advancedFields={advanced} fieldValues={values} saving={saving} saveState={saveState} saveError={error} connectFlow={connectFlow} onFieldChange={change} />' },
-  { title: "previews.weixinConnect.title", files: ["nanobot/channels/weixin/webui/WeixinConnectFlowView.tsx"],
+  { title: "previews.weixinConnect.title", files: ["babo/channels/weixin/webui/WeixinConnectFlowView.tsx"],
     Preview: WeixinConnectPreview, description: "previews.weixinConnect.description",
     options: "previews.weixinConnect.options",
     code: '<WeixinConnectFlowView connect={connect} busy={busy} error={error} autoStart minimalPending onStart={start} onCancel={cancel} onPoll={verify} />' },

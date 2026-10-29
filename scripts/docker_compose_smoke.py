@@ -33,7 +33,7 @@ def main() -> None:
          "--profile", "cli", "config", "--format", "json"],
         text=True,
     ))
-    with tempfile.TemporaryDirectory(prefix="nanobot-compose-smoke-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="babo-compose-smoke-") as temporary:
         root = Path(temporary)
         config.pop("name", None)
         for network in config.get("networks", {}).values():
@@ -70,27 +70,27 @@ def main() -> None:
             for service in config["services"].values():
                 service["volumes"] = [{
                     "type": "bind", "source": str(data),
-                    "target": "/home/nanobot/.nanobot",
+                    "target": "/home/babo/.babo",
                 }]
                 service["environment"].update(
-                    NANOBOT_WEB_TOKEN=secret, NANOBOT_API_KEY=secret,
+                    BABO_WEB_TOKEN=secret, BABO_API_KEY=secret,
                 )
             compose_path.write_text(json.dumps(config), encoding="utf-8")
             try:
-                onboard = run("run", "--rm", "--no-deps", "-T", "nanobot-cli", "onboard")
+                onboard = run("run", "--rm", "--no-deps", "-T", "babo-cli", "onboard")
                 assert "Overwrite?" not in onboard
                 assert "Created config" in onboard
                 subprocess.run([
                     "docker", "run", "--rm", "--user", "1000:1000", "--entrypoint", "python",
-                    "-v", f"{data}:/home/nanobot/.nanobot", args.image,
-                    "-c", "from pathlib import Path; Path('/home/nanobot/.nanobot/config.json').unlink()",
+                    "-v", f"{data}:/home/babo/.babo", args.image,
+                    "-c", "from pathlib import Path; Path('/home/babo/.babo/config.json').unlink()",
                 ], check=True)
                 run("up", "-d")
-                health = endpoint("nanobot-gateway", 18790)
-                webui = endpoint("nanobot-gateway", 8765)
+                health = endpoint("babo-gateway", 18790)
+                webui = endpoint("babo-gateway", 8765)
                 wait_for(health + "/health")
                 wait_for(webui + "/")
-                assert set(run("ps", "--services").split()) == {"nanobot-gateway", "nanobot-api"}
+                assert set(run("ps", "--services").split()) == {"babo-gateway", "babo-api"}
                 path = data / "config.json"
                 saved = json.loads(path.read_text(encoding="utf-8"))
                 password = saved["channels"]["websocket"]["tokenIssueSecret"]
@@ -105,7 +105,7 @@ def main() -> None:
                 assert request(webui + "/webui/bootstrap", "wrong-password")[0] == 401
                 status, body = request(webui + "/webui/bootstrap", password)
                 assert status == 200 and json.loads(body)["token"]
-                api = endpoint("nanobot-api", 8900)
+                api = endpoint("babo-api", 8900)
                 wait_for(api + "/health")
                 for stream in (False, True):
                     status, body = request(api + "/v1/chat/completions", api_key, {
@@ -121,28 +121,28 @@ def main() -> None:
                 }
                 saved["agents"]["defaults"].update(provider="custom", model="smoke-model")
                 subprocess.run([
-                    *compose, "exec", "-T", "--user", "1000:1000", "nanobot-gateway", "python", "-c",
+                    *compose, "exec", "-T", "--user", "1000:1000", "babo-gateway", "python", "-c",
                     "import json, sys; from pathlib import Path; "
-                    "from nanobot.config.schema import Config; from nanobot.config.loader import save_config; "
+                    "from babo.config.schema import Config; from babo.config.loader import save_config; "
                     "save_config(Config.model_validate(json.load(sys.stdin)), "
-                    "Path('/home/nanobot/.nanobot/config.json'))",
+                    "Path('/home/babo/.babo/config.json'))",
                 ], input=json.dumps(saved), text=True, check=True)
                 previous = path.read_bytes()
                 for service in config["services"].values():
                     service["environment"].update(
-                        NANOBOT_WEB_TOKEN="changed-env", NANOBOT_API_KEY="changed-env",
+                        BABO_WEB_TOKEN="changed-env", BABO_API_KEY="changed-env",
                     )
                 compose_path.write_text(json.dumps(config), encoding="utf-8")
-                run("up", "-d", "--force-recreate", "nanobot-gateway")
-                webui = endpoint("nanobot-gateway", 8765)
+                run("up", "-d", "--force-recreate", "babo-gateway")
+                webui = endpoint("babo-gateway", 8765)
                 wait_for(webui + "/")
                 assert path.read_bytes() == previous
                 assert request(webui + "/webui/bootstrap", password)[0] == 200
                 assert request(webui + "/webui/bootstrap", "changed-env")[0] == 401
                 print(f"PASS {label}: recreate preserves provider settings and credentials")
 
-                run("up", "-d", "--force-recreate", "nanobot-api")
-                api = endpoint("nanobot-api", 8900)
+                run("up", "-d", "--force-recreate", "babo-api")
+                api = endpoint("babo-api", 8900)
                 deadline = time.monotonic() + 60
                 while True:
                     try:
@@ -170,14 +170,14 @@ def main() -> None:
                     ], check=True)
 
         commands = {name: list(service["command"]) for name, service in config["services"].items()}
-        selected_path = "/home/nanobot/.nanobot/selected.json"
+        selected_path = "/home/babo/.babo/selected.json"
         selectors = (
             ("long", ["--config", selected_path]),
             ("long-equals", [f"--config={selected_path}"]),
             ("short", ["-c", selected_path]),
             ("short-attached", [f"-c{selected_path}"]),
         )
-        for service_name in ("nanobot-gateway", "nanobot-api"):
+        for service_name in ("babo-gateway", "babo-api"):
             for label, selector in selectors:
                 data = root / f"{service_name}-{label}"
                 data.mkdir()
@@ -187,13 +187,13 @@ def main() -> None:
                 for service in config["services"].values():
                     service["volumes"] = [{
                         "type": "bind", "source": str(data),
-                        "target": "/home/nanobot/.nanobot",
+                        "target": "/home/babo/.babo",
                     }]
                 config["services"][service_name]["command"] = [*commands[service_name], *selector]
                 compose_path.write_text(json.dumps(config), encoding="utf-8")
                 try:
                     run("up", "-d", "--no-deps", service_name)
-                    gateway = service_name == "nanobot-gateway"
+                    gateway = service_name == "babo-gateway"
                     health = endpoint(service_name, 18790 if gateway else 8900)
                     wait_for(health + "/health")
                     if gateway:
@@ -222,8 +222,8 @@ def main() -> None:
         readonly.mkdir()
         result = subprocess.run([
             "docker", "run", "--rm", "--read-only",
-            "-e", "NANOBOT_DOCKER_BOOTSTRAP=1",
-            "-v", f"{readonly}:/home/nanobot/.nanobot:ro", args.image, "status",
+            "-e", "BABO_DOCKER_BOOTSTRAP=1",
+            "-v", f"{readonly}:/home/babo/.babo:ro", args.image, "status",
         ], capture_output=True, text=True)
         assert result.returncode == 1, result.stdout + result.stderr
         assert not (readonly / "config.json").exists()

@@ -7,7 +7,7 @@ import { BrowserNotifications, useBrowserNotificationLifecycle } from "@/compone
 import { useLocalPreferences } from "@/hooks/useLocalPreferences";
 import { enableBrowserNotifications, NOTIFICATION_OPEN_EVENT, notificationChatUrl, notificationProblem, showBrowserNotification, taskNoticeKey } from "@/lib/browser-notifications";
 import { DEFAULT_LOCAL_PREFS, readLocalPreferences, writeLocalPreferences } from "@/lib/local-preferences";
-import type { TaskNotice } from "@/lib/nanobot-client";
+import type { TaskNotice } from "@/lib/babo-client";
 import i18n from "@/i18n";
 
 const requestPermission = vi.fn();
@@ -36,7 +36,7 @@ beforeEach(() => {
   });
   Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: Object.assign(new EventTarget(), { getRegistration, controller: worker }) });
   getRegistration.mockResolvedValue({ active: worker });
-  postMessage.mockImplementation((data, ports) => { queueMicrotask(() => ports[0].reply(data.type === "nanobot:notification-probe" ? "ready" : "submitted")); });
+  postMessage.mockImplementation((data, ports) => { queueMicrotask(() => ports[0].reply(data.type === "babo:notification-probe" ? "ready" : "submitted")); });
   requestPermission.mockImplementation(() => {
     vi.stubGlobal("Notification", { permission: "granted", requestPermission });
     return Promise.resolve("granted");
@@ -276,7 +276,7 @@ it("keeps validated notification navigation alive through sign-out and reveals t
   window.addEventListener(NOTIFICATION_OPEN_EVENT, reveal);
   const url = notificationChatUrl("clicked", false);
   const send = (source: unknown, target: string) => navigator.serviceWorker.dispatchEvent(new MessageEvent("message", {
-    source: source as Window, data: { type: "nanobot:notification-click", url: target },
+    source: source as Window, data: { type: "babo:notification-click", url: target },
   }));
   send(window, url);
   send(worker, "https://wrong-host.example/#/chat/other");

@@ -7,13 +7,13 @@ import {
   type ReactNode,
 } from "react";
 
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 import type { WebUIIngressLimits } from "@/lib/types";
 import { VersionCheckProvider } from "@/providers/VersionCheckProvider";
 import { UpdateFlowProvider } from "@/providers/UpdateFlowProvider";
 
 interface ClientContextValue {
-  client: NanobotClient;
+  client: BaboClient;
   token: string;
   getToken: () => string;
   modelName: string | null;
@@ -32,7 +32,7 @@ export function ClientProvider({
   allowUpdateFlow = true,
   children,
 }: {
-  client: NanobotClient;
+  client: BaboClient;
   token: string;
   modelName?: string | null;
   ingressLimits?: WebUIIngressLimits | null;

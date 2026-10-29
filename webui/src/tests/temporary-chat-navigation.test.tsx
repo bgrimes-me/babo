@@ -163,7 +163,7 @@ describe("temporary chat navigation", () => {
       await screen.findByRole("button", { name: "Back to chat" });
       act(() => TestSocket.current.open());
       await waitFor(() => expect(window.location.hash).toBe(`#/${view}`));
-      expect(window.history.state.nanobotReturnChat.key).toBe("websocket:regular");
+      expect(window.history.state.baboReturnChat.key).toBe("websocket:regular");
       expect(screen.queryByTestId("thread-message-region")).not.toBeInTheDocument();
       const requests = vi.mocked(fetch).mock.calls.map(([url]) => String(url));
       expect(requests.filter((url) => url.includes("/webui-thread") || url === "/api/commands")).toEqual([]);

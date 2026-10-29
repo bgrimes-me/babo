@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { useSidebarState } from "@/hooks/useSidebarState";
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 import type { ConnectionStatus, SidebarStatePayload } from "@/lib/types";
 import { ClientProvider } from "@/providers/ClientProvider";
 
@@ -33,7 +33,7 @@ async function renderLoadedSidebarState() {
       return () => { onState = undefined; };
     },
     setSidebarState,
-  } as unknown as NanobotClient;
+  } as unknown as BaboClient;
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({
     title_overrides: { "websocket:a": "Saved title", "websocket:b": "Other title" },
   })));
@@ -59,7 +59,7 @@ describe("useSidebarState", () => {
       onStatus: () => () => {},
       onSidebarStateUpdate: () => () => {},
       setSidebarState,
-    } as unknown as NanobotClient;
+    } as unknown as BaboClient;
     const saved = {
       pinned_keys: ["websocket:old"],
       archived_keys: ["websocket:archived"],
@@ -114,7 +114,7 @@ describe("useSidebarState", () => {
         return () => { receive = undefined; };
       },
       setSidebarState,
-    } as unknown as NanobotClient;
+    } as unknown as BaboClient;
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(initialFetch));
     const wrapper = ({ children }: { children: ReactNode }) => (
       <ClientProvider client={client} token="token">{children}</ClientProvider>
@@ -158,7 +158,7 @@ describe("useSidebarState", () => {
           return () => { receive = undefined; };
         },
         setSidebarState: vi.fn(async (state: SidebarStatePayload) => state),
-      } as unknown as NanobotClient;
+      } as unknown as BaboClient;
       const fetch = vi.fn()
         .mockResolvedValueOnce(Response.json({}, { status: 503 }))
         .mockResolvedValue(Response.json({}));
@@ -390,7 +390,7 @@ describe("useSidebarState", () => {
         };
       },
       setSidebarState,
-    } as unknown as NanobotClient;
+    } as unknown as BaboClient;
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       status: 200,

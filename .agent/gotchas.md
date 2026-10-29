@@ -6,26 +6,26 @@ Channel dependencies come from channel package manifests, outside the main extra
 
 ## Channel-owned UI and WebUI transport
 
-Channels can own frontend code in `nanobot/channels/*/webui/` and tests in `nanobot/channels/*/tests/`, including `tests/webui/`. The WebUI's lint and test configurations include those frontend paths. Do not assume all channel tests live under the root `tests/` or all frontend code lives under `webui/`.
+Channels can own frontend code in `babo/channels/*/webui/` and tests in `babo/channels/*/tests/`, including `tests/webui/`. The WebUI's lint and test configurations include those frontend paths. Do not assume all channel tests live under the root `tests/` or all frontend code lives under `webui/`.
 
-Vite proxies `/api`, `/webui`, and `/auth`; the application's WebSocket connects directly to the gateway. `NANOBOT_API_URL` sets the HTTP proxy target, whose default is `http://127.0.0.1:8765`. See `webui/vite.config.ts`.
+Vite proxies `/api`, `/webui`, and `/auth`; the application's WebSocket connects directly to the gateway. `BABO_API_URL` sets the HTTP proxy target, whose default is `http://127.0.0.1:8765`. See `webui/vite.config.ts`.
 
 ## Config `${VAR}` References
 
-`nanobot/config/loader.py` loads and validates the config; `resolve_config_env_vars` resolves `${VAR}` references before runtime use. This is not shell-like default-value syntax. Missing referenced variables raise `ConfigLoadError` with field locations; invalid existing config files also raise `ConfigLoadError`. Defaults are created when the config file is absent, not as recovery from an invalid file.
+`babo/config/loader.py` loads and validates the config; `resolve_config_env_vars` resolves `${VAR}` references before runtime use. This is not shell-like default-value syntax. Missing referenced variables raise `ConfigLoadError` with field locations; invalid existing config files also raise `ConfigLoadError`. Defaults are created when the config file is absent, not as recovery from an invalid file.
 
 ## Windows Compatibility
 
-nanobot explicitly supports Windows. Key differences to keep in mind:
+babo explicitly supports Windows. Key differences to keep in mind:
 - `ExecTool` defaults to PowerShell on Windows (`pwsh` when available, otherwise Windows PowerShell); pass `shell="cmd"` for cmd.exe syntax or cmd built-ins (`shell.py`).
-- `nanobot/cli/entry.py` configures Windows console output as UTF-8 before dispatch to handle emoji and multilingual input.
+- `babo/cli/entry.py` configures Windows console output as UTF-8 before dispatch to handle emoji and multilingual input.
 - MCP stdio server commands are normalized for Windows path separators (`mcp.py`).
 
 ## Prompt Templates
 
-Agent system prompts and scenario-specific instructions live in `nanobot/templates/`, including `agent/identity.md` and `agent/platform_policy.md`; workspace defaults include `AGENTS.md`, `HEARTBEAT.md`, and `SOUL.md`. Prompt rendering is handled by `nanobot/utils/prompt_templates.py`. Changing these files alters agent behavior as directly as changing Python code.
+Agent system prompts and scenario-specific instructions live in `babo/templates/`, including `agent/identity.md` and `agent/platform_policy.md`; workspace defaults include `AGENTS.md`, `HEARTBEAT.md`, and `SOUL.md`. Prompt rendering is handled by `babo/utils/prompt_templates.py`. Changing these files alters agent behavior as directly as changing Python code.
 
-The repository's root `AGENTS.md` guides coding agents; `nanobot/templates/AGENTS.md` is a default for nanobot workspaces. `nanobot/agent/context.py` loads project `AGENTS.md` and global `SOUL.md`/`USER.md`, skipping unchanged bundled `AGENTS.md` and `USER.md` defaults. It does not implement Codex's ancestor-directory instruction chain.
+The repository's root `AGENTS.md` guides coding agents; `babo/templates/AGENTS.md` is a default for babo workspaces. `babo/agent/context.py` loads project `AGENTS.md` and global `SOUL.md`/`USER.md`, skipping unchanged bundled `AGENTS.md` and `USER.md` defaults. It does not implement Codex's ancestor-directory instruction chain.
 
 Tool descriptions, skills, and replayed session history also shape model behavior. Treat changes to those surfaces like runtime code: keep them focused, verify the affected contract, and avoid teaching the model to repeat internal markers, local paths, or tool-call text. Add a regression test when it proves a reachable failure that existing coverage does not address.
 
@@ -35,10 +35,10 @@ Anything written into memory, session history, or prompt inputs can be replayed 
 
 ## Skills as Extension Point
 
-Built-in skills live in `nanobot/skills/` (markdown + YAML frontmatter format). Agent capabilities that are "know-how" rather than code should be added as skills, not hardcoded into the agent loop. External skills can be published to and installed from ClawHub.
+Built-in skills live in `babo/skills/` (markdown + YAML frontmatter format). Agent capabilities that are "know-how" rather than code should be added as skills, not hardcoded into the agent loop. External skills can be published to and installed from ClawHub.
 
 ## Persistence and durability
 
-`nanobot/agent/memory.py` owns the memory journal `memory/history.jsonl`; ordinary entries are appended under a lock, without explicit fsync. Full journal rewrites use `atomic_write_lines` with its default file and directory fsync. Preserve that atomic replacement path rather than truncating the live journal in place.
+`babo/agent/memory.py` owns the memory journal `memory/history.jsonl`; ordinary entries are appended under a lock, without explicit fsync. Full journal rewrites use `atomic_write_lines` with its default file and directory fsync. Preserve that atomic replacement path rather than truncating the live journal in place.
 
-Conversation history is stored in `sessions.sqlite3`. `SessionState` (`nanobot/session/state.py`) owns runtime access; `SqliteSessionStore` (`nanobot/session/sqlite_store.py`) commits changes in SQLite transactions using WAL and `PRAGMA synchronous = FULL` on every connection. `SessionManager.save()` is for offline administrative snapshots and has no per-save fsync option. Keep runtime mutations behind the async owner and preserve transaction boundaries and stale-generation checks.
+Conversation history is stored in `sessions.sqlite3`. `SessionState` (`babo/session/state.py`) owns runtime access; `SqliteSessionStore` (`babo/session/sqlite_store.py`) commits changes in SQLite transactions using WAL and `PRAGMA synchronous = FULL` on every connection. `SessionManager.save()` is for offline administrative snapshots and has no per-save fsync option. Keep runtime mutations behind the async owner and preserve transaction boundaries and stale-generation checks.

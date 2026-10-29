@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 import pytest_asyncio
 
-from nanobot.api.server import (
+from babo.api.server import (
     _FileSizeExceeded,
     _parse_json_content,
     _save_base64_data_url,
@@ -132,7 +132,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-from nanobot.api.server import _parse_json_content
+from babo.api.server import _parse_json_content
 
 media_dir = Path(sys.argv[1])
 url = "data:image/png" + ";a" * 128 + ",eA=="
@@ -140,7 +140,7 @@ body = {"messages": [{"role": "user", "content": [
     {"type": "text", "text": "describe this"},
     {"type": "image_url", "image_url": {"url": url}},
 ]}]}
-with patch("nanobot.api.server.get_media_dir", return_value=media_dir):
+with patch("babo.api.server.get_media_dir", return_value=media_dir):
     assert _parse_json_content(body) == ("describe this", [])
 assert list(media_dir.iterdir()) == []
 """
@@ -266,7 +266,7 @@ async def test_multipart_multiple_files(aiohttp_client, mock_agent, tmp_path, mo
 
     media_dir = tmp_path / "media"
     media_dir.mkdir()
-    monkeypatch.setattr("nanobot.api.server.get_media_dir", lambda _channel=None: media_dir)
+    monkeypatch.setattr("babo.api.server.get_media_dir", lambda _channel=None: media_dir)
     app = create_app(mock_agent, model_name="m", api_key=API_KEY)
     client = await aiohttp_client(app)
 
@@ -407,7 +407,7 @@ async def test_json_base64_image_upload(
     aiohttp_client, mock_agent, tmp_path, monkeypatch, marker: str,
 ) -> None:
     """JSON request with base64 data URL saves file and passes path."""
-    monkeypatch.setattr("nanobot.api.server.get_media_dir", lambda _channel=None: tmp_path)
+    monkeypatch.setattr("babo.api.server.get_media_dir", lambda _channel=None: tmp_path)
     app = create_app(mock_agent, model_name="m", api_key=API_KEY)
     client = await aiohttp_client(app)
 

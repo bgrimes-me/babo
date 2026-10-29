@@ -296,7 +296,7 @@ export function AppsCatalogSettings({
 
       {requiresRestartPending ? (
         <RestartRequiredNotice
-          message={tx("settings.apps.restartRequired", "Restart nanobot to apply updated apps and MCP tools.")}
+          message={tx("settings.apps.restartRequired", "Restart babo to apply updated apps and MCP tools.")}
           onRestart={onRestart}
           isRestarting={isRestarting}
         />
@@ -577,7 +577,7 @@ function McpAppsCatalogRow({
   const runtimeFailed = !toggleable && preset.installed && preset.runtime_status === "failed";
   const connecting = Boolean(oauthFlow) || (runtimeConnecting && configuredInstalled);
   const statusLabel = toggleable
-    ? tx("settings.nanobotFeatures.enabled", "Enabled")
+    ? tx("settings.baboFeatures.enabled", "Enabled")
     : runtimeConnected
       ? tx("connection.open", "Connected")
       : mcpPresetStatusLabel(preset.status, tx);
@@ -704,7 +704,7 @@ function McpAppsCatalogRow({
                     onClick={() => onAction("disable", preset.name)}
                   >
                     <PauseCircle aria-hidden />
-                    {tx("settings.nanobotFeatures.disable", "Disable")}
+                    {tx("settings.baboFeatures.disable", "Disable")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -725,8 +725,8 @@ function McpAppsCatalogRow({
             )
           ) : preset.enabled === false ? (
             <AppsActionButton
-              ariaLabel={tx("settings.nanobotFeatures.enable", "Enable")}
-              visibleLabel={tx("settings.nanobotFeatures.enable", "Enable")}
+              ariaLabel={tx("settings.baboFeatures.enable", "Enable")}
+              visibleLabel={tx("settings.baboFeatures.enable", "Enable")}
               busy={enableBusy}
               onClick={() => onAction("enable", preset.name, values)}
             />
@@ -1319,7 +1319,7 @@ function mcpOAuthStatusText(
       if (completionInput === "callback_url") {
         return tx(
           "settings.mcp.manualCallbackRequired",
-          "Finish signing in, then paste the callback URL into nanobot.",
+          "Finish signing in, then paste the callback URL into babo.",
         );
       }
       return popupBlocked

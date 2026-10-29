@@ -7,13 +7,13 @@ from typing import Any
 
 import pytest
 
-import nanobot.providers.base as provider_base
-from nanobot.providers.openai_codex_provider import OpenAICodexProvider, _CodexHTTPError
-from nanobot.providers.openai_responses import build_responses_state
+import babo.providers.base as provider_base
+from babo.providers.openai_codex_provider import OpenAICodexProvider, _CodexHTTPError
+from babo.providers.openai_responses import build_responses_state
 
 LANGFUSE_MISSING_WARNING = (
     "LANGFUSE_SECRET_KEY is set but langfuse is not installed; "
-    "run `nanobot plugins enable langfuse` to enable tracing"
+    "run `babo plugins enable langfuse` to enable tracing"
 )
 
 
@@ -22,7 +22,7 @@ def _mock_codex_token(monkeypatch: pytest.MonkeyPatch) -> None:
         return SimpleNamespace(account_id="acct", access="token")
 
     monkeypatch.setattr(
-        "nanobot.providers.openai_codex_provider.get_codex_token",
+        "babo.providers.openai_codex_provider.get_codex_token",
         fake_token,
     )
 
@@ -40,7 +40,7 @@ class _WarningCaptureLogger:
 
 def _capture_codex_warnings(monkeypatch: pytest.MonkeyPatch) -> _WarningCaptureLogger:
     capture = _WarningCaptureLogger()
-    monkeypatch.setattr("nanobot.providers.openai_codex_provider.logger", capture)
+    monkeypatch.setattr("babo.providers.openai_codex_provider.logger", capture)
     return capture
 
 
@@ -93,7 +93,7 @@ async def test_codex_langfuse_missing_package_warns_and_call_still_succeeds(monk
     capture = _capture_codex_warnings(monkeypatch)
     _mock_codex_token(monkeypatch)
     monkeypatch.setattr(
-        "nanobot.providers.openai_codex_provider._request_codex", _fake_request_success
+        "babo.providers.openai_codex_provider._request_codex", _fake_request_success
     )
 
     provider = OpenAICodexProvider()
@@ -113,7 +113,7 @@ async def test_codex_langfuse_disabled_when_env_var_unset(monkeypatch) -> None:
         lambda name: find_spec_calls.append(name),
     )
     monkeypatch.setattr(
-        "nanobot.providers.openai_codex_provider._request_codex", _fake_request_success
+        "babo.providers.openai_codex_provider._request_codex", _fake_request_success
     )
 
     provider = OpenAICodexProvider()
@@ -155,7 +155,7 @@ async def test_codex_langfuse_success_records_generation_with_expected_fields(
         )
 
     monkeypatch.setattr(
-        "nanobot.providers.openai_codex_provider._request_codex", fake_request
+        "babo.providers.openai_codex_provider._request_codex", fake_request
     )
 
     provider = OpenAICodexProvider()
@@ -179,7 +179,7 @@ async def test_codex_langfuse_error_records_generation_and_original_error_still_
         raise _CodexHTTPError("boom", status_code=500)
 
     monkeypatch.setattr(
-        "nanobot.providers.openai_codex_provider._request_codex", fake_request_error
+        "babo.providers.openai_codex_provider._request_codex", fake_request_error
     )
 
     provider = OpenAICodexProvider()
@@ -204,7 +204,7 @@ async def test_codex_langfuse_tracing_failure_does_not_break_codex_call(monkeypa
 
     _install_fake_langfuse(monkeypatch, broken_start_observation)
     monkeypatch.setattr(
-        "nanobot.providers.openai_codex_provider._request_codex", _fake_request_success
+        "babo.providers.openai_codex_provider._request_codex", _fake_request_success
     )
 
     provider = OpenAICodexProvider()
@@ -224,7 +224,7 @@ async def test_codex_langfuse_generation_still_ends_when_update_raises(monkeypat
 
     monkeypatch.setattr(_FakeGeneration, "update", fail_update)
     monkeypatch.setattr(
-        "nanobot.providers.openai_codex_provider._request_codex", _fake_request_success
+        "babo.providers.openai_codex_provider._request_codex", _fake_request_success
     )
 
     provider = OpenAICodexProvider()
@@ -243,7 +243,7 @@ async def test_codex_langfuse_generation_ends_on_cancellation(monkeypatch, gener
         raise asyncio.CancelledError()
 
     monkeypatch.setattr(
-        "nanobot.providers.openai_codex_provider._request_codex", fake_request_cancelled
+        "babo.providers.openai_codex_provider._request_codex", fake_request_cancelled
     )
 
     provider = OpenAICodexProvider()
@@ -296,7 +296,7 @@ async def test_codex_langfuse_traces_each_request_during_native_compaction(monke
             usage=provider_base.LLMUsage.reported(input_tokens=5, output_tokens=1, total_tokens=6),
         )
 
-    monkeypatch.setattr("nanobot.providers.openai_codex_provider._request_codex", fake_request)
+    monkeypatch.setattr("babo.providers.openai_codex_provider._request_codex", fake_request)
 
     response = await provider.chat_with_retry(
         [
@@ -330,7 +330,7 @@ async def test_codex_langfuse_detection_failure_does_not_break_codex_call(monkey
 
     monkeypatch.setattr("importlib.util.find_spec", broken_find_spec)
     monkeypatch.setattr(
-        "nanobot.providers.openai_codex_provider._request_codex", _fake_request_success
+        "babo.providers.openai_codex_provider._request_codex", _fake_request_success
     )
 
     provider = OpenAICodexProvider()
@@ -384,7 +384,7 @@ async def test_codex_langfuse_traces_the_actual_wire_body_not_the_prenormalized_
         sent_bodies.append(body)
         return provider_base.LLMResponse(content="done")
 
-    monkeypatch.setattr("nanobot.providers.openai_codex_provider._request_codex", fake_request)
+    monkeypatch.setattr("babo.providers.openai_codex_provider._request_codex", fake_request)
 
     await provider.chat(
         [{"role": "user", "content": "Check the weather"}],
@@ -432,7 +432,7 @@ async def test_codex_langfuse_records_rejected_compaction_as_error(monkeypatch, 
             return provider_base.LLMResponse(content=None)
         return provider_base.LLMResponse(content="done")
 
-    monkeypatch.setattr("nanobot.providers.openai_codex_provider._request_codex", fake_request)
+    monkeypatch.setattr("babo.providers.openai_codex_provider._request_codex", fake_request)
 
     response = await provider.chat_with_retry(
         [

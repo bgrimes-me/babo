@@ -631,7 +631,7 @@ for (const width of [1440, 390, 320]) {
     const archive = page.locator("[data-subagent-results]").first();
     const header = archive.locator("[data-subagent-results-summary]");
     const logo = header.locator("img");
-    await expect(logo).toHaveAttribute("src", "/brand/nanobot_mark.svg");
+    await expect(logo).toHaveAttribute("src", "/brand/babo_mark.svg");
     await expect.poll(() => logo.evaluate(node => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     const rows = archive.locator('[data-subagent-surface="archive"]');
     await expect(rows.first()).toBeHidden();

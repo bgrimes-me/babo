@@ -15,8 +15,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from nanobot.cli import desktop_target, webui_support
-from nanobot.cli import windows_browser as browser
+from babo.cli import desktop_target, webui_support
+from babo.cli import windows_browser as browser
 
 
 class RecordingInput(io.BytesIO):

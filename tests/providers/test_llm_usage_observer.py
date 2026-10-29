@@ -11,12 +11,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from nanobot.llm_usage.context import current_llm_usage_source, llm_usage_source
-from nanobot.llm_usage.models import LLMCallRecord
-from nanobot.llm_usage.service import record_llm_call
-from nanobot.llm_usage.store import LLMUsageStore
-from nanobot.providers.base import LLMProvider, LLMResponse, LLMUsage
-from nanobot.providers.fallback_provider import FallbackProvider
+from babo.llm_usage.context import current_llm_usage_source, llm_usage_source
+from babo.llm_usage.models import LLMCallRecord
+from babo.llm_usage.service import record_llm_call
+from babo.llm_usage.store import LLMUsageStore
+from babo.providers.base import LLMProvider, LLMResponse, LLMUsage
+from babo.providers.fallback_provider import FallbackProvider
 
 
 class _SequenceProvider(LLMProvider):
@@ -190,7 +190,7 @@ async def test_missing_usage_keeps_loop_responsive_and_settles_before_cancellati
     events: list[LLMCallRecord] = []
     observer_loops = []
     clock = [1_000_000_000]
-    monkeypatch.setattr("nanobot.providers.base.time.monotonic_ns", lambda: clock[0])
+    monkeypatch.setattr("babo.providers.base.time.monotonic_ns", lambda: clock[0])
 
     def estimate() -> tuple[int, str]:
         sources.append(current_llm_usage_source())
@@ -362,7 +362,7 @@ async def test_gateway_usage_observer_records_missing_usage_and_retry(
     reply = "gateway-response-canary-27be91"
     error = "gateway-error-canary-64a8cd"
     store = LLMUsageStore(tmp_path / "usage.sqlite3")
-    monkeypatch.setattr("nanobot.llm_usage.service.get_llm_usage_store", lambda: store)
+    monkeypatch.setattr("babo.llm_usage.service.get_llm_usage_store", lambda: store)
     provider = _SequenceProvider(iter([
         LLMResponse(content=error, finish_reason="error", error_kind="timeout"),
         LLMResponse(content=reply),
@@ -410,7 +410,7 @@ async def test_stream_observer_records_physical_attempt_timing(monkeypatch) -> N
         ]
     )
     monkeypatch.setattr(
-        "nanobot.providers.base.time.monotonic_ns",
+        "babo.providers.base.time.monotonic_ns",
         lambda: next(monotonic_values),
     )
 

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const fixture = "/browser/fixture.html?case=queued-guidance";
-const storageKey = "nanobot.webui.composerQueuedGuidance.v1:queued-fixture";
+const storageKey = "babo.webui.composerQueuedGuidance.v1:queued-fixture";
 
 async function queue(page: Page, text = "Confirm this instruction") {
   const input = page.getByRole("textbox", { name: "Message input", exact: true });

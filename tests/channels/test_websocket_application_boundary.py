@@ -11,18 +11,18 @@ import pytest
 from websockets.datastructures import Headers
 from websockets.http11 import Request, Response
 
-from nanobot.bus.events import OutboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.channels.websocket import runtime
-from nanobot.webui.gateway_services import build_gateway_services
+from babo.bus.events import OutboundMessage
+from babo.bus.queue import MessageBus
+from babo.channels.websocket import runtime
+from babo.webui.gateway_services import build_gateway_services
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-_SESSION_IDENTITY_PATH = _REPOSITORY_ROOT / "nanobot" / "webui" / "session_identity.py"
+_SESSION_IDENTITY_PATH = _REPOSITORY_ROOT / "babo" / "webui" / "session_identity.py"
 
 
 @pytest.fixture
 async def channel(tmp_path, monkeypatch):
-    monkeypatch.setattr("nanobot.config.paths.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.config.paths.get_data_dir", lambda: tmp_path)
     config = runtime.WebSocketConfig(allow_from=["client-1"], websocket_requires_token=False)
     bus = MessageBus()
     gateway = build_gateway_services(
@@ -160,7 +160,7 @@ def test_persisted_webui_session_prefix_has_one_production_owner() -> None:
     # Consumers import session_identity; independent literal keys/prefixes fork its policy.
     # Exact persisted values and mapping round trips live in test_session_identity.py.
     owners = {}
-    for path in (_REPOSITORY_ROOT / "nanobot").rglob("*.py"):
+    for path in (_REPOSITORY_ROOT / "babo").rglob("*.py"):
         if "tests" in path.parts:
             continue
         lines = _session_namespace_literal_lines(path.read_text(encoding="utf-8"))

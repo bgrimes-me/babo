@@ -50,7 +50,7 @@ export function HostCompatibilityDialog({ profile, clientVersion, onClose }: {
       <div className={report && !compatible ? "remote-dialog-actions" : "flex justify-end"}>
         <Button className="remote-action" variant="ghost" onClick={onClose}>{t("common.close")}</Button>
         {report && !compatible && <Button asChild className="remote-action gap-2">
-          <a href="https://github.com/HKUDS/nanobot/blob/main/docs/quick-start.md#updating" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/bgrimes-me/babo/blob/main/docs/quick-start.md#updating" target="_blank" rel="noopener noreferrer">
             {t("remote.compatibility.guide")}<ExternalLink aria-hidden className="h-3.5 w-3.5" />
           </a>
         </Button>}

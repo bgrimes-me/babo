@@ -126,7 +126,7 @@ function Comboboxes() {
 function Dialogs() {
   const { t } = useGalleryTranslation();
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("Nanobot");
+  const [name, setName] = useState("Babo");
   const [draft, setDraft] = useState(name);
   return <div className="space-y-4">
     <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (next) setDraft(name); }}>
@@ -245,7 +245,7 @@ function StreamingLabels() {
 
 function ImageViewports() {
   return <div className="flex h-80 max-w-xl flex-col rounded-lg border p-3">
-    <ImageViewport src="/brand/nanobot_icon_512.png" alt="Nanobot" className="flex-1" />
+    <ImageViewport src="/brand/babo_icon_512.png" alt="Babo" className="flex-1" />
   </div>;
 }
 

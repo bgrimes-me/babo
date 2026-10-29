@@ -8,8 +8,8 @@ import pytest
 def test_config_base_import_does_not_load_config_schema():
     code = """
 import sys
-from nanobot.config_base import Base
-print("nanobot.config.schema" in sys.modules)
+from babo.config_base import Base
+print("babo.config.schema" in sys.modules)
 """
     result = subprocess.run(
         [sys.executable, "-c", code],
@@ -29,26 +29,26 @@ import sys
 class RuntimeImportBlocker(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
         config_modules = {
-            'nanobot.agent', 'nanobot.agent.tools',
-            'nanobot.agent.tools.cli_apps_config',
-            'nanobot.agent.tools.filesystem_config',
-            'nanobot.agent.tools.image_generation_config',
-            'nanobot.agent.tools.self_config',
-            'nanobot.agent.tools.shell_config',
-            'nanobot.agent.tools.web_config',
+            'babo.agent', 'babo.agent.tools',
+            'babo.agent.tools.cli_apps_config',
+            'babo.agent.tools.filesystem_config',
+            'babo.agent.tools.image_generation_config',
+            'babo.agent.tools.self_config',
+            'babo.agent.tools.shell_config',
+            'babo.agent.tools.web_config',
         }
         if fullname in config_modules:
             return None
         forbidden = (
-            'nanobot.agent', 'nanobot.api', 'nanobot.apps', 'nanobot.channels',
-            'nanobot.cli', 'nanobot.session', 'nanobot.webui', 'nanobot.providers.base',
+            'babo.agent', 'babo.api', 'babo.apps', 'babo.channels',
+            'babo.cli', 'babo.session', 'babo.webui', 'babo.providers.base',
         )
         if any(fullname == name or fullname.startswith(name + '.') for name in forbidden):
             raise AssertionError('configuration imported runtime implementation: ' + fullname)
 
 sys.meta_path.insert(0, RuntimeImportBlocker())
-from nanobot.config import Config
-from nanobot.config.schema import ModelPresetConfig
+from babo.config import Config
+from babo.config.schema import ModelPresetConfig
 
 config = Config.model_validate({'tools': {
     'exec': {'timeout': 37},
@@ -76,15 +76,15 @@ assert ModelPresetConfig(model='example').to_generation_settings().max_tokens ==
 def test_public_tool_contracts_can_be_imported_without_agent_execution():
     code = """
 import sys
-from nanobot.agent.tools import Tool, ToolResult, tool_parameters
-from nanobot.agent.tools.base import Tool as BaseTool
+from babo.agent.tools import Tool, ToolResult, tool_parameters
+from babo.agent.tools.base import Tool as BaseTool
 
 assert Tool is BaseTool
 assert callable(tool_parameters)
 assert ToolResult
-assert 'nanobot.agent.loop' not in sys.modules
-assert 'nanobot.agent.runner' not in sys.modules
-assert 'nanobot.agent.tools.shell' not in sys.modules
+assert 'babo.agent.loop' not in sys.modules
+assert 'babo.agent.runner' not in sys.modules
+assert 'babo.agent.tools.shell' not in sys.modules
 """
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
@@ -102,9 +102,9 @@ assert 'nanobot.agent.tools.shell' not in sys.modules
     ],
 )
 def test_tool_config_imports_keep_the_same_public_class(module, names):
-    contracts = import_module(f"nanobot.agent.tools.{module}_config")
-    aggregate = import_module("nanobot.config.schema")
-    implementation = import_module(f"nanobot.agent.tools.{module}")
+    contracts = import_module(f"babo.agent.tools.{module}_config")
+    aggregate = import_module("babo.config.schema")
+    implementation = import_module(f"babo.agent.tools.{module}")
     for name in names:
         assert getattr(implementation, name) is getattr(contracts, name)
         assert getattr(aggregate, name) is getattr(contracts, name)

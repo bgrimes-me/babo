@@ -134,7 +134,7 @@ function ProvidersPreview() {
     {entry ? <ProvidersSettings entry={entry} settings={payload} showBrandLogos={showBrandLogos}
       onClose={() => setEntry(null)} onCloseAutoFocus={(event) => { event.preventDefault(); trigger.current?.focus(); }}
       onProviderAdded={() => setNotice({ key: "providerAdded" })}
-      nanobotFeatures={null} featureAction={null} capabilityError={null} providerForms={drafts}
+      baboFeatures={null} featureAction={null} capabilityError={null} providerForms={drafts}
       visibleProviderKeys={visibleKeys} editingProviderKeys={editingKeys} providerSaving={null} remoteBrowserAccess={false}
       onResetProviderDraft={resetDraft}
       onToggleProviderKey={(name) => setVisibleKeys((current) => ({ ...current, [name]: !current[name] }))}

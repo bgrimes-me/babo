@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from agent.session_helpers import run_session, save_completed_subagent
-from nanobot.agent.context import TranscriptInput
-from nanobot.agent.hooks import create_file_edit_activity_hook
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import current_request_context
-from nanobot.agent.tools.filesystem import WriteFileTool
-from nanobot.bus.events import InboundMessage
-from nanobot.bus.outbound_events import (
+from babo.agent.context import TranscriptInput
+from babo.agent.hooks import create_file_edit_activity_hook
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import current_request_context
+from babo.agent.tools.filesystem import WriteFileTool
+from babo.bus.events import InboundMessage
+from babo.bus.outbound_events import (
     GoalStatusEvent,
     ProgressEvent,
     SessionUpdatedEvent,
@@ -22,12 +22,12 @@ from nanobot.bus.outbound_events import (
     StreamEndEvent,
     TurnEndEvent,
 )
-from nanobot.bus.queue import MessageBus
-from nanobot.providers.base import LLMResponse, ToolCallRequest
-from nanobot.providers.factory import ProviderSnapshot
-from nanobot.session.webui_turns import WebuiTurnCoordinator, WebuiTurnRoutePolicy
-from nanobot.utils.progress_events import output_events
-from nanobot.webui.metadata import (
+from babo.bus.queue import MessageBus
+from babo.providers.base import LLMResponse, ToolCallRequest
+from babo.providers.factory import ProviderSnapshot
+from babo.session.webui_turns import WebuiTurnCoordinator, WebuiTurnRoutePolicy
+from babo.utils.progress_events import output_events
+from babo.webui.metadata import (
     WEBSOCKET_TURN_OWNER_METADATA_KEY,
     WEBUI_TURN_METADATA_KEY,
 )
@@ -159,7 +159,7 @@ class TestToolEventProgress:
             pass
 
         monkeypatch.setattr(
-            "nanobot.agent.hooks.file_edit_activity.prepare_file_edit_trackers",
+            "babo.agent.hooks.file_edit_activity.prepare_file_edit_trackers",
             prepare_file_edit_trackers,
         )
 
@@ -1120,7 +1120,7 @@ class TestToolEventProgress:
             return False
 
         monkeypatch.setattr(
-            "nanobot.session.webui_turns.maybe_generate_webui_title_after_turn",
+            "babo.session.webui_turns.maybe_generate_webui_title_after_turn",
             fake_title_after_turn,
         )
         scheduled_title: list[object] = []
@@ -1164,8 +1164,8 @@ class TestToolEventProgress:
         tmp_path: Path,
         metadata: dict[str, object],
     ) -> None:
-        from nanobot.session.manager import SessionManager
-        from nanobot.session.webui_turns import maybe_generate_webui_title_after_turn
+        from babo.session.manager import SessionManager
+        from babo.session.webui_turns import maybe_generate_webui_title_after_turn
 
         sessions = SessionManager(tmp_path)
         session = sessions.get_or_create("websocket:chat1")
@@ -1245,7 +1245,7 @@ class TestToolEventProgress:
             raise AssertionError("command-only turns should not generate titles")
 
         monkeypatch.setattr(
-            "nanobot.session.webui_turns.maybe_generate_webui_title_after_turn",
+            "babo.session.webui_turns.maybe_generate_webui_title_after_turn",
             fake_title_after_turn,
         )
         scheduled: list[object] = []

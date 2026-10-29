@@ -9,12 +9,12 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.session.display_history import HistoryFact, HistoryKind
-from nanobot.session.manager import SessionManager
-from nanobot.session.sqlite_store import SessionConflictError
-from nanobot.webui.forking import create_webui_chat_fork
-from nanobot.webui.history import HISTORY_IMPORT_MARKER, collect_legacy_history
-from nanobot.webui.transcript import WebUITranscriptRecorder, build_webui_thread_response
+from babo.session.display_history import HistoryFact, HistoryKind
+from babo.session.manager import SessionManager
+from babo.session.sqlite_store import SessionConflictError
+from babo.webui.forking import create_webui_chat_fork
+from babo.webui.history import HISTORY_IMPORT_MARKER, collect_legacy_history
+from babo.webui.transcript import WebUITranscriptRecorder, build_webui_thread_response
 
 
 def _manager(tmp_path: Path) -> SessionManager:
@@ -105,7 +105,7 @@ async def test_fork_rolls_back_both_histories_if_display_copy_fails(tmp_path, mo
     source.add_message("user", "question")
     source.add_message("assistant", "answer")
     await sessions.state.finish_turn(source)
-    monkeypatch.setattr("nanobot.webui.forking.uuid.uuid4", lambda: "failed-fork")
+    monkeypatch.setattr("babo.webui.forking.uuid.uuid4", lambda: "failed-fork")
     original = sessions._store.append_history
 
     def fail(key, facts, *, expected_generation):
@@ -222,7 +222,7 @@ async def test_real_process_exit_cannot_split_fork_model_and_display_histories(t
     child = tmp_path / "crash.py"
     child.write_text('''import asyncio, os, sys
 from pathlib import Path
-from nanobot.session.manager import SessionManager
+from babo.session.manager import SessionManager
 root = Path(sys.argv[1])
 sessions = SessionManager(root / "workspace", sessions_root=root / "sessions")
 original = sessions._store.append_history
@@ -251,7 +251,7 @@ asyncio.run(run())
 
 @pytest.mark.asyncio
 async def test_legacy_import_owner_survives_delete_and_new_workspace(tmp_path):
-    from nanobot.webui.history import collect_legacy_history
+    from babo.webui.history import collect_legacy_history
 
     root = tmp_path / "sessions"
     legacy = tmp_path / "webui"
@@ -277,7 +277,7 @@ async def test_legacy_import_owner_survives_delete_and_new_workspace(tmp_path):
 async def test_large_display_fact_serialization_and_copy_stay_off_runtime_loop(tmp_path, monkeypatch):
     import threading
 
-    import nanobot.session.state as state_module
+    import babo.session.state as state_module
 
     sessions = _manager(tmp_path)
     session = await sessions.state.get_header("websocket:large-activity")
@@ -306,7 +306,7 @@ async def test_large_display_fact_serialization_and_copy_stay_off_runtime_loop(t
 
 
 def test_message_projection_adapter_preserves_reply_and_agent_activity():
-    from nanobot.webui.history import fact_from_record, record_from_fact
+    from babo.webui.history import fact_from_record, record_from_fact
 
     record = {
         "event": "message", "chat_id": "activity", "kind": "progress",
@@ -320,7 +320,7 @@ def test_message_projection_adapter_preserves_reply_and_agent_activity():
 async def test_legacy_activity_without_record_timestamps_preserves_file_time(tmp_path):
     import os
 
-    from nanobot.webui.session_list_index import list_webui_sessions
+    from babo.webui.session_list_index import list_webui_sessions
 
     sessions = _manager(tmp_path)
     session = await sessions.state.get_header("websocket:old-activity")
@@ -344,7 +344,7 @@ async def test_legacy_activity_without_record_timestamps_preserves_file_time(tmp
 async def test_new_fork_activity_uses_creation_time_not_inherited_history(tmp_path, stored_display):
     from datetime import datetime
 
-    from nanobot.webui.session_list_index import list_webui_sessions
+    from babo.webui.session_list_index import list_webui_sessions
 
     sessions = _manager(tmp_path)
     source = await sessions.state.get("websocket:old-source")

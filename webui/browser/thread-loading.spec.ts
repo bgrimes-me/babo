@@ -14,7 +14,7 @@ for (const width of [314, 390, 1440]) for (const dark of [false, true]) {
     await page.setViewportSize({ width, height: width === 314 ? 647 : 844 });
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.addInitScript(() => { localStorage.setItem("nanobot.locale", "en"); });
+    await page.addInitScript(() => { localStorage.setItem("babo.locale", "en"); });
     await page.route("**/api/commands", (route) => route.fulfill({ json: { commands: [] } }));
     let releaseHistory!: () => void;
     const historyGate = new Promise<void>((resolve) => { releaseHistory = resolve; });

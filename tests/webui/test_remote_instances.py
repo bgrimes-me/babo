@@ -14,13 +14,13 @@ from pydantic import ValidationError
 from websockets.datastructures import Headers
 from websockets.http11 import Request
 
-from nanobot.channels.websocket.runtime import WebSocketConfig
-from nanobot.webui import remote_instances, remote_ssh
-from nanobot.webui.client_contract import webui_contract
-from nanobot.webui.gateway_services import build_gateway_services
-from nanobot.webui.remote_instances import RemoteInstances
-from nanobot.webui.remote_proxy import RemoteProxy
-from nanobot.webui.remote_ssh import (
+from babo.channels.websocket.runtime import WebSocketConfig
+from babo.webui import remote_instances, remote_ssh
+from babo.webui.client_contract import webui_contract
+from babo.webui.gateway_services import build_gateway_services
+from babo.webui.remote_instances import RemoteInstances
+from babo.webui.remote_proxy import RemoteProxy
+from babo.webui.remote_ssh import (
     RemoteError,
     RemoteProfile,
     open_tunnel,
@@ -53,7 +53,7 @@ def ssh(monkeypatch):
 
     def respond(request):
         if request.url.path == "/webui/terminal":
-            assert request.headers["X-Nanobot-Auth"] == "private-webui-secret"
+            assert request.headers["X-Babo-Auth"] == "private-webui-secret"
             return httpx.Response(state["status"], json=state["identity"])
         raise AssertionError(f"A data-only host must not be asked for a frontend: {request.url.path}")
 
@@ -131,12 +131,12 @@ async def test_rename_connected_profile_only_changes_display_name(manager, ssh):
     await manager.action("connect", {"id": key})
     before = json.loads(manager.path.read_text(encoding="utf-8"))
     live = manager.connections[key]
-    result = await manager.action("rename", {"id": key, "name": "  腾讯云 nanobot  "})
-    assert result["profiles"][0]["name"] == "腾讯云 nanobot"
+    result = await manager.action("rename", {"id": key, "name": "  腾讯云 babo  "})
+    assert result["profiles"][0]["name"] == "腾讯云 babo"
     assert result["profiles"][0]["connected"] is True
-    before[key]["name"] = "腾讯云 nanobot"
+    before[key]["name"] = "腾讯云 babo"
     assert json.loads(manager.path.read_text(encoding="utf-8")) == before
-    assert RemoteInstances(manager.path.parent).snapshot()["profiles"][0]["name"] == "腾讯云 nanobot"
+    assert RemoteInstances(manager.path.parent).snapshot()["profiles"][0]["name"] == "腾讯云 babo"
     assert manager.connections[key] is live
     ssh.tunnel.pause.assert_not_awaited()
     ssh.tunnel.close.assert_not_awaited()
@@ -190,7 +190,7 @@ async def test_readding_exact_destination_reuses_entry_without_renaming_or_disco
 
 @pytest.mark.parametrize("change", [
     {"host": "another-alias"}, {"port": 2222}, {"identity_file": "/other/key"},
-    {"runtime_user": "nanobot"}, {"ssh_config": "/other/config"},
+    {"runtime_user": "babo"}, {"ssh_config": "/other/config"},
     {"config_path": "/srv/another-bot/config.json"},
 ])
 async def test_different_destinations_are_not_collapsed_before_connecting(manager, change):
@@ -427,7 +427,7 @@ async def test_shutdown_does_not_release_origin_during_health_request(manager, s
         entered.set()
         await release.wait()
         ssh.tunnel.close.assert_not_awaited()
-        assert request.headers["X-Nanobot-Auth"] == "private-webui-secret"
+        assert request.headers["X-Babo-Auth"] == "private-webui-secret"
         return httpx.Response(200, json=ssh.state["identity"])
 
     monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: ssh.client(
@@ -528,12 +528,12 @@ async def test_changing_instance_drops_origin_but_keeps_server_trust(manager, ss
     await manager.action("disconnect", {"id": key})
     known_hosts = manager.path.parent / "remote-hosts" / key
     known_hosts.parent.mkdir()
-    known_hosts.write_text("nanobot-remote ssh-ed25519 fixture\n")
+    known_hosts.write_text("babo-remote ssh-ed25519 fixture\n")
     await manager.action("save", {"id": key, "profile": {
         "name": "Another bot", "host": "ubuntu@example.test", **change,
     }})
     assert json.loads(manager.path.read_text())[key]["local_port"] == 0
-    assert known_hosts.read_text() == "nanobot-remote ssh-ed25519 fixture\n"
+    assert known_hosts.read_text() == "babo-remote ssh-ed25519 fixture\n"
 
 
 @pytest.mark.parametrize("failure", ["process-exit", "health-error"])
@@ -629,12 +629,12 @@ async def test_new_host_trust_is_explicit_scoped_and_one_use(manager, ssh, monke
     ssh.probe.side_effect = RemoteError("host_key_unknown")
     with pytest.raises(RemoteError):
         await manager.action("connect", {"id": key})
-    monkeypatch.setattr(remote_ssh, "scan_host_key", AsyncMock(return_value=("nanobot-remote ssh-ed25519 test-key\n", "SHA256:test")))
+    monkeypatch.setattr(remote_ssh, "scan_host_key", AsyncMock(return_value=("babo-remote ssh-ed25519 test-key\n", "SHA256:test")))
     result = await manager.action("fingerprint", {"id": key})
     assert result["fingerprint"] == "SHA256:test"
     assert not list(manager.path.parent.glob("remote-hosts/*"))
     await manager.action("trust", {"id": key, "challenge": result["challenge"]})
-    assert (manager.path.parent / "remote-hosts" / key).read_text() == "nanobot-remote ssh-ed25519 test-key\n"
+    assert (manager.path.parent / "remote-hosts" / key).read_text() == "babo-remote ssh-ed25519 test-key\n"
     with pytest.raises(RemoteError, match="host_key_changed"):
         await manager.action("trust", {"id": key, "challenge": result["challenge"]})
     with pytest.raises(RemoteError, match="host_key_changed"):
@@ -694,7 +694,7 @@ async def test_http_mutations_are_not_gettable_even_with_token(gateway, action):
 
 @pytest.mark.parametrize("path", ["/local/ssh-config", None])
 async def test_file_picker_returns_path_without_saving_profile(manager, monkeypatch, path):
-    from nanobot.webui import native_file_picker
+    from babo.webui import native_file_picker
 
     choose = AsyncMock(return_value=path)
     monkeypatch.setattr(native_file_picker, "pick_native_file", choose)
@@ -704,7 +704,7 @@ async def test_file_picker_returns_path_without_saving_profile(manager, monkeypa
 
 
 async def test_file_picker_failure_does_not_expose_native_error(manager, monkeypatch):
-    from nanobot.webui import native_file_picker
+    from babo.webui import native_file_picker
 
     monkeypatch.setattr(native_file_picker, "pick_native_file", AsyncMock(
         side_effect=native_file_picker.NativeFilePickerError("private diagnostic"),
@@ -714,7 +714,7 @@ async def test_file_picker_failure_does_not_expose_native_error(manager, monkeyp
 
 
 async def test_file_picker_does_not_open_multiple_system_dialogs(manager, monkeypatch):
-    from nanobot.webui import native_file_picker
+    from babo.webui import native_file_picker
 
     choose = AsyncMock()
     monkeypatch.setattr(native_file_picker, "pick_native_file", choose)
@@ -730,7 +730,7 @@ async def test_file_picker_does_not_open_multiple_system_dialogs(manager, monkey
     ("127.0.0.1", "127.0.0.1:8765", "https://evil.example"),
 ])
 async def test_remote_clients_cannot_open_local_file_picker(gateway, monkeypatch, peer, host, origin):
-    from nanobot.webui import native_file_picker
+    from babo.webui import native_file_picker
 
     choose = AsyncMock()
     monkeypatch.setattr(native_file_picker, "pick_native_file", choose)
@@ -777,7 +777,7 @@ def test_ssh_probe_rejects_trusted_assertion_bypass(tmp_path, field):
     }}}))
     result = subprocess.run([sys.executable, "-c", remote_ssh._PROBE, str(path)],
                             capture_output=True, text=True, check=True)
-    assert json.loads(result.stdout.split("NANOBOT_REMOTE:")[1]) == {"error": "incompatible_gateway"}
+    assert json.loads(result.stdout.split("BABO_REMOTE:")[1]) == {"error": "incompatible_gateway"}
 
 
 @pytest.mark.parametrize("banner", [b"", b"Welcome to the server\n", b"{\"port\": 1}\nWelcome without newline"])
@@ -793,8 +793,8 @@ async def test_probe_ignores_shell_banners_without_exposing_them(monkeypatch, ba
 
 @pytest.mark.parametrize("output", [
     b"Welcome. Password required for private-user.",
-    b'\x1eNANOBOT_REMOTE:{"port": 8765, "secret": "s"}\n\x1eNANOBOT_REMOTE:{}',
-    b"\x1eNANOBOT_REMOTE:not-json-with-private-data",
+    b'\x1eBABO_REMOTE:{"port": 8765, "secret": "s"}\n\x1eBABO_REMOTE:{}',
+    b"\x1eBABO_REMOTE:not-json-with-private-data",
 ])
 async def test_invalid_probe_protocol_is_not_reported_as_bad_config(monkeypatch, output):
     process = MagicMock(returncode=0)
@@ -810,7 +810,7 @@ def test_probe_reports_malformed_config_as_config_error(tmp_path, config):
     path.write_text(config)
     result = subprocess.run([sys.executable, "-c", remote_ssh._PROBE, str(path)],
                             capture_output=True, text=True, check=True)
-    assert json.loads(result.stdout.split("NANOBOT_REMOTE:")[1]) == {"error": "config_invalid"}
+    assert json.loads(result.stdout.split("BABO_REMOTE:")[1]) == {"error": "config_invalid"}
 
 
 async def test_tunnel_refuses_an_existing_listener(monkeypatch):

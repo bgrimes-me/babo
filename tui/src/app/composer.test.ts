@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { StyledText, TextareaRenderable, TextAttributes, TextRenderable } from "@opentui/core"
 import { MockTreeSitterClient, createTestRenderer, type TestRendererSetup } from "@opentui/core/testing"
-import { NanobotTui } from "./app"
+import { BaboTui } from "./app"
 import type { MessageOptions, SkillCandidate, SlashCommand } from "../client"
 import type { ClipboardImageReader } from "../composer/clipboard-image"
 import { options, client, mount, waitUntil, occurrences } from "./test-support"
@@ -9,7 +9,7 @@ import { LOCAL_COMMANDS } from "./commands"
 import type { CommandMenu } from "../menus/command-menu"
 import type { Transcript } from "../rendering/transcript"
 
-describe("NanobotTui composer", () => {
+describe("BaboTui composer", () => {
   let setup: TestRendererSetup | undefined
 
   afterEach(() => {
@@ -115,7 +115,7 @@ describe("NanobotTui composer", () => {
     const app = mount(setup)
     const composer = (app as unknown as { composer: TextareaRenderable }).composer
     await setup.renderOnce()
-    expect(setup.captureCharFrame()).toContain("Ask nanobot anything")
+    expect(setup.captureCharFrame()).toContain("Ask babo anything")
 
     setup.mockInput.typeText("bu")
     await setup.flush()
@@ -124,14 +124,14 @@ describe("NanobotTui composer", () => {
     expect(composer.plainText).toBe("bu")
     expect(composer.placeholder).toBeNull()
     expect(frame).toContain("bu")
-    expect(frame).not.toContain("Ask nanobot anything")
-    expect(frame).not.toContain("buAsk nanobot anything")
+    expect(frame).not.toContain("Ask babo anything")
+    expect(frame).not.toContain("buAsk babo anything")
 
     setup.mockInput.pressBackspace()
     setup.mockInput.pressBackspace()
     await setup.flush()
-    expect(composer.placeholder).toBe("Ask nanobot anything")
-    expect(setup.captureCharFrame()).toContain("Ask nanobot anything")
+    expect(composer.placeholder).toBe("Ask babo anything")
+    expect(setup.captureCharFrame()).toContain("Ask babo anything")
   })
 
   test("turns a confirmed pasted video path into a removable reference and retains failed sends", async () => {
@@ -147,7 +147,7 @@ describe("NanobotTui composer", () => {
       if (sentOptions.length === 1) throw new Error("source unavailable")
       return "accepted"
     }
-    const app = NanobotTui.mount(setup.renderer, options, transport, new MockTreeSitterClient({ autoResolveTimeout: 0 }))
+    const app = BaboTui.mount(setup.renderer, options, transport, new MockTreeSitterClient({ autoResolveTimeout: 0 }))
     app.accept({ event: "attached", chat_id: "chat" })
     const ui = app as unknown as { ready: boolean; composer: TextareaRenderable; status: { plainText: string } }
     await waitUntil(() => ui.ready)
@@ -171,7 +171,7 @@ describe("NanobotTui composer", () => {
     transport.inspectAttachment = () => new Promise((resolve) => { complete = resolve })
     const sent: Array<{ content: string; options: MessageOptions }> = []
     transport.sendAttachments = async (content, options) => { sent.push({ content, options }); return "accepted" }
-    const app = NanobotTui.mount(setup.renderer, options, transport, new MockTreeSitterClient({ autoResolveTimeout: 0 }))
+    const app = BaboTui.mount(setup.renderer, options, transport, new MockTreeSitterClient({ autoResolveTimeout: 0 }))
     app.accept({ event: "attached", chat_id: "chat" })
     const ui = app as unknown as { ready: boolean; composer: TextareaRenderable; pathInspectionPending: boolean }
     await waitUntil(() => ui.ready)
@@ -193,7 +193,7 @@ describe("NanobotTui composer", () => {
     const transport = client()
     let complete!: (file: Awaited<ReturnType<typeof transport.inspectAttachment>>) => void
     transport.inspectAttachment = () => new Promise((resolve) => { complete = resolve })
-    const app = NanobotTui.mount(setup.renderer, options, transport, new MockTreeSitterClient({ autoResolveTimeout: 0 }))
+    const app = BaboTui.mount(setup.renderer, options, transport, new MockTreeSitterClient({ autoResolveTimeout: 0 }))
     app.accept({ event: "attached", chat_id: "chat" })
     const ui = app as unknown as { ready: boolean; composer: TextareaRenderable; pathInspectionPending: boolean; status: { plainText: string }; draft: { imageCount: number } }
     await waitUntil(() => ui.ready)
@@ -216,7 +216,7 @@ describe("NanobotTui composer", () => {
     })
     const sentOptions: MessageOptions[] = []
     transport.sendAttachments = async (_content, options) => { sentOptions.push(options); return "accepted" }
-    const app = NanobotTui.mount(setup.renderer, options, transport,
+    const app = BaboTui.mount(setup.renderer, options, transport,
       new MockTreeSitterClient({ autoResolveTimeout: 0 }), undefined,
       { read: async () => ({ mimeType: "image/png", dataUrl: "data:image/png;base64,eA==" }), dispose: async () => {} })
     app.accept({ event: "attached", chat_id: "chat" })
@@ -280,7 +280,7 @@ describe("NanobotTui composer", () => {
       attempts++
       return new Promise<string>((resolve, reject) => { resolveSend = resolve; rejectSend = reject })
     }
-    const app = NanobotTui.mount(setup.renderer, options, transport,
+    const app = BaboTui.mount(setup.renderer, options, transport,
       new MockTreeSitterClient({ autoResolveTimeout: 0 }), undefined,
       { read: async () => ({ mimeType: "image/png", dataUrl: "data:image/png;base64,eA==" }), dispose: async () => {} })
     app.accept({ event: "attached", chat_id: "chat" })
@@ -320,7 +320,7 @@ describe("NanobotTui composer", () => {
       recordSend(content, messageOptions)
       return `image-turn-${sent.length}`
     }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       transport,
@@ -414,7 +414,7 @@ describe("NanobotTui composer", () => {
       dispose: async () => undefined,
     }
     setup = await createRenderer({ width: 72, height: 20, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       client(),
@@ -491,7 +491,7 @@ describe("NanobotTui composer", () => {
       dispose: async () => undefined,
     }
     setup = await createRenderer({ width: 72, height: 20, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       client(sent),
@@ -520,7 +520,7 @@ describe("NanobotTui composer", () => {
       dispose: async () => undefined,
     }
     setup = await createRenderer({ width: 72, height: 20, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       client(sent),
@@ -565,7 +565,7 @@ describe("NanobotTui composer", () => {
       dispose: async () => { disposed = true },
     }
     setup = await createRenderer({ width: 72, height: 20, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       client(),
@@ -592,7 +592,7 @@ describe("NanobotTui composer", () => {
       sent.push(content)
       return sent.length === 1 ? "active" : "followup"
     }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer, options, transport,
       new MockTreeSitterClient({ autoResolveTimeout: 0 }),
     )
@@ -637,7 +637,7 @@ describe("NanobotTui composer", () => {
     const sent: string[] = []
     const sentOptions: MessageOptions[] = []
     setup = await createRenderer({ width: 88, height: 24, screenMode: "alternate-screen" })
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       client(sent, [], [], sentOptions),
@@ -991,7 +991,7 @@ describe("NanobotTui composer", () => {
     setup = await createRenderer({ width: 100, height: 32, screenMode: "alternate-screen" })
     const sent: string[] = []
     const sentOptions: MessageOptions[] = []
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       client(sent, [], [], sentOptions),

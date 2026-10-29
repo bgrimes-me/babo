@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.data_access import data_access
-from nanobot.installation_lock import InstallationBusyError, installation_access
+from babo.data_access import data_access
+from babo.installation_lock import InstallationBusyError, installation_access
 
 pytestmark = pytest.mark.skipif(os.name != "posix", reason="POSIX exec handoff only")
 
@@ -17,8 +17,8 @@ _PROGRAM = "import os,sys; print(os.getpid(), flush=True); sys.stdin.read(1)"
 _EXEC = """
 import os,sys
 from pathlib import Path
-from nanobot.data_access import data_access
-from nanobot.installation_lock import installation_access
+from babo.data_access import data_access
+from babo.installation_lock import installation_access
 Path.home = classmethod(lambda cls: Path(sys.argv[1]))
 with installation_access(updating=True, environment=sys.argv[2]) as installation:
     with data_access([sys.argv[3]], updating=True) as data:
@@ -49,7 +49,7 @@ def test_exec_retains_both_leases_until_installer_exits(tmp_path, monkeypatch, c
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
     )
     try:
-        ready(process)  # Same PID; the program no longer imports nanobot or owns Python lease objects.
+        ready(process)  # Same PID; the program no longer imports babo or owns Python lease objects.
         for updating in (False, True):
             with pytest.raises(InstallationBusyError):
                 with installation_access(updating=updating, environment=environment):

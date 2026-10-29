@@ -12,9 +12,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.webui import remote_discovery, remote_ssh
-from nanobot.webui.remote_instances import RemoteInstances
-from nanobot.webui.remote_ssh import RemoteError, RemoteProfile
+from babo.webui import remote_discovery, remote_ssh
+from babo.webui.remote_instances import RemoteInstances
+from babo.webui.remote_ssh import RemoteError, RemoteProfile
 
 if sys.platform != "win32":
     import pwd
@@ -39,7 +39,7 @@ def locate(monkeypatch, capsys, path, units="", properties=""):
     monkeypatch.setattr(sys, "argv", ["locate", str(path)])
     monkeypatch.setattr(subprocess, "run", systemctl)
     exec(remote_discovery._LOCATE, {})
-    result = json.loads(capsys.readouterr().out.split("NANOBOT_REMOTE:")[1])
+    result = json.loads(capsys.readouterr().out.split("BABO_REMOTE:")[1])
     assert "model-secret" not in json.dumps(result)
     return result, calls
 
@@ -54,7 +54,7 @@ def test_default_config_found_without_reading_contents(tmp_path, monkeypatch, ca
 
 @pytest.mark.skipif(sys.platform == "win32", reason="systemd account discovery targets Unix servers")
 def test_service_account_and_private_path_are_offered_without_sudo(tmp_path, monkeypatch, capsys):
-    path = tmp_path / ".nanobot/config.json"
+    path = tmp_path / ".babo/config.json"
     original_stat = Path.stat
 
     def stat(self, *args, **kwargs):
@@ -65,9 +65,9 @@ def test_service_account_and_private_path_are_offered_without_sudo(tmp_path, mon
     monkeypatch.setattr(Path, "stat", stat)
     monkeypatch.setattr(pwd, "getpwnam", lambda name: SimpleNamespace(pw_dir=str(tmp_path)))
     result, calls = locate(monkeypatch, capsys, tmp_path / "missing.json",
-                           "nanobot-team.service loaded active running\n",
-                           "Id=nanobot-team.service\nUser=nanobot\nWorkingDirectory=/opt/nanobot\nExecStart=/opt/nanobot/bin/nanobot gateway\n")
-    assert result["candidates"] == [{"config_path": str(path), "runtime_user": "nanobot", "service": "nanobot-team.service"}]
+                           "babo-team.service loaded active running\n",
+                           "Id=babo-team.service\nUser=babo\nWorkingDirectory=/opt/babo\nExecStart=/opt/babo/bin/babo gateway\n")
+    assert result["candidates"] == [{"config_path": str(path), "runtime_user": "babo", "service": "babo-team.service"}]
     assert len(calls) == 2
 
 
@@ -78,8 +78,8 @@ def test_multiple_configs_and_custom_service_path(tmp_path, monkeypatch, capsys)
     default.touch()
     custom.touch()
     user = pwd.getpwuid(os.getuid()).pw_name
-    result, _ = locate(monkeypatch, capsys, default, "nanobot.service loaded active running\n",
-                       f'Id=nanobot.service\nUser={user}\nWorkingDirectory={tmp_path}\nExecStart=nanobot gateway --config "custom config.json"\n')
+    result, _ = locate(monkeypatch, capsys, default, "babo.service loaded active running\n",
+                       f'Id=babo.service\nUser={user}\nWorkingDirectory={tmp_path}\nExecStart=babo gateway --config "custom config.json"\n')
     assert [item["config_path"] for item in result["candidates"]] == [str(default), str(custom)]
     assert all(not item["runtime_user"] for item in result["candidates"])
 
@@ -88,14 +88,14 @@ def test_unavailable_systemctl_keeps_default_result(tmp_path, monkeypatch, capsy
     monkeypatch.setattr(sys, "argv", ["locate", str(tmp_path / "absent")])
     monkeypatch.setattr(subprocess, "run", MagicMock(side_effect=FileNotFoundError))
     exec(remote_discovery._LOCATE, {})
-    result = json.loads(capsys.readouterr().out.split("NANOBOT_REMOTE:")[1])
+    result = json.loads(capsys.readouterr().out.split("BABO_REMOTE:")[1])
     assert result["candidates"] == []
     assert result["incomplete"] is True
 
 
 async def test_inspection_uses_login_user_and_strips_unexpected_data(monkeypatch):
     check = AsyncMock(return_value={"hostname": "server", "candidates": [{
-        "config_path": "/srv/bot/config.json", "runtime_user": "nanobot", "service": "nanobot.service", "secret": "model-secret",
+        "config_path": "/srv/bot/config.json", "runtime_user": "babo", "service": "babo.service", "secret": "model-secret",
     }], "incomplete": False, "secret": "model-secret"})
     monkeypatch.setattr(remote_discovery, "run_check", check)
     result = await remote_discovery.inspect(RemoteProfile(name="Test", host="server", runtime_user="root"))

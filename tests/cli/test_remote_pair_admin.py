@@ -9,11 +9,11 @@ from unittest.mock import Mock
 import pytest
 from typer.testing import CliRunner
 
-from nanobot.cli import remote
-from nanobot.cli.remote import _default_ssh_user
-from nanobot.webui import remote_pair_server
-from nanobot.webui.remote_pairing import PairStore, read_request
-from nanobot.webui.remote_ssh import RemoteError
+from babo.cli import remote
+from babo.cli.remote import _default_ssh_user
+from babo.webui import remote_pair_server
+from babo.webui.remote_pairing import PairStore, read_request
+from babo.webui.remote_ssh import RemoteError
 
 
 @pytest.fixture
@@ -48,7 +48,7 @@ def test_explicit_admin_consent_keeps_environment_config_and_login(protected, mo
     assert "Continue as server administrator?" in result.output
     assert "File permissions will not change" in result.output
     protected.run.assert_called_once_with([
-        "/usr/bin/sudo", "--", python, "-I", "-m", "nanobot",
+        "/usr/bin/sudo", "--", python, "-I", "-m", "babo",
         "remote", "pair", protected.request, "--config", str(protected.config), "--port", "22",
         "--host", "8.8.8.8", "--ssh-user", "ubuntu",
     ], check=False)
@@ -124,7 +124,7 @@ def test_readable_config_still_requires_device_authorization(protected):
 
 
 def test_expired_request_never_offers_sudo(protected, monkeypatch):
-    from nanobot.webui import remote_pairing
+    from babo.webui import remote_pairing
 
     now = remote_pairing.time.time()
     monkeypatch.setattr(remote_pairing.time, "time", lambda: now + 601)
@@ -142,9 +142,9 @@ def test_unavailable_sudo_process_fails_without_authorizing(protected):
 
 
 def test_discovered_service_config_is_carried_into_admin_retry(protected):
-    protected.run.side_effect = [SimpleNamespace(stdout="NANOBOT_REMOTE:" + json.dumps({
+    protected.run.side_effect = [SimpleNamespace(stdout="BABO_REMOTE:" + json.dumps({
         "hostname": "team", "incomplete": False, "candidates": [{"config_path": str(protected.config),
-        "runtime_user": "nanobot", "service": "nanobot-team.service"}],
+        "runtime_user": "babo", "service": "babo-team.service"}],
     })), SimpleNamespace(returncode=0)]
     result = CliRunner().invoke(remote.app, ["pair", protected.request], input="y\n")
     assert result.exit_code == 0, result.output
@@ -275,18 +275,18 @@ def test_explicit_account_skips_discovery_and_selection(protected, monkeypatch):
     protected.authorize.assert_not_called()
 
 
-def test_multiple_nanobots_keep_invalid_choices_in_the_selection_step(protected):
+def test_multiple_babos_keep_invalid_choices_in_the_selection_step(protected):
     protected.metadata.side_effect = None
     protected.metadata.return_value = {"port": 8765}
-    protected.run.return_value = SimpleNamespace(stdout="NANOBOT_REMOTE:" + json.dumps({
+    protected.run.return_value = SimpleNamespace(stdout="BABO_REMOTE:" + json.dumps({
         "hostname": "team", "incomplete": False, "candidates": [
-            {"config_path": str(protected.config), "runtime_user": "nanobot", "service": "nanobot-team.service"},
-            {"config_path": str(protected.config.parent / "other.json"), "runtime_user": "nanobot", "service": "other.service"},
+            {"config_path": str(protected.config), "runtime_user": "babo", "service": "babo-team.service"},
+            {"config_path": str(protected.config.parent / "other.json"), "runtime_user": "babo", "service": "other.service"},
         ],
     }))
     result = CliRunner().invoke(remote.app, ["pair", protected.request], input="0\n3\n1\nn\n")
     assert result.exit_code == 0, result.output
-    assert result.output.count("Which nanobot?") == 3
+    assert result.output.count("Which babo?") == 3
     assert result.output.count("Please choose a number from 1 to 2") == 2
     protected.metadata.assert_called_once_with(protected.config)
     protected.authorize.assert_not_called()

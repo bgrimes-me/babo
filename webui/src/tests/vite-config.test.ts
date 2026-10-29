@@ -32,7 +32,7 @@ describe("gzipWebuiAssets", () => {
   it("compresses finalized files after Rollup writes the bundle", async () => {
     const plugin = gzipWebuiAssets();
     expect(plugin.generateBundle).toBeUndefined();
-    const outputDir = mkdtempSync(path.join(tmpdir(), "nanobot-vite-gzip-"));
+    const outputDir = mkdtempSync(path.join(tmpdir(), "babo-vite-gzip-"));
     const assetPath = path.join(outputDir, "assets", "index-final.js");
     const finalized = Buffer.from(
       "const __vite__mapDeps = ['assets/lazy-feature.js'];\n".repeat(200),
@@ -85,8 +85,8 @@ describe("entryLazyFeatureImports", () => {
 describe("webuiManualChunk", () => {
   it("groups common and channel translations into one request per locale", () => {
     expect(webuiManualChunk("/repo/webui/src/i18n/locales/en/common.json")).toBe("locale-en");
-    expect(webuiManualChunk("/repo/nanobot/channels/slack/webui/locales/en.json")).toBe("locale-en");
-    expect(webuiManualChunk("/repo/nanobot/channels/slack/webui/locales/zh-CN.json")).toBe("locale-zh-CN");
+    expect(webuiManualChunk("/repo/babo/channels/slack/webui/locales/en.json")).toBe("locale-en");
+    expect(webuiManualChunk("/repo/babo/channels/slack/webui/locales/zh-CN.json")).toBe("locale-zh-CN");
     expect(webuiManualChunk("/repo/node_modules/rehype-katex/index.js")).toBe("markdown-math");
     expect(webuiManualChunk("/repo/webui/src/lib/markdown-math.ts")).toBe("markdown-math");
     expect(webuiManualChunk("/repo/node_modules/micromark-extension-math/lib/html.js")).toBe("markdown-math");

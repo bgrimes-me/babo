@@ -12,8 +12,8 @@ import { installSettingsViewTestHooks, jsonResponse, renderSettingsView, request
 function runtimeSettings() {
   const payload = settingsPayload();
   const runtimeConfig: NonNullable<SettingsPayload["runtime_config"]> = {
-    "agents.defaults.bot_name": "nanobot",
-    "agents.defaults.bot_icon": "🐈",
+    "agents.defaults.bot_name": "babo",
+    "agents.defaults.bot_icon": "🏡",
     "agents.defaults.timezone_mode": "auto",
     "agents.defaults.timezone": "UTC",
     "agents.defaults.dream.enabled": true,
@@ -137,7 +137,7 @@ describe("Runtime configuration settings", () => {
     render(<RuntimeSettings form={DEFAULT_AGENT_SETTINGS_DRAFT} settings={payload}
       requiresRestartPending={false} apiService={{
         installed: true, running: false, managed: false, host: "127.0.0.1", port: 8900,
-        timeout: 120, endpoint: "http://127.0.0.1:8900/v1", command: "nanobot serve",
+        timeout: 120, endpoint: "http://127.0.0.1:8900/v1", command: "babo serve",
         api_key_hint: "set",
       }} apiServiceLoading={false} apiServiceAction={null} apiServiceError={null}
       capabilitiesLoading={false} capabilityAction={null} capabilityError={null}

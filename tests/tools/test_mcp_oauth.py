@@ -11,7 +11,7 @@ import pytest
 from mcp.client.auth import OAuthClientProvider
 from mcp.shared.auth import OAuthClientInformationFull, OAuthMetadata, OAuthToken
 
-from nanobot.agent.tools.mcp_oauth import (
+from babo.agent.tools.mcp_oauth import (
     MCPAuthorizationRequiredError,
     MCPOAuthHandlers,
     MCPOAuthStorage,
@@ -20,11 +20,11 @@ from nanobot.agent.tools.mcp_oauth import (
     delete_mcp_oauth_credentials,
     mcp_oauth_has_credentials,
 )
-from nanobot.config.schema import MCPServerConfig
+from babo.config.schema import MCPServerConfig
 
 
 def _use_data_dir(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("nanobot.agent.tools.mcp_oauth.get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr("babo.agent.tools.mcp_oauth.get_data_dir", lambda: tmp_path)
 
 
 def _oauth_metadata() -> OAuthMetadata:
@@ -214,10 +214,10 @@ async def test_create_mcp_oauth_auth_uses_browser_handlers_and_persists_redirect
     assert str(auth.context.client_metadata.redirect_uris[0]) == (
         "https://agent.example/auth/mcp/callback"
     )
-    assert str(auth.context.client_metadata.client_uri) == "https://github.com/HKUDS/nanobot"
+    assert str(auth.context.client_metadata.client_uri) == "https://github.com/bgrimes-me/babo"
     assert str(auth.context.client_metadata.logo_uri) == (
-        "https://raw.githubusercontent.com/HKUDS/nanobot/main/"
-        "webui/public/brand/nanobot_apple_touch.png"
+        "https://raw.githubusercontent.com/bgrimes-me/babo/main/"
+        "webui/public/brand/babo_apple_touch.png"
     )
     assert auth.context.redirect_handler is redirect
     assert auth.context.callback_handler is callback
@@ -616,7 +616,7 @@ async def test_unrecoverable_refresh_error_requires_authorization(
     _use_data_dir(tmp_path, monkeypatch)
     caplog.set_level("INFO", logger="mcp.client.auth.oauth2")
     log = MagicMock()
-    monkeypatch.setattr("nanobot.agent.tools.mcp_oauth.logger", log)
+    monkeypatch.setattr("babo.agent.tools.mcp_oauth.logger", log)
     server_url = "https://mcp.example.com/mcp"
     storage = MCPOAuthStorage("linear", server_url)
     await storage.set_oauth_metadata(_oauth_metadata())
@@ -845,12 +845,12 @@ async def test_official_mcp_sdk_completes_discovery_registration_and_token_excha
             })
         if request.url.path == "/register":
             registration = json.loads(request.content)
-            assert registration["client_uri"] == "https://github.com/HKUDS/nanobot"
+            assert registration["client_uri"] == "https://github.com/bgrimes-me/babo"
             assert registration["logo_uri"].endswith(
-                "/webui/public/brand/nanobot_apple_touch.png"
+                "/webui/public/brand/babo_apple_touch.png"
             )
             return httpx.Response(201, json={
-                "client_id": "nanobot-client",
+                "client_id": "babo-client",
                 "redirect_uris": ["https://agent.example/auth/mcp/callback"],
                 "token_endpoint_auth_method": "none",
             })

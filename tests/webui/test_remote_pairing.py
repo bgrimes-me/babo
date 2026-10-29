@@ -15,10 +15,10 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from nanobot.webui import remote_pair_server, remote_pairing, remote_ssh
-from nanobot.webui.remote_instances import RemoteInstances
-from nanobot.webui.remote_pairing import PairReceipt, PairStore, read_request, seal
-from nanobot.webui.remote_ssh import (
+from babo.webui import remote_pair_server, remote_pairing, remote_ssh
+from babo.webui.remote_instances import RemoteInstances
+from babo.webui.remote_pairing import PairReceipt, PairStore, read_request, seal
+from babo.webui.remote_ssh import (
     PairedSSHProfile,
     RemoteError,
     ssh_arguments,
@@ -32,7 +32,7 @@ def ssh_public():
 
 def receipt(request, **updates):
     return PairReceipt(**dict(id=request.id, ssh_key=request.ssh_key, host="203.0.113.1", user="ubuntu",
-                             ssh_port=22, host_key=ssh_public(), hostname="team", config_path="/srv/nanobot/config.json",
+                             ssh_port=22, host_key=ssh_public(), hostname="team", config_path="/srv/babo/config.json",
                              port=8765, secret="private-webui-credential", authorized_until=int(time.time()) + 86400,
                              **updates))
 
@@ -145,7 +145,7 @@ def test_server_appends_restricted_key_and_revoke_preserves_existing(pair, tmp_p
     assert lines[1].startswith('restrict,expiry-time="')
     assert "port-forwarding" not in lines[1]
     assert request.ssh_key in lines[1]
-    assert "private-webui" not in (home / ".ssh/nanobot-remote" / request.id / "bridge.py").read_text()
+    assert "private-webui" not in (home / ".ssh/babo-remote" / request.id / "bridge.py").read_text()
     with pytest.raises(RemoteError, match="pair_used"):
         remote_pair_server.write_authorization(home, request, 8765, int(time.time()) + 86400)
     remote_pair_server.remove_authorization(home, request.id)
@@ -176,11 +176,11 @@ def test_paired_transport_cannot_fall_back_to_generic_probe_or_forwarding(pair, 
     assert args[1:3] == ["-F", os.devnull]
     transport = transport_arguments(profile, value.port, store.path(request.id) / "known_hosts")
     assert "-W" not in transport
-    assert transport[-1] == "nanobot-remote-bridge-v2"
+    assert transport[-1] == "babo-remote-bridge-v2"
     assert "sudo" not in " ".join(transport)
 
 
-@pytest.mark.parametrize("command", ["echo MUST-NOT-EXECUTE", "nanobot-remote-bridge-v2"])
+@pytest.mark.parametrize("command", ["echo MUST-NOT-EXECUTE", "babo-remote-bridge-v2"])
 def test_fixed_bridge_streams_only_to_baked_in_loopback_port(tmp_path, command):
     # Real bidirectional bytes, no SSH_ORIGINAL_COMMAND interpolation.
     listener = socket.socket()
@@ -197,9 +197,9 @@ def test_fixed_bridge_streams_only_to_baked_in_loopback_port(tmp_path, command):
                 connection.sendall(b"received:" + data)
     worker = threading.Thread(target=serve, daemon=True)
     worker.start()
-    target = tmp_path / ".ssh" / "nanobot-remote" / "device"
+    target = tmp_path / ".ssh" / "babo-remote" / "device"
     target.mkdir(parents=True)
-    line = "restrict fixture-key nanobot-remote:device\n"
+    line = "restrict fixture-key babo-remote:device\n"
     (target / "authorization").write_text(line)
     (tmp_path / ".ssh" / "authorized_keys").write_text(line)
     bridge = target / "bridge.py"
@@ -209,15 +209,15 @@ def test_fixed_bridge_streams_only_to_baked_in_loopback_port(tmp_path, command):
                             env={**os.environ, "SSH_ORIGINAL_COMMAND": command})
     worker.join(2)
     assert result.returncode == 0
-    prefix = remote_ssh._BRIDGE_READY if command == "nanobot-remote-bridge-v2" else b""
+    prefix = remote_ssh._BRIDGE_READY if command == "babo-remote-bridge-v2" else b""
     assert result.stdout == prefix + b"received:hello-webui"
 
 
 @pytest.mark.parametrize("reason", ["expired", "revoked", "missing", "another-device"])
 def test_guarded_bridge_rejects_new_channels_without_connecting(tmp_path, reason):
-    target = tmp_path / ".ssh" / "nanobot-remote" / "device"
+    target = tmp_path / ".ssh" / "babo-remote" / "device"
     target.mkdir(parents=True)
-    line = "restrict fixture-key nanobot-remote:device\n"
+    line = "restrict fixture-key babo-remote:device\n"
     (target / "authorization").write_text(line)
     keys = tmp_path / ".ssh" / "authorized_keys"
     keys.write_text(line if reason == "expired" else line.replace(":device", ":other") if reason == "another-device" else "")
@@ -226,7 +226,7 @@ def test_guarded_bridge_rejects_new_channels_without_connecting(tmp_path, reason
     bridge = target / "bridge.py"
     bridge.write_text(remote_pair_server.bridge_source(1, int(time.time()) + (-1 if reason == "expired" else 60)))
     result = subprocess.run([sys.executable, "-I", "-S", str(bridge)], capture_output=True, timeout=5,
-                            env={**os.environ, "SSH_ORIGINAL_COMMAND": "nanobot-remote-bridge-v2"})
+                            env={**os.environ, "SSH_ORIGINAL_COMMAND": "babo-remote-bridge-v2"})
     assert result.returncode == 1
     assert not result.stdout  # No reuse capability or connection to the target.
     assert b"Permission denied" in result.stderr
@@ -244,7 +244,7 @@ async def test_api_pair_finalization_pins_host_and_hides_credentials(tmp_path):
     assert result["profiles"][0]["paired"] is True
     assert "private-webui" not in json.dumps(result)
     assert "private-webui" not in manager.path.read_text()
-    assert manager._known_hosts(request.id).read_text() == "nanobot-remote " + value.host_key + "\n"
+    assert manager._known_hosts(request.id).read_text() == "babo-remote " + value.host_key + "\n"
     again = await manager.action("pair_finish", {"id": request.id, "code": code})
     assert again["id"] == request.id and len(again["profiles"]) == 1
     with pytest.raises(RemoteError, match="pair_managed"):
@@ -446,7 +446,7 @@ async def test_paired_profile_follows_moved_data_root(tmp_path, monkeypatch, wit
         assert profile.ssh_config == paired["ssh_config"]
         args = ssh_arguments(profile, known_hosts)
         assert str(original) not in " ".join(args)
-        assert known_hosts.read_text() == "nanobot-remote " + value.host_key + "\n"
+        assert known_hosts.read_text() == "babo-remote " + value.host_key + "\n"
         raise RemoteError("ssh_unreachable")
 
     monkeypatch.setattr(remote_ssh, "open_tunnel", check_transport)
@@ -473,8 +473,8 @@ def test_pairing_modules_can_import_without_posix_server_dependencies():
 import sys
 sys.modules['fcntl'] = None
 sys.modules['pwd'] = None
-from nanobot.webui import remote_pair_server, remote_pairing
-from nanobot.cli import remote
+from babo.webui import remote_pair_server, remote_pairing
+from babo.cli import remote
 assert remote_pair_server.metadata
 assert remote_pairing.PairStore
 """

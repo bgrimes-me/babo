@@ -1,9 +1,9 @@
-# Build a WhatsApp AI Agent with nanobot
+# Build a WhatsApp AI Agent with babo
 
-This guide connects nanobot to WhatsApp through the `whatsapp` channel. The channel links as a WhatsApp device and uses the same nanobot agent runtime, tools, memory, and workspace as the CLI and WebUI.
+This guide connects babo to WhatsApp through the `whatsapp` channel. The channel links as a WhatsApp device and uses the same babo agent runtime, tools, memory, and workspace as the CLI and WebUI.
 
 > [!NOTE]
-> WhatsApp also offers an official Agent Platform where the agent appears as its own chat and talks only to you. That is a separate channel with different tradeoffs — no group support, no end-to-end encryption, and limited country availability, but an officially supported interface that does not rely on a linked device. See [Connect nanobot to WhatsApp Agent Platform](./whatsapp-agent-platform.md) to compare them.
+> WhatsApp also offers an official Agent Platform where the agent appears as its own chat and talks only to you. That is a separate channel with different tradeoffs — no group support, no end-to-end encryption, and limited country availability, but an officially supported interface that does not rely on a linked device. See [Connect babo to WhatsApp Agent Platform](./whatsapp-agent-platform.md) to compare them.
 
 ## What this guide builds
 
@@ -14,14 +14,14 @@ This guide connects nanobot to WhatsApp through the `whatsapp` channel. The chan
 
 ## Prerequisites
 
-- A normal reply in your existing nanobot WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
+- A normal reply in your existing babo WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
 
 - A WhatsApp account that can link a new device.
-- A machine that can keep `nanobot gateway` running.
+- A machine that can keep `babo gateway` running.
 
 ## Continue from your running instance
 
-If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `nanobot webui` command; there is no need to install nanobot again.
+If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `babo webui` command; there is no need to install babo again.
 
 For terminal or server setup, use the manual configuration section below. Reuse the config/home and executable from your working instance. Docker users should use the [container commands](../deployment.md#docker-compose).
 
@@ -35,18 +35,18 @@ Open **Channels → WhatsApp**, install support if prompted, and follow the QR c
 Install the optional channel dependency:
 
 ```bash
-nanobot plugins enable whatsapp
+babo plugins enable whatsapp
 ```
 
 Link WhatsApp as a device:
 
 ```bash
-nanobot channels login whatsapp
+babo channels login whatsapp
 ```
 
 Scan the QR code from WhatsApp -> Settings -> Linked Devices.
 
-Merge this snippet into `~/.nanobot/config.json`:
+Merge this snippet into `~/.babo/config.json`:
 
 ```json
 {
@@ -67,7 +67,7 @@ Omitting `allowFrom` enables pairing-only mode for private chats. `groupPolicy` 
 
 In the WebUI, follow any restart prompt and keep the launcher running for the first test. You do not need to start another gateway. For unattended operation afterward, use [background or service mode](../cli-reference.md#gateway).
 
-For manual config changes, restart the existing gateway through its owning terminal, `nanobot gateway restart` for background mode, or its service/container supervisor. If none is running, start `nanobot gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
+For manual config changes, restart the existing gateway through its owning terminal, `babo gateway restart` for background mode, or its service/container supervisor. If none is running, start `babo gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
 
 ## Test a message
 
@@ -79,7 +79,7 @@ Send the bot a private WhatsApp message. It should return a pairing code. Return
 In a separate local terminal, using the same instance:
 
 ```bash
-nanobot agent -m "/pairing approve ABCD-EFGH"
+babo agent -m "/pairing approve ABCD-EFGH"
 ```
 
 Replace the example code with your actual code.
@@ -97,9 +97,9 @@ Send the message again after approval. Confirm that your private chat now receiv
 
 ## Troubleshooting
 
-- If QR linking fails, rerun `nanobot channels login whatsapp`.
+- If QR linking fails, rerun `babo channels login whatsapp`.
 - If you are migrating from the old bridge, remove `bridgeUrl` and `bridgeToken`, then re-login.
-- If a sender appears as a LID instead of a phone number, let nanobot learn the mapping at runtime or use `lidMappings` in the full reference.
+- If a sender appears as a LID instead of a phone number, let babo learn the mapping at runtime or use `lidMappings` in the full reference.
 - If a first private message returns a pairing code, approve it before testing normal replies.
 
 ## Next: memory, automations, MCP tools

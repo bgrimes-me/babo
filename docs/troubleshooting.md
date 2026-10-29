@@ -1,15 +1,15 @@
 # Troubleshooting
 
-Use the first check that matches what you see, then follow its next step. This avoids investigating the browser or a chat app before confirming nanobot can start and contact its model.
+Use the first check that matches what you see, then follow its next step. This avoids investigating the browser or a chat app before confirming babo can start and contact its model.
 
 ## Fast Diagnosis Order
 
-- **The `nanobot` command is not found, or nanobot will not start:** check [Installation Problems](#installation-problems). Run `nanobot --version` to confirm the command is available.
-- **nanobot starts, but does not answer:** run `nanobot status`. Check that it points to the config and workspace you expect and that the active model is ready. This command does not contact the model; if setup is incomplete, follow its WebUI **Settings → Models** or CLI wizard instructions.
-- **Status looks ready, but a test question fails:** run `nanobot agent -m "Hello!"`. If it fails, troubleshoot [Provider and Model Problems](#provider-and-model-problems) before testing the gateway or a chat app.
-- **The test question works, but the browser or chat app does not:** start `nanobot gateway` and follow [Gateway Problems](#gateway-problems), [WebUI Problems](#webui-problems), or [Chat App Problems](#chat-app-problems), depending on what is failing.
+- **The `babo` command is not found, or babo will not start:** check [Installation Problems](#installation-problems). Run `babo --version` to confirm the command is available.
+- **babo starts, but does not answer:** run `babo status`. Check that it points to the config and workspace you expect and that the active model is ready. This command does not contact the model; if setup is incomplete, follow its WebUI **Settings → Models** or CLI wizard instructions.
+- **Status looks ready, but a test question fails:** run `babo agent -m "Hello!"`. If it fails, troubleshoot [Provider and Model Problems](#provider-and-model-problems) before testing the gateway or a chat app.
+- **The test question works, but the browser or chat app does not:** start `babo gateway` and follow [Gateway Problems](#gateway-problems), [WebUI Problems](#webui-problems), or [Chat App Problems](#chat-app-problems), depending on what is failing.
 
-`nanobot status` checks local configuration and provider readiness without making a model request. A successful `nanobot agent -m "Hello!"` confirms the local agent can get a reply; it does not prove that a gateway, browser, or chat app is working.
+`babo status` checks local configuration and provider readiness without making a model request. A successful `babo agent -m "Hello!"` confirms the local agent can get a reply; it does not prove that a gateway, browser, or chat app is working.
 
 ## Empty topics after a WebUI restart
 
@@ -28,19 +28,19 @@ Sessions live at `<config-dir>/sessions/<workspace-id>/`, outside the agent work
 To fix an existing instance:
 
 1. Stop the instance and back up its config directory and workspace.
-2. Keep the workspace and `.nanobot/workspace-id` in place. Move the config file **and its runtime data, including sessions**, to a directory outside the workspace.
+2. Keep the workspace and `.babo/workspace-id` in place. Move the config file **and its runtime data, including sessions**, to a directory outside the workspace.
 3. Update `--config` in your launch command or service, check relative paths, and restart.
 
-Moving only the config leaves history behind. Choosing a new workspace without moving its contents (including memory, skills, and `.nanobot/workspace-id`) can start an empty workspace with a different session identity.
+Moving only the config leaves history behind. Choosing a new workspace without moving its contents (including memory, skills, and `.babo/workspace-id`) can start an empty workspace with a different session identity.
 
-## How to Read `nanobot status`
+## How to Read `babo status`
 
-`nanobot status` does not call a model. It checks the selected config and workspace, resolves environment references, and validates the local settings required by the active provider/model without constructing a provider client.
+`babo status` does not call a model. It checks the selected config and workspace, resolves environment references, and validates the local settings required by the active provider/model without constructing a provider client.
 
 The output has this shape:
 
 ```text
-nanobot Status
+babo Status
 
 Config: /path/to/config.json ✓
 Workspace: /path/to/workspace ✓
@@ -56,13 +56,13 @@ Read it like this:
 
 | Line | Good sign | What to do if it looks wrong |
 |---|---|---|
-| `Config` | It points to the config file you meant to use and shows `✓`. | Run `nanobot onboard`, or pass `--config` to `nanobot agent`, `gateway`, or `serve` when testing a non-default instance. |
-| `Workspace` | It points to the workspace you meant to use and shows `✓`. | Run `nanobot onboard`, create the folder, fix permissions, or pass `--workspace` on commands that support it. |
+| `Config` | It points to the config file you meant to use and shows `✓`. | Run `babo onboard`, or pass `--config` to `babo agent`, `gateway`, or `serve` when testing a non-default instance. |
+| `Workspace` | It points to the workspace you meant to use and shows `✓`. | Run `babo onboard`, create the folder, fix permissions, or pass `--workspace` on commands that support it. |
 | `Model` | It shows the active model or the preset name you expect. | Set `agents.defaults.modelPreset` to the intended preset, or check `/model` if you changed models during a chat session. |
-| `Agent` | It says `provider/model configuration is ready`. | Follow the printed WebUI or CLI setup route, then run `nanobot status` again. |
+| `Agent` | It says `provider/model configuration is ready`. | Follow the printed WebUI or CLI setup route, then run `babo status` again. |
 | Provider rows | The provider used by the active preset shows `✓`, an OAuth marker, or a local URL. | Configure only the active provider first. It is normal for unused providers to say `not set`. |
 
-If `nanobot status` looks right but `nanobot agent -m "Hello!"` fails, the install and config paths are probably fine. Continue with [Provider and Model Problems](#provider-and-model-problems).
+If `babo status` looks right but `babo agent -m "Hello!"` fails, the install and config paths are probably fine. Continue with [Provider and Model Problems](#provider-and-model-problems).
 
 ## Installation Problems
 
@@ -71,15 +71,15 @@ Use the same Python command for install checks and module fallback. On macOS/Lin
 | Symptom | Check |
 |---|---|
 | `python: command not found` | Try `python3 --version` on macOS/Linux or `py --version` on Windows. Then replace `python` in docs commands with the command that worked. |
-| `curl: command not found` | The macOS/Linux one-command installer could not download the script. Install curl, or use a manual isolated install such as `uv tool install nanobot-ai` or `pipx install nanobot-ai`. |
-| `irm` is not recognized | PowerShell could not run the download helper. Use manual install: `uv tool install nanobot-ai`, `pipx install nanobot-ai`, or `py -m pip install nanobot-ai` inside an environment you control. |
+| `curl: command not found` | The macOS/Linux one-command installer could not download the script. Install curl, or use a manual isolated install such as `uv tool install babo` or `pipx install babo`. |
+| `irm` is not recognized | PowerShell could not run the download helper. Use manual install: `uv tool install babo`, `pipx install babo`, or `py -m pip install babo` inside an environment you control. |
 | Could not download `raw.githubusercontent.com` | Your network, proxy, or firewall blocked the installer script download. Use manual install from PyPI, or configure your proxy and rerun the command. |
-| `nanobot: command not found` | With the recommended installer, reuse its printed full command; with uv/pipx, use `uv tool run --from nanobot-ai nanobot ...` / `pipx run --spec nanobot-ai nanobot ...`. For a pip install, use `<installing-python> -m nanobot ...` from that same environment. A system `python` or `py` may not contain the isolated installation. |
-| `No module named nanobot` | You are running a different Python than the one used for installation. Run `python -m pip show nanobot-ai`, `python3 -m pip show nanobot-ai`, or `py -m pip show nanobot-ai`, matching the command that installed nanobot. |
+| `babo: command not found` | With the recommended installer, reuse its printed full command; with uv/pipx, use `uv tool run --from babo babo ...` / `pipx run --spec babo babo ...`. For a pip install, use `<installing-python> -m babo ...` from that same environment. A system `python` or `py` may not contain the isolated installation. |
+| `No module named babo` | You are running a different Python than the one used for installation. Run `python -m pip show babo`, `python3 -m pip show babo`, or `py -m pip show babo`, matching the command that installed babo. |
 | `pip is not available` | When the installer uses a virtual environment, it tries `python -m ensurepip --upgrade`. If that fails, install pip for that Python, or use a Python installer/distribution that includes pip. |
-| `externally-managed-environment` | Your system Python blocks global pip installs. Use the one-command installer, `uv tool install nanobot-ai`, `pipx install nanobot-ai`, or create a virtual environment; do not add `--break-system-packages` for nanobot. |
-| Installer chose the wrong Python | Set `PYTHON` before running the installer, such as `curl -fsSL https://raw.githubusercontent.com/HKUDS/nanobot/main/scripts/install.sh | PYTHON=python3 sh` or `$env:PYTHON="py"` before the PowerShell command. |
-| Editable source install does not update | From the repo root, run `python -m pip install -e .` again with the Python command used for development, then check `python -m nanobot --version` or `nanobot --version`. |
+| `externally-managed-environment` | Your system Python blocks global pip installs. Use the one-command installer, `uv tool install babo`, `pipx install babo`, or create a virtual environment; do not add `--break-system-packages` for babo. |
+| Installer chose the wrong Python | Set `PYTHON` before running the installer, such as `curl -fsSL https://raw.githubusercontent.com/bgrimes-me/babo/main/scripts/install.sh | PYTHON=python3 sh` or `$env:PYTHON="py"` before the PowerShell command. |
+| Editable source install does not update | From the repo root, run `python -m pip install -e .` again with the Python command used for development, then check `python -m babo --version` or `babo --version`. |
 | WebUI build tools missing | They are only needed for WebUI development. Packaged installs already include the WebUI bundle. |
 
 ## Config Problems
@@ -87,21 +87,21 @@ Use the same Python command for install checks and module fallback. On macOS/Lin
 Default config path:
 
 ```text
-~/.nanobot/config.json
+~/.babo/config.json
 ```
 
 Default workspace path:
 
 ```text
-~/.nanobot/workspace/
+~/.babo/workspace/
 ```
 
-`nanobot status` reads the default config unless you pass explicit paths. Use the same `--config` and `--workspace` across status checks and runtime commands when debugging multiple instances:
+`babo status` reads the default config unless you pass explicit paths. Use the same `--config` and `--workspace` across status checks and runtime commands when debugging multiple instances:
 
 ```bash
-nanobot status --config ./bot-a/config.json --workspace ./bot-a/workspace
-nanobot agent --config ./bot-a/config.json --workspace ./bot-a/workspace -m "Hello"
-nanobot gateway --config ./bot-a/config.json --workspace ./bot-a/workspace
+babo status --config ./bot-a/config.json --workspace ./bot-a/workspace
+babo agent --config ./bot-a/config.json --workspace ./bot-a/workspace -m "Hello"
+babo gateway --config ./bot-a/config.json --workspace ./bot-a/workspace
 ```
 
 Common config mistakes:
@@ -110,30 +110,30 @@ Common config mistakes:
 |---|---|
 | JSON parse error | Validate commas, braces, and quotes. Most docs examples are partial snippets to merge. |
 | Unknown or missing provider | Use provider registry names such as `openrouter`, `anthropic`, `openai`, `ollama`, `vllm`, `lm_studio`, or define a custom OpenAI-compatible provider key under `providers` and reference that exact key from the active preset. |
-| snake_case vs camelCase confusion | Both are accepted, but docs use camelCase because nanobot writes config with aliases such as `apiKey`, `modelPresets`, `intervalS`. |
-| Environment variable error | `${VAR_NAME}` references are resolved at startup. Set the variable before running nanobot. |
-| Edited config but behavior did not change | Restart `nanobot gateway`; long-running processes read config at startup. |
+| snake_case vs camelCase confusion | Both are accepted, but docs use camelCase because babo writes config with aliases such as `apiKey`, `modelPresets`, `intervalS`. |
+| Environment variable error | `${VAR_NAME}` references are resolved at startup. Set the variable before running babo. |
+| Edited config but behavior did not change | Restart `babo gateway`; long-running processes read config at startup. |
 
 After editing config, check the shortest path to an Agent reply:
 
 ```bash
-nanobot status
+babo status
 ```
 
 To refresh missing defaults without overwriting existing settings, run:
 
 ```bash
-nanobot onboard --refresh
+babo onboard --refresh
 ```
 
-For an interactive choice between resetting and refreshing, run `nanobot onboard` and choose the option that keeps current values and merges missing defaults.
+For an interactive choice between resetting and refreshing, run `babo onboard` and choose the option that keeps current values and merges missing defaults.
 
 ## Provider and Model Problems
 
 First prove the provider in the CLI:
 
 ```bash
-nanobot agent -m "Hello!"
+babo agent -m "Hello!"
 ```
 
 Then compare your config against [`providers.md`](./providers.md).
@@ -154,10 +154,10 @@ If you need a known-good snippet instead of diagnosis, use [`provider-cookbook.m
 | Codex says a model is not supported with a ChatGPT account | Use provider `openai_codex` with a Codex model such as `openai-codex/gpt-5.6-sol`. Do not use the direct-API `openai/...` prefix with Codex OAuth. |
 | Config says `providers.openai_codex` conflicts with the built-in provider | Under `providers`, keep only the canonical `openaiCodex` settings key and remove a duplicate `openai_codex` key. A model preset's `provider` value remains `openai_codex`. |
 | xAI OAuth needs a proxy | Set `network.proxy` and `providers.xaiGrok.useProxy: true` before login, or use the shared address and provider switch in Settings. This applies to OAuth discovery, token exchange/refresh, and Grok subscription requests. |
-| xAI login runs on a remote/headless machine | In the WebUI, finish sign-in in your local browser; if the loopback redirect cannot reach the server, copy the final URL from the address bar into the WebUI dialog. From the CLI, run `nanobot provider login xai-grok` interactively, open the printed URL elsewhere, and paste the final callback URL or authorization code when prompted. |
-| xAI returns 403 or subscription access denied | Confirm the signed-in account has an eligible X Premium / Grok subscription, then run `nanobot provider login xai-grok` again. This provider does not use an xAI API key or X Developer OAuth. |
+| xAI login runs on a remote/headless machine | In the WebUI, finish sign-in in your local browser; if the loopback redirect cannot reach the server, copy the final URL from the address bar into the WebUI dialog. From the CLI, run `babo provider login xai-grok` interactively, open the printed URL elsewhere, and paste the final callback URL or authorization code when prompted. |
+| xAI returns 403 or subscription access denied | Confirm the signed-in account has an eligible X Premium / Grok subscription, then run `babo provider login xai-grok` again. This provider does not use an xAI API key or X Developer OAuth. |
 | xAI returns 400 `invalid-argument` | Read the bounded `Response body` appended to the provider error. Hosted `x_search` is sent only when xAI's model catalog advertises `supportsBackendSearch`; the model ID `grok-4.5` itself is valid. |
-| xAI model or X Search stops working after an upstream release | The integration follows Grok Build's public OAuth/proxy client contract. Update nanobot if xAI changes that contract. |
+| xAI model or X Search stops working after an upstream release | The integration follows Grok Build's public OAuth/proxy client contract. Update babo if xAI changes that contract. |
 
 ### Local Token Estimation
 
@@ -169,8 +169,8 @@ Langfuse tracing is optional and controlled by environment variables.
 
 | Symptom | Check |
 |---|---|
-| `LANGFUSE_SECRET_KEY is set but langfuse is not installed` | Install `langfuse` in the same Python environment that runs nanobot, then restart the process. |
-| No traces appear | Set `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_BASE_URL` before starting nanobot. |
+| `LANGFUSE_SECRET_KEY is set but langfuse is not installed` | Install `langfuse` in the same Python environment that runs babo, then restart the process. |
+| No traces appear | Set `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_BASE_URL` before starting babo. |
 | Wrong Langfuse project or region | Check that the key pair and `LANGFUSE_BASE_URL` come from the same Langfuse project/region. |
 | Only some providers trace | Langfuse tracing applies to OpenAI-compatible provider calls and the Codex OAuth provider; other native providers may not use either client path. |
 
@@ -178,7 +178,7 @@ See [`configuration.md#langfuse-observability`](./configuration.md#langfuse-obse
 
 ## Gateway Problems
 
-`nanobot gateway` is required for WebUI, chat apps, heartbeat, Dream, and long-running channel connections.
+`babo gateway` is required for WebUI, chat apps, heartbeat, Dream, and long-running channel connections.
 
 Default ports:
 
@@ -186,12 +186,12 @@ Default ports:
 |---|---|
 | Gateway health endpoint | `http://127.0.0.1:18790/health` |
 | WebUI/WebSocket channel | `http://127.0.0.1:8765` |
-| OpenAI-compatible API (`nanobot serve`) | `http://127.0.0.1:8900` |
+| OpenAI-compatible API (`babo serve`) | `http://127.0.0.1:8900` |
 
 Common gateway checks:
 
 ```bash
-nanobot gateway --verbose
+babo gateway --verbose
 ```
 
 | Symptom | Check |
@@ -205,18 +205,18 @@ nanobot gateway --verbose
 
 ### Slow Optional Channel Dependency Installation
 
-Before loading enabled channels, the gateway checks the dependencies declared by their channel manifests. The CLI and WebUI normally install these dependencies when a channel is enabled. Installation during startup is a recovery path for an enabled config whose Python environment no longer has the required packages, for example after manually editing the config, upgrading nanobot, or recreating an isolated `uv tool`/`pipx` environment. The gateway waits for the install so an enabled channel is not silently skipped; later starts skip the installation once the dependencies are present.
+Before loading enabled channels, the gateway checks the dependencies declared by their channel manifests. The CLI and WebUI normally install these dependencies when a channel is enabled. Installation during startup is a recovery path for an enabled config whose Python environment no longer has the required packages, for example after manually editing the config, upgrading babo, or recreating an isolated `uv tool`/`pipx` environment. The gateway waits for the install so an enabled channel is not silently skipped; later starts skip the installation once the dependencies are present.
 
-If access to PyPI is slow in your region, configure pip to use a trusted package index. The installer honors the standard `PIP_INDEX_URL` environment variable, including when nanobot itself was installed with `uv tool`:
+If access to PyPI is slow in your region, configure pip to use a trusted package index. The installer honors the standard `PIP_INDEX_URL` environment variable, including when babo itself was installed with `uv tool`:
 
 ```bash
-PIP_INDEX_URL=https://your-trusted-mirror.example/simple nanobot gateway
+PIP_INDEX_URL=https://your-trusted-mirror.example/simple babo gateway
 ```
 
-For the systemd user service created by `nanobot gateway install-service`, add a drop-in:
+For the systemd user service created by `babo gateway install-service`, add a drop-in:
 
 ```bash
-systemctl --user edit nanobot-gateway.service
+systemctl --user edit babo-gateway.service
 ```
 
 ```ini
@@ -228,14 +228,14 @@ Then reload and restart the service:
 
 ```bash
 systemctl --user daemon-reload
-systemctl --user restart nanobot-gateway.service
+systemctl --user restart babo-gateway.service
 ```
 
 For a system-level or custom service, use `sudo systemctl edit <unit>` instead. Prefer an HTTPS index operated by an organization you trust, and do not put index credentials in commands or logs.
 
 ## WebUI Problems
 
-Run `nanobot webui` to prepare the local WebSocket channel and open the browser. Finish model setup in **Settings → Models**.
+Run `babo webui` to prepare the local WebSocket channel and open the browser. Finish model setup in **Settings → Models**.
 
 <details>
 <summary>Manual WebSocket configuration</summary>
@@ -257,7 +257,7 @@ Minimal config:
 Then run:
 
 ```bash
-nanobot gateway
+babo gateway
 ```
 
 Open:
@@ -268,7 +268,7 @@ http://127.0.0.1:8765
 
 </details>
 
-For first access, copy the complete login link printed by `nanobot webui`, including the fragment after `#`. In WSL, open that link in your Windows browser if automatic opening fails. The plain page address does not sign in a new browser.
+For first access, copy the complete login link printed by `babo webui`, including the fragment after `#`. In WSL, open that link in your Windows browser if automatic opening fails. The plain page address does not sign in a new browser.
 
 If accessing from another device, bind the WebSocket channel to `0.0.0.0` and set `token` or `tokenIssueSecret`. The WebSocket channel refuses public binds without a token or token issue secret.
 
@@ -285,9 +285,9 @@ See [`webui.md#lan-access`](./webui.md#lan-access) for LAN setup and [`../webui/
 Before debugging a chat app:
 
 ```bash
-nanobot agent -m "Hello!"
-nanobot channels status
-nanobot gateway
+babo agent -m "Hello!"
+babo channels status
+babo gateway
 ```
 
 Then check:
@@ -300,7 +300,7 @@ Then check:
 | Telegram rejects the token | Copy the current token from BotFather or regenerate it. |
 | Telegram receives no messages | Confirm the channel is enabled, the gateway is running, and the sender is paired or listed in `allowFrom`. |
 | Discord replies missing | Enable Message Content intent and invite the bot with the required permissions. |
-| WhatsApp or WeChat login expired | Re-run `nanobot channels login whatsapp` or `nanobot channels login weixin`. |
+| WhatsApp or WeChat login expired | Re-run `babo channels login whatsapp` or `babo channels login weixin`. |
 | Chat app works but WebUI does not | The provider and gateway are likely fine; debug the WebSocket channel separately. |
 
 See [`chat-apps.md`](./chat-apps.md) for channel-specific setup.
@@ -321,22 +321,22 @@ See [`chat-apps.md`](./chat-apps.md) for channel-specific setup.
 |---|---|
 | Conversation context seems wrong | Confirm the active workspace and session. WebUI chats and chat app threads may use different sessions. |
 | Memory does not update immediately | Dream consolidation is periodic; recent turns still live in session history. |
-| Sessions disappear after changing `--config` | Sessions follow the config directory at `<config-dir>/sessions/<workspace-id>/`; use the original config path or copy that `sessions/` directory into the new config directory while nanobot is stopped. |
-| Sessions disappear after moving a workspace | Keep the workspace's `.nanobot/workspace-id` file with the move or backup. If it was lost, restore that marker from backup before starting nanobot. |
+| Sessions disappear after changing `--config` | Sessions follow the config directory at `<config-dir>/sessions/<workspace-id>/`; use the original config path or copy that `sessions/` directory into the new config directory while babo is stopped. |
+| Sessions disappear after moving a workspace | Keep the workspace's `.babo/workspace-id` file with the move or backup. If it was lost, restore that marker from backup before starting babo. |
 | You want one shared session across devices | Set `agents.defaults.unifiedSession` intentionally; otherwise keep separate sessions. |
 
 ## Collect Useful Evidence
 
 When opening an issue or asking for help, include:
 
-- install method and `nanobot --version`;
+- install method and `babo --version`;
 - operating system and Python version;
 - the command you ran;
-- relevant `nanobot status` output;
+- relevant `babo status` output;
 - sanitized config snippets, especially provider, model, channel, and tool settings;
-- gateway logs from `nanobot gateway --verbose`;
-- whether `nanobot agent -m "Hello!"` works.
+- gateway logs from `babo gateway --verbose`;
+- whether `babo agent -m "Hello!"` works.
 
 Never paste real API keys, bot tokens, OAuth tokens, or private chat IDs into public issues.
 
-If you find a docs mistake, outdated command, or confusing step, please open an issue: <https://github.com/HKUDS/nanobot/issues>.
+If you find a docs mistake, outdated command, or confusing step, please open an issue: <https://github.com/bgrimes-me/babo/issues>.

@@ -53,7 +53,7 @@ describe("sidebar action focus", () => {
   beforeEach(() => { restoreBrowserFocus = mockBrowserFocus(); });
   afterEach(() => {
     restoreBrowserFocus();
-    localStorage.removeItem("nanobot-webui.collapsed-pane-groups.v1");
+    localStorage.removeItem("babo-webui.collapsed-pane-groups.v1");
   });
 
   it.each([

@@ -3,7 +3,7 @@ import { createRef, type ReactNode } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import * as api from "@/lib/api";
-import { NanobotClient } from "@/lib/nanobot-client";
+import { BaboClient } from "@/lib/babo-client";
 import { ClientProvider } from "@/providers/ClientProvider";
 import type { UIMessage, WebuiThreadPersistedPayload } from "@/lib/types";
 import { ThreadViewport, type ThreadViewportHandle } from "@/components/thread/ThreadViewport";
@@ -20,7 +20,7 @@ function page(start: number): WebuiThreadPersistedPayload {
     has_more_before: start > 0, has_more_after: start < 1999 } };
 }
 function wrapper(enabled = true) {
-  const client = new NanobotClient({ url: "ws://localhost:8765", reconnect: false });
+  const client = new BaboClient({ url: "ws://localhost:8765", reconnect: false });
   return ({ children }: { children: ReactNode }) => <ClientProvider client={client} token="test"
     webuiCapabilities={enabled ? ["webui.prompt-navigation.v1"] : []}>{children}</ClientProvider>;
 }

@@ -4,7 +4,7 @@ import type { ApplySettingsPayload } from "@/components/settings/contracts";
 import { providerFormFromRow } from "@/components/settings/models/providerForm";
 import type { ModelSettingsState } from "@/components/settings/models/useModelSettingsState";
 import { cancelProviderOAuth, completeProviderOAuth } from "@/lib/api";
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 import type {
   ProviderOAuthCompletionResult,
   ProviderOAuthPending,
@@ -19,7 +19,7 @@ function isProviderOAuthPending(
 
 interface ProviderOAuthPollingOptions {
   state: ModelSettingsState;
-  client: NanobotClient;
+  client: BaboClient;
   applyPayload: ApplySettingsPayload;
   setError: Dispatch<SetStateAction<string | null>>;
   closeProviderOAuthFlow: (cancelPending?: boolean) => void;

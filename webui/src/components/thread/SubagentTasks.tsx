@@ -19,7 +19,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/
 import { usePageVisibility } from "@/hooks/usePageVisibility";
 import { useThreadVisibility } from "@/hooks/useThreadVisibility";
 import { cancelSubagentTask, fetchSubagentTasks } from "@/lib/api";
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 import { isActiveSubagentTask, isSubagentTask, mergeSubagentTasks, type ObservedSubagentTask } from "@/lib/subagent-tasks";
 import type { SubagentTaskSnapshot } from "@/lib/types";
 
@@ -41,7 +41,7 @@ export function useSubagentTasks() {
 }
 
 interface SubagentTasksProviderProps {
-  client: Pick<NanobotClient, "requestMutation" | "onChat" | "onStatus">;
+  client: Pick<BaboClient, "requestMutation" | "onChat" | "onStatus">;
   sessionKey: string | null;
   token: string;
   enabled: boolean;

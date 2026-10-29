@@ -53,7 +53,7 @@ export function Gallery() {
     const controller = new AbortController();
     setLoading(true);
     setError(false);
-    void fetch("/__nanobot_components", { signal: controller.signal })
+    void fetch("/__babo_components", { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error(`Inventory request failed: ${response.status}`);
         const data: ComponentSource[] = await response.json();
@@ -102,7 +102,7 @@ export function Gallery() {
     <div className="component-gallery">
       <header className="gallery-header">
         <div className="flex min-w-0 items-center gap-3">
-          <img src="/brand/nanobot_icon_192.png" alt="" className="h-9 w-9" />
+          <img src="/brand/babo_icon_192.png" alt="" className="h-9 w-9" />
           <div><h1 className="text-base font-semibold">{t("ui.title")}</h1>
             <p className="text-xs text-muted-foreground">{t("ui.subtitle")}</p></div>
         </div>

@@ -2,15 +2,15 @@
 
 import pytest
 
-from nanobot.agent.memory import MemoryStore
-from nanobot.config.schema import ModelPresetConfig
-from nanobot.providers.base import LLMResponse
-from nanobot.security.workspace_access import (
+from babo.agent.memory import MemoryStore
+from babo.config.schema import ModelPresetConfig
+from babo.providers.base import LLMResponse
+from babo.security.workspace_access import (
     bind_workspace_scope,
     default_workspace_scope,
     reset_workspace_scope,
 )
-from nanobot.utils.prompt_templates import render_template
+from babo.utils.prompt_templates import render_template
 
 
 @pytest.fixture
@@ -383,9 +383,9 @@ class TestEphemeralDirect:
         """Factory fixture that builds a minimal AgentLoop with mocked deps."""
         from unittest.mock import AsyncMock, MagicMock, patch
 
-        from nanobot.agent.loop import AgentLoop
-        from nanobot.agent.memory import MemoryStore
-        from nanobot.bus.queue import MessageBus
+        from babo.agent.loop import AgentLoop
+        from babo.agent.memory import MemoryStore
+        from babo.bus.queue import MessageBus
 
         store = MemoryStore(tmp_path)
         store.write_soul("# Soul")
@@ -402,7 +402,7 @@ class TestEphemeralDirect:
         )
 
         with (
-            patch("nanobot.agent.loop.SubagentManager") as mock_sub,
+            patch("babo.agent.loop.SubagentManager") as mock_sub,
         ):
             mock_sub.return_value.cancel_by_session = AsyncMock(return_value=0)
             loop = AgentLoop(
@@ -454,9 +454,9 @@ class TestEphemeralDirect:
         from copy import deepcopy
         from unittest.mock import AsyncMock, MagicMock, patch
 
-        from nanobot.agent.loop import AgentLoop
-        from nanobot.bus.queue import MessageBus
-        from nanobot.providers.base import GenerationSettings
+        from babo.agent.loop import AgentLoop
+        from babo.bus.queue import MessageBus
+        from babo.providers.base import GenerationSettings
 
         store = MemoryStore(tmp_path)
         store.write_memory("# Memory")
@@ -478,7 +478,7 @@ class TestEphemeralDirect:
         async def _silent(*_args, **_kwargs):
             pass
 
-        with patch("nanobot.agent.runner.deepcopy", wraps=deepcopy) as copy_state:
+        with patch("babo.agent.runner.deepcopy", wraps=deepcopy) as copy_state:
             response = await loop.process_direct(
                 prompt, session_key=MemoryStore.dream_session_key(), ephemeral=True,
                 tools=store.build_dream_tools(), on_progress=_silent,
@@ -553,7 +553,7 @@ class TestEphemeralDirect:
         """A soft tool error is model input, not a second run-level failure state."""
         from unittest.mock import AsyncMock
 
-        from nanobot.providers.base import ToolCallRequest
+        from babo.providers.base import ToolCallRequest
 
         loop, store = _make_loop
         loop.provider.chat_stream_with_retry = AsyncMock(side_effect=[
@@ -592,8 +592,8 @@ class TestEphemeralDirect:
         """Dream must only see the batch selected by build_dream_prompt."""
         from unittest.mock import MagicMock
 
-        from nanobot.agent.loop import AgentLoop
-        from nanobot.bus.queue import MessageBus
+        from babo.agent.loop import AgentLoop
+        from babo.bus.queue import MessageBus
 
         store = MemoryStore(tmp_path)
         for i in range(60):
@@ -642,8 +642,8 @@ class TestEphemeralDirect:
         """Dream gets durable files from system context without losing its session record."""
         from unittest.mock import MagicMock
 
-        from nanobot.agent.loop import AgentLoop
-        from nanobot.bus.queue import MessageBus
+        from babo.agent.loop import AgentLoop
+        from babo.bus.queue import MessageBus
 
         markers = {
             "SOUL.md": "DREAM_SOUL_MARKER",
@@ -704,10 +704,10 @@ class TestEphemeralHooks:
         """Build an AgentLoop with a spy hook to verify hook firing behavior."""
         from unittest.mock import AsyncMock, MagicMock, patch
 
-        from nanobot.agent.hook import AgentHook
-        from nanobot.agent.loop import AgentLoop
-        from nanobot.bus.queue import MessageBus
-        from nanobot.providers.base import LLMResponse
+        from babo.agent.hook import AgentHook
+        from babo.agent.loop import AgentLoop
+        from babo.bus.queue import MessageBus
+        from babo.providers.base import LLMResponse
 
         bus = MessageBus()
         provider = MagicMock()
@@ -728,7 +728,7 @@ class TestEphemeralHooks:
         spy.after_iteration = AsyncMock(return_value=None)
 
         with (
-            patch("nanobot.agent.loop.SubagentManager") as mock_sub,
+            patch("babo.agent.loop.SubagentManager") as mock_sub,
         ):
             mock_sub.return_value.cancel_by_session = AsyncMock(return_value=0)
             loop = AgentLoop(

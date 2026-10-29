@@ -2,13 +2,13 @@ import { useEffect } from "react";
 
 import { persistedCanonicalRunState } from "@/lib/canonical-run-snapshot";
 import { fetchLatestWebuiThread } from "@/lib/latest-thread-request";
-import type { NanobotClient } from "@/lib/nanobot-client";
+import type { BaboClient } from "@/lib/babo-client";
 import { webuiThreadCache } from "@/lib/webui-thread-cache";
 
 const RECONNECT_READ_CONCURRENCY = 4;
 
 /** Reconcile durable runs even when their threads are not mounted. */
-export function useReconnectRuns(client: NanobotClient, getToken: () => string): void {
+export function useReconnectRuns(client: BaboClient, getToken: () => string): void {
   useEffect(() => {
     let controller: AbortController | null = null;
     const unsubscribe = client.onStatus((status) => {

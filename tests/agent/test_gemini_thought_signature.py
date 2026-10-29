@@ -10,9 +10,9 @@ from unittest.mock import patch
 import pytest
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
-from nanobot.providers.base import ToolCallRequest
-from nanobot.providers.openai_compat_provider import OpenAICompatProvider
-from nanobot.providers.registry import ProviderSpec
+from babo.providers.base import ToolCallRequest
+from babo.providers.openai_compat_provider import OpenAICompatProvider
+from babo.providers.registry import ProviderSpec
 
 GEMINI_EXTRA = {"google": {"thought_signature": "sig-abc-123"}}
 
@@ -87,7 +87,7 @@ def _make_sdk_response_with_extra_content() -> ChatCompletion:
 
 
 def test_parse_sdk_object_preserves_extra_content() -> None:
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI"):
+    with patch("babo.providers.openai_compat_provider.AsyncOpenAI"):
         provider = OpenAICompatProvider()
 
     result = provider._parse(_make_sdk_response_with_extra_content())
@@ -108,7 +108,7 @@ def test_parse_sdk_object_preserves_extra_content() -> None:
 # ── _parse: dict/mapping branch ───────────────────────────────────────
 
 def test_parse_dict_preserves_extra_content() -> None:
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI"):
+    with patch("babo.providers.openai_compat_provider.AsyncOpenAI"):
         provider = OpenAICompatProvider()
 
     response_dict = {
@@ -140,7 +140,7 @@ def test_parse_dict_preserves_extra_content() -> None:
 
 @pytest.mark.parametrize("as_sdk", [False, True], ids=["dict", "sdk"])
 def test_parse_deduplicates_duplicate_tool_call_ids(as_sdk: bool) -> None:
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI"):
+    with patch("babo.providers.openai_compat_provider.AsyncOpenAI"):
         provider = OpenAICompatProvider()
 
     response_dict = {
@@ -259,7 +259,7 @@ def test_stale_extra_content_in_tool_calls_survives_sanitize() -> None:
     """When switching from Gemini to OpenAI, extra_content inside tool_calls
     should survive message sanitization (it lives inside the tool_call dict,
     not at message level, so it bypasses _ALLOWED_MSG_KEYS filtering)."""
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI"):
+    with patch("babo.providers.openai_compat_provider.AsyncOpenAI"):
         provider = OpenAICompatProvider()
 
     messages = [
@@ -286,7 +286,7 @@ def test_stale_extra_content_in_tool_calls_survives_sanitize() -> None:
 # ── Replay to Gemini: preserve or backfill thought signatures ─────────
 
 def _gemini_provider() -> OpenAICompatProvider:
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI"):
+    with patch("babo.providers.openai_compat_provider.AsyncOpenAI"):
         return OpenAICompatProvider(
             spec=ProviderSpec(
                 name="gemini", keywords=("gemini",), env_key="GEMINI_API_KEY",
@@ -445,7 +445,7 @@ def test_gemini_replay_preserves_signed_tool_calls() -> None:
 
 def test_non_gemini_provider_keeps_unsigned_tool_calls() -> None:
     """The filter is Gemini-scoped: other providers still replay unsigned calls."""
-    with patch("nanobot.providers.openai_compat_provider.AsyncOpenAI"):
+    with patch("babo.providers.openai_compat_provider.AsyncOpenAI"):
         provider = OpenAICompatProvider()
 
     messages = [

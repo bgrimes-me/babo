@@ -23,7 +23,7 @@ import "./remote-layout.css";
 
 const emptyProfile = (): Omit<RemoteProfile, "id" | "connected"> => ({
   name: "", host: "", port: null, ssh_config: "", identity_file: "",
-  config_path: "~/.nanobot/config.json", runtime_user: "",
+  config_path: "~/.babo/config.json", runtime_user: "",
 });
 
 /** The page is a server directory. Add/edit/first-use verification share one dialog. */
@@ -262,11 +262,11 @@ export function RemoteConnectionsPage({ mainNavigationExpanded = false, hostChro
     finally { if (mounted.current) setBusy(""); }
   };
   const pageError = error || (directoryError ? t("remote.errors.directory_unavailable") : "");
-  const nanobotError = /^(config_|runtime_user_|webui_|remote_auth_|remote_unreachable|incompatible_gateway|public_ws_|python_|probe_failed)/.test(errorCode);
-  const locationStep = !!inspection || manualLocation || nanobotError;
+  const baboError = /^(config_|runtime_user_|webui_|remote_auth_|remote_unreachable|incompatible_gateway|public_ws_|python_|probe_failed)/.test(errorCode);
+  const locationStep = !!inspection || manualLocation || baboError;
   const openingProfile = !editorOpen && !fingerprint && !removing && !disconnecting
     ? directory?.profiles.find((profile) => profile.id === busy) : null;
-  const editorAction = editing ? "remote.save" : locationStep ? "remote.setup.openNanobot" : "remote.connect";
+  const editorAction = editing ? "remote.save" : locationStep ? "remote.setup.openBabo" : "remote.connect";
   const editorLabel = !busy || busy.startsWith("pick-") ? editorAction : busy === "save" ? "remote.saving"
     : busy === "inspect" ? "remote.setup.checking" : "remote.setup.opening";
   const editingProfile = editing ? directory?.profiles.find((profile) => profile.id === savedId) : null;
@@ -451,7 +451,7 @@ export function RemoteConnectionsPage({ mainNavigationExpanded = false, hostChro
             <li aria-current={!locationStep ? "step" : undefined} className={cn("flex items-center gap-1.5", !locationStep && "text-foreground")}>
               {locationStep ? <Check className="h-3.5 w-3.5" /> : <span>1</span>}{t("remote.setup.server")}</li>
             <li aria-hidden="true" className="h-px w-5 bg-border" />
-            <li aria-current={locationStep ? "step" : undefined} className={cn("flex items-center gap-1.5", locationStep && "text-foreground")}><span>2</span>{t("remote.setup.nanobot")}</li>
+            <li aria-current={locationStep ? "step" : undefined} className={cn("flex items-center gap-1.5", locationStep && "text-foreground")}><span>2</span>{t("remote.setup.babo")}</li>
           </ol>}
           {locationStep && !editing ? <div className="space-y-4">
             <div className="flex items-center justify-between gap-3 rounded-2xl bg-muted/40 px-3 py-2.5">
@@ -459,12 +459,12 @@ export function RemoteConnectionsPage({ mainNavigationExpanded = false, hostChro
               <Button type="button" size="sm" variant="ghost" className="remote-action" disabled={!!busy} onClick={editSSH}>{t("remote.setup.changeServer")}</Button>
             </div>
             {!!inspection?.candidates.length && <fieldset className="space-y-2">
-              <legend className="mb-2 text-[13px] font-medium">{t("remote.setup.chooseNanobot")}</legend>
+              <legend className="mb-2 text-[13px] font-medium">{t("remote.setup.chooseBabo")}</legend>
               {inspection.candidates.map((candidate) => <label key={candidate.config_path + candidate.runtime_user} className={cn("flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition-colors", !manualLocation && form.config_path === candidate.config_path && form.runtime_user === candidate.runtime_user ? "border-foreground/30 bg-muted/40" : "border-border hover:bg-muted/30")}>
-                <input type="radio" name="nanobot-location" className="mt-1 accent-foreground" disabled={!!busy}
+                <input type="radio" name="babo-location" className="mt-1 accent-foreground" disabled={!!busy}
                   checked={!manualLocation && form.config_path === candidate.config_path && form.runtime_user === candidate.runtime_user}
                   onChange={() => { setManualLocation(false); setForm({ ...form, config_path: candidate.config_path, runtime_user: candidate.runtime_user }); setErrorCode(""); }} />
-                <span className="min-w-0 text-[13px]"><span className="block font-medium [overflow-wrap:anywhere]">{candidate.service || t("remote.setup.yourNanobot")}</span>
+                <span className="min-w-0 text-[13px]"><span className="block font-medium [overflow-wrap:anywhere]">{candidate.service || t("remote.setup.yourBabo")}</span>
                   <span className="block break-all text-xs leading-5 text-muted-foreground">{candidate.config_path}</span>
                   {candidate.runtime_user && <span className="mt-1 block text-xs leading-5 text-muted-foreground">{t("remote.setup.serviceAccount", { user: candidate.runtime_user })}</span>}
                 </span>
@@ -496,7 +496,7 @@ export function RemoteConnectionsPage({ mainNavigationExpanded = false, hostChro
             </DisclosureContent>
             </div>
           </>}
-          {(editing || manualLocation || nanobotError) && <div className="space-y-3">
+          {(editing || manualLocation || baboError) && <div className="space-y-3">
             <RemoteField label={t("remote.config_path")} value={form.config_path} disabled={!!busy} onChange={(config_path) => setForm({ ...form, config_path })} />
             <RemoteField label={t("remote.runtime_user")} value={form.runtime_user} disabled={!!busy} onChange={(runtime_user) => setForm({ ...form, runtime_user })} />
             <p className="text-xs leading-5 text-muted-foreground">{t("remote.setup.locationHint")}</p>

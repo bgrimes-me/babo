@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.webui import native_file_picker as picker
+from babo.webui import native_file_picker as picker
 
 
 def _picker_command(tmp_path: Path, body: str) -> picker._PickerCommand:

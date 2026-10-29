@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from nanobot.config.schema import Config
-from nanobot.webui.settings_capabilities import (
+from babo.config.schema import Config
+from babo.webui.settings_capabilities import (
     capability_settings_payload,
     update_api_settings,
     update_image_generation_settings,
@@ -13,8 +13,8 @@ from nanobot.webui.settings_capabilities import (
     update_transcription_settings,
     update_web_search_settings,
 )
-from nanobot.webui.settings_contracts import WebUISettingsError
-from nanobot.webui.settings_models import create_provider_settings, update_provider_settings
+from babo.webui.settings_contracts import WebUISettingsError
+from babo.webui.settings_models import create_provider_settings, update_provider_settings
 
 
 def test_dynamic_image_provider_selection_and_private_overrides():

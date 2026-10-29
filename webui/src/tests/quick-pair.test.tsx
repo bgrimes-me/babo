@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuickPairSetup } from "@/components/remote/QuickPairSetup";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import type { ConnectionStatus } from "@/lib/types";
-import { NanobotClient } from "@/lib/nanobot-client";
+import { BaboClient } from "@/lib/babo-client";
 import i18n from "@/i18n";
 
 const mocks = vi.hoisted(() => {
@@ -18,13 +18,13 @@ const mocks = vi.hoisted(() => {
       return () => { listeners.delete(listener); };
     },
   };
-  return { action, client, listeners, transportClient: null as NanobotClient | null, connect: vi.fn(), refresh: vi.fn(), cancel: vi.fn(), copy: vi.fn() };
+  return { action, client, listeners, transportClient: null as BaboClient | null, connect: vi.fn(), refresh: vi.fn(), cancel: vi.fn(), copy: vi.fn() };
 });
 vi.mock("@/providers/ClientProvider", () => ({ useClient: () => ({ client: mocks.transportClient ?? mocks.client }) }));
 vi.mock("@/components/remote/remote-context", () => ({ useRemoteConnections: () => ({ connect: mocks.connect, refresh: mocks.refresh, cancel: mocks.cancel, directory: { profiles: [] } }) }));
 vi.mock("@/lib/clipboard", () => ({ copyTextToClipboard: mocks.copy }));
-const request = () => ({ id: "request-1", command: "nanobot remote pair nbpr1.public", expires: Date.now() / 1000 + 600 });
-const preview = { id: "request-1", host: "ubuntu@server", hostname: "team", fingerprint: "SHA256:trusted-server", authorized_until: Date.now() / 1000 + 86400, revoke_command: "nanobot remote revoke request-1" };
+const request = () => ({ id: "request-1", command: "babo remote pair nbpr1.public", expires: Date.now() / 1000 + 600 });
+const preview = { id: "request-1", host: "ubuntu@server", hostname: "team", fingerprint: "SHA256:trusted-server", authorized_until: Date.now() / 1000 + 86400, revoke_command: "babo remote revoke request-1" };
 
 beforeEach(async () => {
   await i18n.changeLanguage("en");
@@ -61,7 +61,7 @@ async function reviewed() {
   chooseOtherWay("Connection code");
   fireEvent.change(await screen.findByRole("textbox", { name: "Connection code" }), { target: { value: "nbpc1.encrypted" } });
   fireEvent.click(screen.getByRole("button", { name: "Review connection" }));
-  await screen.findByRole("heading", { name: "Open this nanobot?" });
+  await screen.findByRole("heading", { name: "Open this babo?" });
 }
 
 describe("quick pairing", () => {
@@ -77,7 +77,7 @@ describe("quick pairing", () => {
     act(() => { if (typeof expiry === "function") expiry(); });
     await act(async () => finish({ id: "paired-server" }));
     expect(await screen.findByRole("button", { name: "Retry" })).toBeEnabled();
-    expect(screen.getByRole("heading", { name: "Open this nanobot?" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Open this babo?" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Get a new command" })).not.toBeInTheDocument();
   });
   it("replaces an expired confirmation with a new-command action", async () => {
@@ -87,7 +87,7 @@ describe("quick pairing", () => {
     expect(typeof expiry).toBe("function");
     act(() => { if (typeof expiry === "function") expiry(); });
     expect(screen.getByRole("button", { name: "Get a new command" })).toBeEnabled();
-    expect(screen.queryByRole("heading", { name: "Open this nanobot?" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Open this babo?" })).not.toBeInTheDocument();
     expect(mocks.connect).not.toHaveBeenCalled();
   });
   it.each(["pair_expired", "pair_used"])("offers a new command when manual review reports %s", async (code) => {
@@ -122,7 +122,7 @@ describe("quick pairing", () => {
     const result = render(content(true));
     result.rerender(content(false));
     await act(async () => resolve(preview));
-    expect(screen.queryByRole("heading", { name: "Open this nanobot?" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Open this babo?" })).not.toBeInTheDocument();
     expect(mocks.connect).not.toHaveBeenCalled();
     expect(mocks.action).toHaveBeenCalledTimes(1);
   });
@@ -137,7 +137,7 @@ describe("quick pairing", () => {
   });
   it("uses the same copyable revocation code block in pairing details", async () => {
     returnedView();
-    await screen.findByRole("heading", { name: "Open this nanobot?" });
+    await screen.findByRole("heading", { name: "Open this babo?" });
     fireEvent.click(screen.getByRole("button", { name: "Manage access" }));
     expect(screen.getByText(preview.revoke_command).closest("pre")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Copy code" }));
@@ -153,7 +153,7 @@ describe("quick pairing", () => {
       return {};
     });
     returnedView();
-    await screen.findByRole("heading", { name: "This nanobot is already saved" });
+    await screen.findByRole("heading", { name: "This babo is already saved" });
     expect(screen.getByText("My team")).toBeVisible();
     expect(screen.getByText(i18n.t("remote.sameInstance.pairHint"))).toBeVisible();
     expect(mocks.action.mock.calls.some(([action]) => action === "remote.pair_finish")).toBe(false);
@@ -166,16 +166,16 @@ describe("quick pairing", () => {
     view();
     await waitFor(() => expect(screen.getByRole("button", { name: "Copy command" })).toBeEnabled());
     const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveAccessibleName("Connect to remote nanobot");
+    expect(dialog).toHaveAccessibleName("Connect to remote babo");
     expect(dialog).toHaveAccessibleDescription(i18n.t("remote.pair.introHint"));
-    const illustration = dialog.querySelector('image[href="/brand/nanobot_mark.svg"]')?.closest("svg");
+    const illustration = dialog.querySelector('image[href="/brand/babo_mark.svg"]')?.closest("svg");
     expect(illustration).toHaveAttribute("aria-hidden", "true");
     expect(illustration).toHaveAttribute("focusable", "false");
     expect(dialog.querySelector(".invisible")).toBeNull();
     expect(screen.queryByText(i18n.t("remote.pair.afterCopyHint"))).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Copy command" }));
     await screen.findByRole("heading", { name: "Command copied" });
-    expect(dialog.querySelector('image[href="/brand/nanobot_mark.svg"]')?.closest("svg")).toBe(illustration);
+    expect(dialog.querySelector('image[href="/brand/babo_mark.svg"]')?.closest("svg")).toBe(illustration);
     expect(screen.queryByText(i18n.t("remote.pair.introHint"))).toBeNull();
   });
   it("keeps the illustration out of code entry and authorization review", async () => {
@@ -183,15 +183,15 @@ describe("quick pairing", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Copy command" })).toBeEnabled());
     chooseOtherWay("Connection code");
     const dialog = screen.getByRole("dialog");
-    expect(dialog.querySelector('image[href="/brand/nanobot_mark.svg"]')).toBeNull();
+    expect(dialog.querySelector('image[href="/brand/babo_mark.svg"]')).toBeNull();
     fireEvent.change(screen.getByRole("textbox", { name: "Connection code" }), { target: { value: "nbpc1.encrypted" } });
     fireEvent.click(screen.getByRole("button", { name: "Review connection" }));
-    await screen.findByRole("heading", { name: "Open this nanobot?" });
-    expect(dialog.querySelector('image[href="/brand/nanobot_mark.svg"]')).toBeNull();
+    await screen.findByRole("heading", { name: "Open this babo?" });
+    expect(dialog.querySelector('image[href="/brand/babo_mark.svg"]')).toBeNull();
     expect(screen.getByText(i18n.t("remote.pair.access"))).toBeVisible();
     expect(mocks.connect).not.toHaveBeenCalled();
   });
-  it("reviews through the real NanobotClient after its socket opens", async () => {
+  it("reviews through the real BaboClient after its socket opens", async () => {
     const socket = {
       readyState: 0,
       onopen: null as (() => void) | null,
@@ -200,7 +200,7 @@ describe("quick pairing", () => {
       onclose: null as (() => void) | null,
       send: vi.fn(), close: vi.fn(),
     };
-    mocks.transportClient = new NanobotClient({
+    mocks.transportClient = new BaboClient({
       url: "ws://local-test", reconnect: false,
       socketFactory: () => socket as unknown as WebSocket,
     });
@@ -214,7 +214,7 @@ describe("quick pairing", () => {
     await act(async () => {
       socket.onmessage?.({ data: JSON.stringify({ event: "webui_response", request_id: frame.request_id, ok: true, result: preview }) } as MessageEvent);
     });
-    expect(screen.getByRole("heading", { name: "Open this nanobot?" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Open this babo?" })).toBeVisible();
     expect(socket.send).toHaveBeenCalledTimes(1);
     expect(mocks.connect).not.toHaveBeenCalled();
   });
@@ -225,7 +225,7 @@ describe("quick pairing", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByRole("button", { name: "Get a new command" })).toBeNull();
     setStatus("open");
-    await screen.findByRole("heading", { name: "Open this nanobot?" });
+    await screen.findByRole("heading", { name: "Open this babo?" });
     setStatus("reconnecting"); setStatus("open");
     expect(mocks.action).toHaveBeenCalledTimes(1);
     expect(mocks.action).toHaveBeenCalledWith("remote.pair_preview", { id: "request-1", code: "nbpc1.encrypted" }, 65000);
@@ -245,21 +245,21 @@ describe("quick pairing", () => {
     mocks.client.status = "connecting";
     returnedView();
     await act(async () => { vi.advanceTimersByTime(10_000); });
-    expect(screen.getByRole("alert")).toHaveTextContent(/local nanobot/);
+    expect(screen.getByRole("alert")).toHaveTextContent(/local babo/);
     expect(screen.queryByRole("button", { name: "Get a new command" })).toBeNull();
     expect(mocks.action).not.toHaveBeenCalled();
     setStatus("open");
     await act(async () => {});
-    expect(screen.getByRole("heading", { name: "Open this nanobot?" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Open this babo?" })).toBeVisible();
     expect(screen.queryByRole("alert")).toBeNull();
   });
   it.each([["WebUI connection is not open", 503], ["WebUI request timed out after 65000ms", 504]])("retries the same returned receipt after %s", async (message, status) => {
     mocks.action.mockRejectedValueOnce(Object.assign(new Error(String(message)), { status }));
     returnedView();
-    expect(await screen.findByRole("alert")).toHaveTextContent(/local nanobot/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/local babo/);
     expect(screen.queryByRole("button", { name: "Get a new command" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    await screen.findByRole("heading", { name: "Open this nanobot?" });
+    await screen.findByRole("heading", { name: "Open this babo?" });
     expect(mocks.action.mock.calls.map(([action]) => action)).toEqual(["remote.pair_preview", "remote.pair_preview"]);
     expect(mocks.action.mock.calls[0]).toEqual(mocks.action.mock.calls[1]);
     expect(mocks.connect).not.toHaveBeenCalled();
@@ -349,7 +349,7 @@ describe("quick pairing", () => {
     view();
     await waitFor(() => expect(screen.getByRole("button", { name: "Copy command" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Copy command" }));
-    expect(screen.getByRole("heading", { name: "Connect to remote nanobot" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Connect to remote babo" })).toBeVisible();
     await act(async () => finish(true));
     expect(screen.getByRole("heading", { name: "Command copied" })).toBeVisible();
     expect(screen.getByText(/Paste it into your server terminal/)).toBeVisible();
@@ -366,7 +366,7 @@ describe("quick pairing", () => {
     fireEvent.click(screen.getByRole("button", { name: "Copy command" }));
     await screen.findByRole("alert");
     expect(screen.getByText(request().command)).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Connect to remote nanobot" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Connect to remote babo" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Copy again" })).toBeNull();
   });
   it("keeps a manual code when returning to the simpler command screen", async () => {
@@ -397,7 +397,7 @@ describe("quick pairing", () => {
   });
   it("can revisit the receipt from return-link confirmation without a disabled copy dead end", async () => {
     render(<Dialog open><DialogContent><QuickPairSetup returned={{ id: "request-1", code: "nbpc1.encrypted" }} onSSH={vi.fn()} onClose={vi.fn()} /></DialogContent></Dialog>);
-    await screen.findByRole("heading", { name: "Open this nanobot?" });
+    await screen.findByRole("heading", { name: "Open this babo?" });
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("textbox", { name: "Connection code" })).toHaveValue("nbpc1.encrypted");
     expect(screen.getByRole("button", { name: "Review connection" })).toBeEnabled();
@@ -458,7 +458,7 @@ describe("quick pairing", () => {
   });
   it("reviews a returned receipt without generating another key or connecting automatically", async () => {
     render(<Dialog open><DialogContent><QuickPairSetup returned={{ id: "request-1", code: "nbpc1.encrypted" }} onSSH={vi.fn()} onClose={vi.fn()} /></DialogContent></Dialog>);
-    await screen.findByRole("heading", { name: "Open this nanobot?" });
+    await screen.findByRole("heading", { name: "Open this babo?" });
     expect(mocks.action).toHaveBeenCalledWith("remote.pair_preview", { id: "request-1", code: "nbpc1.encrypted" }, 65000);
     expect(mocks.action.mock.calls.some(([action]) => action === "remote.pair_start" || action === "remote.pair_finish")).toBe(false);
     expect(mocks.connect).not.toHaveBeenCalled();

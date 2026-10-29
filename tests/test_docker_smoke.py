@@ -32,7 +32,7 @@ def docker_boundary(tmp_path):
         "stage = args[0]\n"
         "if stage == 'run': stage = args[-1]\n"
         "if stage == 'status':\n"
-        "    print('nanobot Status\\nConfig: configured\\nWorkspace: ready\\nModel: test\\n'\n"
+        "    print('babo Status\\nConfig: configured\\nWorkspace: ready\\nModel: test\\n'\n"
         "          'OpenRouter API: unset\\nAnthropic API: unset\\nOpenAI API: unset')\n"
         "if stage == os.environ.get('DOCKER_FAIL_STAGE'): sys.exit(23)\n",
         encoding="utf-8",
@@ -62,10 +62,10 @@ def docker_boundary(tmp_path):
 
 def _assert_owned_cleanup(calls):
     image = calls[0][2]
-    suffix = image.removeprefix("nanobot-test-")
+    suffix = image.removeprefix("babo-test-")
     assert suffix and suffix != image
-    container = f"nanobot-test-run-{suffix}"
-    onboarded = f"nanobot-test-onboarded-{suffix}"
+    container = f"babo-test-run-{suffix}"
+    onboarded = f"babo-test-onboarded-{suffix}"
     assert calls[-2:] == [["rm", "-f", container], ["rmi", "-f", onboarded, image]]
     for call in calls:
         if call[0] == "run" and call[-1] == "onboard":
@@ -85,7 +85,7 @@ def test_smoke_failure_preserves_exit_and_cleans_only_owned_resources(docker_bou
     _assert_owned_cleanup(calls)
     if stage == "status":
         # Valid-looking output must never turn a failed status process green.
-        assert "nanobot Status" in result.stdout
+        assert "babo Status" in result.stdout
 
 
 def test_concurrent_smoke_runs_use_distinct_resources_and_cleanup(docker_boundary):

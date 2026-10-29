@@ -1,24 +1,24 @@
-# Build an Email AI Agent with nanobot
+# Build an Email AI Agent with babo
 
-This guide turns nanobot into an email AI agent that polls IMAP for accepted messages and replies through SMTP.
+This guide turns babo into an email AI agent that polls IMAP for accepted messages and replies through SMTP.
 
 ## What this guide builds
 
-- a dedicated mailbox for nanobot
+- a dedicated mailbox for babo
 - IMAP and SMTP credentials in `config.json`
 - an allowed sender list
 - a gateway process that polls and replies
 
 ## Prerequisites
 
-- A normal reply in your existing nanobot WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
+- A normal reply in your existing babo WebUI or CLI. If you have not reached that point, complete [Quick Start](../quick-start.md) first.
 
 - A mailbox for the bot.
 - IMAP and SMTP access. For Gmail, use an app password rather than your account password.
 
 ## Continue from your running instance
 
-If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `nanobot webui` command; there is no need to install nanobot again.
+If you are already chatting in the WebUI, keep it open and continue below. It has already started the gateway. To reopen it later, use the same installation's `babo webui` command; there is no need to install babo again.
 
 For terminal or server setup, use the manual configuration section below. Reuse the config/home and executable from your working instance. Docker users should use the [container commands](../deployment.md#docker-compose).
 
@@ -29,7 +29,7 @@ Prepare a dedicated mailbox and app password. In **Channels → Email**, grant m
 <details>
 <summary>Manual configuration</summary>
 
-Merge this snippet into `~/.nanobot/config.json` and replace the addresses and passwords:
+Merge this snippet into `~/.babo/config.json` and replace the addresses and passwords:
 
 ```json
 {
@@ -39,13 +39,13 @@ Merge this snippet into `~/.nanobot/config.json` and replace the addresses and p
       "consentGranted": true,
       "imapHost": "imap.gmail.com",
       "imapPort": 993,
-      "imapUsername": "my-nanobot@gmail.com",
+      "imapUsername": "my-babo@gmail.com",
       "imapPassword": "your-app-password",
       "smtpHost": "smtp.gmail.com",
       "smtpPort": 587,
-      "smtpUsername": "my-nanobot@gmail.com",
+      "smtpUsername": "my-babo@gmail.com",
       "smtpPassword": "your-app-password",
-      "fromAddress": "my-nanobot@gmail.com",
+      "fromAddress": "my-babo@gmail.com",
       "allowFrom": ["your-real-email@gmail.com"],
       "trustedAuthservIds": ["mx.google.com"],
       "autoReplyEnabled": true
@@ -60,7 +60,7 @@ Merge this snippet into `~/.nanobot/config.json` and replace the addresses and p
 
 In the WebUI, follow any restart prompt and keep the launcher running for the first test. You do not need to start another gateway. For unattended operation afterward, use [background or service mode](../cli-reference.md#gateway).
 
-For manual config changes, restart the existing gateway through its owning terminal, `nanobot gateway restart` for background mode, or its service/container supervisor. If none is running, start `nanobot gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
+For manual config changes, restart the existing gateway through its owning terminal, `babo gateway restart` for background mode, or its service/container supervisor. If none is running, start `babo gateway` and leave it running. Run diagnostic CLI commands in a separate terminal using the same installation and config.
 
 ## Test a message
 
@@ -71,7 +71,7 @@ Send an email from an address in `allowFrom` to the bot mailbox. Keep the gatewa
 - Use a dedicated mailbox, not your primary personal inbox.
 - Set `consentGranted` to `false` to fully disable mailbox access.
 - Email does not use DM pairing. Keep `allowFrom` narrow; `["*"]` accepts mail from anyone.
-- Keep SPF/DKIM verification enabled and set `trustedAuthservIds` to the exact `authserv-id` added by your receiving mail service. For Gmail this is normally `mx.google.com`. The service must prepend one consolidated `Authentication-Results` header and remove inbound headers claiming the same identity. nanobot rejects authenticated email when this trust anchor is missing or appears more than once.
+- Keep SPF/DKIM verification enabled and set `trustedAuthservIds` to the exact `authserv-id` added by your receiving mail service. For Gmail this is normally `mx.google.com`. The service must prepend one consolidated `Authentication-Results` header and remove inbound headers claiming the same identity. babo rejects authenticated email when this trust anchor is missing or appears more than once.
 - Use environment variables for mailbox passwords.
 - Enable attachment types only when the agent needs them.
 

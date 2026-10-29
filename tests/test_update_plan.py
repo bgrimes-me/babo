@@ -13,24 +13,24 @@ from packaging.tags import Tag
 from rich.text import Text
 from typer.testing import CliRunner
 
-from nanobot.cli.update import update as update_command
-from nanobot.installation_lock import InstallationBusyError, installation_access
-from nanobot.release_feed import ReleaseFeed, ReleaseTarget
-from nanobot.releases import ReleaseArtifact, release_filenames
-from nanobot.update_manager import ManagerPolicy
-from nanobot.update_plan import InstallationSnapshot, UpdatePlan, UpdatePlans, inspect_installation
+from babo.cli.update import update as update_command
+from babo.installation_lock import InstallationBusyError, installation_access
+from babo.release_feed import ReleaseFeed, ReleaseTarget
+from babo.releases import ReleaseArtifact, release_filenames
+from babo.update_manager import ManagerPolicy
+from babo.update_plan import InstallationSnapshot, UpdatePlan, UpdatePlans, inspect_installation
 
 
 def installation(version="0.3.4", running=None, **changes):
     return InstallationSnapshot(
         environment="/test/venv", python="/test/venv/bin/python", installed_version=version,
-        package_path="/test/venv/lib/nanobot/__init__.py", running_version=running or version,
-        running_package="/test/venv/lib/nanobot/__init__.py", owner="venv", records=changes,
+        package_path="/test/venv/lib/babo/__init__.py", running_version=running or version,
+        running_package="/test/venv/lib/babo/__init__.py", owner="venv", records=changes,
     )
 
 
 def target():
-    name = "nanobot_ai-0.3.5-py3-none-win_amd64.whl"
+    name = "babo-0.3.5-py3-none-win_amd64.whl"
     return ReleaseTarget(version="0.3.5", source="pypi", url=f"https://files.pythonhosted.org/packages/{name}",
                          artifact=ReleaseArtifact(filename=name, size=123, sha256="a" * 64))
 
@@ -89,7 +89,7 @@ async def test_prepare_and_revalidate_cross_the_same_feed_interface_without_inst
     def handler(request):
         requests.append(str(request.url))
         return httpx.Response(200, json={
-            "info": {"name": "nanobot-ai", "version": "0.3.5", "requires_python": ">=3.11"},
+            "info": {"name": "babo", "version": "0.3.5", "requires_python": ">=3.11"},
             "urls": [{"filename": name, "size": 123, "digests": {"sha256": "a" * 64},
                       "url": f"https://files.pythonhosted.org/packages/{name}", "yanked": False}
                      for name in release_filenames("0.3.5") if name.endswith((".whl", ".tar.gz"))],
@@ -101,13 +101,13 @@ async def test_prepare_and_revalidate_cross_the_same_feed_interface_without_inst
         saved = await store.prepare(installation(), "stable", feed, now=100)
         assert saved.target == target()
         assert await store.revalidate(saved.id, installation(), feed, now=101) == saved
-    assert requests == ["https://pypi.org/pypi/nanobot-ai/json", "https://pypi.org/pypi/nanobot-ai/0.3.5/json"]
+    assert requests == ["https://pypi.org/pypi/babo/json", "https://pypi.org/pypi/babo/0.3.5/json"]
 
 
 def test_probe_reads_fresh_interpreter_and_owner_receipt(tmp_path, monkeypatch):
     import venv
 
-    from nanobot import update_plan, update_process
+    from babo import update_plan, update_process
 
     account = tmp_path / "private account"
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: account))
@@ -121,19 +121,19 @@ def test_probe_reads_fresh_interpreter_and_owner_receipt(tmp_path, monkeypatch):
     executable = root / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
     site = Path(subprocess.check_output([str(executable), "-I", "-c",
                                        "import sysconfig; print(sysconfig.get_path('purelib'))"], text=True).strip())
-    (site / "nanobot").mkdir()
-    (site / "nanobot/__init__.py").write_text("__version__='0.3.5'\n")
-    dist = site / "nanobot_ai-0.3.5.dist-info"
+    (site / "babo").mkdir()
+    (site / "babo/__init__.py").write_text("__version__='0.3.5'\n")
+    dist = site / "babo-0.3.5.dist-info"
     dist.mkdir()
-    (dist / "METADATA").write_text("Metadata-Version: 2.1\nName: nanobot-ai\nVersion: 0.3.5\n")
+    (dist / "METADATA").write_text("Metadata-Version: 2.1\nName: babo\nVersion: 0.3.5\n")
     receipt = {"pipx_metadata_version": "0.12", "main_package": {
-        "package": "nanobot-ai", "package_or_url": "nanobot-ai[webui]", "pinned": False,
+        "package": "babo", "package_or_url": "babo[webui]", "pinned": False,
     }}
     (root / "pipx_metadata.json").write_text(json.dumps(receipt))
     monkeypatch.setattr(sys, "prefix", str(root))
     monkeypatch.setattr(sys, "executable", str(executable))
-    monkeypatch.setattr(update_plan.nanobot, "__version__", "0.3.4")
-    monkeypatch.setattr(update_plan.nanobot, "__file__", str(site / "nanobot/__init__.py"))
+    monkeypatch.setattr(update_plan.babo, "__version__", "0.3.4")
+    monkeypatch.setattr(update_plan.babo, "__file__", str(site / "babo/__init__.py"))
     monkeypatch.delenv("RENDER", raising=False)
     snapshot = inspect_installation()
     assert snapshot.installed_version == "0.3.5"
@@ -172,7 +172,7 @@ async def test_managed_plan_preserves_extras_and_reports_owner_constraints(tmp_p
 
 
 def test_cli_plan_is_available_and_never_starts_install(monkeypatch):
-    from nanobot import update, update_plan
+    from babo import update, update_plan
 
     async def preview(channel):
         assert channel is None  # The planner owns the saved installation subscription.
@@ -191,7 +191,7 @@ def test_cli_plan_is_available_and_never_starts_install(monkeypatch):
 
 @pytest.mark.parametrize("channel", ["stable", "preview"])
 def test_cli_channel_inspection_cannot_silently_run_stable_update(monkeypatch, channel):
-    from nanobot import update
+    from babo import update
 
     monkeypatch.setattr(update, "update_installation", lambda **kwargs: pytest.fail("unexpected installer"))
     app = typer.Typer()
@@ -203,9 +203,9 @@ def test_cli_channel_inspection_cannot_silently_run_stable_update(monkeypatch, c
 
 @pytest.mark.parametrize("retry", [False, True])
 def test_saved_job_cli_uses_scoped_status_and_explicit_handoff_only(tmp_path, monkeypatch, retry):
-    from nanobot import update, update_jobs
-    from nanobot.update_jobs import UpdateJobView
-    from nanobot.update_worker import Phase
+    from babo import update, update_jobs
+    from babo.update_jobs import UpdateJobView
+    from babo.update_worker import Phase
 
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
     monkeypatch.setattr(sys, "prefix", str(tmp_path / "environment"))
@@ -249,7 +249,7 @@ def test_saved_job_cli_uses_scoped_status_and_explicit_handoff_only(tmp_path, mo
     ["--job", "id", "--channel", "preview"], ["--job", "id", "--allow-downgrade"],
 ])
 def test_saved_job_cli_rejects_ambiguous_recovery_flags(monkeypatch, arguments):
-    from nanobot.cli import update
+    from babo.cli import update
 
     monkeypatch.setattr(update, "_saved_job", lambda *args: pytest.fail("Ambiguous recovery was executed"))
     app = typer.Typer()

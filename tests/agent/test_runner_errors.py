@@ -11,20 +11,20 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from agent.runner_helpers import make_run_spec
-from nanobot.agent.hook import AgentHook, AgentHookContext
-from nanobot.agent.tools import ToolResult
-from nanobot.agent.tools.execution import execute_tool_calls
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.agent.tools.web import WebFetchTool
-from nanobot.config.schema import AgentDefaults
-from nanobot.providers.base import LLMProvider, LLMResponse, ToolCallRequest
+from babo.agent.hook import AgentHook, AgentHookContext
+from babo.agent.tools import ToolResult
+from babo.agent.tools.execution import execute_tool_calls
+from babo.agent.tools.registry import ToolRegistry
+from babo.agent.tools.web import WebFetchTool
+from babo.config.schema import AgentDefaults
+from babo.providers.base import LLMProvider, LLMResponse, ToolCallRequest
 
 _MAX_TOOL_RESULT_CHARS = AgentDefaults().max_tool_result_chars
 
 
 @pytest.mark.asyncio
 async def test_runner_returns_tool_exception_to_model_for_recovery():
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     provider = MagicMock(spec=LLMProvider)
     provider.chat_stream_with_retry = AsyncMock(side_effect=[
@@ -115,7 +115,7 @@ async def test_tool_execution_propagates_control_flow_exceptions(control_error: 
 async def test_llm_error_not_appended_to_session_messages():
     """When LLM returns finish_reason='error', the error content must NOT be
     appended to the messages list (prevents polluting session history)."""
-    from nanobot.agent.runner import (
+    from babo.agent.runner import (
         _PERSISTED_MODEL_ERROR_PLACEHOLDER,
         AgentRunner,
     )
@@ -147,7 +147,7 @@ async def test_llm_error_not_appended_to_session_messages():
 @pytest.mark.asyncio
 async def test_llm_arrearage_error_surfaces_clear_message():
     """Arrearage errors yield a clear user-facing message, not a raw dump (#3006)."""
-    from nanobot.agent.runner import _ARREARAGE_ERROR_MESSAGE, AgentRunner
+    from babo.agent.runner import _ARREARAGE_ERROR_MESSAGE, AgentRunner
 
     provider = MagicMock(spec=LLMProvider)
     provider.chat_stream_with_retry = AsyncMock(return_value=LLMResponse(
@@ -184,7 +184,7 @@ async def test_runner_ignores_tool_calls_when_finish_reason_blocks_execution(
     expected_stop_reason: str,
 ):
     """Provider/gateway-injected tool calls under terminal block reasons must not run."""
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     provider = MagicMock(spec=LLMProvider)
     provider.chat_stream_with_retry = AsyncMock(return_value=LLMResponse(
@@ -214,7 +214,7 @@ async def test_runner_ignores_tool_calls_when_finish_reason_blocks_execution(
 
 @pytest.mark.asyncio
 async def test_runner_returns_structured_tool_error_to_model_for_recovery():
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     provider = MagicMock(spec=LLMProvider)
 
@@ -253,14 +253,14 @@ async def test_runner_returns_structured_tool_error_to_model_for_recovery():
     pytest.param("http://127.0.0.1/admin", True, id="blocked-loopback"),
 ])
 async def test_runner_recognizes_web_fetch_errors(monkeypatch, url, ssrf):
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
-    monkeypatch.setattr("nanobot.security.network._allowed_networks", [])
-    monkeypatch.setattr("nanobot.security.network.socket.getaddrinfo", MagicMock(
+    monkeypatch.setattr("babo.security.network._allowed_networks", [])
+    monkeypatch.setattr("babo.security.network.socket.getaddrinfo", MagicMock(
         return_value=[(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("127.0.0.1", 0))],
     ))
     http_client = MagicMock(side_effect=AssertionError("Rejected URLs must not reach HTTP"))
-    monkeypatch.setattr("nanobot.agent.tools.web.httpx.AsyncClient", http_client)
+    monkeypatch.setattr("babo.agent.tools.web.httpx.AsyncClient", http_client)
     tools = ToolRegistry()
     tools.register(WebFetchTool())
     hook = AgentHook()
@@ -322,7 +322,7 @@ async def test_runner_recognizes_web_fetch_errors(monkeypatch, url, ssrf):
 
 @pytest.mark.asyncio
 async def test_runner_preserves_successful_exec_output_that_starts_with_error():
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     provider = MagicMock(spec=LLMProvider)
 
@@ -362,7 +362,7 @@ async def test_runner_preserves_successful_exec_output_that_starts_with_error():
 @pytest.mark.asyncio
 async def test_runner_preserves_tool_error_results_in_messages():
     """Tool errors stay paired with their calls so the model can recover (#2943)."""
-    from nanobot.agent.runner import AgentRunner
+    from babo.agent.runner import AgentRunner
 
     provider = MagicMock(spec=LLMProvider)
 
@@ -427,8 +427,8 @@ async def test_length_finish_with_blank_content_routes_to_length_recovery():
     retry path. Retrying the same prompt cannot recover from output-budget
     exhaustion.
     """
-    from nanobot.agent.runner import AgentRunner
-    from nanobot.utils.runtime import LENGTH_RECOVERY_PROMPT
+    from babo.agent.runner import AgentRunner
+    from babo.utils.runtime import LENGTH_RECOVERY_PROMPT
 
     provider = MagicMock(spec=LLMProvider)
     # First call: truncated (length) with blank content and a dropped tool call.

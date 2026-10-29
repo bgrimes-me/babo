@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from nanobot.build_info import read_commit
+from babo.build_info import read_commit
 
 
 def git(root: Path, *args: str) -> str:
@@ -29,7 +29,7 @@ def test_packaged_revision_ignores_an_enclosing_repository(tmp_path: Path) -> No
     git(tmp_path, "-c", "user.name=Test", "-c", "user.email=test@example.com",
         "commit", "--allow-empty", "-m", "unrelated project")
     install_root = tmp_path / "site-packages"
-    package = install_root / "nanobot"
+    package = install_root / "babo"
     package.mkdir(parents=True)
     assert read_commit(install_root) is None
     stamp = package / "_build_commit.txt"

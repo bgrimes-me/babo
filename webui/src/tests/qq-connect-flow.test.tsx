@@ -3,10 +3,10 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import QRCode from "qrcode";
 
 import i18n from "@/i18n";
-import type { ChannelConnectPayload, NanobotFeatureInfo } from "@/lib/types";
+import type { ChannelConnectPayload, BaboFeatureInfo } from "@/lib/types";
 
-import { QQConnectFlow } from "../../../nanobot/channels/qq/webui/QQConnectFlow";
-import { QQConnectFlowView } from "../../../nanobot/channels/qq/webui/QQConnectFlowView";
+import { QQConnectFlow } from "../../../babo/channels/qq/webui/QQConnectFlow";
+import { QQConnectFlowView } from "../../../babo/channels/qq/webui/QQConnectFlowView";
 
 const { requestMutation } = vi.hoisted(() => ({ requestMutation: vi.fn() }));
 vi.mock("@/providers/ClientProvider", () => {
@@ -74,7 +74,7 @@ it("offers retry after QR preparation fails without showing a successful binding
 });
 
 it("clears a transport retry indication when polling recovers before the scan finishes", async () => {
-  const feature: NanobotFeatureInfo = {
+  const feature: BaboFeatureInfo = {
     name: "qq", display_name: "QQ", type: "channel", enabled: false,
     configured: false, installed: true, ready: false, status: "not_enabled",
     install_supported: true, requires_restart: false,
@@ -98,7 +98,7 @@ it("clears a transport retry indication when polling recovers before the scan fi
 });
 
 it("keeps cancellation errors distinct from poll recovery and clears them after cancelling", async () => {
-  const feature: NanobotFeatureInfo = {
+  const feature: BaboFeatureInfo = {
     name: "qq", display_name: "QQ", type: "channel", enabled: false,
     configured: false, installed: true, ready: false, status: "not_enabled",
     install_supported: true, requires_restart: false,

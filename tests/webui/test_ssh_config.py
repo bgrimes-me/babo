@@ -6,9 +6,9 @@ import subprocess
 
 import pytest
 
-from nanobot.webui.remote_instances import RemoteInstances
-from nanobot.webui.remote_ssh import RemoteError, RemoteProfile, ssh_arguments
-from nanobot.webui.ssh_config import discover_hosts
+from babo.webui.remote_instances import RemoteInstances
+from babo.webui.remote_ssh import RemoteError, RemoteProfile, ssh_arguments
+from babo.webui.ssh_config import discover_hosts
 
 
 @pytest.fixture

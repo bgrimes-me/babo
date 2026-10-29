@@ -4,13 +4,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.tools.context import current_request_context
-from nanobot.agent.tools.shell import ExecTool
-from nanobot.bus.events import INBOUND_META_USER_SHELL, InboundMessage, OutboundMessage
-from nanobot.command.builtin import cmd_user_shell
-from nanobot.command.router import CommandContext
-from nanobot.session.manager import Session, SessionPolicy
+from babo.agent.loop import AgentLoop
+from babo.agent.tools.context import current_request_context
+from babo.agent.tools.shell import ExecTool
+from babo.bus.events import INBOUND_META_USER_SHELL, InboundMessage, OutboundMessage
+from babo.command.builtin import cmd_user_shell
+from babo.command.router import CommandContext
+from babo.session.manager import Session, SessionPolicy
 
 
 def _context(loop: MagicMock, *, trusted: bool, command: str = "pwd") -> CommandContext:

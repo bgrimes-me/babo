@@ -3,18 +3,18 @@ from pathlib import Path
 
 import pytest
 
-from nanobot import update_guidance
-from nanobot.update_guidance import installation_method, shell_command, update_guide
-from nanobot.update_manager import ManagerPolicy
-from nanobot.update_plan import InstallationSnapshot
+from babo import update_guidance
+from babo.update_guidance import installation_method, shell_command, update_guide
+from babo.update_manager import ManagerPolicy
+from babo.update_plan import InstallationSnapshot
 
 
 def installation(tmp_path, owner="venv", **policy):
-    environment = tmp_path / "tools" / "nanobot-ai" if owner == "uv" else tmp_path / "pipx" / "venvs" / "nanobot-ai-work"
+    environment = tmp_path / "tools" / "babo" if owner == "uv" else tmp_path / "pipx" / "venvs" / "babo-work"
     return InstallationSnapshot(
         environment=str(environment), python=str(environment / "bin" / "python"),
-        package_path=str(tmp_path / "checkout" / "nanobot" / "__init__.py"),
-        installed_version="0.3.6", running_version="0.3.6", running_package=str(tmp_path / "checkout" / "nanobot" / "__init__.py"),
+        package_path=str(tmp_path / "checkout" / "babo" / "__init__.py"),
+        installed_version="0.3.6", running_version="0.3.6", running_package=str(tmp_path / "checkout" / "babo" / "__init__.py"),
         owner=owner, records={}, manager=ManagerPolicy(
             manager=owner, backend="uv" if owner == "uv" else "pip", extras=["matrix"], source="registry", **policy,
         ) if owner in {"uv", "pipx"} else None,
@@ -74,8 +74,8 @@ def test_pip_requires_known_extras_and_uses_exact_interpreter(tmp_path):
     assert "-m pip" not in unknown.inspect_command
     known = update_guide(snapshot, "0.3.7", extras=["matrix"])
     assert snapshot.python in known.update_command
-    assert "nanobot-ai[matrix]==0.3.7" in known.update_command
-    snapshot.records["nanobot-install.json"] = "a" * 64
+    assert "babo[matrix]==0.3.7" in known.update_command
+    snapshot.records["babo-install.json"] = "a" * 64
     assert installation_method(snapshot) == "managed"
 
 
@@ -90,7 +90,7 @@ def test_deployments_do_not_get_guessed_install_or_restart_commands(tmp_path, ow
 
 
 def test_source_guide_inspects_the_running_checkout_not_a_different_installed_package(tmp_path):
-    snapshot = installation(tmp_path, "source").model_copy(update={"package_path": str(tmp_path / "site-packages" / "nanobot" / "__init__.py")})
+    snapshot = installation(tmp_path, "source").model_copy(update={"package_path": str(tmp_path / "site-packages" / "babo" / "__init__.py")})
     guide = update_guide(snapshot, "0.3.7", extras=[])
     assert str(tmp_path / "checkout") in guide.inspect_command
     assert "site-packages" not in guide.inspect_command
@@ -110,10 +110,10 @@ def test_updated_files_with_old_running_gateway_only_offer_restart_verification(
 
 
 def test_shell_rendering_quotes_paths_and_restores_powershell_environment():
-    args = ["/a b/$not-expanded/python", "-m", "pip", "show", "nanobot-ai"]
+    args = ["/a b/$not-expanded/python", "-m", "pip", "show", "babo"]
     environment = ("PIPX_HOME", "/some one's/$directory")
     assert shlex.split(shell_command(args, windows=False, environment=environment)) == ["env", "PIPX_HOME=/some one's/$directory", *args]
     command = shell_command(args, windows=True, environment=environment)
     assert "'/some one''s/$directory'" in command
-    assert "finally { $env:PIPX_HOME = $nanobotPrevious }" in command
+    assert "finally { $env:PIPX_HOME = $baboPrevious }" in command
     assert "& '/a b/$not-expanded/python'" in command

@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.cron.service import CronJobSkippedError, CronService
-from nanobot.cron.types import CronJob, CronPayload, CronSchedule
-from nanobot.runtime_context import RUNTIME_CONTEXT_INPUT_META
+from babo.cron.service import CronJobSkippedError, CronService
+from babo.cron.types import CronJob, CronPayload, CronSchedule
+from babo.runtime_context import RUNTIME_CONTEXT_INPUT_META
 
 
 async def _wait_until(predicate, *, timeout: float = 1.0, interval: float = 0.01) -> None:
@@ -1467,7 +1467,7 @@ async def test_restart_keeps_pending_every_job_run(tmp_path, monkeypatch, restar
     store_path = tmp_path / "cron" / "jobs.json"
     t0 = 1_800_000_000_000
     hour = 3_600_000
-    monkeypatch.setattr("nanobot.cron.service._now_ms", lambda: t0)
+    monkeypatch.setattr("babo.cron.service._now_ms", lambda: t0)
     service = CronService(store_path)
     await service.start()
     job = service.add_job(
@@ -1480,7 +1480,7 @@ async def test_restart_keeps_pending_every_job_run(tmp_path, monkeypatch, restar
     assert job.state.next_run_at_ms == t0 + 24 * hour
 
     for elapsed in (restart_hours * hour, restart_hours * hour + hour // 4):
-        monkeypatch.setattr("nanobot.cron.service._now_ms", lambda: t0 + elapsed)
+        monkeypatch.setattr("babo.cron.service._now_ms", lambda: t0 + elapsed)
         restarted = CronService(store_path)
         await restarted.start()
         try:
@@ -1498,7 +1498,7 @@ async def test_reregistering_system_job_keeps_pending_every_run(tmp_path, monkey
     minute = 60_000
 
     async def boot(now: int, every_ms: int) -> int | None:
-        monkeypatch.setattr("nanobot.cron.service._now_ms", lambda: now)
+        monkeypatch.setattr("babo.cron.service._now_ms", lambda: now)
         service = CronService(store_path)
         service.register_system_job(_dream_job(every_ms))
         await service.start()

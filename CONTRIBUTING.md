@@ -1,8 +1,8 @@
-# Contributing to nanobot
+# Contributing to babo
 
 Thank you for being here.
 
-nanobot is built with a simple belief: good tools should feel calm, clear, and humane. We care deeply about useful features, but we also believe in achieving more with less: solutions should be powerful without becoming heavy, and ambitious without becoming needlessly complicated.
+babo is built with a simple belief: good tools should feel calm, clear, and humane. We care deeply about useful features, but we also believe in achieving more with less: solutions should be powerful without becoming heavy, and ambitious without becoming needlessly complicated.
 
 This guide is not only about how to open a PR. It is also about how we hope to build software together: with care, clarity, and respect for the next person reading the code.
 
@@ -19,7 +19,7 @@ Maintainers are community stewards who help review, organize, and maintain the p
 
 ### Discuss the Problem First
 
-We currently accept pull requests only from repository collaborators. [Issues](https://github.com/HKUDS/nanobot/issues) remain open to everyone: bug reports, clear reproduction steps, feature suggestions, and design discussions are all welcome.
+We currently accept pull requests only from repository collaborators. [Issues](https://github.com/bgrimes-me/babo/issues) remain open to everyone: bug reports, clear reproduction steps, feature suggestions, and design discussions are all welcome.
 
 Generating code is becoming easier, but understanding changes, verifying correctness, and maintaining them still take substantial effort. Please start by discussing the problem, use case, and requirements in an issue before moving to implementation.
 
@@ -57,7 +57,7 @@ git pull --ff-only upstream main
 git switch -c your-topic-branch
 ```
 
-Use your primary HKUDS/nanobot remote in place of `upstream` if your checkout uses a different remote name.
+Use your primary bgrimes-me/babo remote in place of `upstream` if your checkout uses a different remote name.
 
 Keep unrelated local changes out of the topic branch. If your checkout already has work in progress, use a separate worktree or finish that work before starting a new branch.
 
@@ -69,8 +69,8 @@ Keep setup boring and reliable. The goal is to get you into the code quickly:
 
 ```bash
 # Clone the repository
-git clone https://github.com/HKUDS/nanobot.git
-cd nanobot
+git clone https://github.com/bgrimes-me/babo.git
+cd babo
 
 # Install with dev dependencies
 pip install -e ".[dev]"
@@ -79,7 +79,7 @@ pip install -e ".[dev]"
 pytest
 
 # Lint code
-ruff check nanobot/
+ruff check babo/
 
 # Format code — optional. The existing tree predates `ruff format`,
 # so running it broadly produces large unrelated diffs.
@@ -106,7 +106,7 @@ By submitting a contribution, you confirm that you have the right to submit it a
 
 ## Code Style
 
-We care about more than passing lint. We want nanobot to stay small, calm, and readable.
+We care about more than passing lint. We want babo to stay small, calm, and readable.
 
 When contributing, please aim for code that feels:
 
@@ -149,7 +149,7 @@ A stable install must never combine Python from one version with a TUI from anot
 3. Attach the preverified TUI archives and checksums to the matching GitHub Release. Alternatively, manually run **Publish Terminal UI** for the exact tag with the compliance review confirmed; reverify its outputs, since a rebuild does not preserve the preflight artifact hashes.
 4. Verify every platform archive and checksum is publicly downloadable for fallback/source-built installations, then publish the same `X.Y.Z` source distribution and five platform wheels to PyPI.
 
-Each platform wheel contains the built WebUI and the matching native TUI. Pip chooses the wheel for the user's machine; launching the installed TUI must work without a GitHub download or Bun. The universal wheel produced by `uv build` is only an intermediate: use `scripts/build_tui_wheels.py` as described in the checklist, and do not upload that intermediate. The source distribution remains platform-neutral and does not bundle native binaries. Keep the platform-specific release archives for fallback/source-built installations. Both the wheel's `nanobot/tui/bin/` bundle and its matching archive must contain the executable, target-specific third-party notices, project and runtime licenses, corresponding application source, a written source offer, relinking instructions, and a checksum manifest. Never upload a naked TUI executable. Review the minimum OS, libc, architecture and runtime CPU requirements when changing Bun/OpenTUI; never apply portable platform tags without checking their binaries. Source checkouts use an editable Python install, run `tui/` with Bun, and rebuild stale `webui/` assets locally.
+Each platform wheel contains the built WebUI and the matching native TUI. Pip chooses the wheel for the user's machine; launching the installed TUI must work without a GitHub download or Bun. The universal wheel produced by `uv build` is only an intermediate: use `scripts/build_tui_wheels.py` as described in the checklist, and do not upload that intermediate. The source distribution remains platform-neutral and does not bundle native binaries. Keep the platform-specific release archives for fallback/source-built installations. Both the wheel's `babo/tui/bin/` bundle and its matching archive must contain the executable, target-specific third-party notices, project and runtime licenses, corresponding application source, a written source offer, relinking instructions, and a checksum manifest. Never upload a naked TUI executable. Review the minimum OS, libc, architecture and runtime CPU requirements when changing Bun/OpenTUI; never apply portable platform tags without checking their binaries. Source checkouts use an editable Python install, run `tui/` with Bun, and rebuild stale `webui/` assets locally.
 
 The confirmation is an operational commitment, not a cosmetic checkbox. Before accepting it, verify that the exact Bun/WebKit revisions remain retrievable and that the project can honor the archive's corresponding-source offer for its full stated period. Preserve published archives and their source materials.
 
@@ -157,10 +157,9 @@ The confirmation is an operational commitment, not a cosmetic checkbox. Before a
 
 If you have questions, ideas, or half-formed insights, you are warmly welcome here.
 
-Please feel free to open an [issue](https://github.com/HKUDS/nanobot/issues), join the community, or simply reach out:
+Please feel free to open an [issue](https://github.com/bgrimes-me/babo/issues), join the community, or simply reach out:
 
 - [Discord](https://discord.gg/MnCvHqpUGB)
-- [Feishu/WeChat](./COMMUNICATION.md)
 - Email: Xubin Ren (@Re-bin) — <xubinrencs@gmail.com>
 
-Thank you for spending your time and care on nanobot. We would love for more people to participate in this community, and we genuinely welcome contributions of all sizes.
+Thank you for spending your time and care on babo. We would love for more people to participate in this community, and we genuinely welcome contributions of all sizes.

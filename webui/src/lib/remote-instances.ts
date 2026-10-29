@@ -123,8 +123,8 @@ export function validateRemoteConnection(connection: RemoteConnection): RemoteCo
 }
 
 export type SelectedRemote = Pick<RemoteConnection, "id" | "name" | "hostname">;
-const SELECTED_REMOTE = "nanobot.remote-instance";
-const RECENT_REMOTES = "nanobot.recent-remote-instances";
+const SELECTED_REMOTE = "babo.remote-instance";
+const RECENT_REMOTES = "babo.recent-remote-instances";
 
 /** Only profile IDs are persisted, never connection URLs or credentials. */
 export function readRecentRemotes(): string[] {
@@ -144,7 +144,7 @@ export function rememberRecentRemote(id: string, previous: string[]): string[] {
 
 export function readSelectedRemote(): SelectedRemote | null {
   try {
-    // A remote WebUI embedded by another nanobot must not inherit a local host's selector.
+    // A remote WebUI embedded by another babo must not inherit a local host's selector.
     if (window.top !== window) return null;
     const value = JSON.parse(window.sessionStorage.getItem(SELECTED_REMOTE) || "null") as SelectedRemote | null;
     return value && /^[a-f0-9-]{36}$/.test(value.id) && typeof value.name === "string"

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.utils import atomic_file, file_io, token_encoding
-from nanobot.utils.helpers import (
+from babo.utils import atomic_file, file_io, token_encoding
+from babo.utils.helpers import (
     _write_text_atomic,
     atomic_write_lines,
     atomic_write_text,
@@ -225,7 +225,7 @@ def test_atomic_write_lines_round_trip_replaces_target(tmp_path: Path) -> None:
 @pytest.mark.parametrize("name", ["status.json", "更新状态-🐈.json"])
 def test_atomic_record_reader_does_not_block_concurrent_replacement(tmp_path: Path, name: str) -> None:
     """The update UI can poll while a detached worker commits its next phase."""
-    from nanobot.utils.atomic_file import _open_snapshot, read_atomic_bytes
+    from babo.utils.atomic_file import _open_snapshot, read_atomic_bytes
 
     target = tmp_path / name
     atomic_write_lines(target, ['{"phase":"checking"}'])
@@ -263,7 +263,7 @@ def test_atomic_writes_clean_temp_when_replace_fails(
     def fail_replace(*_args: object, **_kwargs: object) -> None:
         raise error_type("replace failed")
 
-    monkeypatch.setattr("nanobot.utils.atomic_file.replace_atomic", fail_replace)
+    monkeypatch.setattr("babo.utils.atomic_file.replace_atomic", fail_replace)
 
     with pytest.raises(error_type, match="replace failed"):
         write(target, "new")

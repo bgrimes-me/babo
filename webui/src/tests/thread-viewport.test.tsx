@@ -340,7 +340,7 @@ describe("ThreadViewport", () => {
             id: "a-long-link",
             role: "assistant",
             content:
-              "https://github.com/HKUDS/nanobot/discussions/17788077"
+              "https://github.com/bgrimes-me/babo/discussions/17788077"
               + "/a-very-long-unbroken-segment-that-must-not-widen-the-thread",
             createdAt: Date.now(),
           },

@@ -17,14 +17,14 @@ import httpx
 import pytest
 import websockets
 
-from nanobot.agent.subagent_sessions import SubagentSessions
-from nanobot.agent.subagent_status import SubagentStatus
-from nanobot.config.loader import load_config
-from nanobot.session.manager import SessionManager
-from nanobot.session.recovery import PENDING_USER_TURN_KEY, RUNTIME_CHECKPOINT_KEY
-from nanobot.webui.local_client_assets import LocalClientAssets
-from nanobot.webui.remote_proxy import RemoteProxy
-from nanobot.webui.remote_ssh import Tunnel
+from babo.agent.subagent_sessions import SubagentSessions
+from babo.agent.subagent_status import SubagentStatus
+from babo.config.loader import load_config
+from babo.session.manager import SessionManager
+from babo.session.recovery import PENDING_USER_TURN_KEY, RUNTIME_CHECKPOINT_KEY
+from babo.webui.local_client_assets import LocalClientAssets
+from babo.webui.remote_proxy import RemoteProxy
+from babo.webui.remote_ssh import Tunnel
 
 _BOOTSTRAP_SECRET = "smoke-secret"
 
@@ -39,7 +39,7 @@ async def test_remote_proxy_with_real_gateway_chat_settings_and_renewal(
     assets.mkdir()
     shell = "<!doctype html><title>Local smoke client</title>"
     (assets / "index.html").write_text(shell, encoding="utf-8")
-    monkeypatch.setattr("nanobot.webui.remote_proxy.LocalClientAssets", lambda: LocalClientAssets(assets))
+    monkeypatch.setattr("babo.webui.remote_proxy.LocalClientAssets", lambda: LocalClientAssets(assets))
     ws_port, gateway_port = _free_port(), _free_port()
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -57,7 +57,7 @@ async def test_remote_proxy_with_real_gateway_chat_settings_and_renewal(
         async with httpx.AsyncClient(trust_env=False) as client:
             assert (await client.get(proxy.origin + "/")).text == shell
             first = (await client.get(proxy.origin + "/webui/bootstrap", headers={
-                "X-Nanobot-Auth": proxy.secret,
+                "X-Babo-Auth": proxy.secret,
             })).json()
             assert _BOOTSTRAP_SECRET not in json.dumps(first)
             async with websockets.connect(first["ws_url"] + "?token=" + first["token"] + "&client_id=proxy-smoke") as ws:
@@ -76,7 +76,7 @@ async def test_remote_proxy_with_real_gateway_chat_settings_and_renewal(
                 assert mutation["ok"] is True, mutation
                 assert load_config(config_path).agents.defaults.max_tool_iterations == 2
             renewed = (await client.get(proxy.origin + "/webui/bootstrap", headers={
-                "X-Nanobot-Auth": proxy.secret,
+                "X-Babo-Auth": proxy.secret,
             })).json()
             assert renewed["token"] != first["token"]
             response = await client.get(proxy.origin + "/api/sessions", headers={
@@ -137,7 +137,7 @@ def _start_gateway(config_path: Path, log_path: Path) -> subprocess.Popen[bytes]
             [
                 sys.executable,
                 "-m",
-                "nanobot",
+                "babo",
                 "gateway",
                 "--config",
                 str(config_path),
@@ -180,7 +180,7 @@ def _get_json(url: str, *, token: str | None = None) -> dict:
 def _get_bootstrap(url: str) -> dict:
     response = httpx.get(
         url,
-        headers={"X-Nanobot-Auth": _BOOTSTRAP_SECRET},
+        headers={"X-Babo-Auth": _BOOTSTRAP_SECRET},
         timeout=5.0,
         trust_env=False,
     )

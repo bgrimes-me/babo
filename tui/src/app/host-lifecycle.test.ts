@@ -3,13 +3,13 @@ import { join } from "node:path"
 import { BoxRenderable, TextareaRenderable } from "@opentui/core"
 import { MockTreeSitterClient, createTestRenderer } from "@opentui/core/testing"
 
-import { NanobotTui, sessionExitMessage, terminalModelFailureLine } from "./app"
+import { BaboTui, sessionExitMessage, terminalModelFailureLine } from "./app"
 import type { TuiHost } from "../platform/host"
 import { client, occurrences, options, waitUntil } from "./test-support"
 
 test("formats a reusable session ID after exit", () => {
   expect(sessionExitMessage("resume-chat")).toBe(
-    "Resume with: nanobot agent --session websocket:resume-chat\n",
+    "Resume with: babo agent --session websocket:resume-chat\n",
   )
 })
 
@@ -24,7 +24,7 @@ test("formats actionable terminal model failures without inventing retries", () 
   )
 })
 
-describe("NanobotTui with a Herdr pane title reporter", () => {
+describe("BaboTui with a Herdr pane title reporter", () => {
   test("keeps the full terminal experience while reporting task titles", async () => {
     const setup = await createTestRenderer({ width: 80, height: 22, screenMode: "alternate-screen" })
     const titles: string[] = []
@@ -33,7 +33,7 @@ describe("NanobotTui with a Herdr pane title reporter", () => {
       reportTitle(title) { titles.push(title) },
       release() { released = true },
     }
-    const app = NanobotTui.mount(
+    const app = BaboTui.mount(
       setup.renderer,
       options,
       client(),
@@ -73,7 +73,7 @@ describe("NanobotTui with a Herdr pane title reporter", () => {
     })
     await setup.flush()
     const activeFrame = setup.captureCharFrame()
-    expect(activeFrame).toContain(">_  nanobot")
+    expect(activeFrame).toContain(">_  babo")
     expect(activeFrame).toContain("default ▾")
     expect(occurrences(activeFrame, "› Ship the Herdr integration")).toBe(1)
     expect(occurrences(activeFrame, "app.ts")).toBe(1)
@@ -112,15 +112,15 @@ if (process.platform !== "win32") {
       cwd: join(import.meta.dir, "..", ".."),
       env: {
         ...process.env,
-        NANOBOT_TUI_WS_URL: "ws://127.0.0.1:9/ws",
-        NANOBOT_TUI_API_URL: "",
-        NANOBOT_TUI_API_TOKEN: "",
-        NANOBOT_TUI_CHAT_ID: "resume-chat",
-        NANOBOT_TUI_MODEL: "test/model",
-        NANOBOT_TUI_WORKSPACE: "/tmp/nanobot-test",
-        NANOBOT_TUI_VERSION: "test",
-        NANOBOT_TUI_ACCESS: "workspace access",
-        NANOBOT_TUI_THEME: "dark",
+        BABO_TUI_WS_URL: "ws://127.0.0.1:9/ws",
+        BABO_TUI_API_URL: "",
+        BABO_TUI_API_TOKEN: "",
+        BABO_TUI_CHAT_ID: "resume-chat",
+        BABO_TUI_MODEL: "test/model",
+        BABO_TUI_WORKSPACE: "/tmp/babo-test",
+        BABO_TUI_VERSION: "test",
+        BABO_TUI_ACCESS: "workspace access",
+        BABO_TUI_THEME: "dark",
       },
       stdout: "pipe",
       stderr: "pipe",
@@ -152,7 +152,7 @@ if (process.platform !== "win32") {
     expect(output).toContain("\x1b[?1049l")
     expect(output.indexOf("\x1b[?1049l")).toBeLessThan(output.indexOf("Resume with:"))
     expect(output).toContain(
-      "Resume with: nanobot agent --session websocket:resume-chat\n",
+      "Resume with: babo agent --session websocket:resume-chat\n",
     )
   })
 }

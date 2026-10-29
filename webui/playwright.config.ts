@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = Number(process.env.NANOBOT_BROWSER_TEST_PORT ?? 4178);
+const port = Number(process.env.BABO_BROWSER_TEST_PORT ?? 4178);
 
 export default defineConfig({
   testDir: "./browser",

@@ -1,11 +1,11 @@
 import { readLocalPreferences, writeLocalPreferences } from "./local-preferences";
-import type { TaskNotice } from "./nanobot-client";
+import type { TaskNotice } from "./babo-client";
 
 export type NotificationProblem = "insecure" | "unsupported" | "denied" | "revoked" | "dismissed" | "permissionFailed" | "workerUnavailable" | "displayFailed";
 export type NotificationResult = "submitted" | "skipped" | NotificationProblem;
 const TIMEOUT_MS = 5_000;
-export const NOTIFICATION_STATUS_EVENT = "nanobot:notification-status";
-export const NOTIFICATION_OPEN_EVENT = "nanobot:notification-open";
+export const NOTIFICATION_STATUS_EVENT = "babo:notification-status";
+export const NOTIFICATION_OPEN_EVENT = "babo:notification-open";
 let lastProblem: NotificationProblem | null = null;
 export function lastNotificationProblem() { return lastProblem; }
 
@@ -53,7 +53,7 @@ async function workerRequest(worker: ServiceWorker, message: object): Promise<un
 export async function notificationWorkerProblem(): Promise<"workerUnavailable" | null> {
   try {
     const worker = await activeWorker();
-    return worker && await workerRequest(worker, { type: "nanobot:notification-probe" }) === "ready"
+    return worker && await workerRequest(worker, { type: "babo:notification-probe" }) === "ready"
       ? null : "workerUnavailable";
   } catch { return "workerUnavailable"; }
 }
@@ -114,7 +114,7 @@ async function submitNotification(body: string, options: { key: string; url: str
   if (!worker) return "workerUnavailable";
   if (!eligible()) return "skipped";
   try {
-    const data = await workerRequest(worker, { type: "nanobot:notify", body, ...options });
+    const data = await workerRequest(worker, { type: "babo:notify", body, ...options });
     return data === "submitted" || data === "skipped" ? data : "displayFailed";
   } catch { return "workerUnavailable"; }
 }

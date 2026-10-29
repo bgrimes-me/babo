@@ -4,7 +4,7 @@ Chat selection uses the production WebUI and Python gateway. The earlier in-memo
 
 ## Design decision
 
-The concerns in [#5513](https://github.com/HKUDS/nanobot/issues/5513#issuecomment-5488297111) and [#5620](https://github.com/HKUDS/nanobot/pull/5620#issuecomment-5534384796) still apply: running in chat A and forwarding the result to chat B separates the reply from its history and can expose context from A.
+The concerns in [#5513](https://github.com/bgrimes-me/babo/issues/5513#issuecomment-5488297111) and [#5620](https://github.com/bgrimes-me/babo/pull/5620#issuecomment-5534384796) still apply: running in chat A and forwarding the result to chat B separates the reply from its history and can expose context from A.
 
 This implementation changes the whole binding for future runs: execution chat, recorded turn, and default reply route. It does not add a delivery override or copy old messages. New tasks start in their creation chat. A user can explicitly change the whole binding for future runs.
 
@@ -33,7 +33,7 @@ Storage paths and job IDs do not change. `bindingVersion` and per-run `sessionKe
 
 Explicit message-tool instructions can still override the default destination. Prompt review is required, not automatic rewriting. The selector does not create new isolation for shared workspace memory or files and does not guarantee that a remote platform will accept delivery.
 
-New reminders need only task instructions. The cron skill, tool descriptions, and scheduled-turn prompt agree that nanobot sends the final reply to the saved chat. Explicit separate sends and attachments still use `message`. Existing instructions and recipients are not rewritten. The confirmation asks users to check recipients, not remove intended broadcasts.
+New reminders need only task instructions. The cron skill, tool descriptions, and scheduled-turn prompt agree that babo sends the final reply to the saved chat. Explicit separate sends and attachments still use `message`. Existing instructions and recipients are not rewritten. The confirmation asks users to check recipients, not remove intended broadcasts.
 
 Scheduling uses the requested time and notification behavior, not repetition. The always-loaded tool contract distinguishes cron schedules from flexible, quiet heartbeat checks. Updated workspace templates and the cron skill use the same rule. Existing workspace files and heartbeat tasks are not rewritten; the user guide explains how to correct an old rule or an existing task.
 

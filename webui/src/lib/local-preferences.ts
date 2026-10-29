@@ -15,8 +15,8 @@ export interface LocalPreferences {
   fileEditDisplayMode: FileEditDisplayMode;
 }
 
-export const LOCAL_PREFS_STORAGE_KEY = "nanobot-webui.settings-preferences";
-export const LOCAL_PREFS_CHANGED_EVENT = "nanobot-webui.local-preferences-changed";
+export const LOCAL_PREFS_STORAGE_KEY = "babo-webui.settings-preferences";
+export const LOCAL_PREFS_CHANGED_EVENT = "babo-webui.local-preferences-changed";
 const LOCAL_PREFS_SCHEMA_VERSION = 1;
 
 type PersistedLocalPreferences = Partial<LocalPreferences> & {

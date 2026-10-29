@@ -4,8 +4,8 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need_box
-bin="$(nanobot_bin)" || fail "nanobot is not installed; run 02-install-nanobot.sh first"
-[ -f "$HOME/.nanobot/config.json" ] || fail "no config; run 03-config.sh first"
-"$bin" baton found || fail "nanobot baton found failed"
-"$bin" baton residents
+bin="$(babo_bin)" || fail "babo is not installed; run 02-install-babo.sh first"
+[ -f "$HOME/.babo/config.json" ] || fail "no config; run 03-config.sh first"
+"$bin" found || fail "babo found failed"
+"$bin" residents
 ok "the town is founded"
