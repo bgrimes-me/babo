@@ -1,0 +1,13 @@
+[Unit]
+Description=Baton gateway for resident %i (channels bound to %i)
+After=baton-queue.service
+Wants=baton-queue.service
+
+[Service]
+Type=simple
+ExecStart={{ distrobox }} enter {{ box }} -- {{ nanobot }} gateway --foreground --config {{ generated }}/%i/config.json
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=default.target

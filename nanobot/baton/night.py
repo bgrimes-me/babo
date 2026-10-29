@@ -239,6 +239,15 @@ class Night:
                 lines = [json.dumps(m, ensure_ascii=False, default=str) for m in session.messages]
                 atomic_write(out, "\n".join(lines) + "\n")
                 count += 1
+                # Crew (subagents) have no home of their own: file their transcripts
+                # under the resident who spawned them.
+                for child in manager.child_session_keys(key):
+                    crew_session = manager.get_existing(child)
+                    if crew_session is None:
+                        continue
+                    crew_out = self.town.crew / resident / day / f"{session_slug(child)}.jsonl"
+                    atomic_write(crew_out, "\n".join(json.dumps(m, ensure_ascii=False, default=str) for m in crew_session.messages) + "\n")
+                    count += 1
         return count
 
     def write_diff(self, resident: str, events: list[dict[str, Any]]) -> Path:
@@ -413,6 +422,11 @@ class Night:
         return report
 
     def postpass(self) -> dict[str, Any]:
+        from nanobot.baton.growth import ensure_project_clones
+
+        for resident in Registry(self.town).all():
+            if resident.status == "active":
+                ensure_project_clones(self.town, resident.id)
         write_ledger(self.town)
         Registry(self.town).render()
         count = reindex(self.town, self.cfg.index_file)

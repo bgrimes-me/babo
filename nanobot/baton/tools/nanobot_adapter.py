@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from collections.abc import Callable
 from typing import Any
 
@@ -16,9 +17,10 @@ from nanobot.baton.town import BatonError
 class BatonTool(Tool):
     _plugin_discoverable = False
 
-    def __init__(self, spec: ToolSpec, run: Callable[..., str]):
+    def __init__(self, spec: ToolSpec, run: Callable[..., Any], *, is_async: bool = False):
         self._spec = spec
         self._run = run
+        self._async = is_async
 
     @property
     def name(self) -> str:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -38,6 +40,8 @@ class BatonTool(Tool):
 
     async def execute(self, **kwargs: Any) -> Any:
         try:
+            if self._async:
+                return await self._run(**kwargs)
             return await asyncio.to_thread(self._run, **kwargs)
         except BatonError as exc:
             return Tool.error(f"Error: {exc}")
@@ -55,6 +59,11 @@ def baton_tools(toolbox: Toolbox, extra_specs: dict[str, ToolSpec] | None = None
     for name in toolbox.available():
         spec = specs.get(name)
         if spec is None:
+            continue
+
+        direct = toolbox.extra.get(name)
+        if direct is not None and inspect.iscoroutinefunction(direct):
+            out.append(BatonTool(spec, direct, is_async=True))
             continue
 
         def run(_name: str = name, **kwargs: Any) -> str:
