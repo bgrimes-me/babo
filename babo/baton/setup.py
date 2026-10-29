@@ -38,6 +38,7 @@ def town_config(
     bwrap: bool = False,
     box: str = "Agent",
     babo_path: str = "",
+    opencode_path: str = "",
 ) -> dict[str, Any]:
     data = json.loads(json.dumps(existing))
     queue = f"http://127.0.0.1:{queue_port}/v1"
@@ -65,6 +66,9 @@ def town_config(
     baton["box"] = box
     if babo_path:
         baton["baboPath"] = babo_path
+    if opencode_path:
+        # The full path: Babo's services don't see the PATH of an interactive shell.
+        _node(baton, "opencode")["bin"] = opencode_path
     bm = _node(baton, "model")
     bm.update({"endpoint": queue, "upstream": upstream.rstrip("/"), "model": model, "slots": int(slots), "queuePort": int(queue_port)})
     return data

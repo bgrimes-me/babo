@@ -30,7 +30,7 @@ from loguru import logger
 
 from babo.baton.config import BatonModelConfig
 
-PRIORITIES = {"interactive": 0, "visit": 1, "upkeep": 2, "night": 2}  # "night": upkeep's earlier name
+PRIORITIES = {"interactive": 0, "visit": 1, "upkeep": 2}
 UPKEEP = PRIORITIES["upkeep"]
 _RESIDENT_RE = re.compile(r"You are the resident `([a-z][a-z0-9-]{1,31})`")
 _HOP_HEADERS = {"host", "content-length", "transfer-encoding", "connection", "keep-alive", "accept-encoding"}

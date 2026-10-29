@@ -55,8 +55,6 @@ CAPABILITIES: tuple[Capability, ...] = (
 _BY_KEY = {c.key: c for c in CAPABILITIES}
 # Kept short on purpose: a small model chooses better from about a dozen tools.
 READ_TOOLS = ("read_file",)
-# Toolsets written before the rename say "spawn".
-_ALIASES = {"spawn": "subagent"}
 _HARNESS_TOOLS = {t for c in CAPABILITIES for t in c.tools} | set(READ_TOOLS)
 
 
@@ -82,7 +80,7 @@ class Profile(BaseModel):
 
 
 def _toolset(cfg: BatonConfig, agent: str, office: str) -> set[str]:
-    return {_ALIASES.get(name, name) for name in cfg.toolset_for(agent, office)}
+    return set(cfg.toolset_for(agent, office))
 
 
 def office_profile(cfg: BatonConfig, agent: str, office: str) -> Profile:

@@ -273,10 +273,21 @@ def upkeep(
     console.print("Do everything now with: babo upkeep --now")
 
 
-@app.command(hidden=True)
-def night(config: str | None = _CONFIG_OPT):
-    """Upkeep's earlier name: does everything that is waiting now (babo upkeep --now)."""
-    upkeep(now=True, watch=False, config=config)
+@app.command()
+def tidy(
+    checkout: Path | None = typer.Option(None, "--checkout", help="The Babo checkout to tidy (the installer passes its own)"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Remove what earlier versions of Babo left behind: obsolete settings, old backups, stale folders. Safe to repeat."""
+    from babo.baton.tidy import tidy as do_tidy
+    from babo.config.loader import get_config_path
+
+    if config:
+        _config(config)
+    said = do_tidy(babo_home=get_config_path().resolve().parent, user_home=Path.home(), checkout=checkout)
+    for line in said:
+        console.print(f"- {line}")
+    console.print("OK: tidy" + ("" if said else " (nothing left over)"))
 
 
 @app.command()
@@ -490,10 +501,14 @@ def init_config(
     from babo.config.loader import get_config_path
 
     path = Path(config).expanduser() if config else get_config_path()
+    installed = Path.home() / ".opencode" / "bin" / "opencode"  # where opencode's installer puts it
+    opencode_path = _shutil.which("opencode") or (str(installed) if installed.is_file() else "")
     written, backup = write_town_config(
         path, town=town, upstream=upstream, model=model, n_ctx=n_ctx, slots=slots, bwrap=bwrap, box=box,
-        babo_path=_shutil.which("babo") or "",
+        babo_path=_shutil.which("babo") or "", opencode_path=opencode_path,
     )
+    if not opencode_path:
+        console.print("note: opencode is not installed; residents other than the Mayor need it (curl -fsSL https://opencode.ai/install | bash), then run this again")
     if backup:
         console.print(f"Backed up the previous config to {backup}")
     _config(str(written))  # must load and validate

@@ -105,12 +105,10 @@ from babo.cli.remote import app as remote_app  # noqa: E402
 app.add_typer(remote_app, name="remote")
 
 # The town's commands are top-level (`babo review`, `babo doctor`, ...).
-# `babo ...` still works for scripts written before they moved.
 from babo.baton.cli import app as baton_app  # noqa: E402
 
 app.registered_commands.extend(baton_app.registered_commands)
 app.registered_groups.extend(baton_app.registered_groups)
-app.add_typer(baton_app, name="baton", hidden=True)
 
 def version_callback(value: bool):
     if value:

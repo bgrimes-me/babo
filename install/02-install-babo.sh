@@ -13,9 +13,5 @@ if ! uv tool install --force --python 3.12 "$REPO_DIR"; then
 fi
 bin="$(babo_bin)" || fail "babo was installed but is not on PATH; add \$HOME/.local/bin to PATH"
 "$bin" review --help >/dev/null || fail "babo does not run"
-# Before the rename this was installed as the uv tool "nanobot-ai"; now that babo works, remove it so only `babo` remains.
-if uv tool list 2>/dev/null | grep -q '^nanobot-ai '; then
-  uv tool uninstall nanobot-ai >/dev/null 2>&1 && echo "removed the old nanobot-ai install" || echo "note: could not remove the old nanobot-ai install"
-fi
 
 ok "babo installed at $bin"
