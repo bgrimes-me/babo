@@ -72,15 +72,9 @@ describe("Runtime configuration settings", () => {
     expect(screen.getByRole("switch", { name: "Web access" })).toBeInTheDocument();
   });
 
-  it("offers only the memory consolidation switch and saves only dream.enabled", async () => {
-    const payload = runtimeSettings();
-    requestMutationMock.mockResolvedValue({ ...payload, runtime_config: { ...payload.runtime_config, "agents.defaults.dream.enabled": false } });
-    renderSettingsView({ initialSection: "memory", initialSettings: payload });
-    const memory = within(screen.getByRole("region", { name: "Memory consolidation" }));
-    expect(memory.getAllByRole("switch")).toHaveLength(1);
-    fireEvent.click(screen.getByRole("switch", { name: "Memory consolidation" }));
-    await waitFor(() => expect(requestMutationMock).toHaveBeenCalledWith("settings.runtime_config.update", { values: { "agents.defaults.dream.enabled": false } }, 20_000));
-    await waitFor(() => expect(screen.getByRole("switch", { name: "Memory consolidation" })).not.toBeChecked());
+  it("offers no memory consolidation switch (BATON: Dream is off and hidden)", () => {
+    renderSettingsView({ initialSection: "memory", initialSettings: runtimeSettings() });
+    expect(screen.queryByRole("switch", { name: "Memory consolidation" })).not.toBeInTheDocument();
   });
 
   it("explains unavailable memory settings instead of rendering a blank page", () => {

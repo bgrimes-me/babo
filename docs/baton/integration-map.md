@@ -63,18 +63,29 @@ How the required behaviours map onto it:
 
 Cost: each live gateway is a separate Python process (~150–250 MB RAM). Only the Mayor's runs all the time by default; others start on `--as`, on a channel binding, or for the night.
 
-## 4. Planned upstream edits (all marked `# BATON:`)
+## 4. Upstream edits (all marked `# BATON:` / `// BATON:`)
 
 | File | Edit | Why it can't live in `nanobot/baton/` |
 |---|---|---|
-| `nanobot/config/schema.py` | `baton: BatonConfig` field on `Config` | Root schema assembles sub-configs; `BatonConfig` itself lives in `nanobot/baton/config.py`. |
-| `nanobot/agent/loop.py` | (a) pick `BatonContextBuilder` and `BatonConsolidator` when the workspace is a resident; (b) one call `baton.attach(self)` at the end of `__init__` | Only point every composition root shares; both classes must be chosen at construction because `AutoCompact` and `SubagentManager` keep references to them. |
+| `nanobot/config/schema.py` | `baton: BatonConfig` field on `Config`; Dream `enabled` defaults to `false` | Root schema assembles sub-configs; `BatonConfig` itself lives in `nanobot/baton/config.py`. |
+| `nanobot/agent/loop.py` | (a) `loop_classes(...)` picks `BatonContextBuilder`/`BatonConsolidator` for a resident (and fails closed for an unfounded one); (b) `attach(loop, config)` at the end of `from_config` | Only point every composition root shares; both classes must be chosen at construction because `AutoCompact` and `SubagentManager` keep references to them. Ordinary workspaces get upstream's own classes back, so upstream tests that patch them are unaffected. |
+| `nanobot/session/location.py` | refuse to create session storage for a workspace inside `residents/` that isn't a founded resident | The one place every composition root creates a workspace directory; keeps "nothing creates a resident" true even for a mistyped `--workspace`. |
 | `nanobot/utils/helpers.py` | skip `sync_workspace_templates` for resident workspaces | Avoids SOUL/USER duplicates and a nested git repo. |
 | `nanobot/cli/commands.py` | `app.add_typer(baton_app, name="baton")` | CLI registration. |
 | `nanobot/cli/entry.py` | `--as <id>` → `--workspace …` rewrite | `agent` is dispatched before the Typer app loads. |
-| `scripts/check_import_boundaries.py` | add `nanobot.baton` rules if needed | Keep upstream's boundary checker green. |
+| `nanobot/command/builtin.py`, `nanobot/channels/telegram/runtime.py` | Dream commands neither offered nor routed | Dream is off **and hidden** (Squid's decision). |
+| `nanobot/webui/settings_runtime.py`, `webui/src/components/settings/SettingsPage.tsx`, `webui/src/components/settings/system/runtime-config-fields.ts` | no Dream switch in Settings; the setting is not editable from the WebUI | Same. |
+| `pyproject.toml` | ship `nanobot/baton/templates/**` in the wheel | Packaging. |
+| upstream tests | four tests updated to expect Dream hidden (`tests/command/*`, two WebUI settings tests, the runtime-config keys fixture) | They asserted the old visible behaviour. |
 
-Everything else — hooks, tools, gate, queue, search, night, review, MCP server, installer — is new code under `nanobot/baton/`, `install/`, `docs/baton/` and `tests/baton/`. Target: under ~40 changed upstream lines.
+Everything else — hooks, tools, gate, queue, search, night, review, MCP server, installer — is new code under `nanobot/baton/`, `install/`, `docs/baton/` and `tests/baton/`.
+
+## Decisions made with Squid after phase 0
+
+- **Dream:** left in the code (rebase-friendly) but off by default and hidden from menus, help, Telegram's command list and the WebUI settings.
+- **Projects:** every resident has a private `residents/<id>/projects/<name>/`. A promoted project moves to `commons/projects/<name>/`, where every resident can work on it. Project folders are their own git repositories and are ignored by the town repo, so the town's history never embeds another repository.
+- **Tools: one implementation, two adapters.** Residents get the Baton tools in-process (identity is the loop's workspace, so it can't be spoofed, and there's no extra process per resident). `nanobot baton mcp --as <id>` serves the same tools over MCP for OpenCode. This is how upstream nanobot treats its own tools (in-process registry, MCP for external servers) and how the reference fork treats its house tools (an MCP server with identity resolved from the environment).
+- **Tool budget:** to stay near ~12 tools, `read_skill` is folded into `read_note("skill:<name>")`.
 
 ## 5. Spec → module map
 
@@ -91,7 +102,7 @@ Everything else — hooks, tools, gate, queue, search, night, review, MCP server
 | 3.6 Exact-context view | `baton/context_view.py` | `nanobot baton context <id>` builds messages exactly as `AgentLoop` would, prints bytes |
 | 4 Night cycle | `baton/night/*.py`, `install/systemd/*` | CLI + systemd user timer |
 | 5 Search | `baton/search.py` (FTS5, one `SearchBackend` interface) | tools + `reindex` |
-| 5 Tools / `baton-mcp` | `baton/tools/*.py` (one implementation), `baton/mcp_server.py` (stdio adapter) | registered in-process for residents; MCP server for OpenCode/phase two |
+| 5 Tools / `baton-mcp` | `baton/tools/core.py` (one implementation), `baton/tools/nanobot_adapter.py`, `baton/mcp_server.py` (stdio adapter) | registered in-process for residents; MCP server for OpenCode/phase two |
 | 5 Start bundle | `baton/bundle.py` | `BatonContextBuilder` |
 | 6 Growth, review, notes, town | `baton/growth.py`, `baton/review.py`, `baton/cli.py` | CLI |
 | 7 Charter, HOUSE | `baton/templates/CHARTER.md`, `HOUSE.md` | founding |

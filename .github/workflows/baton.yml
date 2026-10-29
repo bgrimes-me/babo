@@ -1,0 +1,63 @@
+name: Baton
+
+# Runs on every push to any branch, and on pull requests. Upstream's own
+# "Test Suite" workflow (ci.yml) still runs the full nanobot suite on PRs to main.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: baton-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  baton:
+    name: Baton tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GIT_CONFIG_NOSYSTEM: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libolm-dev build-essential
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Lint (ruff)
+        run: uv run --no-sync ruff check nanobot/baton tests/baton
+
+      - name: Type check Baton (BasedPyright, strict)
+        run: uv run --no-sync basedpyright nanobot/baton
+
+      - name: Import boundaries
+        run: uv run --no-sync python -m scripts.check_import_boundaries
+
+      - name: Install scripts are valid bash
+        run: for f in install/*.sh; do bash -n "$f"; done
+
+      - name: Baton tests
+        run: uv run --no-sync pytest tests/baton -q
+
+      - name: Upstream tests that Baton's edits touch
+        run: >-
+          uv run --no-sync pytest -q
+          tests/command tests/agent/test_dream.py tests/config tests/session
+          tests/agent/test_loop_runner_integration.py tests/agent/test_hook_composite.py

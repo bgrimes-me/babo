@@ -11,10 +11,12 @@ This fork tracks `HKUDS/nanobot`. Baton code lives in its own places so upstream
 Edits to upstream files are kept to a handful of lines, each marked with a `# BATON:` comment. List them at any time:
 
 ```bash
-git grep -n "BATON:" -- ':!nanobot/baton' ':!tests/baton' ':!docs/baton' ':!install'
+git grep -n "BATON" -- ':!nanobot/baton' ':!tests/baton' ':!docs/baton' ':!install' ':!.github/workflows/baton.yml'
 ```
 
-The expected list is in [integration-map.md](integration-map.md#4-planned-upstream-edits-all-marked--baton). If a sync adds or loses one, update that table.
+(Python edits are marked `# BATON:`, TypeScript edits `// BATON:` or `{/* BATON: */}`.)
+
+The expected list is in [integration-map.md](integration-map.md) (section 4). If a sync adds or loses one, update that table.
 
 ## One-time setup
 

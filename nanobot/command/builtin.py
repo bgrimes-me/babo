@@ -67,7 +67,7 @@ class BuiltinCommandSpec:
         }
 
 
-BUILTIN_COMMAND_SPECS: tuple[BuiltinCommandSpec, ...] = (
+_UPSTREAM_COMMAND_SPECS: tuple[BuiltinCommandSpec, ...] = (  # BATON: filtered below
     BuiltinCommandSpec(
         "/new",
         "New chat",
@@ -189,6 +189,13 @@ BUILTIN_COMMAND_SPECS: tuple[BuiltinCommandSpec, ...] = (
         "[list|approve <code>|deny <code>|revoke <user_id>]",
         accepts_args=True,
     ),
+)
+
+# BATON: Dream is off and hidden in this fork (residents author their own memory),
+# so its commands are neither offered in menus and help nor routed.
+HIDDEN_COMMANDS = frozenset({"/dream", "/dream-log", "/dream-restore", "/dream-prompt"})
+BUILTIN_COMMAND_SPECS: tuple[BuiltinCommandSpec, ...] = tuple(
+    spec for spec in _UPSTREAM_COMMAND_SPECS if spec.command not in HIDDEN_COMMANDS
 )
 
 
@@ -1082,13 +1089,7 @@ def register_builtin_commands(router: CommandRouter) -> None:
     router.prefix("/goal ", cmd_goal)
     router.exact("/trigger", cmd_trigger)
     router.prefix("/trigger ", cmd_trigger)
-    router.exact("/dream", cmd_dream)
-    router.exact("/dream-log", cmd_dream_log)
-    router.prefix("/dream-log ", cmd_dream_log)
-    router.exact("/dream-restore", cmd_dream_restore)
-    router.prefix("/dream-restore ", cmd_dream_restore)
-    router.exact("/dream-prompt", cmd_dream_prompt)
-    router.prefix("/dream-prompt ", cmd_dream_prompt)
+    # BATON: Dream commands are not routed (see HIDDEN_COMMANDS).
     router.exact("/evaluator-prompt", cmd_evaluator_prompt)
     router.prefix("/evaluator-prompt ", cmd_evaluator_prompt)
     router.exact("/skill", cmd_skill)

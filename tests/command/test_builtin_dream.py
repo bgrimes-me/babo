@@ -488,14 +488,11 @@ async def test_dream_prompt_init_recreates_empty_prompt(tmp_path) -> None:
     assert prompt_file.read_text(encoding="utf-8") == MemoryStore.default_dream_prompt() + "\n"
 
 
-def test_dream_prompt_command_in_help_and_palette() -> None:
+def test_dream_commands_hidden_from_help_and_palette() -> None:
+    # BATON: Dream is off and hidden in this fork.
     palette = builtin_command_palette()
-    dream_prompt = next(item for item in palette if item["command"] == "/dream-prompt")
-
-    assert dream_prompt["arg_hint"] == "[init]"
-    assert dream_prompt["lifecycle"] == "side_channel"
-    assert dream_prompt["accepts_args"] is True
-    assert "/dream-prompt [init]" in build_help_text()
+    assert not any(str(item["command"]).startswith("/dream") for item in palette)
+    assert "/dream" not in build_help_text()
 
 
 @pytest.mark.asyncio

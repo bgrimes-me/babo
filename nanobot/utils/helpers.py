@@ -888,6 +888,11 @@ def sync_workspace_templates(workspace: Path, silent: bool = False) -> list[str]
     """Sync bundled templates to workspace. Creates missing files without overwriting user files."""
     from importlib.resources import files as pkg_files
 
+    # BATON: a resident's directory is laid out by the town (no SOUL/USER copies, no nested git).
+    from nanobot.baton.town import is_resident_workspace
+    if is_resident_workspace(workspace):
+        return []
+
     try:
         tpl = pkg_files("nanobot") / "templates"
     except Exception:

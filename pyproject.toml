@@ -142,6 +142,8 @@ include = [
     "nanobot/update_contract.json",
     "nanobot/webui/mcp_presets.json",
     "nanobot/templates/**/*.md",
+    # BATON: town templates, systemd units and the install kit's data files.
+    "nanobot/baton/templates/**/*",
     "nanobot/skills/**/*.md",
     "nanobot/skills/**/*.sh",
     "nanobot/channels/*/webui/**/*",
