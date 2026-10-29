@@ -68,11 +68,13 @@ def found(
 
 @app.command()
 def reindex(config: str | None = _CONFIG_OPT):
-    """Rebuild the search index from the town's files."""
+    """Rebuild the search index and the map of the commons (commons/knowledge/INDEX.md) from the town's files."""
+    from babo.baton.knowledge_map import write_map
     from babo.baton.search import reindex as do_reindex
 
     try:
         t, cfg = _town(config)
+        write_map(t)
         count = do_reindex(t, cfg.baton.index_file)
     except BatonError as exc:
         _fail(exc)

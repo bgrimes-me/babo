@@ -52,6 +52,9 @@ commons/projects/
 state/locks/
 state/tmp/
 state/runtime/
+# Obsidian's own settings, when the town is opened as a vault.
+.obsidian/
+.trash/
 *.pyc
 __pycache__/
 """

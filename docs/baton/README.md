@@ -49,6 +49,14 @@ The Mayor runs in Babo itself. Every other resident runs as its own opencode ins
 
 When the Mayor visits a resident, or upkeep asks the Archivist to curate, that happens in a session of its own in opencode too. If opencode isn't installed, sessions can't start; visits and upkeep then run in Babo itself, and `babo doctor` says so.
 
+## The town's knowledge, and Obsidian
+
+What residents learn goes into their own `knowledge/` folders. What the whole town should know is promoted to the commons, `commons/knowledge/`, where the curator files it: the **Archivist**, or the **Mayor** while the town has none. The curator keeps one topic per note, merges duplicates, links related notes with `[[note name]]`, and marks outdated notes as replaced, so the commons stays small and current.
+
+At every upkeep Babo rewrites `commons/knowledge/INDEX.md`, a **map of the commons** by topic with a link to every current note. Residents start from the map and follow links with `read_note("[[note name]]")`, and `search_memory` finds anything else.
+
+**Reading it in Obsidian.** The town folder (`~/baton-town`) opens as an Obsidian vault as it is: *Open folder as vault* and choose it. Notes are plain markdown with Obsidian properties (title, aliases, tags), `[[links]]` work, and the graph view shows how the town's knowledge hangs together. Start from `commons/knowledge/INDEX.md`. Obsidian's own settings folder stays out of the town's git history. Read as much as you like; if you edit notes, remember the residents own their folders, so the commons is the place for your changes too.
+
 ## The weekly check-in
 
 Run `babo review` once a week, or open the **Town** page in the web interface (`babo webui`) and use its **Review** tab: it shows the same items and records the same decisions. It asks plain questions, one at a time, and you can press Enter to skip anything. It covers:
