@@ -90,6 +90,10 @@ def _command_args(args: list[str]) -> list[str]:
 
 def main() -> None:
     """Acquire a runtime lease before loading application code."""
+    # BATON: `--as <resident>` selects a resident's workspace.
+    from nanobot.baton.cli_support import has_as, rewrite_as_args
+    if has_as(sys.argv[1:]):
+        sys.argv[1:] = rewrite_as_args(sys.argv[1:])
     args = _command_args(sys.argv[1:])
     saved_update = args[:1] == ["update"] and any(argument.split("=", 1)[0] == "--job" for argument in args[1:])
     if args[:1] == ["update"] and not saved_update:

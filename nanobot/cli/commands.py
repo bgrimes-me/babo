@@ -104,6 +104,11 @@ from nanobot.cli.remote import app as remote_app  # noqa: E402
 
 app.add_typer(remote_app, name="remote")
 
+# BATON: the town's commands (`nanobot baton ...`).
+from nanobot.baton.cli import app as baton_app  # noqa: E402
+
+app.add_typer(baton_app, name="baton")
+
 def version_callback(value: bool):
     if value:
         console.print(f"{__logo__} nanobot v{__version__}")

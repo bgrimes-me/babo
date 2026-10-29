@@ -27,6 +27,9 @@ _SESSION_MIGRATION_LOCK_TIMEOUT_SECONDS = 30
 class SessionLocation:
     def __init__(self, workspace: Path, *, sessions_root: Path | None = None):
         canonical_workspace = Path(workspace).expanduser().resolve(strict=False)
+        # BATON: never create a directory inside a town's residents/ for an unfounded resident.
+        from nanobot.baton.registry import require_resident_workspace
+        require_resident_workspace(canonical_workspace)
         ensure_dir(canonical_workspace)
         root = (
             Path(sessions_root).expanduser().resolve(strict=False)

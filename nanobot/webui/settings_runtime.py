@@ -26,7 +26,7 @@ RUNTIME_CONFIG_PATHS = (
     "agents.defaults.max_tool_result_chars",
     "agents.defaults.provider_retry_mode",
     "agents.defaults.tool_hint_max_length",
-    "agents.defaults.dream.enabled",
+    # BATON: agents.defaults.dream.enabled is not editable from the WebUI (Dream is off).
     "gateway.host",
     "gateway.port",
     "gateway.restart_mode",

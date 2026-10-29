@@ -20,6 +20,7 @@ from nanobot.agent.tools.web_config import (
     WebSearchConfig as WebSearchConfig,
 )
 from nanobot.agent.tools.web_config import WebToolsConfig
+from nanobot.baton.config import BatonConfig  # BATON: town settings
 from nanobot.config.home import get_default_workspace
 from nanobot.config.network import NetworkConfig, migrate_legacy_proxy_config
 from nanobot.config.provider_api_migration import migrate_legacy_provider_api
@@ -66,7 +67,8 @@ class DreamConfig(Base):
 
     _HOUR_MS = 3_600_000
 
-    enabled: bool = True  # Register the periodic Dream consolidation job on startup
+    # BATON: Dream is off by default in this fork; residents author their own memory.
+    enabled: bool = False  # Register the periodic Dream consolidation job on startup
     interval_h: int = Field(default=2, ge=1)  # Every 2 hours by default
     cron: str | None = Field(
         default=None,
@@ -511,6 +513,7 @@ class Config(BaseSettings):
     api: ApiConfig = Field(default_factory=ApiConfig)
     gateway: GatewayConfig = Field(default_factory=GatewayConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
+    baton: BatonConfig = Field(default_factory=BatonConfig)  # BATON: town settings
     model_presets: dict[str, ModelPresetConfig] = Field(
         default_factory=dict,
         validation_alias=AliasChoices("modelPresets", "model_presets"),
