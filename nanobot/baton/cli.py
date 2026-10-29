@@ -399,3 +399,55 @@ def configs(config: str | None = _CONFIG_OPT):
     for resident, path in written.items():
         console.print(f"{resident}: {path}")
     console.print("OK: gateway configs written; run `nanobot baton units` again and reinstall the units")
+
+
+@app.command()
+def doctor(
+    config: str | None = _CONFIG_OPT,
+    no_timer: bool = typer.Option(False, "--no-timer", help="Skip the systemd timer check"),
+):
+    """Check the whole town end to end. Prints a table and ends with OK: or FAIL:."""
+    from nanobot.baton.doctor import run_doctor
+    from nanobot.config.loader import get_config_path
+
+    cfg = _config(config)
+    path = Path(config).expanduser() if config else get_config_path()
+    checks = asyncio.run(run_doctor(cfg, config_path=path, include_timer=not no_timer))
+    table = Table("check", "result", "detail")
+    colors = {"PASS": "green", "WARN": "yellow", "FAIL": "red"}
+    for c in checks:
+        table.add_row(c.name, f"[{colors[c.status]}]{c.status}[/]", c.detail)
+    console.print(table)
+    failed = [c.name for c in checks if c.status == "FAIL"]
+    if failed:
+        typer.echo("FAIL: " + ", ".join(failed))
+        raise typer.Exit(1)
+    typer.echo("OK: the town is working")
+
+
+@app.command("init-config")
+def init_config(
+    upstream: str = typer.Option(..., "--upstream", help="llama-server address, e.g. http://127.0.0.1:8080"),
+    model: str = typer.Option(..., "--model", help="Model id reported by llama-server"),
+    n_ctx: int = typer.Option(..., "--ctx", help="Context window (n_ctx) from recon"),
+    slots: int = typer.Option(1, "--slots"),
+    town: str = typer.Option("~/baton-town", "--town"),
+    bwrap: bool = typer.Option(False, "--bwrap/--no-bwrap", help="Turn on the bwrap shell sandbox"),
+    box: str = typer.Option("arch", "--box"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Add the town's settings to nanobot's config (backs the old file up first)."""
+    import shutil as _shutil
+
+    from nanobot.baton.setup import write_town_config
+    from nanobot.config.loader import get_config_path
+
+    path = Path(config).expanduser() if config else get_config_path()
+    written, backup = write_town_config(
+        path, town=town, upstream=upstream, model=model, n_ctx=n_ctx, slots=slots, bwrap=bwrap, box=box,
+        nanobot_path=_shutil.which("nanobot") or "",
+    )
+    if backup:
+        console.print(f"Backed up the previous config to {backup}")
+    _config(str(written))  # must load and validate
+    console.print(f"OK: config written to {written}")
