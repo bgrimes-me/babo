@@ -215,3 +215,37 @@ def restore_session(
         _fail(exc)
         return
     console.print(f"OK: restored {count} messages from {backup.name}")
+
+
+@app.command()
+def night(
+    config: str | None = _CONFIG_OPT,
+    date: str | None = typer.Option(None, "--date", help="Night to run or resume (default: today)"),
+):
+    """Run (or resume) the night cycle. Exits 0 even when the model is unreachable."""
+    from nanobot.baton.night import run_night
+
+    try:
+        cfg = _config(config)
+        result = run_night(cfg, night=date)
+    except BatonError as exc:
+        _fail(exc)
+        return
+    if result["status"] == "skipped":
+        console.print(f"Night skipped: {result['reason']}. It will resume next time.")
+        return
+    console.print(f"OK: night {result['night']} finished ({len(result['steps'])} steps)")
+
+
+@app.command()
+def units(
+    out: Path = typer.Option(Path("install/out/systemd"), "--out", help="Where to write the unit files"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Write the systemd user units (queue, gateway, night timer) for Squid to install on the host."""
+    from nanobot.baton.units import write_units
+
+    cfg = _config(config)
+    for path in write_units(cfg.baton, out):
+        console.print(f"wrote {path}")
+    console.print("OK: units written (installing them on the host is a Squid step)")

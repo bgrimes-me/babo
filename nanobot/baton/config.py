@@ -76,7 +76,7 @@ class BatonBundleConfig(Base):
 
 
 class BatonNightConfig(Base):
-    time: str = "04:00"  # local time, HH:MM; used when generating the systemd timer
+    time: str = Field(default="04:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")  # local time, for the systemd timer
     tool_test_timeout_s: int = Field(default=120, ge=5)
     tool_test_image: str = "docker.io/library/python:3.12-slim"
 
@@ -90,6 +90,9 @@ class BatonConfig(Base):
     # Configs generated per resident (they may contain channel secrets).
     generated_dir: str = "~/.nanobot/baton"
     git_remote: str = ""  # push after the night commit when set (Squid sets this up)
+    # Where nanobot runs: the distrobox name, and nanobot's path inside it ("" = find it).
+    box: str = "arch"
+    nanobot_path: str = ""
     model: BatonModelConfig = Field(default_factory=BatonModelConfig)
     memory: BatonMemoryConfig = Field(default_factory=BatonMemoryConfig)
     bundle: BatonBundleConfig = Field(default_factory=BatonBundleConfig)

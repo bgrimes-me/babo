@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the Baton night cycle every night at {{ time }}
+
+[Timer]
+OnCalendar=*-*-* {{ time }}:00
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

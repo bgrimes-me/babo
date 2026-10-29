@@ -95,6 +95,10 @@ class _GatewayAgentContractStub:
 
     tools = ToolRegistry()
     subagents = MagicMock(spec=SubagentManager)
+    # BATON: Dream is off by default, so startup repairs its cursor through context.memory.
+    context = SimpleNamespace(memory=SimpleNamespace(
+        get_latest_cursor=lambda: 0, get_last_dream_cursor=lambda: 0, set_last_dream_cursor=lambda _cursor: None,
+    ))
 
     @contextmanager
     def maintenance(self):
@@ -3955,6 +3959,9 @@ def test_gateway_health_endpoint_binds_and_serves_expected_responses(
         def register_system_job(self, _job) -> None:
             return None
 
+        def remove_system_job(self, _job_id) -> None:  # BATON: Dream is off by default
+            return None
+
     class _FakeServer:
         async def __aenter__(self):
             return self
@@ -4194,6 +4201,9 @@ def test_gateway_agent_task_owns_initial_mcp_provider_close(
         def register_system_job(self, _job) -> None:
             return None
 
+        def remove_system_job(self, _job_id) -> None:  # BATON: Dream is off by default
+            return None
+
     class _FakeServer:
         async def __aenter__(self):
             return self
@@ -4329,6 +4339,9 @@ def test_gateway_shutdown_event_exits_forever_runtime_tasks(
             return {"jobs": 0}
 
         def register_system_job(self, _job) -> None:
+            return None
+
+        def remove_system_job(self, _job_id) -> None:  # BATON: Dream is off by default
             return None
 
     class _FakeServer:
