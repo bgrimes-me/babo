@@ -426,40 +426,38 @@ def test_interactive_agent_uses_native_tui(
     }
 
 
-def test_interactive_agent_does_not_silently_fall_back(
+def test_interactive_agent_falls_back_to_the_classic_prompt_and_says_so(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     config = Config()
     output: list[str] = []
+    classic: dict[str, object] = {}
 
     def unavailable(*_args: object, **_kwargs: object) -> int:
         raise TuiUnavailableError("missing sidecar")
 
     monkeypatch.setattr("babo.cli.agent._load_runtime_config", lambda *_args: config)
     monkeypatch.setattr("babo.cli.agent.console.print", lambda value: output.append(value))
+    monkeypatch.setattr("babo.cli.agent._run_classic", lambda cfg, **kwargs: classic.update(cfg=cfg, **kwargs))
     monkeypatch.setattr("babo.cli.tui_launcher.launch_tui", unavailable)
     monkeypatch.setattr("babo.config.loader.get_config_path", lambda: tmp_path / "config.json")
     monkeypatch.setattr("babo.cli.agent.sys.stdin", SimpleNamespace(isatty=lambda: True))
     monkeypatch.setattr("babo.cli.agent.sys.stdout", SimpleNamespace(isatty=lambda: True))
 
-    with pytest.raises(typer.Exit) as exc_info:
-        agent(
-            message=None,
-            session_id=None,
-            workspace=None,
-            config=None,
-            markdown=True,
-            logs=False,
-            classic=False,
-            theme="auto",
-        )
+    agent(
+        message=None,
+        session_id=None,
+        workspace=None,
+        config=None,
+        markdown=True,
+        logs=False,
+        classic=False,
+        theme="auto",
+    )
 
-    assert exc_info.value.exit_code == 1
-    assert output == [
-        "[red]Native TUI unavailable: missing sidecar[/red]",
-        "[dim]Use `babo agent --classic` only if you want the old prompt.[/dim]",
-    ]
+    assert output == ["[dim]The full-screen terminal UI isn't installed here; using the simple prompt.[/dim]"]
+    assert classic == {"cfg": config, "message": None, "session_id": None, "markdown": True, "logs": False}
 
 
 def test_native_tui_rejects_a_classic_session_selector(
