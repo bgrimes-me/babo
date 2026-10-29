@@ -31,7 +31,7 @@ def _git_env(author: tuple[str, str] | None) -> dict[str, str]:
 
 def git(town: Town, *args: str, check: bool = True, author: tuple[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     # The town repo never signs commits: it is a local record, and signing
-    # prompts would hang unattended night runs.
+    # prompts would hang unattended upkeep runs.
     cmd = ["git", "-c", "commit.gpgsign=false", "-c", "core.quotepath=off", "-C", str(town.root), *args]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, env=_git_env(author), timeout=120)

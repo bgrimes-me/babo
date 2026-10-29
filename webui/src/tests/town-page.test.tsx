@@ -9,7 +9,9 @@ const town = (name = "") => ({
   residents: [{ id: "mayor", name: "", office: "mayor", status: "active", founded: "", last_active: "", unread: 1, flags: 0 }],
   board: [],
   pending: { tools: 0, proposals: 1, founding: 0, flags: 0 },
-  last_night: null,
+  last_upkeep: null,
+  upkeep: { service: "running", running: false, waiting: ["mayor: 5 hours of activity to review"], waiting_for: "someone used the model in the last 10 minutes",
+    catch_up_requested: false, last_pass: "", quiet_hours: "01:00-06:00", wait_minutes: 10 },
 });
 const review = {
   tools: [],
@@ -95,5 +97,15 @@ describe("town page", () => {
     fireEvent.click(within(archivist).getByRole("radio", { name: "Ask" }));
     await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.profile", { agent: "archivist", changes: { shell: "ask" } }, expect.any(Number)));
     expect(await screen.findByRole("status")).toHaveTextContent("Run commands: deny → ask");
+  });
+
+  it("shows what upkeep is waiting for and catches up on request, like `babo upkeep --now`", async () => {
+    mocks.mutation.mockResolvedValue({ message: "Catch-up requested: upkeep starts within a minute and does everything that is waiting.", town: town() });
+    render(<TownPage onBackToChat={() => {}} />);
+    expect(await screen.findByText("Waiting, because someone used the model in the last 10 minutes.")).toBeVisible();
+    expect(screen.getByText("mayor: 5 hours of activity to review")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Catch up now" }));
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.upkeep", {}, expect.any(Number)));
+    expect(await screen.findByRole("status")).toHaveTextContent("Catch-up requested");
   });
 });

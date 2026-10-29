@@ -75,7 +75,7 @@ TOOL_SPECS: dict[str, ToolSpec] = {
         ),
         ToolSpec(
             "remember",
-            "Save a short note for yourself. It goes to your inbox and is folded into your memory tonight.",
+            "Save a short note for yourself. It goes to your inbox and is folded into your memory at your next memory review.",
             {"type": "object", "properties": {"text": _str("What to remember.")}, "required": ["text"]},
         ),
         ToolSpec(
@@ -98,7 +98,7 @@ TOOL_SPECS: dict[str, ToolSpec] = {
         ),
         ToolSpec(
             "propose_tool",
-            "Propose a new tool for the town. Give Python code defining run(input: str) -> str and a pytest test. It is tested at night and needs Squid's approval.",
+            "Propose a new tool for the town. Give Python code defining run(input: str) -> str and a pytest test. It is tested in isolation, reviewed by the Inspector, and needs Squid's approval.",
             {
                 "type": "object",
                 "properties": {
@@ -296,7 +296,7 @@ class Toolbox:
         if not text.strip():
             raise BatonError("Nothing to remember: text is empty.")
         deliver(self.town, self.resident_id, kind="remember", sender=self.resident_id, text=text)
-        return "Saved. It will be folded into your memory tonight."
+        return "Saved. It will be folded into your memory at your next memory review."
 
     def revise_self(self, new_text: str, reason: str, name: str | None = None) -> str:
         if not new_text.strip():
@@ -343,7 +343,7 @@ class Toolbox:
         atomic_write(folder / "test_tool.py", test.rstrip() + "\n")
         meta = {"name": name, "description": first_line(description, 140), "author": self.resident_id, "created": now_iso(), "status": "pending"}
         atomic_write(folder / "TOOL.md", join_frontmatter(meta, description.strip() + "\n"))
-        return f"Proposed tool {name}. It will be tested tonight, reviewed by the Inspector, and then goes to Squid."
+        return f"Proposed tool {name}. It will be tested in isolation, reviewed by the Inspector, and then goes to Squid."
 
     def propose_change(self, title: str, rationale: str, description: str, project: str | None = None, town_name: str | None = None) -> str:
         town_name = " ".join((town_name or "").split())

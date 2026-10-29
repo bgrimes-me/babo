@@ -75,8 +75,23 @@ class BatonBundleConfig(Base):
     letter_preview_lines: int = Field(default=5, ge=0, le=50)
 
 
+class BatonUpkeepConfig(Base):
+    """When upkeep (memory reviews, curation, inspection) may use the model."""
+
+    # Wait until nobody has used the model for this long.
+    wait_minutes: int = Field(default=10, ge=0)
+    # Review a resident's memory once its unreviewed activity is this old (and its session has gone quiet).
+    review_after_hours: int = Field(default=4, ge=1)
+    # During these hours anything waiting is done, and housekeeping runs even on a day nobody talked.
+    quiet_hours: str = Field(default="01:00-06:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$")
+    check_every_seconds: int = Field(default=60, ge=10)
+    # The same unfinished work (e.g. a tool the Inspector didn't review) is retried after this long.
+    retry_after_hours: int = Field(default=6, ge=1)
+
+
 class BatonNightConfig(Base):
-    time: str = Field(default="04:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")  # local time, for the systemd timer
+    # `time` is unused since upkeep replaced the nightly timer; kept so older config files still load.
+    time: str = Field(default="04:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
     tool_test_timeout_s: int = Field(default=120, ge=5)
     tool_test_image: str = "docker.io/library/python:3.12-slim"
 
@@ -96,6 +111,7 @@ class BatonConfig(Base):
     model: BatonModelConfig = Field(default_factory=BatonModelConfig)
     memory: BatonMemoryConfig = Field(default_factory=BatonMemoryConfig)
     bundle: BatonBundleConfig = Field(default_factory=BatonBundleConfig)
+    upkeep: BatonUpkeepConfig = Field(default_factory=BatonUpkeepConfig)
     night: BatonNightConfig = Field(default_factory=BatonNightConfig)
     toolsets: dict[str, list[str]] = Field(default_factory=lambda: {k: list(v) for k, v in DEFAULT_TOOLSETS.items()})
     # channel name -> resident id. Unbound channels go to the Mayor.

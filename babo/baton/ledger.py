@@ -46,7 +46,7 @@ def active_tools(town: Town) -> list[Capability]:
 
 
 def render_ledger(town: Town) -> str:
-    lines = ["# Ledger", "", "What the town can do. Generated nightly; read a skill with `read_note(\"skill:<name>\")`.", ""]
+    lines = ["# Ledger", "", "What the town can do. Regenerated at each upkeep; read a skill with `read_note(\"skill:<name>\")`.", ""]
     sk = skills(town)
     tl = active_tools(town)
     lines += ["## Skills", ""]

@@ -53,11 +53,15 @@ _EARLIER_SHIPPED: dict[str, frozenset[str]] = {
     "CHARTER.md": frozenset({
         "a14b2f93fb1930c0d611b0cbe733cbc398f83b7ad5bc2f57ab406d169c530ebb",
         "42789c0fbee3ce65dfc82d82c7138817f578ab2f74fa9781a433efbac561b5fd",
+        "ee431ebd6bf7841565bac1c43979ff2ccfbb07db9c654564ed28f70971350f35",
     }),
     "HOUSE.md": frozenset({"f5db7f23720080bdc08805b3c0f64b6186e2edefd06367035ab70333490dd81e"}),
     "offices/mayor.md": frozenset({"796e6bb50d56aa9dac20b24712e6fee0f89ed7542111eadb9020ca3c22ade724"}),
     "offices/archivist.md": frozenset({"f2ae5b783190f844e40284333105bce537920f877599b809ba7c1df436236df5"}),
-    "offices/inspector.md": frozenset({"da6fd4cb1521656dfb05df33dcfffe2d69bf0a3f88915222f36d90eb2e0af87d"}),
+    "offices/inspector.md": frozenset({
+        "da6fd4cb1521656dfb05df33dcfffe2d69bf0a3f88915222f36d90eb2e0af87d",
+        "fe75521b9b38a6ff9db7ccc869e3bdf3332f21d2af8138b73f27a1cdf8106fe8",
+    }),
 }
 
 

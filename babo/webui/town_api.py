@@ -14,6 +14,7 @@ from loguru import logger
 from websockets.http11 import Request as WsRequest
 from websockets.http11 import Response
 
+from babo.baton.config import BatonConfig
 from babo.baton.town import BatonError, Town
 from babo.webui.http_utils import http_error, http_json_response
 
@@ -23,6 +24,7 @@ TOWN_MUTATION_PATHS = {
     "town.name": "/api/town/name",
     "town.settings": "/api/town/settings/update",
     "town.profile": "/api/town/profiles/update",
+    "town.upkeep": "/api/town/upkeep/now",
 }
 _DECISION_KINDS = ("tool", "proposal", "founding", "flag")
 _doctor_lock = asyncio.Lock()
@@ -32,6 +34,12 @@ def _town() -> Town:
     from babo.config.loader import load_config
 
     return Town.open(load_config().baton.town_path)
+
+
+def _baton() -> BatonConfig:
+    from babo.config.loader import load_config
+
+    return load_config().baton
 
 
 def _text(payload: dict[str, Any], key: str, limit: int = 4000) -> str:
@@ -97,7 +105,7 @@ class TownRoutes:
         from babo.baton import views
 
         if got == "/api/town":
-            return http_json_response(await asyncio.to_thread(lambda: views.town_overview(_town())))
+            return http_json_response(await asyncio.to_thread(lambda: views.town_overview(_town(), _baton())))
         if got == "/api/town/review":
             return http_json_response(await asyncio.to_thread(lambda: views.review_items(_town())))
         if got == "/api/town/doctor":
@@ -132,12 +140,14 @@ class TownRoutes:
                 raise BatonError("missing changes")
             message = await asyncio.to_thread(lambda: _update_profile(agent, cast(dict[str, object], changes)))
             return http_json_response({"message": message, **await asyncio.to_thread(_profiles)})
+        elif got == "/api/town/upkeep/now":
+            message = await asyncio.to_thread(lambda: views.request_upkeep(_town()))
         elif got == "/api/town/name":
             name = _text(payload, "name", 200)
             message = await asyncio.to_thread(lambda: views.name_town(_town(), name))
         else:
             return http_json_response(await asyncio.to_thread(lambda: _update_settings(payload)))
-        return http_json_response({"message": message, "town": await asyncio.to_thread(lambda: views.town_overview(_town()))})
+        return http_json_response({"message": message, "town": await asyncio.to_thread(lambda: views.town_overview(_town(), _baton()))})
 
     async def _doctor(self) -> dict[str, Any]:
         from babo.baton.doctor import run_doctor

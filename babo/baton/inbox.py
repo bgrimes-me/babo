@@ -11,7 +11,7 @@ from babo.baton.notes import first_line, join_frontmatter, split_frontmatter
 from babo.baton.town import Town, atomic_write, now_iso, slugify
 
 # Kinds shown as "unread" at session start. remember() notes are the
-# resident's own and are folded at night instead.
+# resident's own and are folded at the next memory review instead.
 ANNOUNCED_KINDS = ("letter", "flag", "note", "reply")
 KINDS = (*ANNOUNCED_KINDS, "remember")
 

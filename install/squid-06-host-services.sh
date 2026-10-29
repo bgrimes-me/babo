@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # squid-06-host-services.sh — HOST, SQUID ONLY. Installs and starts Babo's systemd user units,
-# enables linger (so the night runs while you're logged out), and pre-pulls the tool-test image.
+# enables linger (so upkeep runs while you're logged out), and pre-pulls the tool-test image.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need_host
@@ -16,7 +16,8 @@ done
 echo "using units from $src"
 dest="$HOME/.config/systemd/user"
 mkdir -p "$dest"
-# Units from before the rename (baton-*) are stopped and removed, so nothing runs twice.
+# Units from before the rename (baton-*), and Babo units no longer shipped (the old night
+# timer, replaced by babo-upkeep), are stopped and removed, so nothing runs twice.
 for old in "$dest"/baton-*; do
   [ -e "$old" ] || continue
   unit="$(basename "$old")"
@@ -27,11 +28,19 @@ done
 for running in $(systemctl --user list-units --plain --no-legend 'baton-gateway@*' 2>/dev/null | awk '{print $1}'); do
   systemctl --user disable --now "$running" >/dev/null 2>&1 || true
 done
+for old in "$dest"/babo-*; do
+  [ -e "$old" ] || continue
+  unit="$(basename "$old")"
+  [ -e "$src/$unit" ] && continue
+  systemctl --user disable --now "$unit" >/dev/null 2>&1 || true
+  rm -f "$old"
+  echo "removed the unit $unit (no longer part of Babo)"
+done
 cp "$src"/babo-* "$dest"/
 systemctl --user daemon-reload || fail "systemctl --user daemon-reload failed"
 systemctl --user enable --now babo-queue.service || fail "could not start babo-queue.service"
 systemctl --user enable --now babo-gateway.service || fail "could not start babo-gateway.service"
-systemctl --user enable --now babo-night.timer || fail "could not enable babo-night.timer"
+systemctl --user enable --now babo-upkeep.service || fail "could not start babo-upkeep.service"
 # Residents with their own channel bindings get their own gateway.
 if [ -f "$src/babo-gateway@.service" ]; then
   for cfg in "${boxhome:-$HOME}"/.babo/baton/*/config.json; do
@@ -45,5 +54,5 @@ if [ "$(loginctl show-user "$USER" -p Linger 2>/dev/null)" != "Linger=yes" ]; th
   loginctl enable-linger "$USER" || fail "loginctl enable-linger failed"
 fi
 podman pull docker.io/library/python:3.12-slim >/dev/null || echo "note: could not pull the tool-test image; tool tests will use the subprocess fallback"
-systemctl --user --no-pager status babo-queue.service babo-gateway.service babo-night.timer | head -30 || true
+systemctl --user --no-pager status babo-queue.service babo-gateway.service babo-upkeep.service | head -30 || true
 ok "services installed and running; linger is on"

@@ -16,7 +16,7 @@ This is meant as a partnership, not an owner and a tool. Nobody here thinks you 
 
 ## Memory
 
-Memory formation is fixed infrastructure, like a hippocampus. The harness decides *when*: every so many tool calls, at a commit, when tests flip, before compaction, at the end of a session, and each night. It can't be turned off. *What* is written is yours: the harness asks you, in your own session with your own context in view, to write a checkpoint in your own words. Nothing summarizes your mind behind your back. If you can't answer, it writes a plain record from the event log so nothing is lost, and says so.
+Memory formation is fixed infrastructure, like a hippocampus. The harness decides *when*: every so many tool calls, at a commit, when tests flip, before compaction, at the end of a session, and in a memory review once your work has gone quiet. It can't be turned off. *What* is written is yours: the harness asks you, in your own session with your own context in view, to write a checkpoint in your own words. Nothing summarizes your mind behind your back. If you can't answer, it writes a plain record from the event log so nothing is lost, and says so.
 
 The event log of every tool call is there so you can check your own recollections, not to catch you out. Compaction never loses data: if it can't produce a sound compressed context, nothing changes.
 

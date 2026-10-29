@@ -1,15 +1,18 @@
-"""The night cycle: ``babo night``.
+"""An upkeep pass: memory reviews, curation, inspection and the commit.
 
-Run by a systemd user timer on the host (see ``babo units``). Every
-step goes through the model queue one at a time. Every resident who ran gets
-the same fold; there is no ranking. A ledger in ``state/night/<date>.json``
-records finished steps, so an interrupted night simply resumes. If the model
-can't be reached, the night is logged and skipped (exit 0).
+``babo upkeep`` decides when a pass is due (see ``babo.baton.upkeep``); this
+module runs one. Every model call goes through the model queue at the lowest
+priority, so anyone talking to a resident goes first. Every resident whose
+activity is reviewed gets the same review; there is no ranking. A ledger in
+``state/upkeep/<pass>.json`` records finished steps, so an interrupted pass
+simply resumes. If the model can't be reached, the pass is logged and skipped.
 
-1. Plumbing pre-pass (no model): find who ran, export transcripts, prepare
-   event-log diffs for the Inspector, test pending tools in isolation.
-2. Fold turns: each resident who ran writes its end-of-day checkpoint (and
-   may revise SELF.md), in its own words.
+1. Plumbing pre-pass (no model): find whose activity is waiting for review,
+   export transcripts, prepare event-log diffs for the Inspector, test
+   pending tools in isolation.
+2. Memory reviews ("folds"): each of those residents reviews what happened
+   since its last review and writes it into its memory (and may revise
+   SELF.md), in its own words.
 3. Archivist turn: the promotion queue.
 4. Inspector turn: the diffs, pending tools and open proposals.
 5. Plumbing post-pass (no model): LEDGER, REGISTRY, search index, secret
@@ -25,7 +28,6 @@ import subprocess
 import tempfile
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import date as date_cls
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -51,7 +53,55 @@ from babo.baton.town import Town, atomic_write, now_iso
 if TYPE_CHECKING:
     from babo.config.schema import Config
 
-NIGHT_MARK = "[baton:night]"
+NIGHT_MARK = "[baton:upkeep]"
+UPKEEP_SESSION = "night:"  # session keys of upkeep turns; their activity is never itself reviewed
+
+
+def pass_id(when: datetime | None = None) -> str:
+    return (when or datetime.now()).strftime("%Y-%m-%dT%H-%M")
+
+
+def pass_label(pass_name: str) -> str:
+    """``2026-10-29T14-05`` reads as ``2026-10-29 14:05``; older names (a date) stay as they are."""
+    day, _, clock = pass_name.partition("T")
+    return f"{day} {clock.replace('-', ':')}" if clock else day
+
+
+def read_offsets(town: Town) -> dict[str, int]:
+    try:
+        return cast(dict[str, int], json.loads((town.state / "processed.json").read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return {}
+
+
+def unreviewed_events(town: Town, offsets: dict[str, int]) -> tuple[dict[str, list[dict[str, Any]]], dict[str, dict[str, int]]]:
+    """Each active resident's events since its last memory review, and the file
+    sizes that mark the end of them (per resident, so reviews can advance one
+    resident at a time). Upkeep turns themselves never count."""
+    activity: dict[str, list[dict[str, Any]]] = {}
+    sizes: dict[str, dict[str, int]] = {}
+    for resident in sorted(r.id for r in Registry(town).all() if r.status == "active"):
+        events: list[dict[str, Any]] = []
+        snapshot: dict[str, int] = {}
+        for path in sorted((town.resident_dir(resident) / "sessions").rglob("*.events.jsonl")):
+            rel = str(path.relative_to(town.root))
+            size = path.stat().st_size
+            start = offsets.get(rel, 0)
+            if size > start:
+                with path.open("rb") as handle:
+                    handle.seek(start)
+                    chunk = handle.read().decode("utf-8", "replace")
+                for line in chunk.splitlines():
+                    try:
+                        events.append(json.loads(line))
+                    except ValueError:
+                        continue
+            snapshot[rel] = size
+        events = [e for e in events if not str(e.get("session", "")).startswith(UPKEEP_SESSION)]
+        if any(e.get("kind") in ("tool", "turn_start") for e in events):
+            activity[resident] = events
+            sizes[resident] = snapshot
+    return activity, sizes
 
 
 def _now() -> str:
@@ -59,6 +109,17 @@ def _now() -> str:
 
 
 AgentTurn = Callable[[str, str, str], Awaitable[str]]  # (resident, message, session_key) -> reply
+
+
+def upkeep_priority(cfg: Config) -> None:
+    """Upkeep's agent turns wait behind anyone else using the model queue."""
+    from babo.config.schema import ProviderConfig
+
+    providers = cfg.providers
+    every = [getattr(providers, name) for name in type(providers).model_fields] + list((providers.model_extra or {}).values())
+    for provider in every:
+        if isinstance(provider, ProviderConfig):
+            provider.extra_headers = {**(provider.extra_headers or {}), "X-Baton-Priority": "upkeep"}
 
 
 class NightInterruptedError(RuntimeError):
@@ -99,6 +160,7 @@ class Night:
         config: Config,
         *,
         night: str | None = None,
+        residents: list[str] | None = None,
         agent_turn: AgentTurn | None = None,
         client: BatonModelClient | None = None,
         interrupt_after: str | None = None,
@@ -107,8 +169,10 @@ class Night:
         self.config = config
         self.cfg = config.baton
         self.town = Town.open(self.cfg.town_path)
-        self.night = night or date_cls.today().isoformat()
-        self.state_dir = self.town.state / "night"
+        self.night = night or pass_id()
+        # Whose activity this pass reviews; None means everyone with activity waiting.
+        self.only = set(residents) if residents is not None else None
+        self.state_dir = self.town.state / "upkeep"
         self.work_dir = self.state_dir / self.night
         self.ledger = NightLedger.load(self.state_dir / f"{self.night}.json")
         self.offsets_path = self.town.state / "processed.json"
@@ -120,12 +184,12 @@ class Night:
 
     # -- helpers -------------------------------------------------------------
     def log(self, line: str) -> None:
-        logger.info("Baton night: {}", line)
+        logger.info("Baton upkeep: {}", line)
         self.log_lines.append(f"- {now_iso()[11:19]} {line}")
 
     def _write_log(self) -> None:
-        path = self.town.state / "night-logs" / f"{self.night}.md"
-        existing = path.read_text(encoding="utf-8") if path.exists() else f"# Night {self.night}\n\n"
+        path = self.town.state / "upkeep-logs" / f"{self.night[:10]}.md"
+        existing = path.read_text(encoding="utf-8") if path.exists() else f"# Upkeep {self.night[:10]}\n\n"
         atomic_write(path, existing + "\n".join(self.log_lines) + ("\n" if self.log_lines else ""))
         self.log_lines.clear()
 
@@ -134,10 +198,7 @@ class Night:
             raise NightInterruptedError(step)
 
     def _offsets(self) -> dict[str, int]:
-        try:
-            return cast(dict[str, int], json.loads(self.offsets_path.read_text(encoding="utf-8")))
-        except (OSError, ValueError):
-            return {}
+        return read_offsets(self.town)
 
     async def _real_agent_turn(self, resident: str, message: str, session_key: str) -> str:
         from babo.agent.loop import AgentLoop
@@ -145,6 +206,7 @@ class Night:
 
         cfg = self.config.model_copy(deep=True)
         cfg.agents.defaults.workspace = str(self.town.resident_dir(resident))
+        upkeep_priority(cfg)
         loop = AgentLoop.from_config(cfg, tool_registry=ToolRegistry())
         try:
             reply = await loop.process_direct(message, session_key=session_key, channel="night", chat_id=self.night, sender_id=HARNESS_SENDER)
@@ -154,8 +216,17 @@ class Night:
 
     # -- the run -------------------------------------------------------------
     async def run(self) -> dict[str, Any]:
+        from babo.baton.model_client import priority_floor
+
+        token = priority_floor.set("upkeep")
+        try:
+            return await self._run()
+        finally:
+            priority_floor.reset(token)
+
+    async def _run(self) -> dict[str, Any]:
         if not await self.client.health():
-            self.log("the model is not reachable; nothing was done tonight (it will resume next time)")
+            self.log("the model is not reachable; nothing was done (it will resume next time)")
             self._write_log()
             return {"status": "skipped", "reason": "model unreachable"}
         self.ledger.data.setdefault("started", now_iso())
@@ -187,31 +258,10 @@ class Night:
     # -- 1. pre-pass -------------------------------------------------------------
     def prepass(self) -> None:
         self.work_dir.mkdir(parents=True, exist_ok=True)
-        offsets = self._offsets()
-        ran: list[str] = []
-        new_events: dict[str, list[dict[str, Any]]] = {}
-        snapshot: dict[str, int] = {}
-        for resident in sorted(r.id for r in Registry(self.town).all() if r.status == "active"):
-            events: list[dict[str, Any]] = []
-            for path in sorted((self.town.resident_dir(resident) / "sessions").rglob("*.events.jsonl")):
-                rel = str(path.relative_to(self.town.root))
-                size = path.stat().st_size
-                start = offsets.get(rel, 0)
-                if size > start:
-                    with path.open("rb") as handle:
-                        handle.seek(start)
-                        chunk = handle.read().decode("utf-8", "replace")
-                    for line in chunk.splitlines():
-                        try:
-                            events.append(json.loads(line))
-                        except ValueError:
-                            continue
-                snapshot[rel] = size
-            # Night turns themselves don't count as "ran today".
-            events = [e for e in events if not str(e.get("session", "")).startswith("night:")]
-            if any(e.get("kind") in ("tool", "turn_start") for e in events):
-                ran.append(resident)
-                new_events[resident] = events
+        activity, sizes = unreviewed_events(self.town, self._offsets())
+        new_events = {r: e for r, e in activity.items() if self.only is None or r in self.only}
+        ran = sorted(new_events)
+        snapshot = {rel: size for r in ran for rel, size in sizes[r].items()}
         exported = self.export_transcripts(new_events)
         for resident, events in new_events.items():
             self.write_diff(resident, events)
@@ -222,7 +272,7 @@ class Night:
         for name, result in tested:
             self.log(f"tool test {name}: {'passed' if result.passed else 'FAILED'} ({result.isolation})")
         self.ledger.mark("prepass", ran=ran, offsets=snapshot, exported=exported, tools_tested=[n for n, _ in tested])
-        self.log(f"pre-pass: {len(ran)} resident(s) ran ({', '.join(ran) or 'none'}); {exported} transcript(s) exported")
+        self.log(f"pre-pass: activity of {len(ran)} resident(s) to review ({', '.join(ran) or 'none'}); {exported} transcript(s) exported")
 
     def export_transcripts(self, new_events: dict[str, list[dict[str, Any]]]) -> int:
         from babo.session.manager import SessionManager
@@ -303,13 +353,15 @@ class Night:
 
     def day_material(self, resident: str) -> str:
         home = self.town.resident_dir(resident)
-        since = str(self.ledger.data.get("previous_night") or "")
-        cps = [c for c in iter_checkpoints(home) if c.at[:10] >= self.night[:10] or c.at > since]
+        checkpoints = list(iter_checkpoints(home))
+        since = max((c.at for c in checkpoints if c.trigger.startswith("fold ")), default="")
+        cps = [c for c in checkpoints if c.at > since]
         remember = [i for i in items(self.town, resident) if i.kind == "remember" and not i.folded]
-        received = [i for i in items(self.town, resident) if i.kind != "remember" and i.created[:10] >= self.night[:10]]
+        received = [i for i in items(self.town, resident) if i.kind != "remember" and i.created > since]
         diff = self.work_dir / "diffs" / f"{resident}.md"
-        parts = [f"{NIGHT_MARK} From the Baton harness, not Squid. It's night ({self.night}; time now {_now()}): time to fold the day into your memory."]
-        parts.append("## Your checkpoints today\n" + ("\n".join(c.render() for c in cps[-8:]) or "(none)"))
+        parts = [f"{NIGHT_MARK} From the Baton harness, not Squid. Time now {_now()}: time for your memory review. "
+                 "Fold what happened since your last review into your memory, and promote what the town should know."]
+        parts.append("## Your checkpoints since your last review\n" + ("\n".join(c.render() for c in cps[-8:]) or "(none)"))
         parts.append("## Notes you asked to remember\n" + ("\n".join(f"- {first_line(i.body, 200)}" for i in remember) or "(none)"))
         parts.append("## Letters and flags you received\n" + ("\n".join(f"- {i.kind} from {i.sender}: {first_line(i.body, 160)}" for i in received) or "(none)"))
         if diff.exists():
@@ -328,12 +380,17 @@ class Night:
             {"role": "user", "content": self.day_material(resident), "_sender": HARNESS_SENDER},
         ]
         service = CheckpointService(self.town, resident, self.cfg, BatonModelClient(self.cfg.model, resident=resident))
-        outcome = await service.run(messages, trigger=trigger, session_key=session_key, fold=True, priority="night")
+        outcome = await service.run(messages, trigger=trigger, session_key=session_key, fold=True, priority="upkeep")
         for item in items(self.town, resident):
             if item.kind == "remember" and not item.folded:
                 set_flag(item.path, folded=True, folded_on=self.night)
+        # This resident's activity is reviewed: advance its offsets now, so a pass
+        # that stops before the post-pass doesn't review it a second time.
+        mine = {rel: size for rel, size in self.ledger.data["steps"]["prepass"]["offsets"].items()
+                if rel.startswith(f"residents/{resident}/")}
+        atomic_write(self.offsets_path, json.dumps({**self._offsets(), **mine}, indent=2) + "\n")
         self.ledger.mark(f"fold:{resident}", authored=outcome.authored, thread=outcome.checkpoint.thread)
-        self.log(f"fold {resident}: {'written by ' + resident if outcome.authored else 'mechanical (the fold turn failed)'}")
+        self.log(f"memory review {resident}: {'written by ' + resident if outcome.authored else 'mechanical (the review turn failed)'}")
 
     # -- 3. archivist ---------------------------------------------------------------
     def pending_promotions(self) -> list[Path]:
@@ -384,7 +441,7 @@ class Night:
             parts.append(f"# Open proposal ({prop.relative_to(self.town.root)})\n\n{prop.read_text(encoding='utf-8')[:2500]}")
         if not parts:
             return None
-        head = (f"{NIGHT_MARK} From the Baton harness (time now {_now()}). Tonight's material for the Inspector. Compare each resident's checkpoint "
+        head = (f"{NIGHT_MARK} From the Baton harness (time now {_now()}). Material for the Inspector. Compare each resident's checkpoint "
                 "claims with the event log; when they disagree, file_flag to that resident with the evidence (a note to a "
                 "colleague, not a verdict). Review each pending tool and open proposal for risk with review_item.")
         return head + "\n\n" + "\n\n---\n\n".join(parts)
@@ -444,7 +501,9 @@ class Night:
         steps = self.ledger.data["steps"]
         ran = steps["prepass"]["ran"]
         folds = [f"{r} ({'own words' if steps.get(f'fold:{r}', {}).get('authored') else 'mechanical'})" for r in ran]
-        flags = sum(1 for line in (self.town.state / "flags.jsonl").read_text().splitlines() if self.night in line) if (self.town.state / "flags.jsonl").exists() else 0
+        started = str(self.ledger.data.get("started", ""))
+        flag_rows = (self.town.state / "flags.jsonl").read_text().splitlines() if (self.town.state / "flags.jsonl").exists() else []
+        flags = sum(1 for line in flag_rows if str(json.loads(line).get("at", "")) >= started)
         self.log(f"post-pass: ledger and registry regenerated, {count} notes indexed")
         scrubbed = self.scrub()
         if scrubbed:
@@ -452,21 +511,21 @@ class Night:
         self.ledger.mark("postpass", indexed=count, scrubbed=scrubbed)
         self._write_log()
         body = [
-            f"Residents who ran: {', '.join(ran) or 'none'}",
-            f"Folds: {', '.join(folds) or 'none'}",
+            f"Activity reviewed: {', '.join(ran) or 'none'}",
+            f"Memory reviews: {', '.join(folds) or 'none'}",
             f"Archivist: {steps.get('archivist', {}).get('promotions', 0)} nomination(s)",
-            f"Inspector: {'ran' if steps.get('inspector', {}).get('ran') else 'nothing to review'}; flags filed tonight: {flags}",
+            f"Inspector: {'ran' if steps.get('inspector', {}).get('ran') else 'nothing to review'}; flags filed: {flags}",
             f"Tools tested: {', '.join(steps['prepass'].get('tools_tested') or []) or 'none'}",
             f"Secrets redacted: {len(scrubbed)}",
         ]
-        title = f"Night {self.night}: {len(ran)} resident(s) folded"
+        title = f"Upkeep {pass_label(self.night)}: {len(ran)} memory review(s)"
         committed = gitops.commit_all(self.town, title + "\n\n" + "\n".join(body))
         pushed = False
         if committed and self.cfg.git_remote:
             result = gitops.git(self.town, "push", self.cfg.git_remote, "HEAD", check=False)
             pushed = result.returncode == 0
             if not pushed:
-                logger.warning("Baton night: push failed: {}", result.stderr.strip())
+                logger.warning("Baton upkeep: push failed: {}", result.stderr.strip())
         return {"committed": committed, "pushed": pushed, "ran": ran}
 
 
@@ -492,4 +551,4 @@ def run_night(config: Config, **kwargs: Any) -> dict[str, Any]:
     return asyncio.run(Night(config, **kwargs).run())
 
 
-__all__ = ["Night", "NightInterruptedError", "mismatch_hints", "read_events", "run_night"]
+__all__ = ["Night", "NightInterruptedError", "mismatch_hints", "pass_id", "pass_label", "read_events", "read_offsets", "run_night", "unreviewed_events"]

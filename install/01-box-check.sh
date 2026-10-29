@@ -14,7 +14,7 @@ else
   missing+=(python)
 fi
 command -v bwrap >/dev/null 2>&1 || echo "note: bubblewrap (bwrap) is not installed; shell privacy will be best-effort"
-command -v gitleaks >/dev/null 2>&1 || echo "note: gitleaks is not installed; the night scrub will use its regex fallback"
+command -v gitleaks >/dev/null 2>&1 || echo "note: gitleaks is not installed; the upkeep secret scrub will use its regex fallback"
 
 if [ ${#missing[@]} -gt 0 ]; then
   fail "missing in the box: ${missing[*]}. Ask Squid to run install/squid-01-packages.sh inside the box, then run this step again."

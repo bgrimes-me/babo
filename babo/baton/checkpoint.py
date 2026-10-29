@@ -47,7 +47,7 @@ Time now: {now}. You are {who}.
 - promote: notes of yours worth sharing with the town, as {{"path": "knowledge/<file>.md", "reason": "..."}}
 {extra}Only the JSON. Nothing else is expected of you; after this the conversation continues where it was."""
 
-_FOLD_EXTRA = "- revise_self: the full new text of your SELF.md if you want to revise it tonight, otherwise \"\"\n"
+_FOLD_EXTRA = "- revise_self: the full new text of your SELF.md if you want to revise it now, otherwise \"\"\n"
 _FOLD_INTRO = (
     "Before you write, look back over the day: did you answer to a name, a voice or a job that isn't yours, "
     "or work in another resident's lane? If so, say so in `learned`, and set SELF.md straight with revise_self if it needs it.\n"
@@ -257,7 +257,7 @@ class CheckpointService:
             if fold and reply.revise_self.strip():
                 from babo.baton.tools.core import Toolbox
 
-                Toolbox(self.town, self.resident_id, self.config.index_file).revise_self(reply.revise_self, reason="nightly fold")
+                Toolbox(self.town, self.resident_id, self.config.index_file).revise_self(reply.revise_self, reason="memory review")
         else:
             outcome = self.mechanical(events or [], trigger=trigger, session_key=session_key, error=error)
         self.archive_exchange(session_key, exchange, outcome)

@@ -10,14 +10,14 @@ from jinja2 import Template
 
 from babo.baton.config import BatonConfig
 
-UNITS = ("babo-queue.service", "babo-gateway.service", "babo-night.service", "babo-night.timer")
+UNITS = ("babo-queue.service", "babo-gateway.service", "babo-upkeep.service")
 BOUND_GATEWAY_UNIT = "babo-gateway@.service"
 
 
 def render_units(config: BatonConfig, *, distrobox: str = "/usr/bin/distrobox") -> dict[str, str]:
     babo = config.babo_path or shutil.which("babo") or str(Path.home() / ".local" / "bin" / "babo")
     generated = str(Path(config.generated_dir).expanduser())
-    values = {"distrobox": distrobox, "box": config.box, "babo": babo, "time": config.night.time, "generated": generated}
+    values = {"distrobox": distrobox, "box": config.box, "babo": babo, "generated": generated}
     root = files("babo.baton") / "templates" / "systemd"
     names = [*UNITS, BOUND_GATEWAY_UNIT] if config.channel_bindings else list(UNITS)
     units = {name: Template((root / name).read_text(encoding="utf-8")).render(**values) for name in names}

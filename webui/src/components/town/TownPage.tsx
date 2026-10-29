@@ -17,6 +17,7 @@ import {
   updateTownSettings,
   leaveTownNote,
   nameTown,
+  requestTownUpkeep,
   runTownDoctor,
   type TownChange,
   type TownDecisionKind,
@@ -171,19 +172,57 @@ function ResidentsView({ town, transport, onChanged, onError }: {
         </div>)}
     </SettingsGroup>
 
-    <h2 className="settings-list-inset mt-2 text-[13px] font-medium text-muted-foreground">{t("town.lastNight", { defaultValue: "Last night" })}</h2>
-    <SettingsGroup>
-      {town.last_night
-        ? <details className="settings-list-row py-3">
-          <summary className="cursor-pointer text-[13px]">
-            {town.last_night.night} · {town.last_night.finished ? t("town.nightDone", { defaultValue: "finished" }) : t("town.nightUnfinished", { defaultValue: "not finished (it resumes next time)" })}
-          </summary>
-          <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">{town.last_night.log}</pre>
-        </details>
-        : <p className="settings-list-row py-3 text-[13px] text-muted-foreground">{t("town.noNight", { defaultValue: "No night has run yet." })}</p>}
-    </SettingsGroup>
+    <UpkeepView town={town} transport={transport} onChanged={onChanged} onError={onError} />
 
     <TownNameForm current={town.name} transport={transport} onChanged={onChanged} onError={onError} />
+  </>;
+}
+
+function UpkeepView({ town, transport, onChanged, onError }: {
+  town: TownOverview;
+  transport: Transport;
+  onChanged: (change: TownChange) => void;
+  onError: (message: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const up = town.upkeep;
+  const catchUp = async () => {
+    setBusy(true);
+    try { onChanged(await requestTownUpkeep(transport)); }
+    catch (reason) { onError(errorText(reason)); }
+    finally { setBusy(false); }
+  };
+  const state = up.service !== "running"
+    ? t("town.upkeepStopped", { defaultValue: "The upkeep service isn't running, so nothing is reviewed or curated. On the host: systemctl --user start babo-upkeep" })
+    : up.running ? t("town.upkeepWorking", { defaultValue: "Working now." })
+      : up.waiting.length === 0 ? t("town.upkeepIdle", { defaultValue: "Nothing is waiting." })
+        : up.waiting_for ? t("town.upkeepWaiting", { defaultValue: "Waiting, because {{why}}.", why: up.waiting_for })
+          : t("town.upkeepStarting", { defaultValue: "Starting shortly." });
+  return <>
+    <h2 className="settings-list-inset mt-2 text-[13px] font-medium text-muted-foreground">{t("town.upkeep", { defaultValue: "Upkeep" })}</h2>
+    <SettingsGroup>
+      <div className="settings-list-row flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+        <span className="min-w-[14rem] flex-1">
+          <span className="block text-[13px]">{state}</span>
+          {up.waiting.length > 0 && <span className="mt-1 block text-xs text-muted-foreground">{up.waiting.join(" · ")}</span>}
+          <span className="mt-1 block text-xs text-muted-foreground">
+            {t("town.upkeepHow", { defaultValue: "Memory reviews and curation wait until nobody has used the model for {{minutes}} minutes; everything waiting is done in quiet hours ({{hours}}).", minutes: up.wait_minutes, hours: up.quiet_hours })}
+          </span>
+        </span>
+        <Button variant="secondary" disabled={busy || up.catch_up_requested || up.running || up.service !== "running"} onClick={() => void catchUp()}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : up.catch_up_requested ? t("town.catchUpAsked", { defaultValue: "Catch-up requested" }) : t("town.catchUp", { defaultValue: "Catch up now" })}
+        </Button>
+      </div>
+      {town.last_upkeep
+        ? <details className="settings-list-row py-3">
+          <summary className="cursor-pointer text-[13px]">
+            {t("town.lastUpkeep", { defaultValue: "Last upkeep" })}: {town.last_upkeep.pass} · {town.last_upkeep.finished ? t("town.upkeepDone", { defaultValue: "finished" }) : t("town.upkeepUnfinished", { defaultValue: "not finished (it resumes next time)" })}
+          </summary>
+          <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">{town.last_upkeep.log}</pre>
+        </details>
+        : <p className="settings-list-row py-3 text-[13px] text-muted-foreground">{t("town.noUpkeep", { defaultValue: "No upkeep has run yet." })}</p>}
+    </SettingsGroup>
   </>;
 }
 
@@ -404,7 +443,7 @@ function TownSettingsView({ token, transport, onNotice, onError }: {
           <span className="mt-0.5 block text-xs text-muted-foreground">{s.help}</span>
           <span className="mt-0.5 block text-xs text-muted-foreground">{t("town.applies", { defaultValue: "Takes effect {{when}}.", when: s.applies })}</span>
         </span>
-        <Input className="w-40" inputMode={s.kind === "int" ? "numeric" : undefined} placeholder={s.kind === "time" ? "HH:MM" : undefined}
+        <Input className="w-40" inputMode={s.kind === "int" ? "numeric" : undefined} placeholder={s.kind === "hours" ? "HH:MM-HH:MM" : undefined}
           value={draft[s.key] ?? String(s.value)} onChange={(event) => setDraft((current) => ({ ...current, [s.key]: event.target.value }))} />
       </label>)}
     </SettingsGroup>

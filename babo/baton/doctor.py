@@ -164,16 +164,16 @@ def check_backup() -> Check:
     return Check("compaction backup", "PASS" if ok else "FAIL", "hashed backup written and verified")
 
 
-def check_timer() -> Check:
-    cmd = ["systemctl", "--user", "is-enabled", "babo-night.timer"]
+def check_upkeep() -> Check:
+    cmd = ["systemctl", "--user", "is-active", "babo-upkeep.service"]
     if shutil.which("distrobox-host-exec"):
         cmd = ["distrobox-host-exec", *cmd]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        return Check("night timer", "WARN", f"could not ask systemd: {exc}")
+        return Check("upkeep service", "WARN", f"could not ask systemd: {exc}")
     state = (result.stdout or result.stderr).strip()
-    return Check("night timer", "PASS" if state == "enabled" else "FAIL", state or "unknown")
+    return Check("upkeep service", "PASS" if state == "active" else "FAIL", state or "unknown")
 
 
 def check_git(cfg: Config) -> Check:
@@ -209,7 +209,7 @@ async def run_doctor(cfg: Config, *, config_path: Path | None = None, include_ti
         checks += [Check(n, "FAIL", "skipped: the model isn't reachable") for n in ("tool calling", "schema output", "checkpoint turn")]
     checks += [await check_mcp(cfg, config_path), check_index(cfg), check_residents(cfg), check_backup()]
     if include_timer:
-        checks.append(check_timer())
+        checks.append(check_upkeep())
     checks.append(check_git(cfg))
     checks += check_config(cfg)
     return checks
