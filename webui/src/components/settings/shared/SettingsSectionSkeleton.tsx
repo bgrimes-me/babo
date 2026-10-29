@@ -66,7 +66,8 @@ export function SettingsSectionSkeleton({ section, showRestart = false }: { sect
   let content: ReactNode = null;
   if (isCapabilitySection(section)) content = <>
     <div className="settings-section-heading"><Title heading /></div>
-    {[0, 1, 2, 3].map((index) => <SettingsGroup key={index}><Row control={index === 3 ? "switch" : "feature"} /></SettingsGroup>)}
+    {/* BATON: three capability rows; the Dream (memory consolidation) switch is hidden. */}
+    {[0, 1, 2].map((index) => <SettingsGroup key={index}><Row control="feature" /></SettingsGroup>)}
   </>;
   else switch (section) {
     case "notifications":
