@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# squid-01-packages.sh — BOX, SQUID ONLY (uses sudo). Installs Baton's packages in the Arch box.
+# squid-01-packages.sh — BOX, SQUID ONLY (uses sudo). Installs Baton's packages in the town's Arch box (Agent).
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need_box

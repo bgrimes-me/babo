@@ -433,7 +433,7 @@ def init_config(
     slots: int = typer.Option(1, "--slots"),
     town: str = typer.Option("~/baton-town", "--town"),
     bwrap: bool = typer.Option(False, "--bwrap/--no-bwrap", help="Turn on the bwrap shell sandbox"),
-    box: str = typer.Option("arch", "--box"),
+    box: str = typer.Option("Agent", "--box", help="Name of the distrobox the town runs in"),
     config: str | None = _CONFIG_OPT,
 ):
     """Add the town's settings to nanobot's config (backs the old file up first)."""

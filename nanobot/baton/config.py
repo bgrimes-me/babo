@@ -91,7 +91,7 @@ class BatonConfig(Base):
     generated_dir: str = "~/.nanobot/baton"
     git_remote: str = ""  # push after the night commit when set (Squid sets this up)
     # Where nanobot runs: the distrobox name, and nanobot's path inside it ("" = find it).
-    box: str = "arch"
+    box: str = "Agent"
     nanobot_path: str = ""
     model: BatonModelConfig = Field(default_factory=BatonModelConfig)
     memory: BatonMemoryConfig = Field(default_factory=BatonMemoryConfig)
