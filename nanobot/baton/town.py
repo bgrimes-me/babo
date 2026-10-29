@@ -48,6 +48,7 @@ residents/*/.nanobot*/
 commons/projects/
 state/locks/
 state/tmp/
+state/runtime/
 *.pyc
 __pycache__/
 """

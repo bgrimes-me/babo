@@ -14,11 +14,22 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 
+from nanobot.agent.tools.context import current_request_session_key
+from nanobot.baton.checkpoint import CheckpointService
 from nanobot.baton.config import BatonConfig
+from nanobot.baton.events import append_event
+from nanobot.baton.gate import GATED_TOOLS, install_commit_gate
+from nanobot.baton.hooks import MemoryFormation
 from nanobot.baton.registry import Registry, Resident
-from nanobot.baton.tools.core import Toolbox
+from nanobot.baton.tools.core import Toolbox, ToolSpec
 from nanobot.baton.tools.nanobot_adapter import baton_tools
 from nanobot.baton.town import BatonError, Town, find_town_for_workspace
+
+CHECKPOINT_SPEC = ToolSpec(
+    "checkpoint",
+    "Write a checkpoint of your work now, in your own words. Optional note says why.",
+    {"type": "object", "properties": {"note": {"type": "string", "description": "Optional: why now."}}},
+)
 
 if TYPE_CHECKING:
     from nanobot.agent.loop import AgentLoop
@@ -31,6 +42,7 @@ class ResidentRuntime:
     resident: Resident
     config: BatonConfig
     toolbox: Toolbox
+    formation: MemoryFormation
     pruned: list[str] = field(default_factory=list)
 
 
@@ -68,16 +80,49 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
         loop.context.configure(baton_cfg)
 
     toolbox = Toolbox(town, resident_id, baton_cfg.index_file)
-    runtime = ResidentRuntime(town=town, resident=resident, config=baton_cfg, toolbox=toolbox)
+    formation = MemoryFormation(town, resident_id, baton_cfg, CheckpointService(town, resident_id, baton_cfg))
+    runtime = ResidentRuntime(town=town, resident=resident, config=baton_cfg, toolbox=toolbox, formation=formation)
+
+    def checkpoint_tool(note: str | None = None) -> str:
+        session_key = current_request_session_key()
+        formation.mark_due(session_key, "requested")
+        if note:
+            append_event(town, resident_id, session_key, "checkpoint_request", note=note)
+        return "A checkpoint turn will follow this tool call. Write it in your own words."
+
+    toolbox.extra["checkpoint"] = checkpoint_tool
 
     # Tools: Baton's own, then prune upstream's to the office's toolset.
-    for tool in baton_tools(toolbox):
+    for tool in baton_tools(toolbox, {"checkpoint": CHECKPOINT_SPEC}):
         loop.tools.register(tool)
     allowed = set(baton_cfg.toolset_for(resident_id, resident.office))
     for name in list(loop.tools.tool_names):
         if name not in allowed:
             loop.tools.unregister(name)
             runtime.pruned.append(name)
+
+    # Memory formation: the commit gate, the per-turn hook, compaction, session end.
+    for name in GATED_TOOLS:
+        shell = loop.tools.get(name)
+        if shell is not None:
+            install_commit_gate(
+                shell, town=town, resident_id=resident_id,
+                limit=baton_cfg.memory.commit_gate_after_tool_calls, counters=formation.counters,
+            )
+    loop._hook_factories.append(formation.hook_factory)  # pyright: ignore[reportPrivateUsage]
+    from nanobot.baton.compaction import BatonConsolidator
+
+    if isinstance(loop.consolidator, BatonConsolidator):
+        loop.consolidator.formation = formation
+    upstream_aclose = loop.aclose
+
+    async def aclose() -> None:
+        try:
+            await formation.flush()
+        finally:
+            await upstream_aclose()
+
+    loop.aclose = aclose  # type: ignore[method-assign]
     logger.info(
         "Baton: {} attached as {} with tools {}",
         resident_id, resident.office, sorted(loop.tools.tool_names),

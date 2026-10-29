@@ -153,3 +153,65 @@ def mcp(
         _fail(exc)
         return
     asyncio.run(serve(box))
+
+
+@app.command()
+def queue(config: str | None = _CONFIG_OPT):
+    """Run the model queue: the one line every model call in the town waits in."""
+    from nanobot.baton.queue import serve
+
+    cfg = _config(config)
+    console.print(f"Model queue on {cfg.baton.model.queue_host}:{cfg.baton.model.queue_port} -> {cfg.baton.model.upstream}")
+    asyncio.run(serve(cfg.baton.model, cfg.baton.capture_dir))
+
+
+@app.command()
+def context(
+    resident: str = typer.Argument("mayor"),
+    next_message: str | None = typer.Option(None, "--next", help="Assemble the next request for this message instead"),
+    session: str = typer.Option("cli:direct", "--session", help="Session key for --next"),
+    raw: bool = typer.Option(False, "--raw", help="Print the bytes exactly as sent (no pretty-printing)"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Show exactly what the model received (or, with --next, will receive)."""
+    from nanobot.baton.context_view import assemble_next, last_request_text
+
+    try:
+        t, cfg = _town(config)
+        from nanobot.baton.registry import Registry
+
+        Registry(t).require_active(resident)
+        if next_message is None:
+            text = last_request_text(cfg, resident, raw=raw)
+            if text is None:
+                console.print(f"No request from {resident} has passed through the model queue yet. Try --next \"hello\".")
+                raise typer.Exit(1)
+            typer.echo(text)
+        else:
+            typer.echo(asyncio.run(assemble_next(cfg, resident, next_message, session_key=session, raw=raw)))
+    except BatonError as exc:
+        _fail(exc)
+
+
+@app.command("restore-session")
+def restore_session(
+    backup: Path = typer.Argument(..., help="A .pre-compact-*.jsonl backup from a resident's sessions/ folder"),
+    resident: str = typer.Option(..., "--as", help="Resident whose session this is"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Put a pre-compaction backup back into the session store (stop the gateway first)."""
+    from nanobot.baton.compaction import restore_session_backup
+    from nanobot.session.manager import SessionManager
+
+    try:
+        t, cfg = _town(config)
+        from nanobot.baton.registry import Registry
+
+        Registry(t).require_active(resident)
+        data_dir = cfg.runtime_data_dir
+        manager = SessionManager(t.resident_dir(resident), sessions_root=data_dir / "sessions" if data_dir else None)
+        count = restore_session_backup(manager, backup)
+    except BatonError as exc:
+        _fail(exc)
+        return
+    console.print(f"OK: restored {count} messages from {backup.name}")
