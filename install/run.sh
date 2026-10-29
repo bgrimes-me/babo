@@ -24,12 +24,14 @@ echo '```' >> "$log"
 last="$(grep -E '^(OK|FAIL):' "$log" | tail -1 || true)"
 case "$last" in
   OK:*)
-    if [ "${step%.sh}" = "00-recon" ]; then bash "$INSTALL_DIR/report.sh" "$log" || true; fi
+    if [ "${step%.sh}" = "00-recon" ]; then bash "$INSTALL_DIR/report.sh" "$log" | sed 's/^OK:/note:/' || true; fi
     echo "$last"
     ;;
   *)
-    bash "$INSTALL_DIR/report.sh" "$log" || echo "note: could not push the report; it is saved at $log"
-    echo "FAIL: step ${step%.sh} failed. The report is saved at $log and pushed to the reports branch. Stop here and tell Squid."
+    where="saved at $log"
+    if pushed="$(bash "$INSTALL_DIR/report.sh" "$log" 2>&1)"; then where="$where and pushed to the reports branch"; fi
+    printf '%s\n' "$pushed" | sed 's/^OK:/note:/'
+    echo "FAIL: step ${step%.sh} failed. The report is $where. Stop here and tell Squid."
     exit 1
     ;;
 esac

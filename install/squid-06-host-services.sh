@@ -5,7 +5,16 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need_host
 src="$INSTALL_DIR/out/systemd"
-ls "$src"/baton-*.service >/dev/null 2>&1 || fail "no units in $src; run 05-units.sh in the box first"
+if ! ls "$src"/baton-*.service >/dev/null 2>&1; then
+  # The box may have a home of its own; 05-units.sh wrote the units into the box's ~/nanobot.
+  boxhome="$(distrobox enter "$BOX" -- sh -c 'printf %s "$HOME"' 2>/dev/null | tail -1 || true)"
+  if [ -n "$boxhome" ] && ls "$boxhome/nanobot/install/out/systemd"/baton-*.service >/dev/null 2>&1; then
+    src="$boxhome/nanobot/install/out/systemd"
+    echo "using the units the box wrote: $src"
+  else
+    fail "no units in $src${boxhome:+ or $boxhome/nanobot/install/out/systemd}; run 05-units.sh in the box ($BOX) first"
+  fi
+fi
 dest="$HOME/.config/systemd/user"
 mkdir -p "$dest"
 cp "$src"/baton-* "$dest"/
