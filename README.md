@@ -26,6 +26,7 @@ Everyday commands:
 | `babo webui` | Open the web interface |
 | `babo residents` | Who lives in the town |
 | `babo review` | Decide on tools, proposals, founding requests and flags |
+| `babo profile` | What each agent may do (tools, web, MCP servers, memory timing) |
 | `babo doctor` | Check that every part of the town works |
 | `babo night` | Run the night cycle now |
 

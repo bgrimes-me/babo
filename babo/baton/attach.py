@@ -48,6 +48,8 @@ CHECKPOINT_SPEC = ToolSpec(
 
 if TYPE_CHECKING:
     from babo.agent.loop import AgentLoop
+    from babo.agent.tools.base import Tool
+    from babo.baton.profiles import Profile
     from babo.config.schema import Config
 
 
@@ -94,6 +96,12 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
     if isinstance(loop.context, BatonContextBuilder):
         loop.context.configure(baton_cfg)
 
+    from babo.baton import profiles
+
+    profile = profiles.load(town, baton_cfg, resident_id, resident.office)
+    memory = {k: v for k, v in profile.memory.model_dump().items() if v is not None}
+    if memory:
+        baton_cfg = baton_cfg.model_copy(update={"memory": baton_cfg.memory.model_copy(update=memory)})
     toolbox = Toolbox(town, resident_id, baton_cfg.index_file)
     formation = MemoryFormation(town, resident_id, baton_cfg, CheckpointService(town, resident_id, baton_cfg))
     runtime = ResidentRuntime(town=town, resident=resident, config=baton_cfg, toolbox=toolbox, formation=formation)
@@ -109,12 +117,12 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
     if resident.office in VISIT_SPEC.offices:
         toolbox.extra["visit"] = make_visit(config, town, resident_id)
 
-    # Tools: Baton's own, then prune upstream's to the office's toolset.
+    # Tools: Baton's own, then prune upstream's to what the profile allows.
     for tool in baton_tools(toolbox, {"checkpoint": CHECKPOINT_SPEC, "visit": VISIT_SPEC}):
         loop.tools.register(tool)
-    allowed = set(baton_cfg.toolset_for(resident_id, resident.office))
+    allowed = profiles.harness_tools(profile, baton_cfg, resident_id, resident.office)
     for name in list(loop.tools.tool_names):
-        if name not in allowed:
+        if name not in allowed and not profiles.mcp_permitted(profile, name):
             loop.tools.unregister(name)
             runtime.pruned.append(name)
 
@@ -124,6 +132,8 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
     for tool in active_commons_tools(town):
         if not loop.tools.has(tool.name):
             loop.tools.register(tool)
+            allowed.add(tool.name)
+    _guard_registry(loop, allowed, profile)
     if len(loop.tools.tool_names) > MAX_TOOLS_WARNING:
         logger.warning("Baton: {} has {} tools; a small model chooses better from about 12", resident_id, len(loop.tools.tool_names))
     from babo.baton.growth import ensure_project_clones
@@ -162,6 +172,21 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
     )
     loop.baton = runtime  # type: ignore[attr-defined]
     return runtime
+
+
+def _guard_registry(loop: AgentLoop, allowed: set[str], profile: Profile) -> None:
+    """Tools registered later (MCP servers connect lazily) must pass the profile too."""
+    from babo.baton import profiles
+
+    register = loop.tools.register
+
+    def guarded(tool: Tool) -> None:
+        if tool.name in allowed or profiles.mcp_permitted(profile, tool.name):
+            register(tool)
+        else:
+            logger.debug("Baton: {} is not in this resident's profile; not registered", tool.name)
+
+    loop.tools.register = guarded  # type: ignore[method-assign]
 
 
 def make_visit(config: Config, town: Town, visitor: str):

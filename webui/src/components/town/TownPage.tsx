@@ -11,7 +11,9 @@ import {
   decideTownItem,
   fetchTown,
   fetchTownReview,
+  fetchTownProfiles,
   fetchTownSettings,
+  updateTownProfile,
   updateTownSettings,
   leaveTownNote,
   nameTown,
@@ -19,14 +21,16 @@ import {
   type TownChange,
   type TownDecisionKind,
   type TownDoctorReport,
+  type TownLevel,
   type TownOverview,
+  type TownProfile,
   type TownReview,
   type TownSetting,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import "./town.css";
 
-type TownTab = "town" | "review" | "doctor" | "settings";
+type TownTab = "town" | "review" | "profiles" | "doctor" | "settings";
 
 function errorText(reason: unknown): string {
   return reason instanceof Error && reason.message ? reason.message : String(reason);
@@ -38,8 +42,8 @@ function when(value: string): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-/** The town: who lives here, what waits for Squid, and whether everything works.
- *  The same data and decisions as `babo town`, `babo review`, `babo note` and `babo doctor`. */
+/** The town: who lives here, what waits for Squid, what each agent may do, and whether everything works.
+ *  The same data and decisions as `babo town`, `babo review`, `babo note`, `babo profile` and `babo doctor`. */
 export function TownPage({ mainNavigationExpanded = false, hostChromeInset = false, onBackToChat }: {
   mainNavigationExpanded?: boolean;
   hostChromeInset?: boolean;
@@ -94,6 +98,7 @@ export function TownPage({ mainNavigationExpanded = false, hostChromeInset = fal
             options={[
               { value: "town", label: t("town.tab.town", { defaultValue: "Residents" }) },
               { value: "review", label: waiting ? t("town.tab.reviewWaiting", { defaultValue: "Review ({{count}})", count: waiting }) : t("town.tab.review", { defaultValue: "Review" }) },
+              { value: "profiles", label: t("town.tab.profiles", { defaultValue: "Profiles" }) },
               { value: "doctor", label: t("town.tab.doctor", { defaultValue: "Doctor" }) },
               { value: "settings", label: t("town.tab.settings", { defaultValue: "Settings" }) },
             ]} />
@@ -101,6 +106,7 @@ export function TownPage({ mainNavigationExpanded = false, hostChromeInset = fal
           {error && <p role="alert" className="settings-list-inset flex items-center gap-2 text-[13px] text-destructive"><AlertCircle className="h-4 w-4 shrink-0" />{error}</p>}
           {tab === "town" && <ResidentsView town={town} onChanged={changed} onError={setError} transport={client} />}
           {tab === "review" && <ReviewView token={getToken} transport={client} onChanged={changed} onError={setError} />}
+          {tab === "profiles" && <ProfilesView token={getToken} transport={client} onNotice={(message) => { setNotice(message); setError(""); }} onError={setError} />}
           {tab === "doctor" && <DoctorView token={getToken} />}
           {tab === "settings" && <TownSettingsView token={getToken} transport={client} onNotice={(message) => { setNotice(message); setError(""); }} onError={setError} />}
         </div>
@@ -408,4 +414,99 @@ function TownSettingsView({ token, transport, onNotice, onError }: {
       </Button>
     </div>
   </>;
+}
+
+function ProfilesView({ token, transport, onNotice, onError }: {
+  token: () => string;
+  transport: Parameters<typeof updateTownProfile>[0];
+  onNotice: (message: string) => void;
+  onError: (message: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [profiles, setProfiles] = useState<TownProfile[] | null>(null);
+  const [busy, setBusy] = useState("");
+  useEffect(() => {
+    fetchTownProfiles(token()).then((result) => setProfiles(result.profiles)).catch((reason) => onError(errorText(reason)));
+  }, [onError, token]);
+  if (!profiles) return <p className="settings-list-inset text-[13px] text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{t("town.loading", { defaultValue: "Loading the town…" })}</p>;
+
+  const change = async (agent: string, changes: Record<string, string | string[]>) => {
+    setBusy(agent);
+    try {
+      const result = await updateTownProfile(transport, agent, changes);
+      setProfiles(result.profiles); onNotice(result.message);
+    } catch (reason) { onError(errorText(reason)); }
+    finally { setBusy(""); }
+  };
+  return <>
+    <p className="settings-list-inset text-[13px] leading-6 text-muted-foreground">
+      {t("town.profilesIntro", { defaultValue: "What each agent may do. Keys and providers are set once in Settings; a profile decides which agents may use them. The same profiles are available with `babo profile`." })}
+    </p>
+    {profiles.map((profile) => <ProfileCard key={profile.agent} profile={profile} busy={busy === profile.agent}
+      onChange={(changes) => void change(profile.agent, changes)} />)}
+  </>;
+}
+
+function ProfileCard({ profile, busy, onChange }: {
+  profile: TownProfile;
+  busy: boolean;
+  onChange: (changes: Record<string, string | string[]>) => void;
+}) {
+  const { t } = useTranslation();
+  const template = profile.agent === "_new-residents";
+  const [model, setModel] = useState(profile.model);
+  const [memory, setMemory] = useState<Record<string, string>>({});
+  useEffect(() => { setModel(profile.model); setMemory({}); }, [profile]);
+  const memoryChanges = Object.fromEntries(Object.entries(memory).filter(([key, value]) =>
+    value !== String(profile.memory[key as keyof TownProfile["memory"]] ?? "")).map(([key, value]) => [`memory.${key}`, value || "default"]));
+  const textChanges: Record<string, string> = { ...memoryChanges, ...(!profile.main && model !== profile.model ? { model } : {}) };
+
+  const title = profile.main
+    ? t("town.profileMayor", { defaultValue: "Mayor" })
+    : template ? t("town.profileNew", { defaultValue: "New residents" }) : `${profile.agent} · ${profile.office}`;
+  const subtitle = profile.main
+    ? t("town.profileMayorHelp", { defaultValue: "Babo's main agent. The same profile applies to every Mayor session, in the web interface, the terminal and chat apps. The Mayor uses Babo's model, set in Settings › Models." })
+    : template ? t("town.profileNewHelp", { defaultValue: "What a newly founded resident starts with. Changing it doesn't change residents who already live here." })
+      : t("town.profileResidentHelp", { defaultValue: "A resident. Its sessions start from this profile." });
+  return <section aria-label={title} className="mt-2">
+    <h2 className="settings-list-inset flex items-center gap-2 text-[13px] font-medium text-foreground">
+      {title}
+      {profile.main && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{t("town.mainAgent", { defaultValue: "Main agent" })}</span>}
+      {busy && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+    </h2>
+    <p className="settings-list-inset mb-1 text-xs text-muted-foreground">{subtitle}</p>
+    <SettingsGroup>
+      {profile.capabilities.map((cap) => <div key={cap.key} className="settings-list-row flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+        <span className="min-w-[14rem] flex-1">
+          <span className="block text-[14px] font-medium">{cap.label}</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">{cap.help}</span>
+        </span>
+        <SegmentedControl<TownLevel> mode="radio" value={cap.level} ariaLabel={`${title}: ${cap.label}`}
+          onChange={(level) => { if (!busy && level !== cap.level) onChange({ [cap.key]: level }); }}
+          options={cap.levels.map((level) => ({ value: level, label: t(`town.level.${level}`, { defaultValue: { allow: "Allow", ask: "Ask", deny: "Deny" }[level] }) }))} />
+      </div>)}
+      <div className="settings-list-row py-3">
+        <span className="block text-[14px] font-medium">{t("town.mcpServers", { defaultValue: "MCP servers" })}</span>
+        {profile.mcp_known.length === 0
+          ? <span className="mt-0.5 block text-xs text-muted-foreground">{t("town.mcpNone", { defaultValue: "No MCP servers are set up in Babo yet. Add them in Settings; then choose here who may use them." })}</span>
+          : <span className="mt-2 flex flex-wrap gap-x-5 gap-y-2">{profile.mcp_known.map((name) => <label key={name} className="flex items-center gap-2 text-[13px]">
+            <input type="checkbox" disabled={busy} checked={profile.mcp.includes(name)}
+              onChange={(event) => onChange({ mcp: event.target.checked ? [...profile.mcp, name] : profile.mcp.filter((n) => n !== name) })} />
+            {name}
+          </label>)}</span>}
+      </div>
+      <form className="settings-list-row flex flex-wrap items-end gap-x-4 gap-y-3 py-3" onSubmit={(event) => { event.preventDefault(); if (Object.keys(textChanges).length) onChange(textChanges); }}>
+        {!profile.main && <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+          {t("town.profileModel", { defaultValue: "Model (used in opencode)" })}
+          <Input className="w-56" placeholder={t("town.babodefault", { defaultValue: "Babo default" })} value={model} onChange={(event) => setModel(event.target.value)} />
+        </label>}
+        {(["checkpoint_every_tool_calls", "idle_minutes"] as const).map((key) => <label key={key} className="flex flex-col gap-1 text-xs text-muted-foreground">
+          {key === "idle_minutes" ? t("town.profileIdle", { defaultValue: "Checkpoint after … quiet minutes" }) : t("town.profileEvery", { defaultValue: "Checkpoint every … tool calls" })}
+          <Input className="w-40" inputMode="numeric" placeholder={`${profile.memory_defaults[key]} (${t("town.babowide", { defaultValue: "Babo-wide" })})`}
+            value={memory[key] ?? String(profile.memory[key] ?? "")} onChange={(event) => setMemory((current) => ({ ...current, [key]: event.target.value }))} />
+        </label>)}
+        <Button type="submit" variant="secondary" disabled={busy || Object.keys(textChanges).length === 0}>{t("town.save", { defaultValue: "Save" })}</Button>
+      </form>
+    </SettingsGroup>
+  </section>;
 }

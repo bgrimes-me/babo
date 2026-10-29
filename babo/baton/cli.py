@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import typer
 from rich.console import Console
@@ -453,6 +453,60 @@ def init_config(
         console.print(f"Backed up the previous config to {backup}")
     _config(str(written))  # must load and validate
     console.print(f"OK: config written to {written}")
+
+
+@app.command()
+def profile(
+    agent: str | None = typer.Argument(None, help="mayor, a resident, or new-residents (the template new residents start from)"),
+    key: str | None = typer.Argument(None, help="What to change, e.g. shell, web_search, mcp, model, memory.idle_minutes"),
+    value: str | None = typer.Argument(None, help="allow, ask or deny; for mcp a comma-separated list of servers"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Show what each agent may do, or change one agent's profile (the same as the web interface's Town › Profiles)."""
+    from babo.baton import profiles, views
+
+    town, cfg = _town(config)
+    mcp_known = sorted(cfg.tools.mcp_servers)
+    try:
+        if key is None:
+            rows = views.profiles_overview(town, cfg.baton, mcp_known)
+            if agent is not None:
+                rows = [r for r in rows if r["agent"] == views.profile_agent(agent)]
+                if not rows:
+                    raise BatonError(f"No active resident '{agent}'.")
+            for row in rows:
+                _print_profile(row, profiles)
+            console.print("Change one with: babo profile <agent> <setting> <value>   e.g. babo profile archivist web_search allow")
+            return
+        if agent is None or value is None:
+            raise BatonError("Give an agent, a setting and a value, e.g. babo profile archivist web_search allow")
+        message = views.update_profile(town, cfg.baton, agent, {key: value}, mcp_known)
+    except BatonError as exc:
+        _fail(exc)
+        return
+    console.print(message)
+    console.print("OK: profile saved")
+
+
+def _print_profile(row: dict[str, Any], profiles: Any) -> None:
+    if row["main"]:
+        title = "mayor — the main agent (same profile in every session; uses Babo's model)"
+    elif row["agent"] == profiles.NEW_RESIDENTS:
+        title = "new-residents — what a newly founded resident starts with"
+    else:
+        title = f"{row['agent']} ({row['office']})"
+    table = Table("setting", "value", "what it means", title=title, title_justify="left")
+    for cap in row["capabilities"]:
+        table.add_row(f"{cap['label']}\n[dim]{cap['key']}[/dim]", cap["level"], cap["help"])
+    table.add_row("MCP servers\n[dim]mcp[/dim]", ", ".join(row["mcp"]) or "none",
+                  f"Known in Babo: {', '.join(row['mcp_known']) or 'none'}")
+    if not row["main"]:
+        table.add_row("Model\n[dim]model[/dim]", row["model"] or "Babo default", "Used when the resident runs in opencode.")
+    for name, default in row["memory_defaults"].items():
+        own = row["memory"][name]
+        table.add_row(f"[dim]memory.{name}[/dim]", str(own) if own is not None else f"{default} (Babo-wide)",
+                      "Memory timing for this agent; 'default' goes back to Babo-wide.")
+    console.print(table)
 
 
 @app.command()
