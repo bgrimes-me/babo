@@ -191,13 +191,12 @@ def test_runtime_payload_matches_shared_catalogue_contract():
     assert set(runtime_config_payload(Config())) == set(paths)
 
 
-def test_disabling_memory_consolidation_preserves_other_memory_settings():
+def test_memory_consolidation_switch_is_not_editable():
+    # BATON: Dream is off and hidden in this fork; the WebUI cannot turn it on.
     config = Config()
-    before = config.agents.defaults.model_dump()
-    assert update_runtime_config(config, {"agents.defaults.dream.enabled": False}, local_browser=True)
-    after = config.agents.defaults.model_dump()
-    before["dream"]["enabled"] = False
-    assert after == before
+    assert config.agents.defaults.dream.enabled is False
+    with pytest.raises(WebUISettingsError, match="Unknown runtime setting"):
+        update_runtime_config(config, {"agents.defaults.dream.enabled": True}, local_browser=True)
 
 
 @pytest.mark.parametrize("backend", ["bwrap", "seatbelt"])

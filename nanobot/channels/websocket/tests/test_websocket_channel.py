@@ -550,7 +550,7 @@ async def test_temporary_chat_is_transient_and_discarded(history, bus, tmp_path)
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("content", [
-    "/goal private", "/trigger later", "/dream", "/NEW@nanobot", "/__shell pwd",
+    "/goal private", "/trigger later", "/history 5", "/NEW@nanobot"  # BATON: /dream is hidden, "/__shell pwd",
 ])
 async def test_temporary_chat_rejects_persistent_commands(bus, tmp_path, content) -> None:
     sessions = SessionManager(tmp_path)
