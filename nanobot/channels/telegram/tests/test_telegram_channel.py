@@ -378,10 +378,8 @@ async def test_start_creates_separate_pools_with_proxy(monkeypatch) -> None:
     assert any(cmd.command == "status" for cmd in app.bot.commands)
     assert any(cmd.command == "history" for cmd in app.bot.commands)
     assert any(cmd.command == "skill" for cmd in app.bot.commands)
-    assert any(cmd.command == "dream" for cmd in app.bot.commands)
-    assert any(cmd.command == "dream_log" for cmd in app.bot.commands)
-    assert any(cmd.command == "dream_restore" for cmd in app.bot.commands)
-    assert any(cmd.command == "dream_prompt" for cmd in app.bot.commands)
+    # BATON: Dream is off and hidden, so its commands are not in Telegram's menu.
+    assert not any(cmd.command.startswith("dream") for cmd in app.bot.commands)
     assert any(cmd.command == "evaluator_prompt" for cmd in app.bot.commands)
     assert any(cmd.command == "compact" for cmd in app.bot.commands)
 
@@ -2593,16 +2591,13 @@ async def test_on_help_includes_restart_command() -> None:
     assert "/restart" in help_text
     assert "/status" in help_text
     assert "/skill" in help_text
-    assert "/dream" in help_text
-    assert "/dream_log" in help_text
-    assert "/dream_prompt" in help_text
+    assert "/dream" not in help_text  # BATON: Dream is hidden
     assert "/evaluator_prompt" in help_text
     assert "/compact" in help_text
     assert "/goal" in help_text
     assert "/trigger" in help_text
     assert "/pairing" in help_text
     assert "/model" in help_text
-    assert "/dream_restore" in help_text
 
 
 @pytest.mark.asyncio
