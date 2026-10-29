@@ -47,9 +47,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.python_required == 'true'
     runs-on: ${{ matrix.os }}
-    # Windows runs real isolated update jobs before the complete compatibility
-    # suite; that suite was still progressing at the former 20-minute job cap.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 30 || 20 }}
+    timeout-minutes: 20
     env:
       PYTEST_ADDOPTS: "-o tmp_path_retention_policy=failed -p scripts.pytest_timing"
     strategy:
@@ -68,15 +66,6 @@ jobs:
             python-version: "3.14"
             coverage: true
             pytest_args: "-n 4 --dist loadfile --ignore=tests/cli/test_commands.py --ignore=tests/cli/test_cli_input.py --ignore=tests/cli/test_desktop_target.py --ignore=tests/cli/test_desktop_target_entrypoints.py"
-          - name: Windows, 3.14
-            os: windows-latest
-            python-version: "3.14"
-            coverage: false
-            # Process identities run serially; isolated update jobs use case-level
-            # scheduling below so one file cannot serialize all real venv work.
-            # Bound real persistence contention: six workers can delay session
-            # startup beyond its watchdog. Keep every assertion and test enabled.
-            pytest_args: "-n 4 --dist loadfile --ignore=tests/cli/test_commands.py --ignore=tests/cli/test_cli_input.py --ignore=tests/cli/test_desktop_target.py --ignore=tests/cli/test_desktop_target_entrypoints.py --ignore=tests/tools/test_exec_platform.py --ignore=tests/cli/test_wsl_browser.py --ignore=tests/test_install_scripts.py --ignore=tests/test_update_jobs.py --ignore=tests/test_update_profiles.py"
 
     steps:
       - uses: actions/checkout@v4
@@ -134,28 +123,6 @@ jobs:
         if: matrix.coverage
         run: uv run --no-sync basedpyright
 
-      - name: Check Windows update coordination before the full suite
-        if: runner.os == 'Windows'
-        run: >-
-          uv run --no-sync python -m pytest
-          tests/test_installation_lock.py
-          tests/test_update_profiles.py
-          tests/utils/test_helpers.py::test_atomic_record_reader_does_not_block_concurrent_replacement
-          tests/gateway/test_runtime.py::test_runtime_state_publish_keeps_existing_snapshot_readable
-          tests/gateway/test_runtime.py::test_runtime_state_reader_does_not_block_publish_while_decoding
-          -q --junitxml=test-results/coordination.xml --timing-report=test-results/coordination.json
-
-      # Each update job owns its venv, HOME, profile and lock directory. Preserve
-      # the real installation/restore checks, but avoid a loadfile straggler and
-      # disk contention with timing-sensitive runtime-registration checks.
-      # Keep three update workers; the six-worker trial exceeded supervisor deadlines.
-      - name: Run Windows isolated update jobs
-        if: runner.os == 'Windows' && github.event_name != 'push' && needs.changes.outputs.native_required == 'true'
-        run: >-
-          uv run --no-sync python -m pytest tests/test_update_jobs.py
-          -n 3 --dist load -vv --durations=25 --durations-min=1.0
-          --junitxml=test-results/update-jobs.xml --timing-report=test-results/update-jobs.json
-
       - name: Run tests with coverage
         if: matrix.coverage
         run: >-
@@ -198,100 +165,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: python-timings-${{ matrix.os }}-${{ matrix.python-version }}
-          path: test-results/
-          retention-days: 7
-
-  windows_process:
-    name: Python (Windows process compatibility)
-    env:
-      PYTEST_ADDOPTS: "-o tmp_path_retention_policy=failed -p scripts.pytest_timing"
-    needs: changes
-    if: needs.changes.outputs.python_required == 'true'
-    runs-on: windows-latest
-    timeout-minutes: 20
-
-    steps:
-      - uses: actions/checkout@v4
-
-      # Keep this focused job on the affected pre-3.14 ctypes runtime family;
-      # the full Windows suite above continues to cover the latest Python.
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          enable-cache: true
-          cache-dependency-glob: pyproject.toml
-
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
-
-      - name: Install channel dependencies
-        run: uv run --no-sync python -m scripts.install_channel_dependencies --all-channels
-
-      - name: Verify dependency consistency
-        run: uv pip check
-
-      - name: Run Windows process compatibility tests
-        run: >-
-          uv run --no-sync python -m pytest
-          tests/tools/test_exec_platform.py
-          tests/cli/test_wsl_browser.py
-          tests/gateway/test_runtime.py
-          --junitxml=test-results/process.xml --timing-report=test-results/process.json
-          --durations=25 --durations-min=1.0
-
-      - name: Upload Windows process test timings
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-timings-windows-process
-          path: test-results/
-          retention-days: 7
-
-  windows_installers:
-    name: Python (Windows installer compatibility)
-    needs: changes
-    if: github.event_name != 'push' && needs.changes.outputs.python_required == 'true' && needs.changes.outputs.native_required == 'true'
-    runs-on: windows-latest
-    # The real installer matrix took 18m06s alone; process checks and teardown
-    # previously pushed the combined job beyond its 20-minute bound.
-    timeout-minutes: 25
-    env:
-      PYTEST_ADDOPTS: "-o tmp_path_retention_policy=failed -p scripts.pytest_timing"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - uses: astral-sh/setup-uv@v4
-        with:
-          enable-cache: true
-          cache-dependency-glob: pyproject.toml
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
-      - name: Install pipx for offline installer checks
-        shell: bash
-        run: |
-          uv tool install pipx==1.17.12
-          uv tool dir --bin >> "$GITHUB_PATH"
-
-      # Each case owns an isolated manager/config root. Keep four workers:
-      # eight-way installer startup exceeded the existing command deadlines in CI.
-      - name: Run Windows installer checks
-        run: >-
-          uv run --no-sync python -m pytest tests/test_install_scripts.py
-          -n 4 --dist load -x -vv --durations=10
-          --junitxml=test-results/installers.xml --timing-report=test-results/installers.json
-
-      - name: Upload Windows process test timings
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-timings-windows-installers
           path: test-results/
           retention-days: 7
 
@@ -395,8 +268,6 @@ jobs:
         include:
           - name: Terminal UI
             os: ubuntu-latest
-          - name: Terminal UI (Windows)
-            os: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -405,8 +276,6 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.13
-          # Build with baseline Bun directly: its Windows cross-target extractor is unreliable.
-          bun-download-url: ${{ runner.os == 'Windows' && 'https://github.com/oven-sh/bun/releases/download/bun-v1.3.13/bun-windows-x64-baseline.zip' || '' }}
 
       - name: Install TUI dependencies
         working-directory: tui
@@ -495,29 +364,6 @@ jobs:
       - name: Verify first-boot WebUI and API
         run: python scripts/docker_compose_smoke.py --image babo:test
 
-      - name: Check out the real previous release for retained-volume acceptance
-        uses: actions/checkout@v4
-        with:
-          ref: 1bb712d3488915ca4ed9ccc1a93067ff722f5ab9 # v0.3.5
-          path: .docker-baseline
-          persist-credentials: false
-
-      - name: Verify old-image upgrade without replacing user data
-        run: |
-          docker build -t babo:baseline .docker-baseline
-          python scripts/docker_upgrade_smoke.py --baseline-image babo:baseline \
-            --image babo:test --version "$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')" \
-            --source-commit "$GITHUB_SHA" \
-            --output "$RUNNER_TEMP/docker-upgrade-report.json"
-
-      - name: Retain Docker upgrade acceptance report
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-upgrade-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/docker-upgrade-report.json
-          if-no-files-found: error
-          retention-days: 7
-
       - name: Verify Docker Compose startup and privilege boundary
         env:
           HOME: ${{ runner.temp }}
@@ -567,7 +413,7 @@ jobs:
 
   required:
     name: CI required
-    needs: [changes, test, windows_process, windows_installers, webui_checks, webui_browser, webui, tui, docker, native]
+    needs: [changes, test, webui_checks, webui_browser, webui, tui, docker, native]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2

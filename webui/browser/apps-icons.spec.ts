@@ -7,7 +7,7 @@ for (const theme of ["light", "dark"]) {
       await page.goto(`/browser/fixture.html?case=apps&logos=${logos}`);
       await page.locator("html").evaluate((element, dark) => element.classList.toggle("dark", dark), theme === "dark");
 
-      for (const initials of ["NW", "TM"]) {
+      for (const initials of ["BW", "TM"]) {
         const icon = page.getByText(initials, { exact: true });
         await expect(icon).toBeVisible();
         const contrast = await icon.evaluate((element) => {
