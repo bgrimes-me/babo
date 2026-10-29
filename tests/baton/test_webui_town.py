@@ -1,0 +1,85 @@
+"""The web interface's town routes: the same views and decisions as the CLI."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+from websockets.datastructures import Headers
+from websockets.http11 import Request as WsRequest
+
+from babo.baton import growth
+from babo.baton.inbox import unread
+from babo.baton.town import Town
+from babo.webui.town_api import TownRoutes
+
+
+def _routes(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch, *, authorized: bool = True) -> TownRoutes:
+    from babo.config.schema import Config
+
+    cfg = Config.model_validate({"baton": {"town": str(town.root), "indexPath": str(index_path)}})
+    monkeypatch.setattr("babo.config.loader.load_config", lambda *_a, **_k: cfg)
+    payloads: dict[int, dict[str, Any]] = {}
+
+    def payload(request: WsRequest) -> dict[str, Any] | None:
+        return payloads.get(id(request))
+
+    routes = TownRoutes(authorized=lambda _r: authorized, payload=payload)
+    routes.payloads = payloads  # type: ignore[attr-defined]
+    return routes
+
+
+async def _call(routes: TownRoutes, path: str, body: dict[str, Any] | None = None) -> tuple[int, Any]:
+    request = WsRequest(path, Headers())
+    if body is not None:
+        routes.payloads[id(request)] = body  # type: ignore[attr-defined]
+    response = await routes.dispatch(request, path)
+    assert response is not None
+    text = response.body.decode() if response.body else ""
+    try:
+        return response.status_code, json.loads(text)
+    except ValueError:
+        return response.status_code, text
+
+
+async def test_overview_and_review_match_the_town(town: Town, index_path: Path, box, monkeypatch: pytest.MonkeyPatch) -> None:
+    routes = _routes(town, index_path, monkeypatch)
+    box("mayor").propose_change("Name the town", "why", "what", town_name="Lantern Hill")
+    status, overview = await _call(routes, "/api/town")
+    assert status == 200
+    assert sorted(r["id"] for r in overview["residents"]) == ["archivist", "inspector", "mayor"]
+    assert overview["pending"]["proposals"] == 1 and overview["name"] == ""
+    status, review = await _call(routes, "/api/town/review")
+    assert status == 200 and review["proposals"][0]["town_name"] == "Lantern Hill"
+
+
+async def test_deciding_from_the_web_names_the_town_and_tells_the_author(town: Town, index_path: Path, box, monkeypatch: pytest.MonkeyPatch) -> None:
+    routes = _routes(town, index_path, monkeypatch)
+    box("mayor").propose_change("Name the town", "why", "what", town_name="Lantern Hill")
+    item = growth.open_proposals(town)[0].path.name
+    status, result = await _call(routes, "/api/town/decide", {"kind": "proposal", "id": item, "yes": True, "reason": "lovely"})
+    assert status == 200, result
+    assert town.name == "Lantern Hill" and result["town"]["name"] == "Lantern Hill"
+    assert any("lovely" in i.body for i in unread(town, "mayor"))
+
+
+async def test_notes_and_refusals(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    routes = _routes(town, index_path, monkeypatch)
+    status, _ = await _call(routes, "/api/town/note", {"resident": "archivist", "text": "Thanks!"})
+    assert status == 200 and [i.sender for i in unread(town, "archivist")] == ["squid"]
+    status, text = await _call(routes, "/api/town/decide", {"kind": "proposal", "id": "../../CHARTER.md", "yes": True, "reason": "x"})
+    assert status == 400
+    status, _ = await _call(routes, "/api/town/decide", {"kind": "nonsense", "id": "x", "yes": True, "reason": "x"})
+    assert status == 400
+    # A mutation path reached as a plain HTTP request (no WebUI payload) changes nothing.
+    status, _ = await _call(routes, "/api/town/name")
+    assert status == 405 and town.name == ""
+
+
+async def test_unauthorized_requests_are_refused(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    routes = _routes(town, index_path, monkeypatch, authorized=False)
+    status, _ = await _call(routes, "/api/town")
+    assert status == 401
+    assert await routes.dispatch(WsRequest("/api/other", Headers()), "/api/other") is None

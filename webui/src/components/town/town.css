@@ -1,0 +1,15 @@
+/* Proposals and requests are read inline in review cards: smaller than chat prose. */
+.town-markdown {
+  font-size: 13px;
+  line-height: 1.55;
+}
+.town-markdown :is(p, li) {
+  font-size: 13px;
+}
+/* The chat's markdown sets heading sizes with utility classes; review cards keep them small. */
+.town-markdown .markdown-content :is(h1, h2, h3, h4) {
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+  font-weight: 600;
+  margin-block: 0.5rem 0.25rem !important;
+}

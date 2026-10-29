@@ -1536,3 +1536,81 @@ export function starPromptAction(
 ): Promise<{ show: boolean }> {
   return mutation<{ show: boolean }>(transport, `star_prompt.${action}`);
 }
+
+// -- The town ------------------------------------------------------------------
+// Same data and decisions as `babo town`, `babo review` and `babo note`.
+
+export interface TownResident {
+  id: string;
+  name: string;
+  office: string;
+  status: string;
+  founded: string;
+  last_active: string;
+  unread: number;
+  flags: number;
+}
+
+export interface TownOverview {
+  name: string;
+  root: string;
+  residents: TownResident[];
+  board: { kind: string; author: string; created: string; text: string }[];
+  pending: { tools: number; proposals: number; founding: number; flags: number };
+  last_night: { night: string; finished: boolean; steps: string[]; log: string } | null;
+}
+
+export type TownDecisionKind = "tool" | "proposal" | "founding" | "flag";
+
+export interface TownReview {
+  tools: {
+    id: string; name: string; author: string; description: string;
+    tested: boolean | null; isolation: string; review: string; code: string; test: string;
+  }[];
+  proposals: {
+    id: string; title: string; author: string; project: string; town_name: string; review: string; body: string;
+  }[];
+  founding: { id: string; office: string; author: string; body: string }[];
+  flags: { id: string; to: string; by: string; at: string; claim: string }[];
+}
+
+export interface TownDoctorReport {
+  ok: boolean;
+  checks: { name: string; status: "PASS" | "WARN" | "FAIL"; detail: string }[];
+}
+
+export interface TownChange {
+  message: string;
+  town: TownOverview;
+}
+
+export function fetchTown(token: string, base: string = ""): Promise<TownOverview> {
+  return request<TownOverview>(`${base}/api/town`, token, undefined, API_READ_TIMEOUT_MS);
+}
+
+export function fetchTownReview(token: string, base: string = ""): Promise<TownReview> {
+  return request<TownReview>(`${base}/api/town/review`, token, undefined, API_READ_TIMEOUT_MS);
+}
+
+/** The doctor talks to the model several times, so it gets a longer timeout. */
+export function runTownDoctor(token: string, base: string = ""): Promise<TownDoctorReport> {
+  return request<TownDoctorReport>(`${base}/api/town/doctor`, token, undefined, 180_000);
+}
+
+export function decideTownItem(
+  transport: WebUIMutationTransport,
+  kind: TownDecisionKind,
+  id: string,
+  yes: boolean,
+  reason: string,
+): Promise<TownChange> {
+  return mutation<TownChange>(transport, "town.decide", { kind, id, yes, reason }, PACKAGE_MUTATION_TIMEOUT_MS);
+}
+
+export function leaveTownNote(transport: WebUIMutationTransport, resident: string, text: string): Promise<TownChange> {
+  return mutation<TownChange>(transport, "town.note", { resident, text });
+}
+
+export function nameTown(transport: WebUIMutationTransport, name: string): Promise<TownChange> {
+  return mutation<TownChange>(transport, "town.name", { name });
+}
