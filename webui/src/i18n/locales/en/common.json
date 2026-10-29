@@ -414,7 +414,7 @@
       "chat": "{{title}}"
     },
     "meta": {
-      "description": "babo web UI — chat with your babo workspace."
+      "description": "Babo — talk with the residents of your town and look after it."
     },
     "pairing": {
       "haveCode": "Already received a code?",

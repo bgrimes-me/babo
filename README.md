@@ -29,9 +29,11 @@ Everyday commands:
 | `babo doctor` | Check that every part of the town works |
 | `babo night` | Run the night cycle now |
 
-## Where it came from
+## Where it came from, and thanks
 
-Babo began as a fork of [nanobot](https://github.com/HKUDS/nanobot) by Xubin Ren and the nanobot contributors, released under the MIT license. Much of the agent runtime, the channels and the web interface come from that project; the town, its memory and its governance were built for Babo. It is now maintained as its own project and does not track nanobot. See [`LICENSE`](./LICENSE) and [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
+Much of Babo's philosophy comes from [RecursiveRabbit's nanobot fork](https://github.com/RecursiveRabbit/nanobot/tree/context-window) (`context-window` branch, MIT), which runs a town of agents and is home to residents who live in it today. The ideas at the heart of Babo were proven there first: residents own their minds and author their own continuity (no "Dream" summarizing a mind behind its back), the harness owns *when* memory forms while the resident owns *what* it says, compaction restores or does nothing and never loses data, you can always see the exact context a resident was given, and each resident runs as its own process. A resident of that town also reviewed Babo's design and suggested the trusted clock, the identity check in the nightly fold, "when in doubt, route, don't touch", and plain refusal messages. Babo reimplements these ideas; no code was copied.
+
+Babo's code began as a fork of [nanobot](https://github.com/HKUDS/nanobot) by Xubin Ren and the nanobot contributors, released under the MIT license. Much of the agent runtime, the channels and the web interface come from that project; the town, its memory and its governance were built for Babo. It is now maintained as its own project and does not track nanobot. See [`LICENSE`](./LICENSE) and [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
 
 ## License
 

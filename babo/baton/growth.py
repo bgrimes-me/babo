@@ -103,6 +103,7 @@ class OpenProposal:
     author: str
     project: str
     review: str
+    town_name: str = ""
 
 
 def open_proposals(town: Town) -> list[OpenProposal]:
@@ -111,7 +112,8 @@ def open_proposals(town: Town) -> list[OpenProposal]:
         meta, _ = _meta(path)
         review_path = path.with_name(path.stem + ".review.md")
         review = _meta(review_path)[1].strip() if review_path.exists() else ""
-        out.append(OpenProposal(path, str(meta.get("title", path.stem)), str(meta.get("author", "?")), str(meta.get("project") or ""), review))
+        out.append(OpenProposal(path, str(meta.get("title", path.stem)), str(meta.get("author", "?")), str(meta.get("project") or ""), review,
+                                 str(meta.get("town_name") or "")))
     return out
 
 
@@ -130,6 +132,10 @@ def decide_proposal(town: Town, path: Path, *, accept: bool, reason: str) -> Pat
     if accept and project:
         bare = promote_project(town, str(meta.get("author", "")), project)
         extra = f"\n\nThe project now lives in the commons ({bare.relative_to(town.root)}); every resident has a working copy in their projects/."
+    new_name = str(meta.get("town_name") or "")
+    if accept and new_name:
+        named = town.set_name(new_name, by=f"proposal by {meta.get('author', '?')}")
+        extra += f"\n\nThe town is now called {named}."
     _tell(town, str(meta.get("author", "")), f"proposal {state}: {meta.get('title', '')}",
           f"Squid {state} your proposal \"{meta.get('title', '')}\".\n\nReason: {reason}{extra}")
     return dest

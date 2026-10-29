@@ -254,11 +254,11 @@ def units(
 @app.command()
 def note(resident: str = typer.Argument(...), text: str = typer.Argument(...), config: str | None = _CONFIG_OPT):
     """Leave a note from Squid in a resident's inbox."""
-    from babo.baton.growth import leave_note
+    from babo.baton import views
 
     try:
         t, _ = _town(config)
-        leave_note(t, resident, text)
+        views.leave_note(t, resident, text)
     except BatonError as exc:
         _fail(exc)
         return
@@ -266,30 +266,33 @@ def note(resident: str = typer.Argument(...), text: str = typer.Argument(...), c
 
 
 @app.command()
-def town(config: str | None = _CONFIG_OPT):
+def town(
+    name: str | None = typer.Option(None, "--name", help="Give the town a name (usually you accept a resident's proposal instead)"),
+    config: str | None = _CONFIG_OPT,
+):
     """Who lives here, when they were last active, unread letters, and the board."""
-    from babo.baton.inbox import unread
-    from babo.baton.notes import first_line, split_frontmatter
-    from babo.baton.registry import Registry
+    from babo.baton import views
 
     try:
         t, _ = _town(config)
+        if name is not None:
+            console.print(views.name_town(t, name))
     except BatonError as exc:
         _fail(exc)
         return
+    view = views.town_overview(t)
+    console.print(f"[bold]{view['name'] or 'This town has no name yet'}[/bold] ({view['root']})\n")
     table = Table("resident", "office", "last active", "unread", "status")
-    for r in Registry(t).all():
-        waiting = unread(t, r.id)
-        flags = sum(1 for i in waiting if i.kind == "flag")
-        table.add_row(r.display, r.office, (r.last_active or "never")[:16].replace("T", " "),
-                      f"{len(waiting)}" + (f" ({flags} flag)" if flags else ""), r.status)
+    for r in view["residents"]:
+        label = f"{r['name']} ({r['id']})" if r["name"] else r["id"]
+        table.add_row(label, r["office"], (r["last_active"] or "never")[:16].replace("T", " "),
+                      f"{r['unread']}" + (f" ({r['flags']} flag)" if r["flags"] else ""), r["status"])
     console.print(table)
-    posts: list[str] = []
-    for path in sorted(t.board.glob("*.md")):
-        meta, body = split_frontmatter(path.read_text(encoding="utf-8"))
-        if meta.get("status", "open") == "open":
-            posts.append(f"- [{meta.get('kind')}] {first_line(body, 90)} ({meta.get('author', '?')})")
+    posts = [f"- [{b['kind']}] {b['text'][:90]} ({b['author']})" for b in view["board"]]
     console.print("\nBoard:\n" + ("\n".join(posts) if posts else "- (nothing open)"))
+    waiting = {k: v for k, v in view["pending"].items() if v}
+    if waiting:
+        console.print("\nWaiting for your review: " + ", ".join(f"{v} {k}" for k, v in waiting.items()) + " (babo review)")
 
 
 def _ask_decision(question: str, yes: str, no: str) -> str:
@@ -312,7 +315,7 @@ def _reason() -> str:
 @app.command()
 def review(config: str | None = _CONFIG_OPT):
     """The weekly check-in: tools, proposals, founding requests, old flags. Plain questions, one at a time."""
-    from babo.baton import gitops, growth
+    from babo.baton import gitops, growth, views
 
     try:
         t, _ = _town(config)
@@ -333,7 +336,7 @@ def review(config: str | None = _CONFIG_OPT):
         if choice == "skip":
             continue
         try:
-            growth.decide_tool(t, tool.name, approve=choice == "yes", reason=_reason())
+            views.decide(t, "tool", tool.name, yes=choice == "yes", reason=_reason(), commit=False)
             decided += 1
         except BatonError as exc:
             console.print(f"[yellow]{exc}[/yellow]")
@@ -341,12 +344,13 @@ def review(config: str | None = _CONFIG_OPT):
     props = growth.open_proposals(t)
     console.print(f"\n[bold]2. Proposals[/bold] ({len(props)})")
     for prop in props:
-        console.print(f"\n• {prop.title} by {prop.author}" + (f" (moves project '{prop.project}' to the commons)" if prop.project else ""))
+        console.print(f"\n• {prop.title} by {prop.author}" + (f" (moves project '{prop.project}' to the commons)" if prop.project else "")
+                      + (f" (names the town '{prop.town_name}')" if prop.town_name else ""))
         console.print(prop.path.read_text(encoding="utf-8").split("---", 2)[-1].strip()[:1500])
         console.print(f"  Inspector's review: {prop.review or '(none yet)'}")
         choice = _ask_decision("Accept this proposal?", "accept", "decline")
         if choice != "skip":
-            growth.decide_proposal(t, prop.path, accept=choice == "yes", reason=_reason())
+            console.print(views.decide(t, "proposal", prop.path.name, yes=choice == "yes", reason=_reason(), commit=False))
             decided += 1
 
     from babo.baton.founding import founding_requests
@@ -360,9 +364,7 @@ def review(config: str | None = _CONFIG_OPT):
         console.print("  A new resident uses compute on your machine every day it is active.")
         choice = _ask_decision("Found this resident?", "approve", "decline")
         if choice != "skip":
-            new_id = growth.decide_founding(t, req, approve=choice == "yes", reason=_reason())
-            if new_id:
-                console.print(f"Founded: {new_id}")
+            console.print(views.decide(t, "founding", req.name, yes=choice == "yes", reason=_reason(), commit=False))
             decided += 1
 
     flags = growth.stale_flags(t)
@@ -371,7 +373,7 @@ def review(config: str | None = _CONFIG_OPT):
         console.print(f"\n• To {flag.get('to')} from {flag.get('by')} on {str(flag.get('at'))[:10]}: {flag.get('claim')}")
         choice = _ask_decision("Mark it resolved?", "resolve", "keep")
         if choice == "yes":
-            growth.resolve_flag(t, str(flag.get("path")), note=typer.prompt("Note (optional)", default=""))
+            views.decide(t, "flag", str(flag.get("path")), yes=True, reason=typer.prompt("Note (optional)", default=""), commit=False)
             decided += 1
 
     if decided:
@@ -451,3 +453,33 @@ def init_config(
         console.print(f"Backed up the previous config to {backup}")
     _config(str(written))  # must load and validate
     console.print(f"OK: config written to {written}")
+
+
+@app.command()
+def settings(
+    key: str | None = typer.Argument(None, help="A setting to change, e.g. memory.idle_minutes"),
+    value: str | None = typer.Argument(None, help="Its new value"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Show the town's settings, or change one (the same list as the web interface's Town › Settings)."""
+    from babo.baton import settings as town_settings
+    from babo.config.loader import get_config_path
+
+    cfg = _config(config)
+    if key is None:
+        table = Table("setting", "value", "what it does")
+        for s in town_settings.current(cfg.baton):
+            table.add_row(f"{s['label']}\n[dim]{s['key']}[/dim]", str(s["value"]) if s["value"] != "" else "(none)", s["help"])
+        console.print(table)
+        console.print("Change one with: babo settings <setting> <value>")
+        return
+    if value is None:
+        _fail(BatonError("Give a value too, e.g. babo settings memory.idle_minutes 30"))
+        return
+    try:
+        said = town_settings.update(get_config_path(), {key: value})
+    except BatonError as exc:
+        _fail(exc)
+        return
+    console.print("\n".join(said) if said else "Nothing changed.")
+    console.print("OK: settings saved")

@@ -15,7 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { PanelLeftClose } from "lucide-react";
+import { House, PanelLeftClose } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -76,9 +76,10 @@ interface SidebarProps {
   onOpenSkills: () => void;
   onOpenAutomations: () => void;
   onOpenChannels: () => void;
+  onOpenTown?: () => void;
   onSettingsIntent?: () => void;
   onOpenSearch: () => void;
-  activeUtility?: "apps" | "skills" | "automations" | "channels" | null;
+  activeUtility?: "apps" | "skills" | "automations" | "channels" | "town" | null;
   onToggleArchived: () => void;
   onCollapse?: () => void;
   onExpand?: () => void;
@@ -216,6 +217,14 @@ export function Sidebar(props: SidebarProps) {
         )}
       >
         {collapsed && <>{newChatButton}{searchButton}</>}
+        {props.onOpenTown && <SidebarActionButton
+          collapsed={collapsed}
+          label={t("sidebar.town", { defaultValue: "Town" })}
+          onClick={props.onOpenTown}
+          active={props.activeUtility === "town"}
+          selectionRef={activeActionRef}
+          icon={<House className="h-4 w-4" />}
+        />}
         <SidebarActionButton
           collapsed={collapsed}
           label={t("sidebar.apps")}

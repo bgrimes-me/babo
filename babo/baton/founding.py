@@ -50,7 +50,10 @@ def template_text(name: str) -> str:
 # that still matches one of these was never edited, so re-running found_town may
 # bring it up to date; anything else is someone's own words and is left alone.
 _EARLIER_SHIPPED: dict[str, frozenset[str]] = {
-    "CHARTER.md": frozenset({"a14b2f93fb1930c0d611b0cbe733cbc398f83b7ad5bc2f57ab406d169c530ebb"}),
+    "CHARTER.md": frozenset({
+        "a14b2f93fb1930c0d611b0cbe733cbc398f83b7ad5bc2f57ab406d169c530ebb",
+        "42789c0fbee3ce65dfc82d82c7138817f578ab2f74fa9781a433efbac561b5fd",
+    }),
     "HOUSE.md": frozenset({"f5db7f23720080bdc08805b3c0f64b6186e2edefd06367035ab70333490dd81e"}),
     "offices/mayor.md": frozenset({"796e6bb50d56aa9dac20b24712e6fee0f89ed7542111eadb9020ca3c22ade724"}),
     "offices/archivist.md": frozenset({"f2ae5b783190f844e40284333105bce537920f877599b809ba7c1df436236df5"}),

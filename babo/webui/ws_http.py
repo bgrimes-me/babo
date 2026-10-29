@@ -130,6 +130,7 @@ from babo.webui.skills_marketplace import (
     trending_marketplace_skills,
 )
 from babo.webui.star_prompt import update_star_prompt
+from babo.webui.town_api import TOWN_MUTATION_PATHS, TownRoutes
 from babo.webui.transcript import (
     TranscriptReplayStats,
     build_session_thread_response,
@@ -167,6 +168,7 @@ class _WebUIThreadDiagnostics:
     event_loop_lag_ms: float = 0.0
 
 _WEBUI_MUTATION_PATHS = {
+    **TOWN_MUTATION_PATHS,
     "remote.discover": "/api/remote-instances/discover",
     "remote.pair_start": "/api/remote-instances/pair_start",
     "remote.pair_preview": "/api/remote-instances/pair_preview",
@@ -451,6 +453,7 @@ class GatewayHTTPHandler:
             image_generation_reload=image_generation_reload,
             mcp_oauth_redirect_uri=self._mcp_oauth_redirect_uri,
         )
+        self.town_routes = TownRoutes(authorized=self.check_api_token, payload=_mutation_payload)
 
     def workspace_project_selection_available(self, connection: Any) -> bool:
         """Return whether an authenticated WebUI may submit a server path.
@@ -536,7 +539,7 @@ class GatewayHTTPHandler:
     def _is_webui_mutation_path(self, path: str) -> bool:
         if path.startswith("/api/remote-instances/"):
             return True
-        if self.settings_routes.is_mutation_path(path):
+        if self.settings_routes.is_mutation_path(path) or self.town_routes.is_mutation_path(path):
             return True
         if re.match(r"^/api/sessions/[^/]+/delete$", path):
             return True
@@ -602,6 +605,11 @@ class GatewayHTTPHandler:
 
         # Settings routes (delegated)
         response = await self.settings_routes.dispatch(connection, request, got)
+        if response is not None:
+            return response
+
+        # The town's pages
+        response = await self.town_routes.dispatch(request, got)
         if response is not None:
             return response
 

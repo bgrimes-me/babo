@@ -17,6 +17,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { RemoteInstances } from "@/components/remote/RemoteInstances";
 import { useRemoteConnections } from "@/components/remote/remote-context";
 import { LazyRemoteConnectionsPage } from "@/components/remote/LazyRemoteConnectionsPage";
+import { TownPage } from "@/components/town/TownPage";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SidebarResizeHandle, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH } from "@/components/SidebarResizeHandle";
 import { matchSidebarShortcut } from "@/lib/sidebar-shortcuts";
@@ -146,7 +147,7 @@ const TOKEN_REFRESH_MIN_DELAY_MS = 5_000;
 const PAIRING_POLL_INTERVAL_MS = 5_000;
 const PAIRING_IDLE_POLL_INTERVAL_MS = 15_000;
 const PAIRING_DISMISS_SNOOZE_MS = 30_000;
-type ShellView = "chat" | "settings" | "apps" | "automations" | "skills" | "channels" | "remote";
+type ShellView = "chat" | "settings" | "apps" | "automations" | "skills" | "channels" | "remote" | "town";
 type ShellRoute = {
   view: ShellView;
   activeKey: string | null;
@@ -208,7 +209,7 @@ function shellViewForSettingsSection(section: SettingsSectionKey): ShellView {
 }
 
 function changesSettingsSurface(current: ShellRoute, next: ShellRoute): boolean {
-  return current.view !== "chat" && current.view !== "remote" &&
+  return current.view !== "chat" && current.view !== "remote" && current.view !== "town" &&
     (current.view !== next.view || current.settingsSection !== next.settingsSection);
 }
 
@@ -288,6 +289,9 @@ function readShellRoute(): ShellRoute {
   }
   if (path === "/remote") {
     return { view: "remote", activeKey, temporary, settingsSection: "overview" };
+  }
+  if (path === "/town") {
+    return { view: "town", activeKey, temporary, settingsSection: "overview" };
   }
   if (path === "/skills") {
     return { view: "skills", activeKey, temporary, settingsSection: "skills" };
@@ -2202,6 +2206,12 @@ function Shell({
     setMobileSidebarOpen(false);
   }, [activeKey, navigate]);
 
+  const onOpenTown = useCallback(() => {
+    setSessionSearchOpen(false);
+    navigate({ view: "town", activeKey, settingsSection: "overview" });
+    setMobileSidebarOpen(false);
+  }, [activeKey, navigate]);
+
   const onOpenChannels = useCallback(() => {
     setSessionSearchOpen(false);
     navigate({ view: "channels", activeKey, settingsSection: "channels" });
@@ -2758,6 +2768,10 @@ function Shell({
       document.title = t("app.documentTitle.chat", { title: t("remote.title") });
       return;
     }
+    if (view === "town") {
+      document.title = t("app.documentTitle.chat", { title: t("town.title", { defaultValue: "Your town" }) });
+      return;
+    }
     if (view === "skills") {
       document.title = t("app.documentTitle.chat", {
         title: t("settings.nav.skills", { defaultValue: "Skills" }),
@@ -2828,9 +2842,10 @@ function Shell({
     onOpenAutomations,
     onOpenChannels,
     onOpenSkills,
+    onOpenTown,
     onSettingsIntent,
     onOpenSearch: onOpenSessionSearch,
-    activeUtility: !managingConnections && (view === "apps" || view === "automations" || view === "skills" || view === "channels") ? view : null,
+    activeUtility: !managingConnections && (view === "apps" || view === "automations" || view === "skills" || view === "channels" || view === "town") ? view : null,
     onToggleArchived,
     pinnedKeys: sidebarPinnedTabKeys,
     archivedKeys: sidebarArchivedTabKeys,
@@ -3144,6 +3159,10 @@ function Shell({
             {view !== "chat" && (
               <div className="absolute inset-0 flex flex-col">
                 {view === "remote" ? <LazyRemoteConnectionsPage
+                  mainNavigationExpanded={showMainSidebar && hostSidebarOpen}
+                  hostChromeInset={showHostChrome}
+                  onBackToChat={onBackToChat}
+                /> : view === "town" ? <TownPage
                   mainNavigationExpanded={showMainSidebar && hostSidebarOpen}
                   hostChromeInset={showHostChrome}
                   onBackToChat={onBackToChat}

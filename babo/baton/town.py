@@ -6,12 +6,14 @@ This module only knows where things are. It never creates a resident; that is
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import tempfile
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
+from typing import cast
 
 TOWN_MARKER = ".baton-town"
 RESIDENT_MARKER = ".baton-resident"
@@ -118,6 +120,33 @@ class Town:
         if not (town.root / TOWN_MARKER).is_file():
             raise BatonError(f"No town at {town.root} (missing {TOWN_MARKER}). Run `babo found` first.")
         return town
+
+    # -- the town's name ----------------------------------------------------
+    @property
+    def name_file(self) -> Path:
+        return self.root / "state" / "town.json"
+
+    @property
+    def name(self) -> str:
+        """The name the town chose, or "" while it has none."""
+        try:
+            data: object = json.loads(self.name_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return ""
+        if not isinstance(data, dict):
+            return ""
+        return str(cast(dict[str, object], data).get("name") or "")
+
+    def set_name(self, name: str, *, by: str) -> str:
+        clean = " ".join(name.split())
+        if not clean or len(clean) > 60 or not clean.isprintable():
+            raise BatonError("A town name is 1 to 60 printable characters on one line.")
+        atomic_write(self.name_file, json.dumps({"name": clean, "named": now_iso(), "named_by": by}, indent=2) + "\n")
+        return clean
+
+    @property
+    def display_name(self) -> str:
+        return self.name or "this town"
 
     # -- top level -------------------------------------------------------
     @property

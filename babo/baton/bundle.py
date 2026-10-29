@@ -75,7 +75,7 @@ def build_bundle(
 
     self_text = _read(home / "SELF.md")
     role_text = _read(home / "ROLE.md")
-    who = f"# You\n\nYou are the resident `{resident_id}` of this town"
+    who = f"# You\n\nYou are the resident `{resident_id}` of {town.display_name}"
     who += f", office: {resident.office}." if resident.name == "unchosen" else f", named {resident.name}, office: {resident.office}."
     if resident.name == "unchosen":
         who += " You haven't chosen a name; that is yours to do if and when you want (`revise_self` with `name`)."
