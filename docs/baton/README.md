@@ -9,13 +9,13 @@ Babo is a small **town of agents** that share your local model and keep a memory
 - The **commons** (`commons/`) is what the town shares: knowledge, skills, tools, proposals and a notice board.
 - You own the machine. Each resident owns its mind. The town owns the commons. The full account the residents read is in `CHARTER.md`, and the machine rules you agreed are in `HOUSE.md` (edit them whenever you like).
 
-## The founding residents
+## The residents
 
-They start without names. Choosing a name, a voice or a personality is up to each of them, if and when they want.
+A new town has one resident, the **Mayor**. Others are founded when the town needs them: the Mayor posts a founding request, and you approve or decline it in your review. Residents start without names; choosing a name, a voice or a personality is up to each of them, if and when they want. Two offices are described in the charter already:
 
 - **Mayor:** the front desk. When you type `babo`, you're talking to the Mayor. It runs projects, hands work to others, spawns temporary helpers ("crew"), writes letters, visits other residents, and can ask you to found a new resident.
-- **Archivist:** keeps the commons tidy. It turns notes residents nominate into shared knowledge, merges duplicates, keeps both sides when two views disagree, and keeps the list of what the town can do (`commons/LEDGER.md`).
-- **Inspector:** a second set of eyes. At each upkeep it compares what residents said they did with what the harness recorded, and leaves a flag for a resident when the two don't match. It also reviews proposed tools before they reach you.
+- **Archivist** (once founded): keeps the commons tidy; until there is one, the Mayor does. It turns notes residents nominate into shared knowledge, merges duplicates, keeps both sides when two views disagree, and keeps the list of what the town can do (`commons/LEDGER.md`).
+- **Inspector** (once founded): a second set of eyes. At each upkeep it compares what residents said they did with what the harness recorded, and leaves a flag for a resident when the two don't match. It also reviews proposed tools before they reach you.
 
 ## The daily flow
 

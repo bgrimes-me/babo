@@ -28,7 +28,8 @@ def _isolated_git(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
 @pytest.fixture
 def town(tmp_path: Path) -> Town:
-    t, _ = found_town(tmp_path / "town")
+    # Most tests need the Archivist and the Inspector too; a new town has only the Mayor.
+    t, _ = found_town(tmp_path / "town", offices=("mayor", "archivist", "inspector"))
     return t
 
 

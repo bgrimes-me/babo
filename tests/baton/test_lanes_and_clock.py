@@ -76,7 +76,7 @@ def test_refusals_say_what_to_do(box) -> None:
 
 
 def test_refound_updates_only_unedited_founding_documents(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    town, _ = found_town(tmp_path / "town")
+    town, _ = found_town(tmp_path / "town", offices=("mayor", "archivist"))
     old_charter = "# Charter\n\nAn earlier shipped charter.\n"
     old_role = "# Role: Mayor\n\nAn earlier shipped role.\n"
     edited_role = "# Role: Archivist\n\nMy own words.\n"
@@ -98,3 +98,22 @@ def test_refound_updates_only_unedited_founding_documents(tmp_path, monkeypatch:
 def test_earlier_shipped_hashes_are_not_the_current_templates() -> None:
     for name, hashes in founding._EARLIER_SHIPPED.items():  # pyright: ignore[reportPrivateUsage]
         assert hashlib.sha256(template_text(name).encode()).hexdigest() not in hashes, name
+
+
+def test_a_new_town_starts_with_the_mayor_alone(tmp_path) -> None:
+    town, created = found_town(tmp_path / "town")
+    assert [r.id for r in Registry(town).all()] == ["mayor"] and "residents/mayor" in created
+    assert "founded with a Mayor alone" in template_text("CHARTER.md")
+    assert found_town(town.root)[1] == []  # founding again adds nobody
+
+
+def test_an_archivist_founded_on_request_gets_the_charters_role(tmp_path) -> None:
+    from babo.baton import growth
+    from babo.baton.tools.core import Toolbox
+
+    town, _ = found_town(tmp_path / "town")
+    Toolbox(town, "mayor", tmp_path / "index.sqlite3").post_board("founding_request", "Someone to keep the commons.", office="archivist")
+    request = next(town.board.glob("*founding_request*"))
+    new_id = growth.decide_founding(town, request, approve=True, reason="the commons is growing")
+    assert new_id == "archivist"
+    assert (town.resident_dir("archivist") / "ROLE.md").read_text() == template_text("offices/archivist.md")

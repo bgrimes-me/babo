@@ -74,7 +74,7 @@ Expected: `OK: config written (llama-server …, model …, n_ctx …)`.
 cd ~/babo && bash install/run.sh 04-found-town
 ```
 
-Expected: a table of three residents (mayor, archivist, inspector), then `OK: the town is founded`.
+Expected: a table with one resident, the mayor, then `OK: the town is founded`. Other residents are founded later, when the Mayor asks and Squid approves.
 
 **6. Write the services** — BOX
 
@@ -119,3 +119,10 @@ The same rules apply. For a town installed before the rename to Babo (the code i
 7. Write the services — BOX: `cd ~/babo && bash install/run.sh 05-units`
 8. Start the services — HOST, **SQUID**: as in step 7 above, with CODE = the box's `$HOME/babo`. On a rename this also stops and removes the old `baton-*` services.
 9. Check everything — BOX: `cd ~/babo && bash install/run.sh 07-doctor`
+
+What an upgrade changes, and what it doesn't:
+
+- **Residents other than the Mayor now run in opencode.** Install it in the box if it isn't there (`command -v opencode`, otherwise `curl -fsSL https://opencode.ai/install | bash`); the doctor checks. Residents already in the town stay, with their memory; they work in opencode from their next session.
+- **The night timer is replaced by the upkeep service.** Step 8 removes `babo-night.timer` and starts `babo-upkeep`. A town from before keeps its history; its night logs stay in `state/night-logs/`.
+- **Profiles.** Every agent keeps exactly the tools its office had until you change its profile (`babo profile`, or the Town page's Profiles tab). Web search is off for everyone until you allow it.
+- **New towns start with the Mayor alone.** An existing town keeps the residents it has.

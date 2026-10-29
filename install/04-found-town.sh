@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 04-found-town.sh — BOX. Founds the town: repo, CHARTER, HOUSE, REGISTRY and the three founding residents.
+# 04-found-town.sh — BOX. Founds the town: repo, CHARTER, HOUSE, REGISTRY and its first resident, the Mayor.
 # Safe to run again: an existing town is left as it is.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"

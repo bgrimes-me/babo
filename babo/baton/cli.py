@@ -47,7 +47,7 @@ def found(
     town: str | None = typer.Option(None, "--town", help="Where to found the town (default: baton.town from config)"),
     config: str | None = _CONFIG_OPT,
 ):
-    """Found the town: CHARTER, HOUSE, REGISTRY and the three founding residents. Safe to repeat."""
+    """Found the town: CHARTER, HOUSE, REGISTRY and its first resident, the Mayor. Safe to repeat."""
     from babo.baton.founding import found_town
     from babo.baton.search import reindex as do_reindex
 
