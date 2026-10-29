@@ -49,10 +49,9 @@ def test_the_config_follows_the_profile_and_keeps_residents_in_their_own_workspa
     session = opencode.new_session(town, cfg, "archivist", title="tidy", overrides={"web_fetch": "allow"})
     built = opencode.opencode_config(town, cfg, session, bundle=Path("/b.md"), config_path=Path("/c.json"), babo="babo")
     perm = built["permission"]
-    home = str(town.resident_dir("archivist"))
-    assert perm["edit"] == {"*": "deny", f"{home}/**": "allow"}
+    assert perm["edit"] == {"*": "deny", "residents/archivist/*": "allow"}  # paths inside the town repo
     assert perm["bash"] == "ask" and perm["webfetch"] == "allow" and perm["task"] == "deny"
-    assert perm["external_directory"] == {"*": "deny", f"{town.root}/**": "allow"}
+    assert perm["external_directory"] == "deny"
     assert built["mcp"]["babo"]["command"] == ["babo", "mcp", "--as", "archivist", "-c", "/c.json"]
     assert built["mcp"]["notes"] == {"type": "local", "command": ["notes-mcp", "--ro"], "enabled": True}
     assert built["instructions"] == ["/b.md"] and built["default_agent"] == "resident"
@@ -117,6 +116,22 @@ def test_a_session_starts_with_its_identity_and_resumes_exactly_where_it_was(tow
         assert [str(m["content"]) for m in history][:2] == ["Who are you?", "Hello, I'm the archivist."]
     finally:
         opencode.freeze(town, session)
+
+
+@live
+def test_a_resident_changes_only_its_own_folder(town: Town, config_file, mock_llama: MockLlama) -> None:
+    path, cfg = config_file()
+    views.update_profile(town, cfg.baton, "archivist", {"files": "allow"}, [])
+    mine, theirs = town.resident_dir("archivist") / "index.md", town.resident_dir("mayor") / "SELF.md"
+    before = theirs.read_text()
+    mock_llama.script = [tool_call("write", {"filePath": str(mine), "content": "# Index\n"}),
+                         tool_call("write", {"filePath": str(theirs), "content": "Taken over."}), text("Done.")]
+    session = opencode.new_session(town, cfg, "archivist", title="fence")
+    try:
+        opencode.send(town, cfg, session, "Write an index.", config_path=path)
+    finally:
+        opencode.freeze(town, session)
+    assert mine.read_text() == "# Index\n" and theirs.read_text() == before
 
 
 @live

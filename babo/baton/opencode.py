@@ -181,13 +181,15 @@ def _mcp_entry(server: MCPServerConfig) -> dict[str, Any]:
 
 
 def _permission(town: Town, resident: str, profile: profiles.Profile) -> dict[str, Any]:
-    home = str(town.resident_dir(resident))
+    town.resident_dir(resident)  # validates the id
     level = profile.level
     return {
         "read": "allow",
-        # Read anywhere in the town; change only its own workspace (projects live in it).
-        "external_directory": {"*": "deny", f"{town.root}/**": "allow"},
-        "edit": {"*": "deny", f"{home}/**": level("files")},
+        # Nothing outside the town (inside it, reading is allowed and editing is ruled below).
+        "external_directory": "deny",
+        # The town is one git repository, so opencode treats the whole town as the
+        # project and matches edits by their path inside it: only its own folder.
+        "edit": {"*": "deny", f"residents/{resident}/*": level("files")},
         "bash": level("shell"),
         "webfetch": level("web_fetch"),
         "websearch": "deny",  # web search comes from Babo, with Babo's key, when the profile allows
