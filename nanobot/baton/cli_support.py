@@ -22,8 +22,16 @@ def _option(args: list[str], *names: str) -> tuple[str | None, int, int]:
     return None, -1, 0
 
 
+_RESIDENT_COMMANDS = ("agent", "gateway", "webui", "serve", "status")
+
+
 def has_as(args: list[str]) -> bool:
-    return any(a == "--as" or a.startswith("--as=") for a in args)
+    """``--as`` on a command that runs a resident (``nanobot baton ...`` handles its own)."""
+    if not any(a == "--as" or a.startswith("--as=") for a in args):
+        return False
+    rest = [a for i, a in enumerate(args) if not (a == "--home" or (i > 0 and args[i - 1] == "--home") or a.startswith("--home="))]
+    first = rest[0] if rest else ""
+    return first in _RESIDENT_COMMANDS or first.startswith("-")
 
 
 def rewrite_as_args(args: list[str]) -> list[str]:

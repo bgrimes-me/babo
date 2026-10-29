@@ -76,7 +76,7 @@ Cost: each live gateway is a separate Python process (~150–250 MB RAM). Only t
 | `nanobot/command/builtin.py`, `nanobot/channels/telegram/runtime.py` | Dream commands neither offered nor routed | Dream is off **and hidden** (Squid's decision). |
 | `nanobot/webui/settings_runtime.py`, `webui/src/components/settings/SettingsPage.tsx`, `webui/src/components/settings/system/runtime-config-fields.ts` | no Dream switch in Settings; the setting is not editable from the WebUI | Same. |
 | `pyproject.toml` | ship `nanobot/baton/templates/**` in the wheel | Packaging. |
-| upstream tests | four tests updated to expect Dream hidden (`tests/command/*`, two WebUI settings tests, the runtime-config keys fixture) | They asserted the old visible behaviour. |
+| upstream tests | tests updated to expect Dream off and hidden: `tests/command/*`, `tests/cli/test_commands.py` (gateway stubs), `tests/webui/test_settings_*.py`, the runtime-config keys fixture, one WebSocket channel test, two WebUI settings tests | They asserted the old default (Dream on and visible). |
 
 Everything else — hooks, tools, gate, queue, search, night, review, MCP server, installer — is new code under `nanobot/baton/`, `install/`, `docs/baton/` and `tests/baton/`.
 
@@ -125,3 +125,16 @@ Not brought over: the signing/witness system, the newspaper (townline), the Even
 ## 7. Phase-two design constraints (OpenCode plugin)
 
 Kept callable from outside nanobot so `integrations/opencode/` can reuse them without nanobot's loop: town layout and registry (`baton/town.py`), event-log record format (`baton/events.py`, JSONL, documented schema), checkpoint schema (`baton/schemas.py`, plain JSON Schema), bundle assembly (`baton/bundle.py`, a pure function of the town directory and resident id), and the tools via `baton mcp`.
+
+
+## 8. What was built, by phase
+
+| Phase | Modules |
+|---|---|
+| 1 | `town`, `registry`, `founding`, `scope`, `notes`, `search`, `ledger`, `inbox`, `bundle`, `context`, `tools/core`, `tools/nanobot_adapter`, `mcp_server`, `attach`, `loop_support`, `cli_support`, templates |
+| 2 | `events`, `secrets`, `runtime_state`, `schemas`, `model_client`, `checkpoint`, `hooks`, `gate`, `compaction`, `queue`, `context_view` |
+| 3 | `night`, `tooltest`, `units`, systemd templates |
+| 4 | `growth` (review decisions, project promotion, notes, flags), `tools/active`, `configs` (channel bindings), visits in `attach` |
+| 5 | `setup` (init-config), `doctor`, `install/`, `docs/baton/RUNBOOK.md`, `docs/baton/README.md` |
+
+Commands: `nanobot baton found | residents | town | bundle | context | search | reindex | mcp | queue | night | review | note | units | configs | init-config | doctor | restore-session`, and `nanobot agent --as <resident>`.
