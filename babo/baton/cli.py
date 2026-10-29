@@ -453,3 +453,33 @@ def init_config(
         console.print(f"Backed up the previous config to {backup}")
     _config(str(written))  # must load and validate
     console.print(f"OK: config written to {written}")
+
+
+@app.command()
+def settings(
+    key: str | None = typer.Argument(None, help="A setting to change, e.g. memory.idle_minutes"),
+    value: str | None = typer.Argument(None, help="Its new value"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Show the town's settings, or change one (the same list as the web interface's Town › Settings)."""
+    from babo.baton import settings as town_settings
+    from babo.config.loader import get_config_path
+
+    cfg = _config(config)
+    if key is None:
+        table = Table("setting", "value", "what it does")
+        for s in town_settings.current(cfg.baton):
+            table.add_row(f"{s['label']}\n[dim]{s['key']}[/dim]", str(s["value"]) if s["value"] != "" else "(none)", s["help"])
+        console.print(table)
+        console.print("Change one with: babo settings <setting> <value>")
+        return
+    if value is None:
+        _fail(BatonError("Give a value too, e.g. babo settings memory.idle_minutes 30"))
+        return
+    try:
+        said = town_settings.update(get_config_path(), {key: value})
+    except BatonError as exc:
+        _fail(exc)
+        return
+    console.print("\n".join(said) if said else "Nothing changed.")
+    console.print("OK: settings saved")

@@ -11,6 +11,8 @@ import {
   decideTownItem,
   fetchTown,
   fetchTownReview,
+  fetchTownSettings,
+  updateTownSettings,
   leaveTownNote,
   nameTown,
   runTownDoctor,
@@ -19,11 +21,12 @@ import {
   type TownDoctorReport,
   type TownOverview,
   type TownReview,
+  type TownSetting,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import "./town.css";
 
-type TownTab = "town" | "review" | "doctor";
+type TownTab = "town" | "review" | "doctor" | "settings";
 
 function errorText(reason: unknown): string {
   return reason instanceof Error && reason.message ? reason.message : String(reason);
@@ -92,12 +95,14 @@ export function TownPage({ mainNavigationExpanded = false, hostChromeInset = fal
               { value: "town", label: t("town.tab.town", { defaultValue: "Residents" }) },
               { value: "review", label: waiting ? t("town.tab.reviewWaiting", { defaultValue: "Review ({{count}})", count: waiting }) : t("town.tab.review", { defaultValue: "Review" }) },
               { value: "doctor", label: t("town.tab.doctor", { defaultValue: "Doctor" }) },
+              { value: "settings", label: t("town.tab.settings", { defaultValue: "Settings" }) },
             ]} />
           {notice && <p role="status" className="settings-list-inset flex items-center gap-2 text-[13px] text-foreground"><Check className="h-4 w-4 shrink-0" />{notice}</p>}
           {error && <p role="alert" className="settings-list-inset flex items-center gap-2 text-[13px] text-destructive"><AlertCircle className="h-4 w-4 shrink-0" />{error}</p>}
           {tab === "town" && <ResidentsView town={town} onChanged={changed} onError={setError} transport={client} />}
           {tab === "review" && <ReviewView token={getToken} transport={client} onChanged={changed} onError={setError} />}
           {tab === "doctor" && <DoctorView token={getToken} />}
+          {tab === "settings" && <TownSettingsView token={getToken} transport={client} onNotice={(message) => { setNotice(message); setError(""); }} onError={setError} />}
         </div>
       </div>
     </div>
@@ -354,5 +359,53 @@ function DoctorView({ token }: { token: () => string }) {
           <span className="mt-0.5 block break-words text-xs text-muted-foreground">{check.detail}</span></span>
       </div>)}
     </SettingsGroup>}
+  </>;
+}
+
+function TownSettingsView({ token, transport, onNotice, onError }: {
+  token: () => string;
+  transport: Parameters<typeof updateTownSettings>[0];
+  onNotice: (message: string) => void;
+  onError: (message: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [settings, setSettings] = useState<TownSetting[] | null>(null);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    fetchTownSettings(token()).then((result) => setSettings(result.settings)).catch((reason) => onError(errorText(reason)));
+  }, [onError, token]);
+  if (!settings) return <p className="settings-list-inset text-[13px] text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{t("town.loading", { defaultValue: "Loading the town…" })}</p>;
+
+  const changes = Object.fromEntries(Object.entries(draft).filter(([key, value]) =>
+    String(settings.find((s) => s.key === key)?.value ?? "") !== value));
+  const save = async () => {
+    setBusy(true);
+    try {
+      const result = await updateTownSettings(transport, changes);
+      setSettings(result.settings); setDraft({}); onNotice(result.message);
+    } catch (reason) { onError(errorText(reason)); }
+    finally { setBusy(false); }
+  };
+  return <>
+    <p className="settings-list-inset text-[13px] leading-6 text-muted-foreground">
+      {t("town.settingsIntro", { defaultValue: "The town's own settings. The same list is available with `babo settings`. Your config file is backed up before each change." })}
+    </p>
+    <SettingsGroup>
+      {settings.map((s) => <label key={s.key} className="settings-list-row flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+        <span className="min-w-[14rem] flex-1">
+          <span className="block text-[14px] font-medium">{s.label}</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">{s.help}</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">{t("town.applies", { defaultValue: "Takes effect {{when}}.", when: s.applies })}</span>
+        </span>
+        <Input className="w-40" inputMode={s.kind === "int" ? "numeric" : undefined} placeholder={s.kind === "time" ? "HH:MM" : undefined}
+          value={draft[s.key] ?? String(s.value)} onChange={(event) => setDraft((current) => ({ ...current, [s.key]: event.target.value }))} />
+      </label>)}
+    </SettingsGroup>
+    <div className="settings-list-inset">
+      <Button disabled={busy || Object.keys(changes).length === 0} onClick={() => void save()}>
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("town.saveSettings", { defaultValue: "Save settings" })}
+      </Button>
+    </div>
   </>;
 }

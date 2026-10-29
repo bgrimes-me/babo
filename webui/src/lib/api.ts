@@ -1614,3 +1614,23 @@ export function leaveTownNote(transport: WebUIMutationTransport, resident: strin
 export function nameTown(transport: WebUIMutationTransport, name: string): Promise<TownChange> {
   return mutation<TownChange>(transport, "town.name", { name });
 }
+
+export interface TownSetting {
+  key: string;
+  label: string;
+  help: string;
+  kind: "int" | "time" | "text";
+  applies: string;
+  value: number | string;
+}
+
+export function fetchTownSettings(token: string, base: string = ""): Promise<{ settings: TownSetting[] }> {
+  return request<{ settings: TownSetting[] }>(`${base}/api/town/settings`, token, undefined, API_READ_TIMEOUT_MS);
+}
+
+export function updateTownSettings(
+  transport: WebUIMutationTransport,
+  changes: Record<string, string>,
+): Promise<{ message: string; settings: TownSetting[] }> {
+  return mutation<{ message: string; settings: TownSetting[] }>(transport, "town.settings", { changes });
+}

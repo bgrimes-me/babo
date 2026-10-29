@@ -21,6 +21,7 @@ TOWN_MUTATION_PATHS = {
     "town.decide": "/api/town/decide",
     "town.note": "/api/town/note",
     "town.name": "/api/town/name",
+    "town.settings": "/api/town/settings/update",
 }
 _DECISION_KINDS = ("tool", "proposal", "founding", "flag")
 _doctor_lock = asyncio.Lock()
@@ -39,6 +40,18 @@ def _text(payload: dict[str, Any], key: str, limit: int = 4000) -> str:
     if len(value) > limit:
         raise BatonError(f"{key} is longer than {limit} characters")
     return value
+
+
+def _update_settings(payload: dict[str, Any]) -> dict[str, Any]:
+    from babo.baton import settings as town_settings
+    from babo.config.loader import get_config_path, load_config
+
+    changes = payload.get("changes")
+    if not isinstance(changes, dict) or not changes:
+        raise BatonError("missing changes")
+    said = town_settings.update(get_config_path(), cast(dict[str, object], changes))
+    return {"message": "; ".join(said) if said else "Nothing changed.",
+            "settings": town_settings.current(load_config().baton)}
 
 
 class TownRoutes:
@@ -72,6 +85,11 @@ class TownRoutes:
             return http_json_response(await asyncio.to_thread(lambda: views.review_items(_town())))
         if got == "/api/town/doctor":
             return http_json_response(await self._doctor())
+        if got == "/api/town/settings":
+            from babo.baton import settings as town_settings
+            from babo.config.loader import load_config
+
+            return http_json_response({"settings": town_settings.current(load_config().baton)})
         if not self.is_mutation_path(got):
             return http_error(404, "Not found")
         payload = self._payload(request)
@@ -89,9 +107,11 @@ class TownRoutes:
         elif got == "/api/town/note":
             resident, text = _text(payload, "resident", 80), _text(payload, "text")
             message = await asyncio.to_thread(lambda: views.leave_note(_town(), resident, text))
-        else:
+        elif got == "/api/town/name":
             name = _text(payload, "name", 200)
             message = await asyncio.to_thread(lambda: views.name_town(_town(), name))
+        else:
+            return http_json_response(await asyncio.to_thread(lambda: _update_settings(payload)))
         return http_json_response({"message": message, "town": await asyncio.to_thread(lambda: views.town_overview(_town()))})
 
     async def _doctor(self) -> dict[str, Any]:
