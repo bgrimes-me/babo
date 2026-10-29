@@ -109,10 +109,10 @@ def agent(
             )
         except TuiSessionError as exc:
             raise typer.BadParameter(str(exc), param_hint="--session") from exc
-        except TuiUnavailableError as exc:
-            console.print(f"[red]Native TUI unavailable: {exc}[/red]")
-            console.print("[dim]Use `babo agent --classic` only if you want the old prompt.[/dim]")
-            raise typer.Exit(1) from exc
+        except TuiUnavailableError:
+            # Babo publishes no native TUI archives, so a missing TUI is normal on an
+            # installed copy: say so in one line and use the classic prompt.
+            console.print("[dim]The full-screen terminal UI isn't installed here; using the simple prompt.[/dim]")
         else:
             if exit_code:
                 raise typer.Exit(exit_code)
