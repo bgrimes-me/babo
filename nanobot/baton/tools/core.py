@@ -240,7 +240,7 @@ class Toolbox:
 
     def _require_office(self, *offices: str) -> None:
         if self.me.office not in offices:
-            raise BatonError(f"Only the {' or '.join(offices)} can do this.")
+            raise BatonError(f"Blocked: only the {' or '.join(offices)} can do this; it is their lane. To get it done, send_letter to the {offices[0]} and say what you need.")
 
     def _indexed(self, path: Path) -> None:
         index_file(self.town, self.index_path, path)
@@ -264,7 +264,7 @@ class Toolbox:
             return self.extra[name](**kwargs)
         spec = TOOL_SPECS.get(name)
         if spec is None:
-            raise BatonError(f"Unknown tool {name}")
+            raise BatonError(f"There is no tool called {name}. Your tools: {', '.join(self.available())}.")
         if spec.offices:
             self._require_office(*spec.offices)
         return getattr(self, name)(**kwargs)
@@ -273,7 +273,7 @@ class Toolbox:
     def search_memory(self, query: str, k: int = 3, scope: str = "both") -> str:
         owners = {"both": ("commons", self.resident_id), "self": (self.resident_id,), "commons": ("commons",)}.get(scope)
         if owners is None:
-            raise BatonError("scope must be both, self or commons")
+            raise BatonError("scope must be \"both\", \"self\" or \"commons\". Leave it out to search both.")
         hits = open_index(self.index_path).search(query, owners=owners, k=max(1, min(int(k), 10)))
         if not hits:
             return f"No notes match '{query}'. Try other words, or scope=both."
@@ -333,9 +333,9 @@ class Toolbox:
             raise BatonError("Tool names are lowercase letters, digits and underscores, 2-40 characters, starting with a letter.")
         for state in ("pending", "active"):
             if (self.town.tools / state / name).exists():
-                raise BatonError(f"A tool called {name} is already {state}.")
+                raise BatonError(f"A tool called {name} is already {state}. Pick another name, or use the existing tool.")
         if "def run" not in code:
-            raise BatonError("The code must define run(input: str) -> str.")
+            raise BatonError("Not filed: the code must define run(input: str) -> str. Add that function and propose it again.")
         folder = self.town.tools / "pending" / name
         folder.mkdir(parents=True)
         atomic_write(folder / "tool.py", code.rstrip() + "\n")
@@ -348,7 +348,7 @@ class Toolbox:
         if project:
             slug = slugify(project)
             if not (self.home / "projects" / slug).is_dir():
-                raise BatonError(f"You have no project called {slug} in projects/.")
+                raise BatonError(f"You have no project called {slug} in projects/. Check the folder name under projects/, or leave project out.")
             project = slug
         path = self.town.proposals / "open" / f"{today()}-{slugify(title)}.md"
         if path.exists():
@@ -363,7 +363,7 @@ class Toolbox:
     # -- mayor -----------------------------------------------------------
     def post_board(self, kind: str, text: str, office: str | None = None) -> str:
         if kind not in BOARD_KINDS:
-            raise BatonError(f"kind must be one of {', '.join(BOARD_KINDS)}")
+            raise BatonError(f"kind must be one of {', '.join(BOARD_KINDS)}. Use one of those and post again.")
         meta: dict[str, object] = {"kind": kind, "author": self.resident_id, "created": now_iso(), "status": "open"}
         if kind == "founding_request":
             if not office or not office.strip():

@@ -60,7 +60,7 @@ def found(
         _fail(exc)
         return
     if created:
-        console.print(f"Founded at {t.root}: " + ", ".join(created))
+        console.print(f"Town at {t.root}: " + ", ".join(created))
     else:
         console.print(f"The town at {t.root} already exists; nothing to do.")
     console.print("OK: town ready")

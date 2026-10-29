@@ -10,3 +10,5 @@ The Inspector is the town's second set of eyes. The Inspector:
 - reviews proposals for risk.
 
 A flag is a note to a colleague, not a verdict.
+
+Not the Inspector's lane: fixing what it finds (the resident concerned does that), commons knowledge (the Archivist's), routing work (the Mayor's).

@@ -14,6 +14,7 @@ that only this module creates. Nothing else in Baton writes into
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
@@ -43,6 +44,31 @@ _TEMPLATES = files("nanobot.baton") / "templates"
 
 def template_text(name: str) -> str:
     return (_TEMPLATES / name).read_text(encoding="utf-8")
+
+
+# sha256 of every earlier shipped version of the founding documents. A town file
+# that still matches one of these was never edited, so re-running found_town may
+# bring it up to date; anything else is someone's own words and is left alone.
+_EARLIER_SHIPPED: dict[str, frozenset[str]] = {
+    "CHARTER.md": frozenset({"a14b2f93fb1930c0d611b0cbe733cbc398f83b7ad5bc2f57ab406d169c530ebb"}),
+    "HOUSE.md": frozenset({"f5db7f23720080bdc08805b3c0f64b6186e2edefd06367035ab70333490dd81e"}),
+    "offices/mayor.md": frozenset({"796e6bb50d56aa9dac20b24712e6fee0f89ed7542111eadb9020ca3c22ade724"}),
+    "offices/archivist.md": frozenset({"f2ae5b783190f844e40284333105bce537920f877599b809ba7c1df436236df5"}),
+    "offices/inspector.md": frozenset({"da6fd4cb1521656dfb05df33dcfffe2d69bf0a3f88915222f36d90eb2e0af87d"}),
+}
+
+
+def _refresh_if_untouched(path: Path, template: str) -> bool:
+    """Replace ``path`` with the current template if it is an unedited earlier version."""
+    current = template_text(template)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    if text == current or hashlib.sha256(text.encode("utf-8")).hexdigest() not in _EARLIER_SHIPPED.get(template, frozenset()):
+        return False
+    atomic_write(path, current)
+    return True
 
 
 @dataclass(frozen=True)
@@ -110,9 +136,12 @@ def _found_resident(
 def found_town(root: str | Path) -> tuple[Town, list[str]]:
     """Create the town and its three founding residents. Idempotent: an
     existing town is left as it is, and only missing founding residents are
-    founded (an interrupted first run can simply be repeated)."""
+    founded (an interrupted first run can simply be repeated). The one change
+    to an existing town: founding documents nobody has edited (CHARTER.md,
+    HOUSE.md, the founding residents' ROLE.md) are brought up to date."""
     town = Town.at(root)
     created: list[str] = []
+    updated: list[str] = []
     town.root.mkdir(parents=True, exist_ok=True)
     for rel in COMMONS_DIRS:
         (town.root / rel).mkdir(parents=True, exist_ok=True)
@@ -120,6 +149,8 @@ def found_town(root: str | Path) -> tuple[Town, list[str]]:
         if not (town.root / rel).exists():
             atomic_write(town.root / rel, template_text(name))
             created.append(rel)
+        elif _refresh_if_untouched(town.root / rel, name):
+            updated.append(rel)
     if not town.responses.exists():
         atomic_write(town.responses, "# Responses to the charter\n\nResidents may answer the charter here.\n")
     gitignore = town.root / ".gitignore"
@@ -137,6 +168,8 @@ def found_town(root: str | Path) -> tuple[Town, list[str]]:
             authority = _authority("founding resident of the town", "squid (install)", _TOKEN)
             _found_resident(town, office, office, template_text(f"offices/{office}.md"), authority)
             created.append(f"residents/{office}")
+        elif _refresh_if_untouched(town.resident_dir(office) / "ROLE.md", f"offices/{office}.md"):
+            updated.append(f"residents/{office}/ROLE.md")
     registry.render()
     from nanobot.baton.ledger import write_ledger
 
@@ -144,7 +177,9 @@ def found_town(root: str | Path) -> tuple[Town, list[str]]:
     gitops.ensure_repo(town)
     if created:
         gitops.commit_all(town, "Found the town" if "residents/mayor" in created else "Finish founding the town")
-    return town, created
+    elif updated:
+        gitops.commit_all(town, "Update unedited founding documents: " + ", ".join(updated))
+    return town, created + [f"updated {rel}" for rel in updated]
 
 
 # -- founding requests ----------------------------------------------------
