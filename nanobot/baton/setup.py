@@ -36,7 +36,7 @@ def town_config(
     slots: int = 1,
     queue_port: int = 8091,
     bwrap: bool = False,
-    box: str = "arch",
+    box: str = "Agent",
     nanobot_path: str = "",
 ) -> dict[str, Any]:
     data = json.loads(json.dumps(existing))

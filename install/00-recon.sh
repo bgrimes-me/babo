@@ -10,7 +10,7 @@
 #
 # Optional overrides (normally not needed):
 #   BATON_LLAMA_URL   e.g. http://127.0.0.1:8080   (skip container discovery)
-#   BATON_BOX         distrobox name (default: arch)
+#   BATON_BOX         distrobox name (default: Agent)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,7 +18,7 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPORT_DIR="$SCRIPT_DIR/reports"
 STAMP="$(date +%Y-%m-%d)"
 REPORT="$REPORT_DIR/00-recon-$STAMP.md"
-BOX="${BATON_BOX:-arch}"
+BOX="${BATON_BOX:-Agent}"
 
 fail() { echo "FAIL: $*"; exit 1; }
 

@@ -176,8 +176,8 @@ def test_units_render_for_the_host() -> None:
     from nanobot.baton.config import BatonConfig
     from nanobot.baton.units import render_units
 
-    cfg = BatonConfig.model_validate({"box": "arch", "nanobotPath": "/home/squid/.local/bin/nanobot", "night": {"time": "03:30"}})
+    cfg = BatonConfig.model_validate({"box": "Agent", "nanobotPath": "/home/squid/.local/bin/nanobot", "night": {"time": "03:30"}})
     units = render_units(cfg)
-    assert "ExecStart=/usr/bin/distrobox enter arch -- /home/squid/.local/bin/nanobot baton night" in units["baton-night.service"]
+    assert "ExecStart=/usr/bin/distrobox enter Agent -- /home/squid/.local/bin/nanobot baton night" in units["baton-night.service"]
     assert "OnCalendar=*-*-* 03:30:00" in units["baton-night.timer"]
     assert "baton queue" in units["baton-queue.service"] and "gateway --foreground" in units["baton-gateway.service"]

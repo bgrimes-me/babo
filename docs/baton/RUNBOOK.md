@@ -8,8 +8,8 @@ For the installing agent. Follow the steps in order. Do exactly what each step s
 2. A step succeeded only if its last line starts with `OK:`.
 3. If the last line starts with `FAIL:`, **stop**. `run.sh` has already saved the full output in `install/reports/` and pushed it to the `reports` branch. Tell Squid the step name and the `FAIL:` line. Do not retry, skip, improvise or fix anything yourself.
 4. Steps marked **SQUID** need Squid. Say: "Squid, please run this step and tell me when it is done", show the command, and wait.
-5. **HOST** means a normal terminal on the Bazzite machine. **BOX** means inside the `arch` distrobox.
-   - If you are on the host, run BOX commands as: `distrobox enter arch -- bash -lc 'cd ~/nanobot && <command>'`
+5. **HOST** means a normal terminal on the Bazzite machine. **BOX** means inside the `Agent` distrobox (an Arch box).
+   - If you are on the host, run BOX commands as: `distrobox enter Agent -- bash -lc 'cd ~/nanobot && <command>'`
    - If you are inside the box, run HOST commands as: `distrobox-host-exec bash -lc 'cd ~/nanobot && <command>'`
 6. Every step is safe to run again.
 
