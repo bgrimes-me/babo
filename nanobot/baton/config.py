@@ -106,6 +106,11 @@ class BatonConfig(Base):
     def index_file(self) -> Path:
         return Path(self.index_path).expanduser()
 
+    @property
+    def capture_dir(self) -> Path:
+        """Where the model queue keeps each resident's last request (exact-context view)."""
+        return self.index_file.parent / "last-request"
+
     def toolset_for(self, resident_id: str, office: str) -> list[str]:
         for key in (resident_id, office, "default"):
             if key in self.toolsets:
