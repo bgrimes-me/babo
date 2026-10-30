@@ -131,6 +131,11 @@ class TownRoutes:
         except OSError:
             logger.exception("town route {} failed", got)
             return http_error(500, "The town's files could not be read or written; see the gateway log.")
+        except Exception as exc:
+            # Never let the page fall back to the WebSocket server's bare error: say what broke.
+            logger.exception("town route {} failed", got)
+            return http_error(500, f"Babo couldn't load this ({type(exc).__name__}: {exc}). If Babo was just upgraded, "
+                                   "restart it: on the host, systemctl --user restart babo-queue babo-gateway babo-upkeep")
 
     async def _route(self, request: WsRequest, got: str) -> Response | None:
         from babo.baton import views

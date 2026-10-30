@@ -181,6 +181,9 @@ def update_profile(town: Town, cfg: BatonConfig, agent: str, changes: dict[str, 
         return "Nothing changed."
     if agent == profiles.NEW_RESIDENTS:
         return "Profile for new residents: " + "; ".join(said) + ". Residents founded from now on start with it."
+    if agent == profiles.MAYOR:
+        return ("Profile of the Mayor: " + "; ".join(said)
+                + ". It applies once Babo restarts (on the host: systemctl --user restart babo-gateway).")
     return f"Profile of {agent}: " + "; ".join(said) + ". It applies from the agent's next session."
 
 
