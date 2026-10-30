@@ -83,10 +83,19 @@ def _toolset(cfg: BatonConfig, agent: str, office: str) -> set[str]:
     return set(cfg.toolset_for(agent, office))
 
 
+ALL_MCP = "*"  # every MCP server set up in Babo: what agents had before profiles
+
+
 def office_profile(cfg: BatonConfig, agent: str, office: str) -> Profile:
-    """The profile an agent has without a profile file: what its office's toolset allowed."""
+    """The profile an agent has without a profile file: what its office's toolset
+    allowed, and every MCP server, as before profiles existed."""
     names = _toolset(cfg, agent, office)
-    return Profile(capabilities={c.key: ("allow" if names & set(c.tools) else "deny") for c in CAPABILITIES})
+    return Profile(capabilities={c.key: ("allow" if names & set(c.tools) else "deny") for c in CAPABILITIES}, mcp=[ALL_MCP])
+
+
+def mcp_servers(profile: Profile, known: list[str]) -> list[str]:
+    """The MCP servers a profile grants, by name."""
+    return sorted(known) if ALL_MCP in profile.mcp else [n for n in profile.mcp if n in known]
 
 
 def _path(town: Town, agent: str):
@@ -121,6 +130,8 @@ def harness_tools(profile: Profile, cfg: BatonConfig, agent: str, office: str) -
 
 
 def mcp_permitted(profile: Profile, tool_name: str) -> bool:
+    if ALL_MCP in profile.mcp:
+        return tool_name.startswith("mcp_")
     return any(tool_name.startswith(f"mcp_{server}_") for server in profile.mcp)
 
 
@@ -170,7 +181,10 @@ def describe_changes(before: Profile, after: Profile) -> list[str]:
         if before.level(c.key) != after.level(c.key):
             said.append(f"{c.label}: {before.level(c.key)} → {after.level(c.key)}")
     if before.mcp != after.mcp:
-        said.append(f"MCP servers: {', '.join(before.mcp) or 'none'} → {', '.join(after.mcp) or 'none'}")
+        def names(mcp: list[str]) -> str:
+            return "all" if ALL_MCP in mcp else ", ".join(mcp) or "none"
+
+        said.append(f"MCP servers: {names(before.mcp)} → {names(after.mcp)}")
     if before.model != after.model:
         said.append(f"Model: {before.model or 'Babo default'} → {after.model or 'Babo default'}")
     for name in ProfileMemory.model_fields:
@@ -197,7 +211,7 @@ def widening(base: Profile, session: Profile) -> list[str]:
         for c in CAPABILITIES
         if LEVELS.index(session.level(c.key)) > LEVELS.index(base.level(c.key))
     ]
-    extra = sorted(set(session.mcp) - set(base.mcp))
+    extra = [] if ALL_MCP in base.mcp else sorted(set(session.mcp) - set(base.mcp))
     if extra:
         wider.append(f"MCP servers added: {', '.join(extra)}")
     return wider
@@ -217,7 +231,7 @@ def describe(town: Town, cfg: BatonConfig, agent: str, office: str, *, mcp_known
              "levels": ["allow", "deny"] if agent == MAYOR else list(reversed(LEVELS))}
             for c in CAPABILITIES
         ],
-        "mcp": profile.mcp,
+        "mcp": mcp_servers(profile, mcp_known),
         "mcp_known": mcp_known,
         "model": profile.model,
         "memory": profile.memory.model_dump(),

@@ -27,16 +27,19 @@ for old in "$dest"/babo-*; do
 done
 cp "$src"/babo-* "$dest"/
 systemctl --user daemon-reload || fail "systemctl --user daemon-reload failed"
-systemctl --user enable --now babo-queue.service || fail "could not start babo-queue.service"
-systemctl --user enable --now babo-gateway.service || fail "could not start babo-gateway.service"
-systemctl --user enable --now babo-upkeep.service || fail "could not start babo-upkeep.service"
+# enable, then restart: a service already running from before an upgrade must load the new code.
+for unit in babo-queue.service babo-gateway.service babo-upkeep.service; do
+  systemctl --user enable "$unit" >/dev/null 2>&1 || fail "could not enable $unit"
+  systemctl --user restart "$unit" || fail "could not start $unit"
+done
 # Residents with their own channel bindings get their own gateway.
 if [ -f "$src/babo-gateway@.service" ]; then
   for cfg in "${boxhome:-$HOME}"/.babo/baton/*/config.json; do
     [ -f "$cfg" ] || continue
     rid="$(basename "$(dirname "$cfg")")"
     [ "$rid" = "mayor" ] && continue
-    systemctl --user enable --now "babo-gateway@$rid.service" || fail "could not start babo-gateway@$rid.service"
+    systemctl --user enable "babo-gateway@$rid.service" >/dev/null 2>&1 || fail "could not enable babo-gateway@$rid.service"
+    systemctl --user restart "babo-gateway@$rid.service" || fail "could not start babo-gateway@$rid.service"
   done
 fi
 if [ "$(loginctl show-user "$USER" -p Linger 2>/dev/null)" != "Linger=yes" ]; then

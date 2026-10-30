@@ -102,6 +102,19 @@ def test_a_session_may_narrow_but_widening_needs_review(town: Town) -> None:
     narrower = profiles.session_profile(base, {"files": "deny", "model": "small"}, agent="archivist", mcp_known=["notes"])
     assert profiles.widening(base, narrower) == []
     wider = profiles.session_profile(base, {"shell": "ask", "mcp": "notes"}, agent="archivist", mcp_known=["notes"])
-    assert profiles.widening(base, wider) == ["Run commands: deny → ask", "MCP servers added: notes"]
+    assert profiles.widening(base, wider) == ["Run commands: deny → ask"]  # a town from before profiles has every MCP server
+    narrow_mcp = profiles.with_changes(base, {"mcp": ""}, agent="archivist", mcp_known=["notes"])
+    assert profiles.widening(narrow_mcp, wider) == ["Run commands: deny → ask", "MCP servers added: notes"]
     with pytest.raises(BatonError, match="same profile in every session"):
         profiles.session_profile(base, {"files": "deny"}, agent="mayor", mcp_known=[])
+
+
+def test_without_a_profile_every_mcp_server_stays_as_before_profiles(town: Town, make_loop) -> None:
+    loop = make_loop("mayor")
+    loop.tools.register(_McpTool("mcp_tavily_search"))
+    assert "mcp_tavily_search" in loop.tools.tool_names
+    cfg = BatonConfig(town=str(town.root))
+    row = views.profiles_overview(town, cfg, ["tavily", "notes"])[0]
+    assert row["agent"] == "mayor" and row["mcp"] == ["notes", "tavily"]
+    message = views.update_profile(town, cfg, "mayor", {"mcp": "tavily"}, ["tavily", "notes"])
+    assert "MCP servers: all → tavily" in message and "systemctl --user restart babo-gateway" in message

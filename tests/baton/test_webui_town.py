@@ -129,3 +129,14 @@ async def test_sessions_from_the_web_match_babo_session(town: Town, index_path: 
     assert status == 400 and "opencode is not installed" in str(text)
     status, text = await _call(routes, "/api/town/sessions/new", {"resident": "mayor"})
     assert status == 400 and "runs in Babo itself" in str(text)
+
+
+async def test_an_unexpected_failure_says_what_broke_and_what_to_do(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    routes = _routes(town, index_path, monkeypatch)
+
+    def broken(*_a: Any, **_k: Any) -> Any:
+        raise TypeError("town_overview() missing 1 required positional argument: 'cfg'")
+
+    monkeypatch.setattr("babo.baton.views.town_overview", broken)
+    status, text = await _call(routes, "/api/town")
+    assert status == 500 and "TypeError" in str(text) and "systemctl --user restart babo-queue babo-gateway babo-upkeep" in str(text)

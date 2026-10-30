@@ -223,7 +223,7 @@ def opencode_config(town: Town, config: Config, session: Session, *, bundle: Pat
         "babo": {"type": "local", "enabled": True,
                  "command": [babo, "mcp", "--as", session.resident, "-c", str(config_path)]},
     }
-    for name in profile.mcp:
+    for name in profiles.mcp_servers(profile, sorted(config.tools.mcp_servers)):
         server = config.tools.mcp_servers.get(name)
         if server is not None:
             mcp[name] = _mcp_entry(server)
