@@ -176,7 +176,7 @@ def check_upkeep() -> Check:
 
 
 def check_opencode(cfg: Config) -> Check:
-    from babo.baton.opencode import opencode_bin
+    from babo.baton.opencode import opencode_bin, version_problem
 
     binary = opencode_bin(cfg)
     if binary is None:
@@ -186,8 +186,12 @@ def check_opencode(cfg: Config) -> Check:
         result = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return Check("opencode", "FAIL", f"{binary} doesn't run: {exc}")
-    version = (result.stdout or result.stderr).strip().splitlines()
-    return Check("opencode", "PASS" if result.returncode == 0 else "FAIL", f"{binary} {version[-1] if version else ''}".strip())
+    lines = (result.stdout or result.stderr).strip().splitlines()
+    version = lines[-1] if lines else ""
+    if result.returncode != 0:
+        return Check("opencode", "FAIL", f"{binary} {version}".strip())
+    problem = version_problem(version)
+    return Check("opencode", "FAIL" if problem else "PASS", f"{binary}: {problem}" if problem else f"{binary} {version}")
 
 
 def check_git(cfg: Config) -> Check:

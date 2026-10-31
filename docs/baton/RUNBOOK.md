@@ -120,7 +120,7 @@ The same rules apply. Everything is kept: the town, its git history, the residen
 
 What an upgrade changes, and what it doesn't:
 
-- **Residents other than the Mayor now run in opencode.** Install it in the box if it isn't there (`command -v opencode`, otherwise `curl -fsSL https://opencode.ai/install | bash`); the doctor checks. Residents already in the town stay, with their memory; they work in opencode from their next session.
+- **Residents other than the Mayor now run in opencode.** Install it in the box if it isn't there (`command -v opencode`, otherwise `curl -fsSL https://opencode.ai/install | bash`); it needs opencode 1.19 or newer (`opencode --version`; `opencode upgrade` updates it), and the doctor checks. Residents already in the town stay, with their memory; they work in opencode from their next session.
 - **The night timer is replaced by the upkeep service.** Step 6 removes `babo-night.timer` and starts `babo-upkeep`. A town from before keeps its history; its night logs stay in `state/night-logs/`.
 - **Profiles.** Every agent keeps exactly the tools its office had until you change its profile (`babo profile`, or the Town page's Profiles tab). Web search is off for everyone until you allow it.
 - **New towns start with the Mayor alone.** An existing town keeps the residents it has.
