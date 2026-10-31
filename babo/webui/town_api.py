@@ -28,6 +28,7 @@ TOWN_MUTATION_PATHS = {
     "town.session.new": "/api/town/sessions/new",
     "town.session.resume": "/api/town/sessions/resume",
     "town.session.freeze": "/api/town/sessions/freeze",
+    "town.session.remove": "/api/town/sessions/remove",
     "town.allow_all": "/api/town/allow-all/update",
 }
 _DECISION_KINDS = ("tool", "proposal", "founding", "flag", "session")
@@ -125,6 +126,8 @@ def _session_change(action: str, payload: dict[str, Any]) -> str:
     session_id = _text(payload, "id", 80)
     if action == "resume":
         return views.resume_session(town, cfg, resident, session_id, config_path=get_config_path().resolve())
+    if action == "remove":
+        return views.remove_session(town, resident, session_id)
     return views.freeze_session(town, cfg, resident, session_id, config_path=get_config_path().resolve())
 
 

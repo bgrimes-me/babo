@@ -71,6 +71,9 @@ _ENV_OFF = (
 # server API, and opencode answers any path it doesn't know with its web app.
 MIN_VERSION = (1, 19)
 UPGRADE = "Update it with: opencode upgrade"
+NOT_OURS = ("isn't the opencode Babo works with (opencode.ai, 1.19 or newer); another program by that name may come first "
+            "on your PATH. Install opencode.ai's with: curl -fsSL https://opencode.ai/install | bash, then set "
+            "baton.opencode.bin in ~/.babo/config.json to the path it prints (usually ~/.opencode/bin/opencode)")
 
 
 def parse_version(text: str) -> tuple[int, ...] | None:
@@ -99,6 +102,40 @@ def _json(resp: httpx.Response, what: str) -> Any:
         raise BatonError(f"opencode answered {what} with {resp.headers.get('content-type') or 'something'} instead of data: "
                          f"this opencode doesn't have the API Babo uses. Babo needs opencode "
                          f"{'.'.join(map(str, MIN_VERSION))} or newer; `babo doctor` shows which one it found. {UPGRADE}") from None
+
+
+def probe(config: Config) -> str | None:
+    """Start opencode the way Babo does, check that it answers like the opencode Babo works with, and stop it.
+    Returns what is wrong, or None. For the doctor: a version number alone can belong to another program."""
+    import tempfile
+
+    binary = opencode_bin(config)
+    if binary is None:
+        return "not installed"
+    with tempfile.TemporaryDirectory(prefix="babo-opencode-probe-") as scratch:
+        root = Path(scratch)
+        env = dict(os.environ)
+        for name in ("config", "data", "cache", "state"):
+            (root / name).mkdir()
+            env[f"XDG_{name.upper()}_HOME"] = str(root / name)
+        env.update({name: "1" for name in _ENV_OFF})
+        password = secrets.token_urlsafe(18)
+        env["OPENCODE_SERVER_PASSWORD"] = password
+        port = _free_port()
+        log_path = root / "probe.log"
+        with log_path.open("ab") as log:
+            proc = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
+                [binary, "serve", "--port", str(port), "--hostname", "127.0.0.1"], cwd=root, env=env,
+                stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+            )
+        run = Running(pid=proc.pid, port=port, password=password, started=now_iso())
+        try:
+            _wait_healthy(run, proc, config.baton.opencode.start_timeout_s, log_path=log_path)
+        except BatonError as exc:
+            return str(exc)
+        finally:
+            _stop(run)
+    return None
 
 
 def runs_in_opencode(office: str) -> bool:
@@ -465,8 +502,7 @@ def _wait_healthy(run: Running, proc: subprocess.Popen[bytes], timeout_s: int, *
             except ValueError:
                 health = None
             if not isinstance(health, dict):
-                raise BatonError(f"opencode started but has no health check (it answered with its web page): it's older than "
-                                 f"Babo needs ({'.'.join(map(str, MIN_VERSION))} or newer). {UPGRADE}")
+                raise BatonError(f"This opencode started but has no health check (it answered with a web page): it {NOT_OURS}.")
             problem = version_problem(str(cast(dict[str, Any], health).get("version", "")))
             if problem:
                 raise BatonError(problem)
@@ -474,6 +510,20 @@ def _wait_healthy(run: Running, proc: subprocess.Popen[bytes], timeout_s: int, *
         time.sleep(0.3)
     proc.terminate()
     raise BatonError(f"opencode didn't answer within {timeout_s} seconds.")
+
+
+def remove_session(town: Town, session: Session) -> None:
+    """Remove a session from the list for good: for one that is broken or not wanted. It is stopped
+    without a review; what it did is already in the resident's event log, and stays there."""
+    run = running(town, session)
+    if run is not None:
+        _stop(run)
+    ingest(town, session)
+    runtime = _runtime_dir(town, session.resident)
+    for leftover in (_runtime_path(town, session), spool_path(town, session),
+                     runtime / f"{session.id}.bundle.md", runtime / f"{session.id}.log"):
+        leftover.unlink(missing_ok=True)
+    _session_path(town, session.resident, session.id).unlink(missing_ok=True)
 
 
 def _stop(run: Running) -> None:

@@ -143,6 +143,20 @@ describe("town page", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("is running");
   });
 
+  it("removes a broken session only after asking, like `babo session remove`", async () => {
+    mocks.mutation.mockResolvedValue({ opencode: true, residents: [{ ...sessions.residents[0], sessions: [] }],
+      message: "Removed archivist's session “Tidy the commons”." });
+    render(<TownPage onBackToChat={() => {}} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Sessions" }));
+    const archivist = await screen.findByRole("region", { name: "archivist" });
+    fireEvent.click(within(archivist).getByRole("button", { name: "Remove" }));
+    expect(within(archivist).getByText(/without being reviewed into memory/)).toBeVisible();
+    expect(mocks.mutation).not.toHaveBeenCalled();
+    fireEvent.click(within(archivist).getByRole("button", { name: "Remove for good" }));
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.remove", { resident: "archivist", id: "s1" }, 120_000));
+    await waitFor(() => expect(within(archivist).queryByText("Tidy the commons")).toBeNull());
+  });
+
   it("shows a session request word for word and approves exactly what was shown", async () => {
     mocks.mutation.mockResolvedValue({ message: "Request approved: archivist will run it as soon as upkeep picks it up (within a minute).", town: town() });
     render(<TownPage onBackToChat={() => {}} />);

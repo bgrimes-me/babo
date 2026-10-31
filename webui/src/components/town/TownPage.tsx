@@ -568,7 +568,7 @@ function SessionsView({ token, transport, onNotice, onError }: {
   }, [onError, token]);
   if (!data) return <p className="settings-list-inset text-[13px] text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{t("town.loading", { defaultValue: "Loading the town…" })}</p>;
 
-  const act = async (key: string, action: "new" | "resume" | "freeze", payload: Parameters<typeof changeTownSession>[2]) => {
+  const act = async (key: string, action: "new" | "resume" | "freeze" | "remove", payload: Parameters<typeof changeTownSession>[2]) => {
     setBusy(key);
     try {
       const result = await changeTownSession(transport, action, payload);
@@ -578,7 +578,7 @@ function SessionsView({ token, transport, onNotice, onError }: {
   };
   return <>
     <p className="settings-list-inset text-[13px] leading-6 text-muted-foreground">
-      {t("town.sessionsIntro", { defaultValue: "Residents other than the Mayor work in opencode. Each session starts from the resident's profile; freezing one stops it, and resuming it continues exactly where it was. In the terminal: `babo session open <resident>`." })}
+      {t("town.sessionsIntro", { defaultValue: "Residents other than the Mayor work in opencode. Each session starts from the resident's profile; freezing one stops it, and resuming it continues exactly where it was; removing one drops it for good. In the terminal: `babo session open <resident>`." })}
     </p>
     {!data.opencode && <p role="note" className="settings-list-inset text-[13px] text-destructive">
       {t("town.noOpencode", { defaultValue: "opencode isn't installed where Babo runs, so residents' sessions can't start. Install it in the box with: curl -fsSL https://opencode.ai/install | bash" })}
@@ -589,7 +589,8 @@ function SessionsView({ token, transport, onNotice, onError }: {
       <SettingsGroup>
         {r.sessions.map((s) => <SessionRow key={s.id} session={s} busy={busy === s.id}
           onResume={() => void act(s.id, "resume", { resident: r.id, id: s.id })}
-          onFreeze={() => void act(s.id, "freeze", { resident: r.id, id: s.id })} />)}
+          onFreeze={() => void act(s.id, "freeze", { resident: r.id, id: s.id })}
+          onRemove={() => void act(s.id, "remove", { resident: r.id, id: s.id })} />)}
         <NewSessionForm resident={r.id} disabled={!data.opencode || busy === `new:${r.id}`} busy={busy === `new:${r.id}`}
           onStart={(title, overrides) => void act(`new:${r.id}`, "new", { resident: r.id, title, overrides })} />
       </SettingsGroup>
@@ -597,13 +598,15 @@ function SessionsView({ token, transport, onNotice, onError }: {
   </>;
 }
 
-function SessionRow({ session, busy, onResume, onFreeze }: {
+function SessionRow({ session, busy, onResume, onFreeze, onRemove }: {
   session: TownSession;
   busy: boolean;
   onResume: () => void;
   onFreeze: () => void;
+  onRemove: () => void;
 }) {
   const { t } = useTranslation();
+  const [removing, setRemoving] = useState(false);
   const changes = Object.entries(session.overrides).map(([key, value]) => `${key}: ${value}`).join(", ");
   const running = session.status === "running";
   return <div className="settings-list-row flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
@@ -622,6 +625,13 @@ function SessionRow({ session, busy, onResume, onFreeze }: {
     {running
       ? <Button variant="ghost" size="sm" disabled={busy} onClick={onFreeze}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("town.freeze", { defaultValue: "Freeze" })}</Button>
       : <Button variant="ghost" size="sm" disabled={busy} onClick={onResume}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("town.resume", { defaultValue: "Resume" })}</Button>}
+    {removing
+      ? <span role="group" aria-label={t("town.removeSession", { defaultValue: "Remove" })} className="flex basis-full flex-wrap items-center justify-end gap-2 text-xs">
+        <span className="text-muted-foreground">{t("town.removeWarning", { defaultValue: "Remove it for good? It stops without being reviewed into memory; what it did stays in the event log." })}</span>
+        <Button variant="destructive" size="sm" disabled={busy} onClick={() => { setRemoving(false); onRemove(); }}>{t("town.removeConfirm", { defaultValue: "Remove for good" })}</Button>
+        <Button variant="ghost" size="sm" disabled={busy} onClick={() => setRemoving(false)}>{t("town.keepSession", { defaultValue: "Keep it" })}</Button>
+      </span>
+      : <Button variant="ghost" size="sm" disabled={busy} className="text-muted-foreground" onClick={() => setRemoving(true)}>{t("town.removeSession", { defaultValue: "Remove" })}</Button>}
   </div>;
 }
 

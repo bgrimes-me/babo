@@ -649,7 +649,7 @@ def settings(
 
 # -- residents' sessions in opencode -----------------------------------------------------
 
-session_app = typer.Typer(help="Residents' sessions in opencode: start, open, send, freeze.", no_args_is_help=True)
+session_app = typer.Typer(help="Residents' sessions in opencode: start, open, send, freeze, remove.", no_args_is_help=True)
 app.add_typer(session_app, name="session")
 
 
@@ -772,6 +772,23 @@ def session_freeze(resident: str = typer.Argument(...), session_id: str | None =
         _fail(exc)
         return
     console.print(f"OK: frozen {', '.join(frozen)}" if frozen else "Nothing was running.")
+
+
+@session_app.command("remove")
+def session_remove(resident: str = typer.Argument(...), session_id: str = typer.Argument(...),
+                   yes: bool = typer.Option(False, "--yes", "-y", help="Don't ask first"),
+                   config: str | None = _CONFIG_OPT):
+    """Remove a session for good (one that is broken or not wanted). It is stopped without a review; what it did stays in the event log."""
+    from babo.baton import views
+
+    t, _cfg = _town(config)
+    if not yes and not typer.confirm(f"Remove {resident}'s session {session_id} for good? It won't be reviewed into memory."):
+        console.print("Nothing removed.")
+        return
+    try:
+        console.print(views.remove_session(t, resident, session_id))
+    except BatonError as exc:
+        _fail(exc)
 
 
 @session_app.command("checkpoint", hidden=True)
