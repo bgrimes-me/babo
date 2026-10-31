@@ -234,12 +234,73 @@ def sessions_overview(town: Town, config: Config) -> dict[str, Any]:
     }
 
 
-def start_session(town: Town, config: Config, resident: str, *, title: str, overrides: dict[str, object], config_path: Any) -> str:
+def start_session(town: Town, config: Config, resident: str, *, title: str, overrides: dict[str, object], config_path: Any,
+                  task: str = "") -> str:
+    """Start a session. With a task, the resident starts on it right away and works on its own."""
+    from babo.baton import opencode
+    from babo.baton.notes import first_line
+
+    task = task.strip()
+    session = opencode.new_session(town, config, resident, title=title.strip() or first_line(task, 80), overrides=overrides)
+    if task:
+        session.task = task
+        opencode.save_session(town, session)
+    opencode.start(town, config, session, config_path=config_path)
+    if task:
+        opencode.prompt(town, config, opencode.get_session(town, resident, session.id), task, config_path=config_path)
+        return f"{resident} is working on “{session.title}”. Open the session to watch or join in."
+    return f"{resident}'s session “{session.title}” is running."
+
+
+def send_to_session(town: Town, config: Config, resident: str, session_id: str, text: str, *, config_path: Any) -> str:
     from babo.baton import opencode
 
-    session = opencode.new_session(town, config, resident, title=title, overrides=overrides)
-    opencode.start(town, config, session, config_path=config_path)
-    return f"{resident}'s session “{session.title}” is running."
+    opencode.prompt(town, config, opencode.get_session(town, resident, session_id), text, config_path=config_path)
+    return f"Sent to {resident}."
+
+
+def stop_session_turn(town: Town, resident: str, session_id: str) -> str:
+    from babo.baton import opencode
+
+    stopped = opencode.interrupt(town, opencode.get_session(town, resident, session_id))
+    return f"Stopped what {resident} was doing; the session is still open." if stopped else f"{resident} wasn't in the middle of anything."
+
+
+def checkpoint_session(town: Town, config: Config, resident: str, session_id: str, *, config_path: Any) -> str:
+    """Ask for a checkpoint now. It takes the model a while, so it runs in the background."""
+    import threading
+
+    from babo.baton import opencode
+
+    session = opencode.get_session(town, resident, session_id)
+    if opencode.running(town, session) is None:
+        raise BatonError("That session isn't running; resume it first, or freeze it to have it reviewed.")
+
+    def write() -> None:
+        try:
+            opencode.checkpoint(town, config, session, trigger="requested", config_path=config_path)
+        except Exception as exc:  # the safety net reviews it later; say why in the log
+            from loguru import logger
+
+            logger.warning("Babo: {}'s checkpoint for {} didn't go through: {}", resident, session_id, exc)
+
+    threading.Thread(target=write, name=f"checkpoint-{resident}-{session_id}", daemon=True).start()
+    return f"{resident} is writing a checkpoint of this session in its own words."
+
+
+def set_session_model(town: Town, config: Config, resident: str, session_id: str, preset: str, *, config_path: Any) -> str:
+    from babo.baton import opencode
+
+    session = opencode.switch_model(town, config, opencode.get_session(town, resident, session_id), preset, config_path=config_path)
+    chosen = str(session.overrides.get("model") or "the profile's model")
+    return f"{resident}'s session now uses {chosen}" + (", and carries on where it was." if opencode.running(town, session) else ".")
+
+
+def answer_session_question(town: Town, resident: str, session_id: str, request_id: str, decision: str) -> str:
+    from babo.baton import opencode
+
+    opencode.answer_permission(town, opencode.get_session(town, resident, session_id), request_id, decision)
+    return {"once": "Allowed, this once.", "always": "Allowed for the rest of this session.", "reject": "Refused."}[decision]
 
 
 def resume_session(town: Town, config: Config, resident: str, session_id: str, *, config_path: Any) -> str:

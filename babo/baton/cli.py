@@ -693,7 +693,7 @@ def settings(
 
 # -- residents' sessions in opencode -----------------------------------------------------
 
-session_app = typer.Typer(help="Residents' sessions in opencode: start, open, send, freeze, remove.", no_args_is_help=True)
+session_app = typer.Typer(help="Residents' sessions in opencode: start (with a task), watch, open, send, stop, checkpoint, change model, freeze, remove.", no_args_is_help=True)
 app.add_typer(session_app, name="session")
 
 
@@ -721,12 +721,13 @@ def session_list(resident: str | None = typer.Argument(None, help="Only this res
 
     t, _ = _town(config)
     residents = [resident] if resident else [r.id for r in Registry(t).all() if r.status == "active" and opencode.runs_in_opencode(r.office)]
-    table = Table("resident", "session", "title", "status", "last active", "changes for this session")
+    table = Table("resident", "session", "title", "now", "last active", "changes for this session")
     try:
         for rid in residents:
             for s in opencode.overview(t, rid):
                 changes = ", ".join(f"{k}={v}" for k, v in s["overrides"].items()) or "-"
-                table.add_row(rid, s["id"], s["title"], s["status"], (s["last_active"] or "never")[:16].replace("T", " "), changes)
+                now = s["live"]["state"] + (f": {s['live']['activity']}" if s["live"]["activity"] else "")
+                table.add_row(rid, s["id"], s["title"], now, (s["last_active"] or "never")[:16].replace("T", " "), changes)
     except BatonError as exc:
         _fail(exc)
     console.print(table)
@@ -736,22 +737,49 @@ def session_list(resident: str | None = typer.Argument(None, help="Only this res
 @session_app.command("new")
 def session_new(
     resident: str = typer.Argument(...),
-    title: str = typer.Option("", "--title", help="What the session is for"),
-    set_: list[str] = typer.Option([], "--set", help="Change the profile for this session only, e.g. --set shell=deny"),
+    task: str = typer.Option("", "--task", help="What it should do; it starts on it right away and works on its own"),
+    title: str = typer.Option("", "--title", help="A name for the session (default: the task's first line)"),
+    set_: list[str] = typer.Option([], "--set", help="Change the profile for this session only, e.g. --set shell=deny or --set model=<preset>"),
     config: str | None = _CONFIG_OPT,
 ):
-    """Start a new session for a resident (it starts from the resident's profile)."""
-    from babo.baton import opencode
+    """Start a new session for a resident (it starts from the resident's profile). With --task, it gets going on its own."""
+    from babo.baton import opencode, views
 
     t, cfg = _town(config)
     try:
-        session = opencode.new_session(t, cfg, resident, title=title, overrides=_overrides(set_))
-        run = opencode.start(t, cfg, session, config_path=_config_path())
+        said = views.start_session(t, cfg, resident, title=title, overrides=_overrides(set_), config_path=_config_path(), task=task)
+        session = max((s for s in opencode.sessions(t, resident) if s.kind == "work"), key=lambda s: s.created)
     except BatonError as exc:
         _fail(exc)
         return
-    console.print(f"OK: session {session.id} for {resident} is running ({run.url}, user opencode, password {run.password})")
-    console.print(f"Open it in the terminal with: babo session open {resident} {session.id}")
+    console.print(f"OK: {said}")
+    console.print(f"Watch or join it with: babo session open {resident} {session.id}   (babo session list shows what it's doing)")
+
+
+@session_app.command("stop")
+def session_stop(resident: str = typer.Argument(...), session_id: str | None = typer.Argument(None), config: str | None = _CONFIG_OPT):
+    """Stop what the resident is doing right now; the session stays open."""
+    from babo.baton import opencode, views
+
+    t, _ = _town(config)
+    try:
+        console.print(views.stop_session_turn(t, resident, opencode.get_session(t, resident, session_id).id))
+    except BatonError as exc:
+        _fail(exc)
+
+
+@session_app.command("model")
+def session_model(resident: str = typer.Argument(...), session_id: str = typer.Argument(...),
+                  preset: str = typer.Argument(..., help="A model preset from Settings › Models, or 'default' for the profile's"),
+                  config: str | None = _CONFIG_OPT):
+    """Give a session another model preset; a running session carries on where it was."""
+    from babo.baton import views
+
+    t, cfg = _town(config)
+    try:
+        console.print(views.set_session_model(t, cfg, resident, session_id, preset, config_path=_config_path()))
+    except BatonError as exc:
+        _fail(exc)
 
 
 @session_app.command("open")
@@ -835,10 +863,10 @@ def session_remove(resident: str = typer.Argument(...), session_id: str = typer.
         _fail(exc)
 
 
-@session_app.command("checkpoint", hidden=True)
+@session_app.command("checkpoint")
 def session_checkpoint(resident: str = typer.Argument(...), session_id: str = typer.Argument(...),
                        trigger: str = typer.Option("requested", "--trigger"), config: str | None = _CONFIG_OPT):
-    """Ask a resident in opencode for a checkpoint (Babo's plugin calls this at the right moments)."""
+    """Have a resident write a checkpoint of a running session now, in its own words (Babo's plugin also calls this)."""
     from babo.baton import opencode
 
     t, cfg = _town(config)

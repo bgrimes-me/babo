@@ -188,6 +188,7 @@ class Session:
     commands: list[str] = field(default_factory=lambda: cast(list[str], []))  # exact shell commands allowed, from an approved request
     reviewed: str = ""  # when the resident last reviewed this session into its memory
     previous: list[str] = field(default_factory=lambda: cast(list[str], []))  # earlier opencode sessions, after one filled up
+    task: str = ""  # what it was started with, if anything: sent as its first message
 
     @property
     def key(self) -> str:
@@ -676,6 +677,104 @@ def send(town: Town, config: Config, session: Session, text: str, *, config_path
     return "\n".join(_text(m) for m in after if m.get("type") == "assistant" and _text(m)).strip()
 
 
+def prompt(town: Town, config: Config, session: Session, text: str, *, config_path: Path) -> str:
+    """Send a message without waiting: the resident works on it in the background. Returns the message's id."""
+    if not text.strip():
+        raise BatonError("The message is empty.")
+    run = start(town, config, session, config_path=config_path)
+    with _client(run, 30) as client:
+        sent = str(_data(client.post(f"/api/session/{session.opencode_id}/prompt", json={"text": text}), "a message")["id"])
+    session = get_session(town, session.resident, session.id)
+    session.last_active = now_iso()
+    save_session(town, session)
+    return sent
+
+
+def interrupt(town: Town, session: Session) -> bool:
+    """Stop the resident's current turn; the session stays open. True if it was working."""
+    run = running(town, session)
+    if run is None or not session.opencode_id:
+        return False
+    with _client(run, 30) as client:
+        resp = client.post(f"/api/session/{session.opencode_id}/interrupt")
+    resp.raise_for_status()
+    return bool(cast(dict[str, Any], resp.json()).get("interrupted"))
+
+
+def permission_requests(run: Running, session: Session) -> list[dict[str, Any]]:
+    with _client(run, 10) as client:
+        return cast(list[dict[str, Any]], _data(client.get(f"/api/session/{session.opencode_id}/permission"), "permission requests"))
+
+
+def answer_permission(town: Town, session: Session, request_id: str, decision: str) -> None:
+    """Answer a question the resident's opencode is waiting on: once, always (for this session) or reject."""
+    if decision not in ("once", "always", "reject"):
+        raise BatonError("Answer with once, always or reject.")
+    run = running(town, session)
+    if run is None:
+        raise BatonError("That session isn't running.")
+    with _client(run, 30) as client:
+        client.post(f"/api/session/{session.opencode_id}/permission/{request_id}/reply", json={"decision": decision}).raise_for_status()
+
+
+def switch_model(town: Town, config: Config, session: Session, preset: str, *, config_path: Path) -> Session:
+    """Give a session another model preset. A running session restarts on it and carries on where it was."""
+    overrides = dict(session.overrides)
+    if preset.strip() in ("", "default"):
+        overrides.pop("model", None)
+    else:
+        overrides["model"] = preset.strip()
+    effective_profile(town, config, session.resident, overrides, by=session.by)  # validates the preset
+    session.overrides = overrides
+    save_session(town, session)
+    run = running(town, session)
+    if run is not None:
+        _stop(run)
+        _runtime_path(town, session).unlink(missing_ok=True)
+        start(town, config, session, config_path=config_path)
+    return get_session(town, session.resident, session.id)
+
+
+def _activity(message: dict[str, Any]) -> str:
+    """What a message shows the resident doing, in a few words."""
+    if message.get("type") == "user":
+        return "reading your message"
+    for part in reversed(cast(list[dict[str, Any]], message.get("content") or [])):
+        if part.get("type") == "tool":
+            state = cast(dict[str, Any], part.get("state") or {})
+            data = cast(dict[str, Any], state.get("input") or {}) if isinstance(state.get("input"), dict) else {}
+            detail = data.get("command") or data.get("path") or data.get("pattern") or data.get("url") or ""
+            return f"{part.get('name')} {str(detail)[:80]}".strip()
+        if part.get("type") in ("text", "reasoning") and part.get("text"):
+            return "writing" if part.get("type") == "text" else "thinking"
+    return "thinking"
+
+
+def live(town: Town, session: Session) -> dict[str, Any]:
+    """What a session is doing now: frozen or new; or, while it runs, working, idle, or waiting for you."""
+    run = running(town, session)
+    if run is None:
+        return {"state": "frozen" if session.status != "new" else "new", "activity": "", "questions": []}
+    if not session.opencode_id:
+        return {"state": "starting", "activity": "", "questions": []}
+    try:
+        questions: list[dict[str, Any]] = [
+            {"id": q.get("id"), "action": q.get("action"), "resources": q.get("resources") or [], "message": q.get("message") or ""}
+            for q in permission_requests(run, session)]
+        with _client(run, 10) as client:
+            body = _json(client.get(f"/api/session/{session.opencode_id}/message", params={"order": "desc", "limit": 5}), "messages")
+    except (BatonError, httpx.HTTPError):
+        return {"state": "running", "activity": "", "questions": []}
+    recent = cast(list[dict[str, Any]], cast(dict[str, Any], body).get("data") or [])
+    if questions:
+        return {"state": "waiting", "activity": "waiting for your answer", "questions": questions}
+    shown = [m for m in recent if m.get("type") in ("user", "assistant", "idle")]
+    if not shown or shown[0].get("type") == "idle":
+        outcome = str(shown[0].get("outcome") or "") if shown else ""
+        return {"state": "idle", "activity": "" if outcome in ("", "succeeded") else f"its last turn {outcome}", "questions": []}
+    return {"state": "working", "activity": _activity(shown[0]), "questions": []}
+
+
 def _after(messages: list[dict[str, Any]], message_id: str) -> list[dict[str, Any]]:
     ids = [str(m.get("id")) for m in messages]
     return messages[ids.index(message_id) + 1:] if message_id in ids else []
@@ -914,7 +1013,7 @@ def attach_argv(config: Config, session: Session, run: Running) -> tuple[list[st
 def describe(town: Town, session: Session) -> dict[str, Any]:
     run = running(town, session)
     return {**asdict(session), "status": "running" if run else ("frozen" if session.status != "new" else "new"),
-            "url": run.url if run else "", "password": run.password if run else ""}
+            "url": run.url if run else "", "password": run.password if run else "", "live": live(town, session)}
 
 
 def overview(town: Town, resident: str) -> list[dict[str, Any]]:
