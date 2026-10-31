@@ -1601,7 +1601,7 @@ export interface TownSessionRequest {
 
 export interface TownReview {
   sessions: TownSessionRequest[];
-  /** Requests already decided, newest first: what ran, and whether Squid or allow-all approved it. */
+  /** Requests already decided, newest first: what ran, and whether the owner or allow-all approved it. */
   recent: {
     id: string; resident: string; task: string; status: string; decided: string;
     decided_by: string; commands: string[]; access: Record<string, string>; result: string;
@@ -1740,7 +1740,7 @@ export function changeTownSession(
   return mutation<TownSessions & { message: string }>(transport, `town.session.${action}`, payload, 120_000);
 }
 
-/** Session requests waiting for Squid, for the prompt that appears in a chat while one waits. */
+/** Session requests waiting for the owner, for the prompt that appears in a chat while one waits. */
 export function fetchPendingSessionRequests(token: string, base: string = ""): Promise<{ pending: TownSessionRequest[] }> {
   return request<{ pending: TownSessionRequest[] }>(`${base}/api/town/session-requests`, token, undefined, API_READ_TIMEOUT_MS);
 }

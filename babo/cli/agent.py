@@ -383,7 +383,7 @@ def _run_classic(runtime_config: Config, *, message: str | None, session_id: str
             requests_seen: set[str] = set()
 
             async def _ask_about_new_requests() -> None:
-                """Session requests wait for Squid: ask here, between turns, instead of leaving them for babo review."""
+                """Session requests wait for the owner: ask here, between turns, instead of leaving them for babo review."""
                 if baton_runtime is None:
                     return
                 from babo.baton.cli import ask_about_new_requests

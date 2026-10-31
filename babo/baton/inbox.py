@@ -1,4 +1,4 @@
-"""Inboxes: letters, flags, Squid's notes and a resident's own remember() notes."""
+"""Inboxes: letters, flags, the owner's notes and a resident's own remember() notes."""
 
 from __future__ import annotations
 

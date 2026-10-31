@@ -152,7 +152,7 @@ def test_ordinary_workspace_is_untouched(tmp_path) -> None:
 async def test_resident_turn_runs_against_mock_llama(make_loop, mock_llama) -> None:
     from baton.mock_llama import text, tool_call
 
-    mock_llama.push(tool_call("remember", {"text": "Squid likes tomatoes."}), text("Noted."))
+    mock_llama.push(tool_call("remember", {"text": "Robin likes tomatoes."}), text("Noted."))
     loop = make_loop("mayor")
     reply = await loop.process_direct("Remember that I like tomatoes.", session_key="cli:test")
     assert "Noted" in str(reply)

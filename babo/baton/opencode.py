@@ -51,7 +51,7 @@ from filelock import FileLock
 
 from babo.baton import profiles
 from babo.baton.registry import Registry
-from babo.baton.town import BatonError, Town, atomic_write, now_iso
+from babo.baton.town import OWNER, BatonError, Town, atomic_write, is_owner, now_iso
 
 if TYPE_CHECKING:
     from babo.config.schema import Config, MCPServerConfig
@@ -184,7 +184,7 @@ class Session:
     overrides: dict[str, object] = field(default_factory=lambda: cast(dict[str, object], {}))
     created: str = ""
     last_active: str = ""
-    by: str = "squid"
+    by: str = OWNER
     commands: list[str] = field(default_factory=lambda: cast(list[str], []))  # exact shell commands allowed, from an approved request
     reviewed: str = ""  # when the resident last reviewed this session into its memory
     previous: list[str] = field(default_factory=lambda: cast(list[str], []))  # earlier opencode sessions, after one filled up
@@ -235,10 +235,10 @@ def get_session(town: Town, resident: str, session_id: str | None = None) -> Ses
 
 def new_session(
     town: Town, config: Config, resident: str, *, title: str = "", overrides: dict[str, object] | None = None,
-    by: str = "squid", kind: str = "work", commands: list[str] | None = None,
+    by: str = OWNER, kind: str = "work", commands: list[str] | None = None,
 ) -> Session:
-    """Record a new session. Squid may change anything for it; the Mayor may
-    only narrow it, because a resident's profile is Squid's to widen."""
+    """Record a new session. The owner may change anything for it; the Mayor may
+    only narrow it, because a resident's profile is the owner's to widen."""
     agent = Registry(town).require_active(resident)
     if not runs_in_opencode(agent.office):
         raise BatonError("The Mayor runs in Babo itself; talk to it with `babo` or the web interface.")
@@ -257,8 +257,8 @@ def effective_profile(town: Town, config: Config, resident: str, overrides: dict
     mcp_known = sorted(config.tools.mcp_servers)
     session = profiles.session_profile(base, overrides, agent=resident, mcp_known=mcp_known)
     wider = profiles.widening(base, session)
-    if wider and by != "squid":
-        raise BatonError("Only Squid can give a session more than its resident's profile allows: " + "; ".join(wider))
+    if wider and not is_owner(by):
+        raise BatonError(f"Only {town.owner_name} can give a session more than its resident's profile allows: " + "; ".join(wider))
     return session
 
 

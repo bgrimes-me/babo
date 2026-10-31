@@ -98,7 +98,7 @@ TOOL_SPECS: dict[str, ToolSpec] = {
         ),
         ToolSpec(
             "propose_tool",
-            "Propose a new tool for the town. Give Python code defining run(input: str) -> str and a pytest test. It is tested in isolation, reviewed by the Inspector, and needs Squid's approval.",
+            "Propose a new tool for the town. Give Python code defining run(input: str) -> str and a pytest test. It is tested in isolation, reviewed by the Inspector, and needs the owner's approval.",
             {
                 "type": "object",
                 "properties": {
@@ -112,7 +112,7 @@ TOOL_SPECS: dict[str, ToolSpec] = {
         ),
         ToolSpec(
             "propose_change",
-            "Propose a change to how the town or the harness works. Squid accepts or declines with a reason.",
+            "Propose a change to how the town or the harness works. The owner accepts or declines with a reason.",
             {
                 "type": "object",
                 "properties": {
@@ -120,14 +120,14 @@ TOOL_SPECS: dict[str, ToolSpec] = {
                     "rationale": _str("Why this change is needed."),
                     "description": _str("What should change."),
                     "project": _str("Optional: the name of one of your projects, to propose moving it to the commons."),
-                    "town_name": _str("Optional: a name for the town. If Squid accepts, the town takes this name."),
+                    "town_name": _str("Optional: a name for the town. If the owner accepts, the town takes this name."),
                 },
                 "required": ["title", "rationale", "description"],
             },
         ),
         ToolSpec(
             "post_board",
-            "Post to the town notice board: an open role, a request, or a founding request for a new resident (Squid approves).",
+            "Post to the town notice board: an open role, a request, or a founding request for a new resident (the owner approves).",
             {
                 "type": "object",
                 "properties": {
@@ -141,8 +141,8 @@ TOOL_SPECS: dict[str, ToolSpec] = {
         ),
         ToolSpec(
             "request_session",
-            "Ask Squid to run a task in another resident's session, with the access it needs (for example to install a package or run a build). "
-            "Nothing happens until Squid approves; you get a letter with the result. Ask for the least access that will do: "
+            "Ask the owner to run a task in another resident's session, with the access it needs (for example to install a package or run a build). "
+            "Nothing happens until the owner approves; you get a letter with the result. Ask for the least access that will do: "
             "prefer exact commands over turning the shell on. Commands run without a terminal, so give flags like --noconfirm or -y; "
             "sudo works only if the machine allows it without a password.",
             {
@@ -150,7 +150,7 @@ TOOL_SPECS: dict[str, ToolSpec] = {
                 "properties": {
                     "resident": _str("Which resident does it (not yourself)."),
                     "task": _str("What the session should do, plainly and completely."),
-                    "reason": _str("Why it's needed. Squid reads this before deciding."),
+                    "reason": _str("Why it's needed. The owner reads this before deciding."),
                     "access": {
                         "type": "object",
                         "description": "Access beyond the resident's profile, each allow or deny: files, shell, subagents, web_fetch, web_search, image_generation.",
@@ -377,7 +377,7 @@ class Toolbox:
         atomic_write(folder / "test_tool.py", test.rstrip() + "\n")
         meta = {"name": name, "description": first_line(description, 140), "author": self.resident_id, "created": now_iso(), "status": "pending"}
         atomic_write(folder / "TOOL.md", join_frontmatter(meta, description.strip() + "\n"))
-        return f"Proposed tool {name}. It will be tested in isolation, reviewed by the Inspector, and then goes to Squid."
+        return f"Proposed tool {name}. It will be tested in isolation, reviewed by the Inspector, and then goes to {self.town.owner_name}."
 
     def propose_change(self, title: str, rationale: str, description: str, project: str | None = None, town_name: str | None = None) -> str:
         town_name = " ".join((town_name or "").split())
@@ -398,7 +398,7 @@ class Toolbox:
             meta["town_name"] = town_name
         body = f"# {title.strip()}\n\n## Why\n\n{rationale.strip()}\n\n## What\n\n{description.strip()}\n"
         atomic_write(path, join_frontmatter(meta, body))
-        return f"Proposal filed as {self.scope.display(path)}. Squid will accept or decline it with a reason."
+        return f"Proposal filed as {self.scope.display(path)}. {self.town.owner_name} will accept or decline it with a reason."
 
     # -- mayor -----------------------------------------------------------
     def post_board(self, kind: str, text: str, office: str | None = None) -> str:
@@ -416,7 +416,7 @@ class Toolbox:
             n += 1
         atomic_write(path, join_frontmatter(meta, text.strip() + "\n"))
         if kind == "founding_request":
-            return f"Founding request posted ({self.scope.display(path)}). Squid decides in the weekly review."
+            return f"Founding request posted ({self.scope.display(path)}). {self.town.owner_name} decides in the weekly review."
         return f"Posted to the board: {self.scope.display(path)}."
 
     def request_session(self, resident: str, task: str, reason: str, access: dict[str, object] | None = None,
@@ -427,10 +427,10 @@ class Toolbox:
         request = requests.create(self.town, requested_by=self.resident_id, resident=resident, task=task, reason=reason,
                                   access=access, commands=commands, session_key=current_request_session_key())
         if request.status == "approved":
-            return (f"Request {request.id} was approved automatically (Squid turned allow-all on for this chat). "
+            return (f"Request {request.id} was approved automatically ({self.town.owner_name} turned allow-all on for this chat). "
                     "It starts within a minute; you'll get a letter with the result.")
-        return (f"Request {request.id} is waiting for Squid's approval. Nothing runs until he approves it; "
-                "you'll get a letter with the result, or with his reason if he declines.")
+        return (f"Request {request.id} is waiting for {self.town.owner_name}'s approval. Nothing runs until it is approved; "
+                "you'll get a letter with the result, or with the reason if it is declined.")
 
     # -- archivist -------------------------------------------------------
     def _commons_path(self, ref: str) -> Path:

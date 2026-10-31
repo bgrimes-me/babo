@@ -72,7 +72,7 @@ async def test_deciding_from_the_web_names_the_town_and_tells_the_author(town: T
 async def test_notes_and_refusals(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     routes = _routes(town, index_path, monkeypatch)
     status, _ = await _call(routes, "/api/town/note", {"resident": "archivist", "text": "Thanks!"})
-    assert status == 200 and [i.sender for i in unread(town, "archivist")] == ["squid"]
+    assert status == 200 and [i.sender for i in unread(town, "archivist")] == ["owner"]
     status, text = await _call(routes, "/api/town/decide", {"kind": "proposal", "id": "../../CHARTER.md", "yes": True, "reason": "x"})
     assert status == 400
     status, _ = await _call(routes, "/api/town/decide", {"kind": "nonsense", "id": "x", "yes": True, "reason": "x"})

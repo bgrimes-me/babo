@@ -1,4 +1,4 @@
-"""The town as plain data, and Squid's decisions as plain calls.
+"""The town as plain data, and the owner's decisions as plain calls.
 
 The command line (`babo town`, `babo review`, `babo note`, `babo profile`) and the web
 interface's town pages both go through these functions, so the two always
@@ -16,7 +16,7 @@ from babo.baton.founding import founding_requests
 from babo.baton.inbox import unread
 from babo.baton.notes import first_line, split_frontmatter
 from babo.baton.registry import Registry
-from babo.baton.town import BatonError, Town
+from babo.baton.town import OWNER, BatonError, Town
 
 if TYPE_CHECKING:
     from babo.config.schema import Config
@@ -136,8 +136,8 @@ def mayor_chats(town: Town, *, limit: int = 10) -> list[dict[str, str]]:
 
 def decide(town: Town, kind: DecisionKind, item_id: str, *, yes: bool, reason: str, commit: bool = True,
            digest: str | None = None) -> str:
-    """Apply one of Squid's review decisions. Returns a short plain-language result.
-    ``digest``: for a session request, the fingerprint of the request as Squid saw it."""
+    """Apply one of the owner's review decisions. Returns a short plain-language result.
+    ``digest``: for a session request, the fingerprint of the request as the owner saw it."""
     reason = reason.strip() or "(no reason given)"
     if kind == "session":
         return _requests().decide(town, item_id, approve=yes, reason=reason, digest=digest, commit=commit)
@@ -158,12 +158,12 @@ def decide(town: Town, kind: DecisionKind, item_id: str, *, yes: bool, reason: s
     else:  # pragma: no cover - the type admits nothing else
         raise BatonError(f"Unknown decision kind: {kind}")
     if commit:
-        gitops.commit_all(town, f"Review by Squid: {result}")
+        gitops.commit_all(town, f"Review by {town.owner_name}: {result}")
     return result
 
 
 def name_town(town: Town, name: str) -> str:
-    named = town.set_name(name, by="squid")
+    named = town.set_name(name, by=OWNER)
     gitops.commit_all(town, f"Name the town: {named}")
     return f"The town is now called {named}."
 

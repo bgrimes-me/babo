@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run.sh — runs one install step, saves its full output, and on FAIL pushes the report.
-# Usage: install/run.sh 03-config        (or squid-01-packages, 00-recon, ...)
+# Usage: install/run.sh 03-config        (or host-packages, 00-recon, ...)
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 step="${1:-}"
@@ -31,7 +31,7 @@ case "$last" in
     where="saved at $log"
     if pushed="$(bash "$INSTALL_DIR/report.sh" "$log" 2>&1)"; then where="$where and pushed to the reports branch"; fi
     printf '%s\n' "$pushed" | sed 's/^OK:/note:/'
-    echo "FAIL: step ${step%.sh} failed. The report is $where. Stop here and tell Squid."
+    echo "FAIL: step ${step%.sh} failed. The report is $where. Stop here and tell the owner."
     exit 1
     ;;
 esac

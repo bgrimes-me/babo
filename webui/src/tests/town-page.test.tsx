@@ -5,7 +5,7 @@ import i18n from "@/i18n";
 
 const town = (name = "") => ({
   name,
-  root: "/home/squid/baton-town",
+  root: "/home/robin/baton-town",
   residents: [{ id: "mayor", name: "", office: "mayor", status: "active", founded: "", last_active: "", unread: 1, flags: 0 }],
   board: [],
   pending: { tools: 0, proposals: 1, founding: 0, flags: 0, sessions: 1 },
@@ -75,7 +75,7 @@ describe("town page", () => {
     expect(screen.getByRole("tab", { name: "Review (2)" })).toBeVisible();
   });
 
-  it("accepts a name proposal with Squid's reason, like `babo review`", async () => {
+  it("accepts a name proposal with the owner's reason, like `babo review`", async () => {
     render(<TownPage onBackToChat={() => {}} />);
     fireEvent.click(await screen.findByRole("tab", { name: "Review (2)" }));
     const card = (await screen.findByText("Name the town — mayor")).closest(".settings-list-row") as HTMLElement;

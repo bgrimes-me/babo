@@ -41,12 +41,12 @@ def test_found_town_creates_layout_and_three_residents(town: Town) -> None:
 
 def test_found_town_is_idempotent_and_commits_once(town: Town) -> None:
     before = (town.root / "CHARTER.md").read_text()
-    (town.root / "HOUSE.md").write_text("Squid's edits\n")
+    (town.root / "HOUSE.md").write_text("Robin's edits\n")
     found_town(town.root)
     log = subprocess.run(["git", "-C", str(town.root), "log", "--oneline"], capture_output=True, text=True).stdout.splitlines()
     assert len(log) == 1 and "Found the town" in log[0]
     assert (town.root / "CHARTER.md").read_text() == before
-    assert (town.root / "HOUSE.md").read_text() == "Squid's edits\n"
+    assert (town.root / "HOUSE.md").read_text() == "Robin's edits\n"
 
 
 def test_town_gitignore_keeps_projects_and_derived_data_out(town: Town) -> None:
@@ -75,7 +75,7 @@ def test_founding_refuses_to_adopt_unfounded_directory(town: Town) -> None:
     )
     town.resident_dir("gardener").mkdir()
     (town.resident_dir("gardener") / "SELF.md").write_text("planted")
-    resident = approve_founding_request(town, town.board / "2026-01-01-founding_request-gardener.md", approved_by="squid")
+    resident = approve_founding_request(town, town.board / "2026-01-01-founding_request-gardener.md", approved_by="owner")
     # A unique id is chosen; the planted directory is never adopted.
     assert resident.id == "gardener-2"
     assert (town.resident_dir("gardener") / "SELF.md").read_text() == "planted"
@@ -86,19 +86,19 @@ def test_approved_founding_request_creates_resident(town: Town) -> None:
     path = town.board / "2026-01-01-founding_request-gardener.md"
     path.write_text("---\nkind: founding_request\noffice: gardener\nstatus: open\n---\n\nTends the projects.\n")
     assert founding_requests(town) == [path]
-    resident = approve_founding_request(town, path, approved_by="squid")
+    resident = approve_founding_request(town, path, approved_by="owner")
     assert resident.id == "gardener"
     Registry(town).require_active("gardener")
     assert "Tends the projects." in (town.resident_dir("gardener") / "ROLE.md").read_text()
     assert "status: approved" in path.read_text()
     with pytest.raises(BatonError, match="already approved"):
-        approve_founding_request(town, path, approved_by="squid")
+        approve_founding_request(town, path, approved_by="owner")
 
 
 def test_declined_founding_request_creates_nothing(town: Town) -> None:
     path = town.board / "2026-01-01-founding_request-x.md"
     path.write_text("---\nkind: founding_request\noffice: x-office\nstatus: open\n---\n\nwhy\n")
-    decline_founding_request(town, path, declined_by="squid", reason="not now")
+    decline_founding_request(town, path, declined_by="owner", reason="not now")
     assert len(Registry(town).all()) == 3
     assert not any(p.name.startswith("x-office") for p in town.residents_dir.iterdir())
 
@@ -107,7 +107,7 @@ def test_founding_authority_cannot_be_forged(town: Town) -> None:
     with pytest.raises(BatonError):
         founding._authority("forged", "me", object())
     with pytest.raises(BatonError):
-        founding._found_resident(town, "forged", "x", "role", authority="squid")  # type: ignore[arg-type]
+        founding._found_resident(town, "forged", "x", "role", authority="owner")  # type: ignore[arg-type]
     assert not town.resident_dir("forged").exists()
 
 

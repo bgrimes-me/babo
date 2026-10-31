@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# report.sh — commits one report file to the `reports` branch and pushes it. Never touches your checkout.
+# report.sh — with BABO_PUSH_REPORTS=1, commits one report file to the `reports` branch and pushes it. Never touches your checkout.
 # Usage: install/report.sh install/reports/<file>.md
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -8,6 +8,8 @@ fail() { echo "note: $*"; exit 1; }
 file="${1:-}"
 [ -f "$file" ] || fail "usage: install/report.sh <report file>"
 file="$(cd "$(dirname "$file")" && pwd)/$(basename "$file")"
+# Reports describe the machine, so they stay local unless the owner asks for them to be pushed.
+[ "${BABO_PUSH_REPORTS:-0}" = 1 ] || fail "the report is saved locally (set BABO_PUSH_REPORTS=1 to push reports to the repository's reports branch)"
 work="$(mktemp -d)"
 trap 'git -C "$REPO_DIR" worktree remove --force "$work/reports" >/dev/null 2>&1 || true; rm -rf "$work"' EXIT
 git -C "$REPO_DIR" worktree prune 2>/dev/null || true

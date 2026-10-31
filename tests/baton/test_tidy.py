@@ -47,7 +47,7 @@ def test_stale_folders_in_the_checkout_go_but_work_stays(tmp_path: Path) -> None
     (repo / "babo" / "__pycache__").mkdir()
     (repo / "babo" / "__pycache__" / "app.cpython-312.pyc").write_bytes(b"x")
     (repo / "notes").mkdir()
-    (repo / "notes" / "mine.md").write_text("Squid's own notes")
+    (repo / "notes" / "mine.md").write_text("Robin's own notes")
     said = tidy(babo_home=tmp_path / "none", user_home=tmp_path, checkout=repo)
     assert not (repo / "nanobot").exists() and said == ["removed nanobot/ (only Python's cache of code that no longer exists)"]
     assert (repo / "babo" / "__pycache__").exists() and (repo / "notes" / "mine.md").exists()

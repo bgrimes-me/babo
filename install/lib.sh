@@ -5,7 +5,7 @@ set -euo pipefail
 INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$INSTALL_DIR/.." && pwd)"
 # The distrobox the town runs in. Inside a box, distrobox sets CONTAINER_ID to its name.
-BOX="${BATON_BOX:-${CONTAINER_ID:-Agent}}"
+BOX="${BATON_BOX:-${CONTAINER_ID:-babo}}"
 
 fail() { echo "FAIL: $*"; exit 1; }
 ok() { echo "OK: $*"; exit 0; }

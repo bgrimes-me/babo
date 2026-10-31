@@ -43,13 +43,13 @@ def _commits(town: Town) -> list[str]:
 
 async def _a_day_in_town(make_loop, mock_llama: MockLlama, town: Town) -> None:
     """The Mayor works, remembers something, and nominates a note."""
-    mock_llama.default = _router([tool_call("remember", {"text": "Squid prefers tomatoes."}), text("Noted.")])
+    mock_llama.default = _router([tool_call("remember", {"text": "Robin prefers tomatoes."}), text("Noted.")])
     loop = make_loop("mayor")
     await loop.process_direct("Remember I like tomatoes.", session_key="cli:day")
     await loop.aclose()
-    write_note(town.resident_dir("mayor") / "knowledge", title="Tomatoes", body="Squid prefers tomatoes.", author="mayor")
+    write_note(town.resident_dir("mayor") / "knowledge", title="Tomatoes", body="Robin prefers tomatoes.", author="mayor")
     (town.promotions / "2026-01-01-mayor-tomatoes.md").write_text(
-        "---\nfrom: mayor\nnote: residents/mayor/knowledge/tomatoes.md\ntitle: Tomatoes\nreason: town-wide preference\nstatus: pending\n---\n\nSquid prefers tomatoes.\n"
+        "---\nfrom: mayor\nnote: residents/mayor/knowledge/tomatoes.md\ntitle: Tomatoes\nreason: town-wide preference\nstatus: pending\n---\n\nRobin prefers tomatoes.\n"
     )
     pending = town.tools / "pending" / "shout"
     pending.mkdir(parents=True)
@@ -60,7 +60,7 @@ async def _a_day_in_town(make_loop, mock_llama: MockLlama, town: Town) -> None:
 
 def _night_chats() -> list[dict[str, Any]]:
     return [
-        tool_call("commons_write", {"title": "Tomatoes", "body": "Squid prefers tomatoes.", "authors": ["mayor"], "keywords": ["food"]}),
+        tool_call("commons_write", {"title": "Tomatoes", "body": "Robin prefers tomatoes.", "authors": ["mayor"], "keywords": ["food"]}),
         text("Filed the tomato note."),
         tool_call("file_flag", {"resident": "mayor", "claim": "said it ran tests", "evidence": "no test command in the log"}),
         tool_call("review_item", {"path": "commons/tools/pending/shout", "review": "Pure function, low risk."}),
@@ -177,9 +177,9 @@ def test_units_render_for_the_host() -> None:
     from babo.baton.config import BatonConfig
     from babo.baton.units import render_units
 
-    cfg = BatonConfig.model_validate({"box": "Agent", "baboPath": "/home/squid/.local/bin/babo"})
+    cfg = BatonConfig.model_validate({"box": "Agent", "baboPath": "/home/robin/.local/bin/babo"})
     units = render_units(cfg)
-    assert "ExecStart=/usr/bin/distrobox enter Agent -- /home/squid/.local/bin/babo upkeep --watch" in units["babo-upkeep.service"]
+    assert "ExecStart=/usr/bin/distrobox enter Agent -- /home/robin/.local/bin/babo upkeep --watch" in units["babo-upkeep.service"]
     assert sorted(units) == ["babo-gateway.service", "babo-queue.service", "babo-upkeep.service"]
     assert "babo queue" in units["babo-queue.service"] and "gateway --foreground" in units["babo-gateway.service"]
 

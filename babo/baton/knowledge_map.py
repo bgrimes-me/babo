@@ -2,7 +2,7 @@
 
 Regenerated at every upkeep (and by ``babo reindex``). It lists every note in
 the commons by topic, with Obsidian-style ``[[links]]``, so a resident (or
-Squid, in Obsidian) can find its way around without searching. Residents
+the owner, in Obsidian) can find its way around without searching. Residents
 follow a link with ``read_note("[[note name]]")``. Notes that were replaced or
 are contested are listed apart, so the map leads to what is current.
 """

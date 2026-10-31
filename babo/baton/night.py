@@ -393,7 +393,7 @@ class Night:
         remember = [i for i in items(self.town, resident) if i.kind == "remember" and not i.folded]
         received = [i for i in items(self.town, resident) if i.kind != "remember" and i.created > since]
         diff = self.work_dir / "diffs" / f"{resident}.md"
-        parts = [f"{NIGHT_MARK} From the Baton harness, not Squid. Time now {_now()}: time for your memory review. "
+        parts = [f"{NIGHT_MARK} From the Baton harness, not {self.town.owner_name}. Time now {_now()}: time for your memory review. "
                  "Fold what happened since your last review into your memory, and promote what the town should know."]
         parts.append("## Your checkpoints since your last review\n" + ("\n".join(c.render() for c in cps[-8:]) or "(none)"))
         parts.append("## Notes you asked to remember\n" + ("\n".join(f"- {first_line(i.body, 200)}" for i in remember) or "(none)"))
@@ -494,7 +494,7 @@ class Night:
     async def inspector_turn(self) -> None:
         material = self.inspector_material()
         if material is None or not any(r.office == "inspector" and r.status == "active" for r in Registry(self.town).all()):
-            # With no Inspector, tools and proposals still reach Squid; they just arrive without its review.
+            # With no Inspector, tools and proposals still reach the owner; they just arrive without its review.
             self.ledger.mark("inspector", ran=False)
             return
         reply = await self.agent_turn("inspector", material, f"night:{self.night}")

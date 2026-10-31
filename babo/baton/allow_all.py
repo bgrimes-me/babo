@@ -1,13 +1,13 @@
-"""Allow all: Squid lets one of the Mayor's chats run session requests without review.
+"""Allow all: the owner lets one of the Mayor's chats run session requests without review.
 
-Normally every session the Mayor asks for waits for Squid's approval. With
+Normally every session the Mayor asks for waits for the owner's approval. With
 "allow all" on for one chat (a web chat, a Discord channel, the terminal),
 requests the Mayor makes from that chat are approved as they are asked, and
 the upkeep service runs them within a minute, with whatever access he asked
 for. They still run in a resident's opencode session, and every request and
 result is still recorded and listed in the review's "recently run".
 
-It is Squid's choice, per chat, for an hour, a few hours, or until he turns it
+It is the owner's choice, per chat, for an hour, a few hours, or until they turn it
 off; turning it on and off is recorded in the town's history.
 """
 
@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from babo.baton import gitops
-from babo.baton.town import BatonError, Town, atomic_write, now_iso
+from babo.baton.town import OWNER, BatonError, Town, atomic_write, now_iso
 
 MAX_KEY = 200
 
@@ -68,10 +68,10 @@ def turn_on(town: Town, session_key: str, *, hours: float | None) -> str:
     now = datetime.now().astimezone()
     until = (now + timedelta(hours=hours)).isoformat(timespec="seconds") if hours is not None else ""
     grants = {k: v for k, v in active(town, now=now).items()}
-    grants[key] = {"since": now_iso(), "until": until, "by": "squid"}
+    grants[key] = {"since": now_iso(), "until": until, "by": OWNER}
     atomic_write(_path(town), json.dumps(grants, indent=2) + "\n")
     lasting = f"until {until[:16].replace('T', ' ')}" if until else "until you turn it off"
-    gitops.commit_paths(town, [_path(town)], f"Squid turned allow-all on for {key} ({lasting})")
+    gitops.commit_paths(town, [_path(town)], f"{town.owner_name} turned allow-all on for {key} ({lasting})")
     return f"Allow all is on for {key}, {lasting}. The Mayor's session requests from this chat run without your review."
 
 
@@ -82,7 +82,7 @@ def turn_off(town: Town, session_key: str) -> str:
         return f"Allow all wasn't on for {key}."
     del grants[key]
     atomic_write(_path(town), json.dumps(grants, indent=2) + "\n")
-    gitops.commit_paths(town, [_path(town)], f"Squid turned allow-all off for {key}")
+    gitops.commit_paths(town, [_path(town)], f"{town.owner_name} turned allow-all off for {key}")
     return f"Allow all is off for {key}. The Mayor's session requests wait for your review again."
 
 

@@ -128,7 +128,7 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
             loop.tools.unregister(name)
             runtime.pruned.append(name)
 
-    # Plus every tool Squid approved for the town.
+    # Plus every tool the owner approved for the town.
     from babo.baton.tools.active import active_commons_tools
 
     for tool in active_commons_tools(town):

@@ -129,23 +129,37 @@ class Town:
     def name_file(self) -> Path:
         return self.root / "state" / "town.json"
 
-    @property
-    def name(self) -> str:
-        """The name the town chose, or "" while it has none."""
+    def _facts(self) -> dict[str, object]:
         try:
             data: object = json.loads(self.name_file.read_text(encoding="utf-8"))
         except (OSError, ValueError):
-            return ""
-        if not isinstance(data, dict):
-            return ""
-        return str(cast(dict[str, object], data).get("name") or "")
+            return {}
+        return cast(dict[str, object], data) if isinstance(data, dict) else {}
+
+    @property
+    def name(self) -> str:
+        """The name the town chose, or "" while it has none."""
+        return str(self._facts().get("name") or "")
 
     def set_name(self, name: str, *, by: str) -> str:
-        clean = " ".join(name.split())
-        if not clean or len(clean) > 60 or not clean.isprintable():
-            raise BatonError("A town name is 1 to 60 printable characters on one line.")
-        atomic_write(self.name_file, json.dumps({"name": clean, "named": now_iso(), "named_by": by}, indent=2) + "\n")
+        clean = _one_line(name, 60, "A town name")
+        atomic_write(self.name_file, json.dumps({**self._facts(), "name": clean, "named": now_iso(), "named_by": by}, indent=2) + "\n")
         return clean
+
+    # -- the owner: the person whose machine this is ----------------------
+    @property
+    def owner_name(self) -> str:
+        """What the town calls its owner, in its documents and in what residents are told."""
+        return str(self._facts().get("owner") or "the owner")
+
+    def set_owner_name(self, name: str) -> str:
+        clean = _one_line(name, 40, "The owner's name")
+        atomic_write(self.name_file, json.dumps({**self._facts(), "owner": clean}, indent=2) + "\n")
+        return clean
+
+    @property
+    def has_owner_name(self) -> bool:
+        return bool(self._facts().get("owner"))
 
     @property
     def display_name(self) -> str:
@@ -246,6 +260,23 @@ class Town:
         if len(parts) != 1 or not RESIDENT_ID_RE.match(parts[0]):
             return None
         return parts[0]
+
+
+# The id the code records for the owner (who decided, who sent a note). Towns
+# from before the owner had a name of their own recorded "squid"; both mean the owner.
+OWNER = "owner"
+_EARLIER_OWNER_IDS = ("squid",)
+
+
+def is_owner(who: str) -> bool:
+    return who == OWNER or who in _EARLIER_OWNER_IDS
+
+
+def _one_line(text: str, limit: int, what: str) -> str:
+    clean = " ".join(text.split())
+    if not clean or len(clean) > limit or not clean.isprintable():
+        raise BatonError(f"{what} is 1 to {limit} printable characters on one line.")
+    return clean
 
 
 def find_town_for_workspace(workspace: Path) -> tuple[Town, str] | None:

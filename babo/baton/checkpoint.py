@@ -36,7 +36,7 @@ from babo.baton.town import BatonError, Town, atomic_write, now_iso, slugify, to
 HARNESS_SENDER = "baton-harness"
 CHECKPOINT_MARK = "[baton:checkpoint]"
 
-_REQUEST = """{mark} This message is from the Baton harness, not from Squid. It is a checkpoint (reason: {trigger}).
+_REQUEST = """{mark} This message is from the Baton harness, not from {owner}. It is a checkpoint (reason: {trigger}).
 Time now: {now}. You are {who}.
 {fold_intro}Write your checkpoint in your own words, as JSON:
 - thread: short name of what you are working on (reuse the name if it continues: "{thread}")
@@ -86,7 +86,7 @@ class CheckpointService:
         if resident is not None:
             who += f", office: {resident.office}" if resident.name == UNCHOSEN else f", named {resident.name}, office: {resident.office}"
         return _REQUEST.format(
-            mark=CHECKPOINT_MARK, trigger=trigger, thread=last.thread if last else "general",
+            mark=CHECKPOINT_MARK, owner=self.town.owner_name, trigger=trigger, thread=last.thread if last else "general",
             now=stamp(datetime.now().astimezone()), who=who,
             fold_intro=_FOLD_INTRO if fold else "", extra=_FOLD_EXTRA if fold else "",
         )

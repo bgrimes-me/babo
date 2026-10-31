@@ -170,7 +170,7 @@ def test_note_and_town_commands(cli_config: Path, town: Town) -> None:
     runner = CliRunner()
     result = runner.invoke(app, ["note", "archivist", "Thanks for the tidy ledger.", "-c", str(cli_config)])
     assert result.exit_code == 0, result.output
-    assert [i.sender for i in unread(town, "archivist")] == ["squid"]
+    assert [i.sender for i in unread(town, "archivist")] == ["owner"]
     result = runner.invoke(app, ["town", "-c", str(cli_config)])
     assert result.exit_code == 0 and "archivist" in result.output and "Board" in result.output
     assert runner.invoke(app, ["note", "ghost", "hi", "-c", str(cli_config)]).exit_code == 1
@@ -236,7 +236,7 @@ def test_a_declined_name_changes_nothing(box, town: Town) -> None:
         box("archivist").propose_change("Rename", "why", "what", town_name="x" * 61)
 
 
-def test_squid_can_name_the_town_from_the_command_line(cli_config: Path, town: Town) -> None:
+def test_the_owner_can_name_the_town_from_the_command_line(cli_config: Path, town: Town) -> None:
     from babo.baton.cli import app
 
     runner = CliRunner()

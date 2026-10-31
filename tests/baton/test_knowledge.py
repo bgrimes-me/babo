@@ -25,7 +25,7 @@ def test_the_map_lists_current_notes_by_topic_and_leads_away_from_old_ones(town:
     write_note(town.knowledge, title="Compost", body="Turn it weekly.", author="archivist", keywords=["garden", "soil"])
     write_note(town.knowledge, title="Old compost advice", body="Never turn it.", author="archivist", keywords=["garden"],
                status="superseded")
-    write_note(town.knowledge, title="Tea", body="Squid drinks green tea.", author="mayor")
+    write_note(town.knowledge, title="Tea", body="Robin drinks green tea.", author="mayor")
     text = render_map(town)
     garden = text.split("## Garden", 1)[1].split("##", 1)[0]
     assert "[[compost|Compost]] — Turn it weekly." in garden and "[[raised-beds|Raised beds]]" in garden
@@ -53,7 +53,7 @@ def test_the_mayor_curates_while_the_town_has_no_archivist(town: Town, box, make
     assert curator_of(town) == "mayor"
     mayor = box("mayor")
     assert "commons_write" in mayor.available()
-    mayor.call("commons_write", title="Tea", body="Squid drinks green tea.", keywords=["Squid"])
+    mayor.call("commons_write", title="Tea", body="Robin drinks green tea.", keywords=["Robin"])
     assert (town.knowledge / "tea.md").exists()
     assert "commons_write" in make_loop("mayor").tools.tool_names
 
