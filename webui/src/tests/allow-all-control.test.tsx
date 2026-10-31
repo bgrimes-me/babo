@@ -18,8 +18,8 @@ beforeEach(async () => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("allow all", () => {
-  it("is off until Squid confirms, says what it means, and asks for how long", async () => {
-    mocks.mutation.mockResolvedValue({ message: "on", active: { "websocket:abc": { since: "", until: "", by: "squid" } } });
+  it("is off until the owner confirms, says what it means, and asks for how long", async () => {
+    mocks.mutation.mockResolvedValue({ message: "on", active: { "websocket:abc": { since: "", until: "", by: "owner" } } });
     render(<AllowAllControl sessionKey="websocket:abc" />);
     fireEvent.click(await screen.findByRole("button", { name: "Allow all" }));
     expect(await screen.findByText(/can lead to commands running/)).toBeVisible();
@@ -31,7 +31,7 @@ describe("allow all", () => {
   });
 
   it("shows when it's on for this chat, and turns off in one click", async () => {
-    mocks.fetch.mockImplementation(() => respond({ "websocket:abc": { since: "", until: "", by: "squid" } }));
+    mocks.fetch.mockImplementation(() => respond({ "websocket:abc": { since: "", until: "", by: "owner" } }));
     mocks.mutation.mockResolvedValue({ message: "off", active: {} });
     render(<AllowAllControl sessionKey="websocket:abc" />);
     fireEvent.click(await screen.findByRole("button", { name: "Turn off" }));

@@ -36,7 +36,7 @@ from babo.baton.night import Night, read_offsets, unreviewed_events
 from babo.baton.notes import split_frontmatter
 from babo.baton.registry import Registry
 from babo.baton.tools.core import proposal_files
-from babo.baton.town import Town, atomic_write, now_iso
+from babo.baton.town import OWNER, Town, atomic_write, now_iso
 
 if TYPE_CHECKING:
     from babo.config.schema import Config
@@ -97,7 +97,7 @@ def _request_path(town: Town):
     return town.state / "runtime" / "upkeep-request.json"
 
 
-def request_catch_up(town: Town, *, by: str = "squid") -> str:
+def request_catch_up(town: Town, *, by: str = OWNER) -> str:
     """Ask the running upkeep service to do everything waiting now (the web interface's button)."""
     atomic_write(_request_path(town), json.dumps({"at": now_iso(), "by": by}) + "\n")
     return "Catch-up requested: upkeep starts within a minute and does everything that is waiting."
@@ -238,7 +238,7 @@ async def watch(config: Config) -> None:
     request_job: asyncio.Future[Any] | None = None
     while True:
         try:
-            # Requests Squid approved run one at a time, beside upkeep, not instead of it.
+            # Requests the owner approved run one at a time, beside upkeep, not instead of it.
             if request_job is None or request_job.done():
                 approved = requests.next_approved(town)
                 if approved is not None:

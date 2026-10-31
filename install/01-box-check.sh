@@ -18,6 +18,6 @@ command -v gitleaks >/dev/null 2>&1 || echo "note: gitleaks is not installed; th
 command -v opencode >/dev/null 2>&1 || echo "note: opencode is not installed; residents other than the Mayor work in it (install: curl -fsSL https://opencode.ai/install | bash)"
 
 if [ ${#missing[@]} -gt 0 ]; then
-  fail "missing in the box: ${missing[*]}. Ask Squid to run install/squid-01-packages.sh inside the box, then run this step again."
+  fail "missing in the box: ${missing[*]}. Ask the owner to run install/host-packages.sh inside the box, then run this step again."
 fi
 ok "the box has git, uv, python $(python3 -c 'import platform; print(platform.python_version())') and FTS5"

@@ -62,7 +62,7 @@ def test_recent_activity_waits_for_its_session_to_end_except_in_quiet_hours(town
 
 
 def test_notes_to_curate_are_due_without_any_conversation(town: Town) -> None:
-    (town.promotions / "2026-10-29-mayor-tomatoes.md").write_text("---\nfrom: mayor\ntitle: Tomatoes\nstatus: pending\n---\n\nSquid likes tomatoes.\n")
+    (town.promotions / "2026-10-29-mayor-tomatoes.md").write_text("---\nfrom: mayor\ntitle: Tomatoes\nstatus: pending\n---\n\nRobin likes tomatoes.\n")
     plan = upkeep.due(town, _cfg(town), now=NOON, model_idle_s=3600)
     assert plan.run and plan.reasons == ["1 note(s) to curate into the commons"] and plan.residents == []
 

@@ -1,6 +1,6 @@
 # Babo: a town of agents on your machine
 
-Babo is a small **town of agents** that share your local model and keep a memory that grows. (The name is short for *baton bot*: each resident's memory is passed forward like a relay baton, in its own words.) It's written for you, Squid, not for programmers. The install steps are in [RUNBOOK.md](RUNBOOK.md); the technical map is in [integration-map.md](integration-map.md).
+Babo is a small **town of agents** that share your local model and keep a memory that grows. (The name is short for *baton bot*: each resident's memory is passed forward like a relay baton, in its own words.) It's written for you, the owner of the machine, not for programmers. The install steps are in [RUNBOOK.md](RUNBOOK.md); the technical map is in [integration-map.md](integration-map.md).
 
 ## What the town is
 

@@ -16,7 +16,7 @@ The name is short for *baton bot*. A resident's memory is passed forward like a 
 
 ## Getting started
 
-Babo is installed from this repository by an install agent following [`docs/baton/RUNBOOK.md`](./docs/baton/RUNBOOK.md). The person who owns the machine reads [`docs/baton/README.md`](./docs/baton/README.md).
+Babo is installed from this repository by an install agent following [`docs/baton/RUNBOOK.md`](./docs/baton/RUNBOOK.md). The person who owns the machine reads [`docs/baton/README.md`](./docs/baton/README.md). How it is designed, and why, is in [`docs/baton/DESIGN.md`](./docs/baton/DESIGN.md).
 
 Everyday commands:
 
@@ -30,6 +30,7 @@ Everyday commands:
 | `babo profile` | What each agent may do (tools, web, MCP servers, memory timing) |
 | `babo doctor` | Check that every part of the town works |
 | `babo upkeep` | What upkeep is waiting for; `--now` does it all now |
+| `babo reset` | Back everything up and start again from a fresh install |
 
 ## Where it came from, and thanks
 

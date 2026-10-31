@@ -1456,7 +1456,7 @@ export function ThreadShell({
       hideSidebarToggle={hideSidebarToggle}
       hideThemeButton={hideThemeButton}
       hideTitle={hideHeaderTitle}
-      actions={session ? <>{/* The Mayor's chat: let his session requests run without review, if Squid chooses. */}
+      actions={session ? <>{/* The Mayor's chat: let his session requests run without review, if the owner chooses. */}
         <AllowAllControl sessionKey={session.key} />{headerActions}</> : headerActions}
       minimal={!session && !loading}
       promptNavigatorAction={promptNavigatorAction}

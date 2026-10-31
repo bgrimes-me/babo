@@ -1,6 +1,6 @@
 """Per-resident gateway configs for channel bindings.
 
-By default every channel reaches the Mayor through one gateway, using Squid's
+By default every channel reaches the Mayor through one gateway, using the owner's
 config as is. When ``baton.channelBindings`` binds a channel to another
 resident (``{"telegram": "archivist"}``), ``babo configs`` writes one
 config per gateway under ``baton.generatedDir/<resident>/config.json``:

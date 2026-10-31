@@ -80,7 +80,7 @@ Cost: each live gateway is a separate Python process (~150–250 MB RAM). Only t
 
 Everything else — hooks, tools, gate, queue, search, night, review, MCP server, installer — is new code under `babo/baton/`, `install/`, `docs/baton/` and `tests/baton/`.
 
-## Decisions made with Squid after phase 0
+## Decisions made with the owner after phase 0
 
 - **Dream:** left in the code (rebase-friendly) but off by default and hidden from menus, help, Telegram's command list and the WebUI settings.
 - **Projects:** every resident has a private `residents/<id>/projects/<name>/`. A promoted project moves to `commons/projects/<name>/`, where every resident can work on it. Project folders are their own git repositories and are ignored by the town repo, so the town's history never embeds another repository.

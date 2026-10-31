@@ -79,9 +79,9 @@ def test_the_config_follows_the_profile_and_keeps_residents_in_their_own_workspa
     assert upkeep_cfg["providers"]["babo"]["headers"]["X-Baton-Priority"] == "upkeep"
 
 
-def test_only_squid_widens_a_session_and_the_mayor_stays_in_babo(town: Town, config_file) -> None:
+def test_only_the_owner_widens_a_session_and_the_mayor_stays_in_babo(town: Town, config_file) -> None:
     _, cfg = config_file()
-    with pytest.raises(BatonError, match="Only Squid can give a session more"):
+    with pytest.raises(BatonError, match="Only Robin can give a session more"):
         opencode.new_session(town, cfg, "archivist", overrides={"shell": "allow"}, by="mayor")
     narrower = opencode.new_session(town, cfg, "archivist", overrides={"files": "deny"}, by="mayor")
     assert narrower.overrides == {"files": "deny"}
@@ -91,7 +91,7 @@ def test_only_squid_widens_a_session_and_the_mayor_stays_in_babo(town: Town, con
 
 def test_each_resident_is_isolated_from_the_users_own_opencode(town: Town, config_file, monkeypatch: pytest.MonkeyPatch) -> None:
     _, cfg = config_file()
-    monkeypatch.setenv("OPENCODE_CONFIG", "/home/squid/.config/opencode/opencode.json")
+    monkeypatch.setenv("OPENCODE_CONFIG", "/home/robin/.config/opencode/opencode.json")
     env = opencode._resident_env(cfg, "archivist", password="pw", inline={"a": 1})  # pyright: ignore[reportPrivateUsage]
     root = Path(cfg.baton.opencode.data_dir) / "archivist"  # per resident, apart from the user's own opencode
     assert env["XDG_CONFIG_HOME"] == str(root / "config") and env["XDG_DATA_HOME"] == str(root / "data")

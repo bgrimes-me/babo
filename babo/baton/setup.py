@@ -1,7 +1,7 @@
 """Writing the town config at install time (``babo init-config``).
 
 Adds Baton's settings to ``~/.babo/config.json`` without disturbing
-anything Squid already configured (channels, keys). The original file is
+anything the owner already configured (channels, keys). The original file is
 backed up first. Re-running is safe: values the installer owns are refreshed,
 everything else is left as it is.
 """

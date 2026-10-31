@@ -1,13 +1,13 @@
-"""Session requests: the Mayor asks, Squid approves, Babo runs.
+"""Session requests: the Mayor asks, the owner approves, Babo runs.
 
 The Mayor doesn't do things on the box himself. When something needs doing
 (install a package, run a build, look at a log), he asks for a session: one
 resident, one task, and exactly the access it needs, with his reason. Asking
 does nothing by itself.
 
-Squid sees the request in his review (web or ``babo review``) word for word,
+The owner sees the request in their review (web or ``babo review``) word for word,
 with what it adds beyond the resident's profile, and approves or declines it.
-An approval counts only for the request as Squid saw it: the review sends
+An approval counts only for the request as the owner saw it: the review sends
 back a fingerprint of what was shown, and a request that changed in the
 meantime is refused. Approved requests are run by the upkeep service: it
 starts that resident's opencode session with exactly that access, sends the
@@ -36,12 +36,11 @@ from babo.baton import gitops, profiles
 from babo.baton.inbox import deliver
 from babo.baton.notes import first_line
 from babo.baton.registry import Registry
-from babo.baton.town import BatonError, Town, atomic_write, now_iso, slugify
+from babo.baton.town import OWNER, BatonError, Town, atomic_write, now_iso, slugify
 
 if TYPE_CHECKING:
     from babo.config.schema import Config
 
-SQUID = "squid"
 HARNESS = "baton-harness"
 _LEVELS = ("allow", "deny")
 MAX_COMMANDS = 10
@@ -62,12 +61,12 @@ class SessionRequest:
     decision_reason: str = ""
     approved_digest: str = ""
     session_key: str = ""  # the Mayor's chat it was asked from
-    decided_by: str = ""  # "squid", or "allow-all" when that chat had allow-all on
+    decided_by: str = ""  # the owner, or "allow-all" when that chat had allow-all on
     session_id: str = ""
     result: str = ""
 
     def digest(self) -> str:
-        """A fingerprint of what Squid is asked to approve."""
+        """A fingerprint of what the owner is asked to approve."""
         shown = {"resident": self.resident, "task": self.task, "reason": self.reason,
                  "access": dict(sorted(self.access.items())), "commands": self.commands, "requested_by": self.requested_by}
         return hashlib.sha256(json.dumps(shown, sort_keys=True).encode()).hexdigest()[:16]
@@ -115,7 +114,7 @@ def pending(town: Town) -> list[SessionRequest]:
 def create(town: Town, *, requested_by: str, resident: str, task: str, reason: str,
            access: dict[str, object] | None = None, commands: list[str] | None = None,
            session_key: str | None = None) -> SessionRequest:
-    """Record a request. It does nothing until Squid approves it, unless Squid
+    """Record a request. It does nothing until the owner approves it, unless the owner
     turned allow-all on for the chat it comes from: then it is approved now."""
     from babo.baton import allow_all
     from babo.baton.opencode import runs_in_opencode
@@ -128,7 +127,7 @@ def create(town: Town, *, requested_by: str, resident: str, task: str, reason: s
     if not task.strip():
         raise BatonError("Say what the session should do (task).")
     if not reason.strip():
-        raise BatonError("Say why it's needed (reason); Squid reads it before deciding.")
+        raise BatonError(f"Say why it's needed (reason); {town.owner_name} reads it before deciding.")
     keys = {c.key for c in profiles.CAPABILITIES}
     clean: dict[str, str] = {}
     for key, raw in (access or {}).items():
@@ -162,7 +161,7 @@ def create(town: Town, *, requested_by: str, resident: str, task: str, reason: s
 
 
 def recent(town: Town, *, limit: int = 10) -> list[SessionRequest]:
-    """Requests that were decided, newest first: what ran, with or without Squid's review."""
+    """Requests that were decided, newest first: what ran, with or without the owner's review."""
     decided = [r for r in all_requests(town) if r.status != "pending"]
     return sorted(decided, key=lambda r: r.decided or r.created, reverse=True)[:limit]
 
@@ -170,7 +169,7 @@ def recent(town: Town, *, limit: int = 10) -> list[SessionRequest]:
 # -- deciding ----------------------------------------------------------------------
 
 def describe(town: Town, config: Config, request: SessionRequest) -> dict[str, Any]:
-    """The request as Squid sees it in review: word for word, and what it adds beyond the resident's profile."""
+    """The request as the owner sees it in review: word for word, and what it adds beyond the resident's profile."""
     office = Registry(town).require_active(request.resident).office
     base = profiles.load(town, config.baton, request.resident, office)
     wider = [f"{c.label}: {base.level(c.key)} → allow" for c in profiles.CAPABILITIES
@@ -190,7 +189,7 @@ def decide(town: Town, request_id: str, *, approve: bool, reason: str, digest: s
     if digest is not None and digest != request.digest():
         raise BatonError("That request changed after you opened it. Reload it and decide again.")
     request.decided = now_iso()
-    request.decided_by = SQUID
+    request.decided_by = OWNER
     request.decision_reason = reason.strip() or "(no reason given)"
     if approve:
         request.status = "approved"
@@ -199,11 +198,11 @@ def decide(town: Town, request_id: str, *, approve: bool, reason: str, digest: s
     else:
         request.status = "declined"
         said = "Request declined."
-        _tell(town, request, SQUID, f"Squid declined your request for {request.resident}: {first_line(request.task, 80)}\n\n"
+        _tell(town, request, OWNER, f"{town.owner_name} declined your request for {request.resident}: {first_line(request.task, 80)}\n\n"
                                     f"Reason: {request.decision_reason}")
     path = save(town, request)
     if commit:
-        gitops.commit_paths(town, [path], f"Squid {'approved' if approve else 'declined'} session request {request.id}")
+        gitops.commit_paths(town, [path], f"{town.owner_name} {'approved' if approve else 'declined'} session request {request.id}")
     return said
 
 
@@ -244,9 +243,9 @@ def _unchanged_since_approval(town: Town, request: SessionRequest) -> bool:
     return gitops.git(town, "diff", "--quiet", "HEAD", "--", rel, check=False).returncode == 0
 
 
-def task_message(request: SessionRequest) -> str:
+def task_message(town: Town, request: SessionRequest) -> str:
     lines = [
-        f"[request {request.id}, approved by Squid] {request.task}",
+        f"[request {request.id}, approved by {town.owner_name}] {request.task}",
         "",
         f"Why: {request.reason}",
         "Nobody is at a terminal while this runs: don't ask questions; do the task, then say plainly what you did and what came of it.",
@@ -265,10 +264,10 @@ def run(town: Town, config: Config, request: SessionRequest, *, config_path: Pat
         raise BatonError(f"Request {request.id} is {request.status}, not approved.")
     if not _unchanged_since_approval(town, request):
         request.status = "failed"
-        request.result = "Not run: the request changed after Squid approved it."
+        request.result = "Not run: the request changed after it was approved."
         save(town, request)
         gitops.commit_paths(town, [_path(town, request.id)], f"Session request {request.id} not run: changed after approval")
-        _tell(town, request, HARNESS, f"Your request {request.id} was not run: it changed after Squid approved it. Ask again.")
+        _tell(town, request, HARNESS, f"Your request {request.id} was not run: it changed after {town.owner_name} approved it. Ask again.")
         return request
     request.status = "running"
     save(town, request)
@@ -277,11 +276,11 @@ def run(town: Town, config: Config, request: SessionRequest, *, config_path: Pat
     try:
         session = opencode.new_session(
             town, config, request.resident, title=f"request: {first_line(request.task, 60)}",
-            overrides=cast(dict[str, object], dict(request.access)), by=SQUID, kind=f"request:{request.id}",
+            overrides=cast(dict[str, object], dict(request.access)), by=OWNER, kind=f"request:{request.id}",
             commands=request.commands,
         )
         request.session_id = session.id
-        reply = opencode.send(town, config, session, task_message(request), config_path=config_path)
+        reply = opencode.send(town, config, session, task_message(town, request), config_path=config_path)
         opencode.checkpoint(town, config, opencode.get_session(town, request.resident, session.id),
                             trigger="session_end", config_path=config_path)
         request.status = "done"

@@ -48,7 +48,7 @@ function when(value: string): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-/** The town: who lives here, what waits for Squid, what each agent may do, and whether everything works.
+/** The town: who lives here, what waits for the owner, what each agent may do, and whether everything works.
  *  The same data and decisions as `babo town`, `babo review`, `babo note`, `babo profile` and `babo doctor`. */
 export function TownPage({ mainNavigationExpanded = false, hostChromeInset = false, onBackToChat }: {
   mainNavigationExpanded?: boolean;

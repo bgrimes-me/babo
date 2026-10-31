@@ -8,9 +8,9 @@ Settings come in three layers:
 2. **Agent profile** (``state/profiles/<agent>.json`` in the town, so every
    change has history): capabilities, MCP servers, model and memory timing. The
    Mayor's profile applies to every Mayor session and has no session layer.
-3. **Session overrides**: a resident's session starts from its profile. Squid
+3. **Session overrides**: a resident's session starts from its profile. The owner
    may change anything; the Mayor may narrow a session or pick its model, and
-   anything wider waits for Squid's review.
+   anything wider waits for the owner's review.
 
 An agent without a profile file gets one derived from its office's toolset, so
 a town from before profiles behaves exactly as it did.
@@ -205,7 +205,7 @@ def session_profile(profile: Profile, overrides: dict[str, object], *, agent: st
 
 def widening(base: Profile, session: Profile) -> list[str]:
     """What a session grants beyond its agent's profile. The Mayor may change a
-    session only when this is empty; anything listed goes to Squid's review."""
+    session only when this is empty; anything listed goes to the owner's review."""
     wider = [
         f"{c.label}: {base.level(c.key)} → {session.level(c.key)}"
         for c in CAPABILITIES

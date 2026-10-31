@@ -25,7 +25,7 @@ CHECKPOINT = {
 }
 
 
-def test_town_config_keeps_squids_settings(tmp_path: Path) -> None:
+def test_town_config_keeps_the_owners_settings(tmp_path: Path) -> None:
     existing = {"channels": {"telegram": {"enabled": True, "token": "${TG}"}}, "agents": {"defaults": {"timezone": "Europe/Oslo"}}}
     data = town_config(existing, town="~/baton-town", upstream="http://127.0.0.1:8080/", model="qwen", n_ctx=32768, bwrap=True)
     assert data["channels"]["telegram"]["token"] == "${TG}"
@@ -109,7 +109,7 @@ def test_install_scripts_are_strict_bash(script: str) -> None:
     assert text_.startswith("#!/usr/bin/env bash")
     assert "set -euo pipefail" in text_
     assert subprocess.run(["bash", "-n", str(path)]).returncode == 0
-    if script[:2].isdigit() or script.startswith("squid-"):
+    if script[:2].isdigit() or script.startswith("host-"):
         # Every step ends with OK: or FAIL: (directly, or through lib.sh's ok/fail).
         uses_lib = 'source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"' in text_
         assert ("OK:" in text_ and "FAIL:" in text_) or (uses_lib and re.search(r"^\s*ok ", text_, re.M) is not None and "fail " in text_)

@@ -4,6 +4,7 @@ and bringing unedited founding documents up to date."""
 from __future__ import annotations
 
 import hashlib
+import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -89,10 +90,33 @@ def test_refound_updates_only_unedited_founding_documents(tmp_path, monkeypatch:
 
     _, changed = found_town(town.root)
     assert changed == ["updated CHARTER.md", "updated residents/mayor/ROLE.md"]
-    assert (town.root / "CHARTER.md").read_text() == template_text("CHARTER.md")
-    assert (town.resident_dir("mayor") / "ROLE.md").read_text() == template_text("offices/mayor.md")
+    assert (town.root / "CHARTER.md").read_text() == template_text("CHARTER.md", town.owner_name)
+    assert (town.resident_dir("mayor") / "ROLE.md").read_text() == template_text("offices/mayor.md", town.owner_name)
     assert (town.resident_dir("archivist") / "ROLE.md").read_text() == edited_role
     assert found_town(town.root)[1] == []
+
+
+def test_the_owner_is_named_in_the_founding_documents_and_a_later_version_reaches_them(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    town, _ = found_town(tmp_path / "town", owner="Robin")
+    charter = (town.root / "CHARTER.md").read_text()
+    assert "- **Robin owns the machine:**" in charter and "{{ owner }}" not in charter
+    assert "talks with Robin" in (town.resident_dir("mayor") / "ROLE.md").read_text()
+    # A later version of a document nobody edited reaches the town; edited ones are left alone.
+    newer = template_text("CHARTER.md", "Robin") + "\nA later paragraph.\n"
+    monkeypatch.setattr(founding, "template_text", lambda name, owner="the owner": newer if name == "CHARTER.md" else template_text(name, owner))
+    (town.root / "HOUSE.md").write_text("# House agreements\n\nOur own.\n")
+    assert found_town(town.root)[1] == ["updated CHARTER.md"]
+    assert (town.root / "CHARTER.md").read_text() == newer and "Our own." in (town.root / "HOUSE.md").read_text()
+
+
+def test_a_town_founded_before_owners_had_names_keeps_its_owner(tmp_path) -> None:
+    town, _ = found_town(tmp_path / "town", owner="Robin")
+    facts = json.loads(town.name_file.read_text())
+    del facts["owner"]
+    town.name_file.write_text(json.dumps(facts))
+    (town.root / "CHARTER.md").write_text("# Charter\n\n- **Squid owns the machine:** what runs.\n")
+    found_town(town.root)
+    assert town.owner_name == "Squid"
 
 
 def test_earlier_shipped_hashes_are_not_the_current_templates() -> None:

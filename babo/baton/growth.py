@@ -1,8 +1,8 @@
 """How the town grows and changes: tools, proposals, founding, projects, notes.
 
-Everything Squid decides in the weekly review is a function here, so the
+Everything the owner decides in the weekly review is a function here, so the
 review CLI stays a thin layer of plain prompts and every decision can be
-tested. Squid's reason always goes to the resident concerned.
+tested. The owner's reason always goes to the resident concerned.
 """
 
 from __future__ import annotations
@@ -24,9 +24,7 @@ from babo.baton.ledger import write_ledger
 from babo.baton.notes import join_frontmatter, split_frontmatter
 from babo.baton.registry import Registry
 from babo.baton.tools.core import proposal_files
-from babo.baton.town import BatonError, Town, atomic_write, now_iso, slugify
-
-SQUID = "squid"
+from babo.baton.town import OWNER, BatonError, Town, atomic_write, now_iso, slugify
 
 
 def _meta(path: Path) -> tuple[dict[str, Any], str]:
@@ -35,15 +33,15 @@ def _meta(path: Path) -> tuple[dict[str, Any], str]:
 
 def _tell(town: Town, resident: str, subject: str, text: str) -> None:
     if Registry(town).get(resident) is not None:
-        deliver(town, resident, kind="reply", sender=SQUID, subject=subject, text=text)
+        deliver(town, resident, kind="reply", sender=OWNER, subject=subject, text=text)
 
 
-# -- notes from Squid -----------------------------------------------------------
+# -- notes from the owner -----------------------------------------------------------
 def leave_note(town: Town, resident: str, text: str) -> Path:
     target = Registry(town).resolve(resident)
     if target is None:
         raise BatonError(f"No resident called '{resident}'.")
-    return deliver(town, target.id, kind="note", sender=SQUID, text=text)
+    return deliver(town, target.id, kind="note", sender=OWNER, text=text)
 
 
 # -- tools ----------------------------------------------------------------------
@@ -83,7 +81,7 @@ def decide_tool(town: Town, name: str, *, approve: bool, reason: str) -> Path:
         if result.get("passed") is not True:
             raise BatonError(f"{name} has not passed its isolated test; it can't be approved yet.")
     state = "active" if approve else "rejected"
-    meta.update({"status": state, "decided": now_iso(), "decided_by": SQUID, "decision_reason": reason})
+    meta.update({"status": state, "decided": now_iso(), "decided_by": OWNER, "decision_reason": reason})
     atomic_write(folder / "TOOL.md", join_frontmatter(meta, body))
     dest = town.tools / state / name
     if dest.exists():
@@ -91,7 +89,7 @@ def decide_tool(town: Town, name: str, *, approve: bool, reason: str) -> Path:
     shutil.move(str(folder), str(dest))
     write_ledger(town)
     verdict = "approved: it is now active for every resident" if approve else "not approved"
-    _tell(town, str(meta.get("author", "")), f"tool {name}: {state}", f"Squid's decision on your tool `{name}`: {verdict}.\n\nReason: {reason}")
+    _tell(town, str(meta.get("author", "")), f"tool {name}: {state}", f"{town.owner_name}'s decision on your tool `{name}`: {verdict}.\n\nReason: {reason}")
     return dest
 
 
@@ -120,7 +118,7 @@ def open_proposals(town: Town) -> list[OpenProposal]:
 def decide_proposal(town: Town, path: Path, *, accept: bool, reason: str) -> Path:
     meta, body = _meta(path)
     state = "accepted" if accept else "declined"
-    meta.update({"status": state, "decided": now_iso(), "decided_by": SQUID, "decision_reason": reason})
+    meta.update({"status": state, "decided": now_iso(), "decided_by": OWNER, "decision_reason": reason})
     dest = town.proposals / state / path.name
     atomic_write(dest, join_frontmatter(meta, body))
     path.unlink()
@@ -137,7 +135,7 @@ def decide_proposal(town: Town, path: Path, *, accept: bool, reason: str) -> Pat
         named = town.set_name(new_name, by=f"proposal by {meta.get('author', '?')}")
         extra += f"\n\nThe town is now called {named}."
     _tell(town, str(meta.get("author", "")), f"proposal {state}: {meta.get('title', '')}",
-          f"Squid {state} your proposal \"{meta.get('title', '')}\".\n\nReason: {reason}{extra}")
+          f"{town.owner_name} {state} your proposal \"{meta.get('title', '')}\".\n\nReason: {reason}{extra}")
     return dest
 
 
@@ -146,12 +144,12 @@ def decide_founding(town: Town, request: Path, *, approve: bool, reason: str) ->
     meta, _ = _meta(request)
     author = str(meta.get("author", "mayor"))
     if approve:
-        resident = approve_founding_request(town, request, approved_by=SQUID, note=reason)
+        resident = approve_founding_request(town, request, approved_by=OWNER, note=reason)
         _tell(town, author, f"founding approved: {resident.id}",
-              f"Squid approved the founding of `{resident.id}` (office: {resident.office}).\n\nReason: {reason}")
+              f"{town.owner_name} approved the founding of `{resident.id}` (office: {resident.office}).\n\nReason: {reason}")
         return resident.id
-    decline_founding_request(town, request, declined_by=SQUID, reason=reason)
-    _tell(town, author, "founding declined", f"Squid declined the founding request {request.name}.\n\nReason: {reason}")
+    decline_founding_request(town, request, declined_by=OWNER, reason=reason)
+    _tell(town, author, "founding declined", f"{town.owner_name} declined the founding request {request.name}.\n\nReason: {reason}")
     return ""
 
 

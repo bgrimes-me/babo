@@ -10,7 +10,7 @@ import pytest
 
 from baton.mock_llama import MockLlama
 
-# Baton targets Linux only (Squid's house has no Windows). Upstream's Windows CI
+# Baton targets Linux only (no Windows here). Upstream's Windows CI
 # jobs still run babo's own suite; they just don't collect Baton's.
 if sys.platform == "win32":
     collect_ignore_glob = ["test_*.py"]
@@ -29,7 +29,7 @@ def _isolated_git(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 @pytest.fixture
 def town(tmp_path: Path) -> Town:
     # Most tests need the Archivist and the Inspector too; a new town has only the Mayor.
-    t, _ = found_town(tmp_path / "town", offices=("mayor", "archivist", "inspector"))
+    t, _ = found_town(tmp_path / "town", offices=("mayor", "archivist", "inspector"), owner="Robin")
     return t
 
 

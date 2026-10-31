@@ -46,6 +46,7 @@ def _fail(exc: Exception) -> None:
 @app.command()
 def found(
     town: str | None = typer.Option(None, "--town", help="Where to found the town (default: baton.town from config)"),
+    owner: str = typer.Option("", "--owner", help="What the town calls you, its owner (default: your login name; kept once set)"),
     config: str | None = _CONFIG_OPT,
 ):
     """Found the town: CHARTER, HOUSE, REGISTRY and its first resident, the Mayor. Safe to repeat."""
@@ -55,7 +56,7 @@ def found(
     try:
         cfg = _config(config)
         root = Path(town).expanduser() if town else cfg.baton.town_path
-        t, created = found_town(root)
+        t, created = found_town(root, owner=owner)
         do_reindex(t, cfg.baton.index_file)
     except BatonError as exc:
         _fail(exc)
@@ -292,22 +293,61 @@ def tidy(
 
 
 @app.command()
+def reset(
+    keep_config: bool = typer.Option(False, "--keep-config", help="Keep the config (models, keys, channels) so they needn't be set up again"),
+    backup_dir: Path = typer.Option(Path("~/babo-backups"), "--backup-dir", help="Where the backup archive goes"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Don't ask first"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Back up everything, then start again from a fresh install: the town, its residents and their memory, the Mayor's chats, and (unless --keep-config) the config."""
+    from babo.baton import reset as resetting
+    from babo.config.loader import get_config_path
+
+    cfg = _config(config)
+    try:
+        p = resetting.plan(home=get_config_path().resolve().parent, town=cfg.baton.town_path,
+                           opencode_data=Path(cfg.baton.opencode.data_dir), keep_config=keep_config)
+    except BatonError as exc:
+        _fail(exc)
+        return
+    if not p.present():
+        console.print("Nothing to reset: there is no town, Babo home or residents' data here.")
+        return
+    console.print("[bold yellow]This removes, after backing it up to one archive in " + str(backup_dir) + ":[/bold yellow]")
+    for path in p.present():
+        console.print(f"  {path}" + (" (except config.json)" if path == p.home and keep_config else ""))
+    console.print("Stop Babo's services on the host first: systemctl --user stop babo-queue babo-gateway babo-upkeep")
+    console.print("Afterwards, install as new: install steps 03-config (unless you kept it), 04-found-town, 05-units, then host-services.")
+    if not yes and not typer.confirm("Back up and reset?", default=False):
+        console.print("Nothing changed.")
+        return
+    try:
+        archive, removed = resetting.reset(p, backup_dir=backup_dir)
+    except BatonError as exc:
+        _fail(exc)
+        return
+    for line in removed:
+        console.print(f"- removed {line}")
+    console.print(f"OK: reset; the backup is {archive}")
+
+
+@app.command()
 def units(
     out: Path = typer.Option(Path("install/out/systemd"), "--out", help="Where to write the unit files"),
     config: str | None = _CONFIG_OPT,
 ):
-    """Write the systemd user units (queue, gateway, upkeep) for Squid to install on the host."""
+    """Write the systemd user units (queue, gateway, upkeep) for the owner to install on the host."""
     from babo.baton.units import write_units
 
     cfg = _config(config)
     for path in write_units(cfg.baton, out):
         console.print(f"wrote {path}")
-    console.print("OK: units written (installing them on the host is a Squid step)")
+    console.print("OK: units written (installing them on the host is the owner's step)")
 
 
 @app.command()
 def note(resident: str = typer.Argument(...), text: str = typer.Argument(...), config: str | None = _CONFIG_OPT):
-    """Leave a note from Squid in a resident's inbox."""
+    """Leave a note from the owner in a resident's inbox."""
     from babo.baton import views
 
     try:
@@ -370,7 +410,7 @@ def _reason() -> str:
 
 
 def ask_about_request(t: Town, cfg: Config, request: SessionRequest) -> bool:
-    """Show one session request word for word and ask Squid to approve, decline or skip it.
+    """Show one session request word for word and ask the owner to approve, decline or skip it.
 
     Used by ``babo review`` and, live, by the terminal chat after the Mayor asks."""
     from babo.baton import requests as session_requests
@@ -398,7 +438,7 @@ def ask_about_request(t: Town, cfg: Config, request: SessionRequest) -> bool:
 
 
 def ask_about_new_requests(t: Town, cfg: Config, seen: set[str]) -> None:
-    """In a live terminal chat: ask about each session request waiting for Squid that this chat hasn't shown yet."""
+    """In a live terminal chat: ask about each session request waiting for the owner that this chat hasn't shown yet."""
     from babo.baton import requests as session_requests
 
     for request in session_requests.pending(t):
@@ -481,7 +521,7 @@ def review(config: str | None = _CONFIG_OPT):
             decided += 1
 
     if decided:
-        gitops.commit_all(t, f"Weekly review: {decided} decision(s) by Squid")
+        gitops.commit_all(t, f"Weekly review: {decided} decision(s) by {t.owner_name}")
     console.print(f"\nOK: review finished, {decided} decision(s) recorded. This was not an audit of anyone's memory.")
 
 

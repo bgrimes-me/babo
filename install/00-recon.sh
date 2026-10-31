@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# 00-recon.sh — read-only reconnaissance of Squid's machine for the Baton install.
+# 00-recon.sh — read-only reconnaissance of the owner's machine for the Baton install.
 #
-# Run on: HOST (Bazzite), from the root of the babo checkout.
+# Run on: HOST, from the root of the babo checkout.
 # Changes nothing on the system. It only reads, sends a few small test requests
 # to llama-server, and writes one report file:
 #   install/reports/00-recon-<date>.md
@@ -10,7 +10,7 @@
 #
 # Optional overrides (normally not needed):
 #   BATON_LLAMA_URL   e.g. http://127.0.0.1:8080   (skip container discovery)
-#   BATON_BOX         distrobox name (default: Agent)
+#   BATON_BOX         distrobox name (default: babo)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,7 +18,7 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPORT_DIR="$SCRIPT_DIR/reports"
 STAMP="$(date +%Y-%m-%d)"
 REPORT="$REPORT_DIR/00-recon-$STAMP.md"
-BOX="${BATON_BOX:-Agent}"
+BOX="${BATON_BOX:-babo}"
 
 fail() { echo "FAIL: $*"; exit 1; }
 
@@ -332,7 +332,7 @@ else echo "bwrap_works=n/a"; fi
 rc, out, err = run(["loginctl", "show-user", USER, "-p", "Linger"])
 linger = out.split("=", 1)[1] if "=" in out else "unknown"
 add("linger", "PASS" if linger == "yes" else "WARN",
-    f"Linger={linger}" + ("" if linger == "yes" else " (Squid runs: loginctl enable-linger — needed for upkeep while logged out)"))
+    f"Linger={linger}" + ("" if linger == "yes" else " (the owner runs: loginctl enable-linger — needed for upkeep while logged out)"))
 rc, out, err = run(["systemctl", "--user", "is-system-running"])
 add("systemd --user", "PASS" if out in ("running", "degraded") else "WARN", out or err or "unknown")
 

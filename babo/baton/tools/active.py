@@ -1,6 +1,6 @@
 """Approved commons tools (``commons/tools/active/<name>``) as resident tools.
 
-Only tools Squid approved in review are here. Each call runs ``run(input)``
+Only tools the owner approved in review are here. Each call runs ``run(input)``
 from the tool's ``tool.py`` in a fresh subprocess, in a temporary copy of the
 tool, with a timeout, so a broken tool can't hang or corrupt a turn.
 """

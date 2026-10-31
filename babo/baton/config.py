@@ -116,9 +116,9 @@ class BatonConfig(Base):
     index_path: str = "~/.local/share/baton/index.sqlite3"
     # Configs generated per resident (they may contain channel secrets).
     generated_dir: str = "~/.babo/baton"
-    git_remote: str = ""  # push after the night commit when set (Squid sets this up)
+    git_remote: str = ""  # push after the night commit when set (the owner sets this up)
     # Where babo runs: the distrobox name, and babo's path inside it ("" = find it).
-    box: str = "Agent"
+    box: str = "babo"
     babo_path: str = ""
     model: BatonModelConfig = Field(default_factory=BatonModelConfig)
     memory: BatonMemoryConfig = Field(default_factory=BatonMemoryConfig)

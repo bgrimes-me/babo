@@ -5,10 +5,10 @@ import { DecisionCard, SessionRequestDetails } from "@/components/town/DecisionC
 import { useClient } from "@/providers/ClientProvider";
 import { decideTownItem, fetchPendingSessionRequests, type TownDecisionKind, type TownSessionRequest } from "@/lib/api";
 
-/** How often an open chat checks for session requests waiting for Squid. */
+/** How often an open chat checks for session requests waiting for the owner. */
 export const SESSION_REQUEST_POLL_MS = 5_000;
 
-/** Shown above the composer while a session request waits for Squid, so he can decide it right in the chat
+/** Shown above the composer while a session request waits for the owner, so they can decide it right in the chat
  *  instead of checking `babo review`. The same decision, with the same fingerprint, as Town › Review. */
 export function SessionRequestPrompt({ sessionKey }: { sessionKey: string }) {
   const { t } = useTranslation();
