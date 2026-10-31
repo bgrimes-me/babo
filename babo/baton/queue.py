@@ -2,6 +2,9 @@
 
 ``babo queue`` runs a small OpenAI-compatible proxy in front of
 llama-server. Residents' provider config and Baton's own client point at it.
+Each call names a model preset; the gateway (``babo/baton/gateway.py``) sends
+calls for a local preset through the line below, and makes calls for any
+other provider through Babo's own provider code, with keys kept inside Babo.
 It lets at most ``baton.model.slots`` requests reach the server at once
 (default 1), whichever process they come from, and orders waiting requests by
 priority (interactive, then visit, then upkeep), oldest first. Streaming
@@ -22,13 +25,14 @@ import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import aiohttp
 from aiohttp import web
 from loguru import logger
 
 from babo.baton.config import BatonModelConfig
+from babo.baton.gateway import ProviderCallError, RouterSource, as_stream, call_provider
 
 PRIORITIES = {"interactive": 0, "visit": 1, "upkeep": 2}
 UPKEEP = PRIORITIES["upkeep"]
@@ -96,8 +100,9 @@ class SlotQueue:
 
 
 class ModelQueue:
-    def __init__(self, config: BatonModelConfig, *, capture_dir: Path | None = None):
+    def __init__(self, config: BatonModelConfig, *, capture_dir: Path | None = None, router: RouterSource | None = None):
         self.config = config
+        self.router = router
         self.slots = SlotQueue(config.slots)
         self.capture_dir = capture_dir
         self.started = time.time()
@@ -157,6 +162,16 @@ class ModelQueue:
         resident = resident_of(request.headers, body)
         priority = PRIORITIES.get(request.headers.get("X-Baton-Priority", "interactive"), 0)
         self._capture(resident, request.path, body)
+        if self.router is not None and request.method == "POST" and request.path.endswith("chat/completions"):
+            try:
+                parsed = cast(dict[str, Any], json.loads(body))
+            except ValueError:
+                parsed = None
+            if isinstance(parsed, dict):
+                route = self.router.get().resolve(str(parsed.get("model") or ""))
+                if not route.local:
+                    return await self._provider(request, route, parsed, resident)
+                body = json.dumps({**parsed, "model": route.model}).encode()
         url = self.config.upstream.rstrip("/") + request.rel_url.path_qs
         headers = {k: v for k, v in request.headers.items() if k.lower() not in _HOP_HEADERS and not k.lower().startswith("x-baton-")}
         someone = priority < UPKEEP
@@ -198,6 +213,27 @@ class ModelQueue:
             release()
 
 
+    async def _provider(self, request: web.Request, route: Any, body: dict[str, Any], resident: str) -> web.StreamResponse:
+        """A preset on another provider: Babo's provider code makes the call; no local slot is used."""
+        assert self.router is not None
+        try:
+            completion = await call_provider(self.router.get().config, route, body)
+        except ProviderCallError as exc:
+            logger.warning("Baton gateway: {} ({}) for {}: {}", route.preset_name, route.model, resident, exc)
+            return web.json_response({"error": {"message": str(exc)}}, status=exc.status if 400 <= exc.status < 600 else 502)
+        except Exception as exc:  # setup problems (no key, unknown provider) are the owner's to see
+            logger.warning("Baton gateway: {} ({}) for {}: {}", route.preset_name, route.model, resident, exc)
+            return web.json_response({"error": {"message": f"model preset {route.preset_name}: {exc}"}}, status=502)
+        if not body.get("stream"):
+            return web.json_response(completion)
+        response = web.StreamResponse(status=200, headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache"})
+        await response.prepare(request)
+        async for chunk in as_stream(completion):
+            await response.write(chunk)
+        await response.write_eof()
+        return response
+
+
 def last_request(capture_dir: Path, resident: str) -> bytes | None:
     path = capture_dir / f"{resident}.json"
     return path.read_bytes() if path.exists() else None
@@ -210,8 +246,8 @@ def pretty(body: bytes) -> str:
         return body.decode("utf-8", "replace")
 
 
-async def serve(config: BatonModelConfig, capture_dir: Path) -> None:
-    queue = ModelQueue(config, capture_dir=capture_dir)
+async def serve(config: BatonModelConfig, capture_dir: Path, *, config_path: Path | None = None) -> None:
+    queue = ModelQueue(config, capture_dir=capture_dir, router=RouterSource(config_path) if config_path else None)
     runner = web.AppRunner(queue.app())
     await runner.setup()
     site = web.TCPSite(runner, config.queue_host, config.queue_port)

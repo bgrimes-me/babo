@@ -58,10 +58,21 @@ async def check_queue(cfg: Config) -> Check:
     return Check("model queue", "PASS", f"{cfg.baton.model.endpoint} {body}")
 
 
+def check_models(cfg: Config) -> Check:
+    from babo.baton.gateway import Router
+
+    try:
+        route = Router(cfg).resolve("default")
+    except (KeyError, ValueError) as exc:
+        return Check("default model", "FAIL", f"Settings › Models: {exc}")
+    where = "the local model server, through the queue" if route.local else "its provider, through Babo's gateway"
+    return Check("default model", "PASS", f"preset {route.preset_name}: {route.model} ({where})")
+
+
 async def check_tool_calling(cfg: Config) -> Check:
     client = BatonModelClient(cfg.baton.model, resident="doctor")
     body = {
-        "model": cfg.baton.model.model,
+        "model": cfg.baton.model.model or "default",
         "messages": [{"role": "user", "content": "What is the weather in Oslo? Use the tool."}],
         "tools": [{"type": "function", "function": {"name": "get_weather", "description": "Weather for a city.",
                    "parameters": {"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}}}],
@@ -220,7 +231,7 @@ def check_config(cfg: Config) -> list[Check]:
 
 
 async def run_doctor(cfg: Config, *, config_path: Path | None = None, include_timer: bool = True) -> list[Check]:
-    checks: list[Check] = [await check_endpoint(cfg), await check_queue(cfg)]
+    checks: list[Check] = [check_models(cfg), await check_endpoint(cfg), await check_queue(cfg)]
     model_ok = checks[0].status == "PASS" and checks[1].status == "PASS"
     if model_ok:
         checks += [await check_tool_calling(cfg), await check_schema(cfg), await check_checkpoint_turn(cfg)]

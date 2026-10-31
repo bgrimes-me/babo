@@ -255,7 +255,9 @@ def effective_profile(town: Town, config: Config, resident: str, overrides: dict
     office = Registry(town).require_active(resident).office
     base = profiles.load(town, config.baton, resident, office)
     mcp_known = sorted(config.tools.mcp_servers)
-    session = profiles.session_profile(base, overrides, agent=resident, mcp_known=mcp_known)
+    from babo.baton.gateway import preset_names
+
+    session = profiles.session_profile(base, overrides, agent=resident, mcp_known=mcp_known, presets_known=preset_names(config))
     wider = profiles.widening(base, session)
     if wider and not is_owner(by):
         raise BatonError(f"Only {town.owner_name} can give a session more than its resident's profile allows: " + "; ".join(wider))
@@ -264,10 +266,19 @@ def effective_profile(town: Town, config: Config, resident: str, overrides: dict
 
 # -- the opencode config ----------------------------------------------------------
 
-def _context_tokens(config: Config) -> int:
+def preset_for(config: Config, profile: profiles.Profile) -> str:
+    """The model preset a session uses: its profile's (or the session's) choice, else the default preset.
+    A preset that no longer exists falls back to the default, as it does in the gateway."""
+    from babo.baton.gateway import default_preset_name
+
+    chosen = profile.model.strip()
+    return chosen if chosen in config.model_presets else default_preset_name(config)
+
+
+def _context_tokens(config: Config, preset: str | None = None) -> int:
     if config.baton.opencode.context_tokens:
         return config.baton.opencode.context_tokens
-    return config.resolve_default_preset().context_window_tokens
+    return config.resolve_preset(preset).context_window_tokens
 
 
 def _mcp_entry(server: MCPServerConfig) -> dict[str, Any]:
@@ -343,8 +354,9 @@ def _priority(kind: str) -> str:
 def opencode_config(town: Town, config: Config, session: Session, *, bundle: Path, config_path: Path, babo: str) -> dict[str, Any]:
     """The resident's whole opencode configuration, in opencode 2's own format, passed inline."""
     profile = effective_profile(town, config, session.resident, session.overrides, by=session.by)
-    model_id = profile.model or config.baton.model.model
-    tokens = _context_tokens(config)
+    # opencode is told a preset name only; Babo's gateway knows the real model, its provider and its key.
+    model_id = preset_for(config, profile)
+    tokens = _context_tokens(config, model_id)
     prompt = (files("babo.baton") / "templates" / "opencode" / "resident.md").read_text(encoding="utf-8")
     servers: dict[str, Any] = {
         # Tools stay on the model's own tool list (not behind opencode's Code Mode, which is denied).
@@ -357,7 +369,7 @@ def opencode_config(town: Town, config: Config, session: Session, *, bundle: Pat
         if server is not None and name != PROVIDER:
             servers[name] = _mcp_entry(server)
             allowed_mcp.append(name)
-    model = model_id if "/" in model_id else f"{PROVIDER}/{model_id}"
+    model = f"{PROVIDER}/{model_id}"
     return {
         "$schema": "https://opencode.ai/config.json",
         "providers": {
@@ -375,8 +387,8 @@ def opencode_config(town: Town, config: Config, session: Session, *, bundle: Pat
             AGENT: {"mode": "primary", "description": f"The resident {session.resident}", "system": prompt,
                     "permissions": _permissions(town, session.resident, profile, unattended=session.kind.startswith("request:"),
                                                 commands=session.commands, mcp=allowed_mcp)},
-            # Titles come from the same model, through the same queue.
-            "title": {"model": f"{PROVIDER}/{config.baton.model.model}"},
+            # Titles come from the same model, through the same gateway.
+            "title": {"model": model},
         },
         "instructions": [str(bundle)],
         "mcp": {"servers": servers},
@@ -469,7 +481,7 @@ def _memory_env(town: Town, config: Config, session: Session, *, config_path: Pa
         "BABO_CHECKPOINT_EVERY": str(profile.memory.checkpoint_every_tool_calls or memory.checkpoint_every_tool_calls),
         "BABO_COMMIT_GATE": str(memory.commit_gate_after_tool_calls),
         "BABO_IDLE_MINUTES": str(profile.memory.idle_minutes or memory.idle_minutes),
-        "BABO_CONTEXT_TOKENS": str(_context_tokens(config)),
+        "BABO_CONTEXT_TOKENS": str(_context_tokens(config, preset_for(config, profile))),
     }
 
 
@@ -844,11 +856,16 @@ def checkpoint(town: Town, config: Config, session: Session, *, trigger: str, co
         bundle_path = _runtime_dir(town, session.resident) / f"{session.id}.bundle.md"
         bundle = bundle_path.read_text(encoding="utf-8") if bundle_path.exists() else write_bundle(town, config, session).read_text(encoding="utf-8")
         prompt = (files("babo.baton") / "templates" / "opencode" / "resident.md").read_text(encoding="utf-8")
-        convo = [{"role": "system", "content": prompt + "\n\n" + bundle},
-                 *conversation(messages, budget_tokens=int(_context_tokens(config) * 0.6))]
         profile = effective_profile(town, config, session.resident, session.overrides, by=session.by)
+        preset = preset_for(config, profile)
+        convo = [{"role": "system", "content": prompt + "\n\n" + bundle},
+                 *conversation(messages, budget_tokens=int(_context_tokens(config, preset) * 0.6))]
         overrides = {k: v for k, v in profile.memory.model_dump().items() if v is not None}
-        baton_cfg = config.baton.model_copy(update={"memory": config.baton.memory.model_copy(update=overrides)}) if overrides else config.baton
+        baton_cfg = config.baton.model_copy(update={
+            "memory": config.baton.memory.model_copy(update=overrides),
+            # The resident writes its checkpoint with the model it works with.
+            "model": config.baton.model.model_copy(update={"model": preset}),
+        })
         outcome = asyncio.run(CheckpointService(town, session.resident, baton_cfg).run(
             convo, trigger=trigger, session_key=session.key, events=events))
         if trigger in ("session_end", "context_full"):

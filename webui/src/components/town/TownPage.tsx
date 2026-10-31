@@ -27,6 +27,7 @@ import {
   type TownDoctorReport,
   type TownLevel,
   type TownOverview,
+  type TownPreset,
   type TownProfile,
   type TownReview,
   type TownSession,
@@ -457,9 +458,11 @@ function ProfilesView({ token, transport, onNotice, onError }: {
 }) {
   const { t } = useTranslation();
   const [profiles, setProfiles] = useState<TownProfile[] | null>(null);
+  const [presets, setPresets] = useState<TownPreset[]>([]);
   const [busy, setBusy] = useState("");
   useEffect(() => {
-    fetchTownProfiles(token()).then((result) => setProfiles(result.profiles)).catch((reason) => onError(errorText(reason)));
+    fetchTownProfiles(token()).then((result) => { setProfiles(result.profiles); setPresets(result.presets ?? []); })
+      .catch((reason) => onError(errorText(reason)));
   }, [onError, token]);
   if (!profiles) return <p className="settings-list-inset text-[13px] text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{t("town.loading", { defaultValue: "Loading the town…" })}</p>;
 
@@ -467,7 +470,7 @@ function ProfilesView({ token, transport, onNotice, onError }: {
     setBusy(agent);
     try {
       const result = await updateTownProfile(transport, agent, changes);
-      setProfiles(result.profiles); onNotice(result.message);
+      setProfiles(result.profiles); setPresets(result.presets ?? presets); onNotice(result.message);
     } catch (reason) { onError(errorText(reason)); }
     finally { setBusy(""); }
   };
@@ -475,13 +478,14 @@ function ProfilesView({ token, transport, onNotice, onError }: {
     <p className="settings-list-inset text-[13px] leading-6 text-muted-foreground">
       {t("town.profilesIntro", { defaultValue: "What each agent may do. Keys and providers are set once in Settings; a profile decides which agents may use them. The same profiles are available with `babo profile`." })}
     </p>
-    {profiles.map((profile) => <ProfileCard key={profile.agent} profile={profile} busy={busy === profile.agent}
+    {profiles.map((profile) => <ProfileCard key={profile.agent} profile={profile} presets={presets} busy={busy === profile.agent}
       onChange={(changes) => void change(profile.agent, changes)} />)}
   </>;
 }
 
-function ProfileCard({ profile, busy, onChange }: {
+function ProfileCard({ profile, presets, busy, onChange }: {
   profile: TownProfile;
+  presets: TownPreset[];
   busy: boolean;
   onChange: (changes: Record<string, string | string[]>) => void;
 }) {
@@ -530,8 +534,9 @@ function ProfileCard({ profile, busy, onChange }: {
       </div>
       <form className="settings-list-row flex flex-wrap items-end gap-x-4 gap-y-3 py-3" onSubmit={(event) => { event.preventDefault(); if (Object.keys(textChanges).length) onChange(textChanges); }}>
         {!profile.main && <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-          {t("town.profileModel", { defaultValue: "Model (used in opencode)" })}
-          <Input className="w-56" placeholder={t("town.babodefault", { defaultValue: "Babo default" })} value={model} onChange={(event) => setModel(event.target.value)} />
+          {t("town.profileModel", { defaultValue: "Model" })}
+          <PresetSelect presets={presets} value={model} onChange={setModel}
+            emptyLabel={t("town.presetDefault", { defaultValue: "Babo's default" })} />
         </label>}
         {(["checkpoint_every_tool_calls", "idle_minutes"] as const).map((key) => <label key={key} className="flex flex-col gap-1 text-xs text-muted-foreground">
           {key === "idle_minutes" ? t("town.profileIdle", { defaultValue: "Checkpoint after … quiet minutes" }) : t("town.profileEvery", { defaultValue: "Checkpoint every … tool calls" })}
@@ -591,7 +596,7 @@ function SessionsView({ token, transport, onNotice, onError }: {
           onResume={() => void act(s.id, "resume", { resident: r.id, id: s.id })}
           onFreeze={() => void act(s.id, "freeze", { resident: r.id, id: s.id })}
           onRemove={() => void act(s.id, "remove", { resident: r.id, id: s.id })} />)}
-        <NewSessionForm resident={r.id} disabled={!data.opencode || busy === `new:${r.id}`} busy={busy === `new:${r.id}`}
+        <NewSessionForm resident={r.id} presets={data.presets ?? []} disabled={!data.opencode || busy === `new:${r.id}`} busy={busy === `new:${r.id}`}
           onStart={(title, overrides) => void act(`new:${r.id}`, "new", { resident: r.id, title, overrides })} />
       </SettingsGroup>
     </section>)}
@@ -635,8 +640,25 @@ function SessionRow({ session, busy, onResume, onFreeze, onRemove }: {
   </div>;
 }
 
-function NewSessionForm({ resident, disabled, busy, onStart }: {
+/** A model preset from Settings › Models; empty means the default (or, for a session, the profile's). */
+function PresetSelect({ presets, value, onChange, emptyLabel }: {
+  presets: TownPreset[];
+  value: string;
+  onChange: (value: string) => void;
+  emptyLabel: string;
+}) {
+  const fallback = presets.find((p) => p.default);
+  return <select className="w-56 rounded border bg-background px-2 py-1.5 text-[13px] text-foreground" value={value}
+    onChange={(event) => onChange(event.target.value)}>
+    <option value="">{fallback ? `${emptyLabel} (${fallback.name})` : emptyLabel}</option>
+    {presets.map((p) => <option key={p.name} value={p.name}>{p.name} · {p.model}</option>)}
+    {value && !presets.some((p) => p.name === value) && <option value={value}>{value}</option>}
+  </select>;
+}
+
+function NewSessionForm({ resident, presets, disabled, busy, onStart }: {
   resident: string;
+  presets: TownPreset[];
   disabled: boolean;
   busy: boolean;
   onStart: (title: string, overrides: Record<string, string>) => void;
@@ -654,6 +676,15 @@ function NewSessionForm({ resident, disabled, busy, onStart }: {
     <details>
       <summary className="cursor-pointer text-xs text-muted-foreground">{t("town.sessionOptions", { defaultValue: "Change what this session may do" })}</summary>
       <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">
+        <label className="flex items-center gap-2 text-[13px]">
+          {t("town.sessionModel", { defaultValue: "Model" })}
+          <PresetSelect presets={presets} value={overrides.model ?? ""} emptyLabel={t("town.asProfile", { defaultValue: "as in the profile" })}
+            onChange={(value) => setOverrides((current) => {
+              const next = { ...current };
+              if (value) next.model = value; else delete next.model;
+              return next;
+            })} />
+        </label>
         {SESSION_CHANGES.map((c) => <label key={c.key} className="flex items-center gap-2 text-[13px]">
           {t(`town.cap.${c.key}`, { defaultValue: c.label })}
           <select className="rounded border bg-background px-1 py-0.5 text-[13px]" value={overrides[c.key] ?? ""}

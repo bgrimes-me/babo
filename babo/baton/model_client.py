@@ -152,7 +152,7 @@ class BatonModelClient:
         flatten: bool = False,
     ) -> SchemaResult:
         body: dict[str, Any] = {
-            "model": self.config.model,
+            "model": self.config.model or "default",  # a preset name; the gateway picks the model
             "messages": flatten_messages(messages) if flatten else plain_messages(messages),
             "temperature": self.config.temperature,
             "max_tokens": max_tokens or self.config.schema_max_tokens,

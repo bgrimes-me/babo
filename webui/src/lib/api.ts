@@ -1695,16 +1695,24 @@ export interface TownProfile {
   memory_defaults: { checkpoint_every_tool_calls: number; idle_minutes: number };
 }
 
-export function fetchTownProfiles(token: string, base: string = ""): Promise<{ profiles: TownProfile[] }> {
-  return request<{ profiles: TownProfile[] }>(`${base}/api/town/profiles`, token, undefined, API_READ_TIMEOUT_MS);
+/** A model preset from Settings › Models, as an agent or a session can be given it. */
+export interface TownPreset {
+  name: string;
+  model: string;
+  /** The preset everything uses unless a profile or session picks another. */
+  default: boolean;
+}
+
+export function fetchTownProfiles(token: string, base: string = ""): Promise<{ profiles: TownProfile[]; presets: TownPreset[] }> {
+  return request<{ profiles: TownProfile[]; presets: TownPreset[] }>(`${base}/api/town/profiles`, token, undefined, API_READ_TIMEOUT_MS);
 }
 
 export function updateTownProfile(
   transport: WebUIMutationTransport,
   agent: string,
   changes: Record<string, string | string[]>,
-): Promise<{ message: string; profiles: TownProfile[] }> {
-  return mutation<{ message: string; profiles: TownProfile[] }>(transport, "town.profile", { agent, changes });
+): Promise<{ message: string; profiles: TownProfile[]; presets: TownPreset[] }> {
+  return mutation<{ message: string; profiles: TownProfile[]; presets: TownPreset[] }>(transport, "town.profile", { agent, changes });
 }
 
 export interface TownSession {
@@ -1723,6 +1731,7 @@ export interface TownSession {
 }
 
 export interface TownSessions {
+  presets: TownPreset[];
   opencode: boolean;
   residents: { id: string; name: string; office: string; sessions: TownSession[] }[];
 }

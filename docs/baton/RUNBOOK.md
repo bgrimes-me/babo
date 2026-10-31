@@ -124,6 +124,7 @@ The same rules apply. Everything is kept: the town, its git history, the residen
 
 What an upgrade changes, and what it doesn't:
 
+- **Models come from Settings › Models.** Re-running step 3 no longer changes the owner's presets or the default; step 4 removes the old copy of the model name (`baton.model.model`), so Babo's own memory work uses the default preset like everything else.
 - **The owner's name and the install steps' names.** The town now calls its owner by name (a town founded before keeps the name its charter used); `babo found --owner NAME` changes it. The owner's steps are now `host-packages` and `host-services`; the old `squid-…` names still work for one more release. Install reports stay on the machine unless `BABO_PUSH_REPORTS=1` is set.
 - **Residents other than the Mayor now run in opencode.** Install it in the box if it isn't there (`command -v opencode`, otherwise `curl -fsSL https://opencode.ai/install | bash`); it needs opencode.ai's opencode 2 (`opencode --version` says 2.x; `opencode upgrade` updates an opencode 1), and the doctor starts it to check. If another opencode comes first on your PATH, point Babo at the right one with `baton.opencode.bin` in `~/.babo/config.json`. Residents already in the town stay, with their memory; they work in opencode from their next session.
 - **The night timer is replaced by the upkeep service.** Step 6 removes `babo-night.timer` and starts `babo-upkeep`. A town from before keeps its history; its night logs stay in `state/night-logs/`.

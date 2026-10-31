@@ -3,6 +3,7 @@ template for new residents, and what a session may change."""
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -118,3 +119,21 @@ def test_without_a_profile_every_mcp_server_stays_as_before_profiles(town: Town,
     assert row["agent"] == "mayor" and row["mcp"] == ["notes", "tavily"]
     message = views.update_profile(town, cfg, "mayor", {"mcp": "tavily"}, ["tavily", "notes"])
     assert "MCP servers: all → tavily" in message and "systemctl --user restart babo-gateway" in message
+
+
+def test_a_resident_works_with_a_preset_from_settings(town: Town, make_config) -> None:
+    from babo.baton import opencode
+
+    cfg = make_config("mayor", **{"modelPresets": {"local": {"provider": "custom", "model": "mock-model", "contextWindowTokens": 32768},
+                                                   "big": {"provider": "custom", "model": "big.gguf", "contextWindowTokens": 65536}}})
+    with pytest.raises(BatonError, match="No model preset named 'huge'"):
+        views.update_profile(town, cfg.baton, "archivist", {"model": "huge"}, [], ["default", "local", "big"])
+    views.update_profile(town, cfg.baton, "archivist", {"model": "big"}, [], ["default", "local", "big"])
+    session = opencode.new_session(town, cfg, "archivist", title="t")
+    built = opencode.opencode_config(town, cfg, session, bundle=Path("/b.md"), config_path=Path("/c.json"), babo="babo")
+    # opencode only ever hears the preset's name; the gateway knows the real model, its provider and key.
+    assert built["model"] == "babo/big" and list(built["providers"]["babo"]["models"]) == ["big"]
+    assert built["providers"]["babo"]["models"]["big"]["limit"]["context"] == 65536
+    # Without a choice, the default preset (Settings › Models).
+    other = opencode.new_session(town, cfg, "inspector", title="t")
+    assert opencode.opencode_config(town, cfg, other, bundle=Path("/b.md"), config_path=Path("/c.json"), babo="babo")["model"] == "babo/local"
