@@ -145,11 +145,16 @@ def test_a_request_session_denies_what_would_ask_and_allows_exactly_its_commands
     from babo.baton import opencode, profiles
 
     profile = profiles.Profile(capabilities={"shell": "ask", "files": "ask", "web_fetch": "allow"})
-    perm = opencode._permission(town, "archivist", profile, unattended=True, commands=["make test"])  # pyright: ignore[reportPrivateUsage]
-    assert perm["bash"] == {"*": "deny", "make test": "allow"}
-    assert perm["edit"] == {"*": "deny", "residents/archivist/*": "deny"} and perm["webfetch"] == "allow"
-    attended = opencode._permission(town, "archivist", profile)  # pyright: ignore[reportPrivateUsage]
-    assert attended["bash"] == "ask"
+    from baton.test_opencode import effect
+
+    rules = opencode._permissions(town, "archivist", profile, unattended=True,  # pyright: ignore[reportPrivateUsage]
+                                  commands=["make test", "cd build && make"])
+    assert effect(rules, "shell", "make test") == "allow" and effect(rules, "shell", "make install") == "deny"
+    # opencode checks a compound command piece by piece: an approved one passes as a whole and in pieces.
+    assert all(effect(rules, "shell", piece) == "allow" for piece in ("cd build && make", "cd build", "make"))
+    assert effect(rules, "edit", "notes.md") == "deny" and effect(rules, "webfetch", "https://x") == "allow"
+    attended = opencode._permissions(town, "archivist", profile)  # pyright: ignore[reportPrivateUsage]
+    assert effect(attended, "shell", "make test") == "ask"
 
 
 # -- allow all: Squid lets one of the Mayor's chats run requests without review --------------

@@ -43,22 +43,40 @@ def config_file(town: Town, index_path: Path, mock_llama: MockLlama, tmp_path: P
     return make
 
 
+def effect(rules: list[dict[str, str]], action: str, resource: str) -> str:
+    """How opencode 2 decides: the last rule whose action and resource match (``*`` matches anything, ``/`` too)."""
+    from fnmatch import fnmatchcase
+
+    found = "ask"
+    for r in rules:
+        if fnmatchcase(action, r["action"]) and fnmatchcase(resource, r["resource"]):
+            found = r["effect"]
+    return found
+
+
 def test_the_config_follows_the_profile_and_keeps_residents_in_their_own_workspace(town: Town, config_file) -> None:
-    _, cfg = config_file(**{"tools.mcpServers": {"notes": {"command": "notes-mcp", "args": ["--ro"]}}})
-    views.update_profile(town, cfg.baton, "archivist", {"files": "allow", "shell": "ask", "mcp": "notes"}, ["notes"])
+    _, cfg = config_file(**{"tools.mcpServers": {"notes": {"command": "notes-mcp", "args": ["--ro"]}, "mail": {"command": "mail-mcp"}}})
+    views.update_profile(town, cfg.baton, "archivist", {"files": "allow", "shell": "ask", "mcp": "notes"}, ["notes", "mail"])
     session = opencode.new_session(town, cfg, "archivist", title="tidy", overrides={"web_fetch": "allow"})
     built = opencode.opencode_config(town, cfg, session, bundle=Path("/b.md"), config_path=Path("/c.json"), babo="babo")
-    perm = built["permission"]
-    assert perm["edit"] == {"*": "deny", "residents/archivist/*": "allow"}  # paths inside the town repo
-    assert perm["bash"] == "ask" and perm["webfetch"] == "allow" and perm["task"] == "deny"
-    assert perm["external_directory"] == "deny"
-    assert built["mcp"]["babo"]["command"] == ["babo", "mcp", "--as", "archivist", "-c", "/c.json"]
-    assert built["mcp"]["notes"] == {"type": "local", "command": ["notes-mcp", "--ro"], "enabled": True}
+    rules = built["agents"]["resident"]["permissions"]
+    # Edits are matched relative to the resident's own folder: anything leaving it is refused.
+    assert effect(rules, "edit", "notes/today.md") == "allow" and effect(rules, "edit", "../inspector/x.md") == "deny"
+    assert effect(rules, "read", "../inspector/x.md") == "allow" and effect(rules, "external_directory", "/etc/*") == "deny"
+    assert effect(rules, "shell", "ls") == "ask" and effect(rules, "webfetch", "https://x") == "allow"
+    assert effect(rules, "subagent", "general") == "deny" and effect(rules, "question", "*") == "deny"
+    assert effect(rules, "babo_send_letter", "*") == "allow" and effect(rules, "notes_search", "*") == "allow"
+    assert effect(rules, "mail_send", "*") == "deny" and effect(rules, "skill", "x") == "deny"
+    servers = built["mcp"]["servers"]
+    assert servers["babo"]["command"] == ["babo", "mcp", "--as", "archivist", "-c", "/c.json"]
+    assert servers["notes"] == {"type": "local", "command": ["notes-mcp", "--ro"], "disabled": False, "codemode": False}
+    assert "mail" not in servers and effect(rules, "execute", "*") == "deny"  # no Code Mode: tools stay on the list
     assert built["instructions"] == ["/b.md"] and built["default_agent"] == "resident"
-    assert built["provider"]["babo"]["options"]["headers"] == {"X-Baton-Resident": "archivist", "X-Baton-Priority": "interactive"}
+    assert built["compaction"] == {"auto": False}
+    assert built["providers"]["babo"]["headers"] == {"X-Baton-Resident": "archivist", "X-Baton-Priority": "interactive"}
     upkeep = opencode.special_session(town, cfg, "archivist", "upkeep")
     upkeep_cfg = opencode.opencode_config(town, cfg, upkeep, bundle=Path("/b.md"), config_path=Path("/c.json"), babo="babo")
-    assert upkeep_cfg["provider"]["babo"]["options"]["headers"]["X-Baton-Priority"] == "upkeep"
+    assert upkeep_cfg["providers"]["babo"]["headers"]["X-Baton-Priority"] == "upkeep"
 
 
 def test_only_squid_widens_a_session_and_the_mayor_stays_in_babo(town: Town, config_file) -> None:
@@ -77,7 +95,7 @@ def test_each_resident_is_isolated_from_the_users_own_opencode(town: Town, confi
     env = opencode._resident_env(cfg, "archivist", password="pw", inline={"a": 1})  # pyright: ignore[reportPrivateUsage]
     root = Path(cfg.baton.opencode.data_dir) / "archivist"  # per resident, apart from the user's own opencode
     assert env["XDG_CONFIG_HOME"] == str(root / "config") and env["XDG_DATA_HOME"] == str(root / "data")
-    assert env["OPENCODE_DISABLE_PROJECT_CONFIG"] == "1" and env["OPENCODE_DISABLE_AUTOCOMPACT"] == "1"
+    assert env["OPENCODE_DISABLE_PROJECT_CONFIG"] == "1" and env["OPENCODE_DISABLE_CLAUDE_CODE_SKILLS"] == "1"
     assert env["OPENCODE_DISABLE_CLAUDE_CODE"] == "1" and "OPENCODE_CONFIG" not in env
     assert json.loads(env["OPENCODE_CONFIG_CONTENT"]) == {"a": 1}
 
@@ -108,12 +126,20 @@ def test_a_session_starts_with_its_identity_and_resumes_exactly_where_it_was(tow
         assert "You are the resident `archivist`" in _texts(first)
         assert {k.lower(): v for k, v in mock_llama.request_headers[-1].items()}["x-baton-resident"] == "archivist"
         tools = {t["function"]["name"] for t in first.get("tools", [])}
-        assert "babo_send_letter" in tools and "bash" not in tools  # the town's tools; no shell by default
+        assert "babo_send_letter" in tools and "shell" not in tools  # the town's tools; no shell by default
         assert opencode.freeze(town, session) and opencode.running(town, session) is None
         mock_llama.default = text("Still here.")
         assert opencode.send(town, cfg, session, "And now?", config_path=path) == "Still here."
         history = [m for m in mock_llama.requests[-1]["messages"] if m["role"] != "system"]
         assert [str(m["content"]) for m in history][:2] == ["Who are you?", "Hello, I'm the archivist."]
+        # A session this opencode doesn't know (one from opencode 1) carries on in a fresh one.
+        opencode.freeze(town, session)
+        stale = opencode.get_session(town, "archivist", session.id)
+        stale.opencode_id = "ses_from_opencode_one"
+        opencode.save_session(town, stale)
+        assert opencode.send(town, cfg, stale, "Hello again?", config_path=path) == "Still here."
+        resumed = opencode.get_session(town, "archivist", session.id)
+        assert resumed.opencode_id != "ses_from_opencode_one" and "ses_from_opencode_one" in resumed.previous
     finally:
         opencode.freeze(town, session)
 
@@ -124,8 +150,8 @@ def test_a_resident_changes_only_its_own_folder(town: Town, config_file, mock_ll
     views.update_profile(town, cfg.baton, "archivist", {"files": "allow"}, [])
     mine, theirs = town.resident_dir("archivist") / "index.md", town.resident_dir("mayor") / "SELF.md"
     before = theirs.read_text()
-    mock_llama.script = [tool_call("write", {"filePath": str(mine), "content": "# Index\n"}),
-                         tool_call("write", {"filePath": str(theirs), "content": "Taken over."}), text("Done.")]
+    mock_llama.script = [tool_call("write", {"path": str(mine), "content": "# Index\n"}),
+                         tool_call("write", {"path": str(theirs), "content": "Taken over."}), text("Done.")]
     session = opencode.new_session(town, cfg, "archivist", title="fence")
     try:
         opencode.send(town, cfg, session, "Write an index.", config_path=path)
@@ -204,8 +230,8 @@ def test_a_resident_in_opencode_forms_memory_like_any_other(town: Town, config_f
     note = town.resident_dir("archivist") / "index.md"
     others = town.resident_dir("mayor") / "SELF.md"
     before = others.read_text()
-    mock_llama.default = _router([tool_call("write", {"filePath": str(note), "content": "# Index\n"}),
-                                  tool_call("write", {"filePath": str(others), "content": "Taken over."}), text("Written.")])
+    mock_llama.default = _router([tool_call("write", {"path": str(note), "content": "# Index\n"}),
+                                  tool_call("write", {"path": str(others), "content": "Taken over."}), text("Written.")])
     session = opencode.new_session(town, cfg, "archivist", title="index")
     home = town.resident_dir("archivist")
     try:
@@ -264,8 +290,8 @@ def test_an_approved_request_may_run_exactly_its_commands_and_nothing_else(town:
     path, cfg = config_file()
     home = town.resident_dir("archivist")
     mock_llama.default = _router([
-        tool_call("bash", {"command": "touch allowed.txt", "description": "make the file"}),
-        tool_call("bash", {"command": "touch denied.txt", "description": "not approved"}),
+        tool_call("shell", {"command": "touch allowed.txt"}),
+        tool_call("shell", {"command": "touch denied.txt"}),
         text("Made allowed.txt; the second command was refused."),
     ])
     box("mayor").call("request_session", resident="archivist", task="Create allowed.txt.", reason="A test.",
@@ -276,7 +302,12 @@ def test_an_approved_request_may_run_exactly_its_commands_and_nothing_else(town:
     assert done.status == "done", done.result
     assert (home / "allowed.txt").exists() and not (home / "denied.txt").exists()
     assert any("Made allowed.txt" in i.body for i in unread(town, "mayor") if i.sender == "archivist")
-    assert opencode.running(town, opencode.get_session(town, "archivist", done.session_id)) is None
+    ran = opencode.get_session(town, "archivist", done.session_id)
+    assert opencode.running(town, ran) is None
+    from babo.baton.events import resident_events
+
+    shell = [e for e in resident_events(town, "archivist") if e.get("session") == ran.key and e.get("tool") == "exec"]
+    assert any("touch allowed.txt" in json.dumps(e) for e in shell)  # filed like any shell command, redacted the same way
 
 
 _FAKE_OPENCODE = '''#!/usr/bin/env python3
@@ -284,14 +315,14 @@ _FAKE_OPENCODE = '''#!/usr/bin/env python3
 import json, os, sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-MODE, VERSION = os.environ["FAKE_OPENCODE"], os.environ.get("FAKE_OPENCODE_VERSION", "1.19.5")
+MODE, VERSION = os.environ["FAKE_OPENCODE"], os.environ.get("FAKE_OPENCODE_VERSION", "2.2.5")
 if sys.argv[1] == "--version":
     print(VERSION)
     sys.exit(0)
 
 class Handler(BaseHTTPRequestHandler):
     def answer(self):
-        if self.path == "/global/health" and MODE != "no-health":
+        if self.path == "/api/info" and MODE != "no-health":
             body, kind = json.dumps({"healthy": True, "version": VERSION}).encode(), "application/json"
         else:  # what opencode does with a path it doesn't know: its web app
             body, kind = b"<!doctype html><html></html>", "text/html"
@@ -309,9 +340,9 @@ HTTPServer(("127.0.0.1", int(sys.argv[sys.argv.index("--port") + 1])), Handler).
 
 
 @pytest.mark.parametrize(("mode", "version", "message", "remedy"), [
-    ("web-page", "1.19.5", "answered a new session with text/html instead of data", "opencode upgrade"),
-    ("no-health", "2.2.0", "has no health check", "set baton.opencode.bin"),
-    ("too-old", "1.2.0", "opencode 1.2.0 is too old: Babo needs 1.19 or newer", "opencode upgrade"),
+    ("web-page", "2.2.5", "answered the MCP servers with text/html instead of data", "opencode upgrade"),
+    ("no-health", "1.19.5", "doesn't answer /api/info", "opencode upgrade"),  # opencode 1 has no /api: its web page
+    ("too-old", "1.19.5", "opencode 1.19.5 is too old: Babo needs 2.0 or newer", "opencode upgrade"),
 ])
 def test_an_opencode_babo_cant_use_is_named_and_left_stopped(town: Town, config_file, tmp_path: Path,
                                                             monkeypatch: pytest.MonkeyPatch, mode: str, version: str, message: str,
@@ -331,8 +362,8 @@ def test_an_opencode_babo_cant_use_is_named_and_left_stopped(town: Town, config_
 
 
 @pytest.mark.parametrize(("mode", "version", "message"), [
-    ("too-old", "1.2.0", "too old"),
-    ("no-health", "2.2.0", "isn't the opencode Babo works with"),  # a newer version number from another program
+    ("too-old", "1.19.5", "too old"),
+    ("no-health", "2.2.0", "isn't the opencode Babo works with"),  # a version number alone can't vouch for the API
 ])
 def test_the_doctor_starts_opencode_to_check_it_is_one_babo_can_use(tmp_path: Path, config_file, monkeypatch: pytest.MonkeyPatch,
                                                                     mode: str, version: str, message: str) -> None:

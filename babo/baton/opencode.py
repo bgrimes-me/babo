@@ -61,19 +61,19 @@ AGENT = "resident"
 # Switched off for residents: anything that would let opencode's own setup,
 # the user's Claude Code files, or the resident's workspace change what Babo set.
 _ENV_OFF = (
-    "OPENCODE_DISABLE_PROJECT_CONFIG", "OPENCODE_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_EXTERNAL_SKILLS",
-    "OPENCODE_DISABLE_AUTOUPDATE", "OPENCODE_DISABLE_AUTOCOMPACT", "OPENCODE_DISABLE_LSP_DOWNLOAD",
-    "OPENCODE_DISABLE_MODELS_FETCH",
+    "OPENCODE_DISABLE_PROJECT_CONFIG", "OPENCODE_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_CLAUDE_CODE_SKILLS",
+    "OPENCODE_DISABLE_AUTOUPDATE", "OPENCODE_DISABLE_MODELS_FETCH", "OPENCODE_DISABLE_FREE_MODELS",
 )
 
 
-# The opencode Babo is built and tested against. Older ones lack parts of the
-# server API, and opencode answers any path it doesn't know with its web app.
-MIN_VERSION = (1, 19)
+# The opencode Babo is built and tested against: opencode 2, whose server API
+# (under /api) replaced opencode 1's. opencode answers any path it doesn't know
+# with its web app, so an opencode 1 looks healthy until Babo asks it for anything.
+MIN_VERSION = (2, 0)
 UPGRADE = "Update it with: opencode upgrade"
-NOT_OURS = ("isn't the opencode Babo works with (opencode.ai, 1.19 or newer); another program by that name may come first "
-            "on your PATH. Install opencode.ai's with: curl -fsSL https://opencode.ai/install | bash, then set "
-            "baton.opencode.bin in ~/.babo/config.json to the path it prints (usually ~/.opencode/bin/opencode)")
+NOT_OURS = ("isn't the opencode Babo works with (opencode.ai, 2.0 or newer): it may be opencode 1, or another program by "
+            "that name may come first on your PATH. Update it with: opencode upgrade (or install opencode.ai's with: "
+            "curl -fsSL https://opencode.ai/install | bash, and set baton.opencode.bin in ~/.babo/config.json to it)")
 
 
 def parse_version(text: str) -> tuple[int, ...] | None:
@@ -120,7 +120,7 @@ def probe(config: Config) -> str | None:
             env[f"XDG_{name.upper()}_HOME"] = str(root / name)
         env.update({name: "1" for name in _ENV_OFF})
         password = secrets.token_urlsafe(18)
-        env["OPENCODE_SERVER_PASSWORD"] = password
+        env["OPENCODE_PASSWORD"] = password
         port = _free_port()
         log_path = root / "probe.log"
         with log_path.open("ab") as log:
@@ -136,6 +136,28 @@ def probe(config: Config) -> str | None:
         finally:
             _stop(run)
     return None
+
+
+def _data(resp: httpx.Response, what: str) -> Any:
+    """opencode 2 wraps each answer in ``{"data": ...}``."""
+    body = _json(resp, what)
+    if not isinstance(body, dict) or "data" not in body:
+        raise BatonError(f"opencode answered {what} in a shape Babo doesn't know. Babo needs opencode "
+                         f"{'.'.join(map(str, MIN_VERSION))} or newer; `babo doctor` shows which one it found.")
+    return cast(dict[str, Any], body)["data"]
+
+
+def _has_session(run: Running, opencode_id: str) -> bool:
+    with _client(run, 30) as client:
+        resp = client.get(f"/api/session/{opencode_id}")
+    if resp.status_code in (400, 404):
+        return False
+    _data(resp, "a session")
+    return True
+
+
+def _new_opencode_session(client: httpx.Client, title: str) -> str:
+    return str(_data(client.post("/api/session", json={"title": title, "agent": AGENT}), "a new session")["id"])
 
 
 def runs_in_opencode(office: str) -> bool:
@@ -250,46 +272,67 @@ def _context_tokens(config: Config) -> int:
 
 def _mcp_entry(server: MCPServerConfig) -> dict[str, Any]:
     if server.command:
-        entry: dict[str, Any] = {"type": "local", "command": [server.command, *server.args], "enabled": True}
+        entry: dict[str, Any] = {"type": "local", "command": [server.command, *server.args], "disabled": False, "codemode": False}
         if server.env:
             entry["environment"] = dict(server.env)
         return entry
-    entry = {"type": "remote", "url": server.url, "enabled": True}
+    entry = {"type": "remote", "url": server.url, "disabled": False, "codemode": False}
     if server.headers:
         entry["headers"] = dict(server.headers)
     return entry
 
 
-def _permission(town: Town, resident: str, profile: profiles.Profile, *, unattended: bool = False,
-                commands: list[str] | None = None) -> dict[str, Any]:
-    """opencode's permission rules for a session. ``unattended``: nobody is at a
-    terminal (an approved request), so whatever would ask is denied instead.
-    ``commands``: exact shell commands allowed even where the shell is not."""
+def _tool_prefix(server: str) -> str:
+    """How opencode names an MCP server's tools (and their permission action): ``<server>_<tool>``."""
+    import re
+
+    return re.sub(r"[^A-Za-z0-9_-]", "_", server) + "_"
+
+
+def _command_pieces(command: str) -> list[str]:
+    """opencode checks a compound command one piece at a time (``a && b`` is ``a`` and ``b``),
+    so an approved command is allowed as a whole and as its pieces."""
+    import re
+
+    pieces = [p.strip() for p in re.split(r"\s*(?:&&|\|\||;|\|)\s*", command) if p.strip()]
+    return list(dict.fromkeys([command.strip(), *pieces]))
+
+
+def _permissions(town: Town, resident: str, profile: profiles.Profile, *, unattended: bool = False,
+                 commands: list[str] | None = None, mcp: list[str] | None = None) -> list[dict[str, str]]:
+    """opencode's ordered permission rules for a session (the last matching rule wins).
+
+    Everything not named here is denied. ``unattended``: nobody is at a terminal
+    (an approved request), so whatever would ask is denied instead. ``commands``:
+    exact shell commands allowed even where the shell is not. ``mcp``: the MCP
+    servers whose tools it may use (Babo's own town tools always)."""
     town.resident_dir(resident)  # validates the id
 
     def level(capability: str) -> str:
         value = profile.level(capability)
         return "deny" if unattended and value == "ask" else value
 
-    shell: str | dict[str, str] = level("shell")
-    if commands and shell != "allow":
-        shell = {"*": "deny", **dict.fromkeys(commands, "allow")}  # the last matching rule wins: exact commands
-    return {
-        "read": "allow",
-        # Nothing outside the town (inside it, reading is allowed and editing is ruled below).
-        "external_directory": "deny",
-        # The town is one git repository, so opencode treats the whole town as the
-        # project and matches edits by their path inside it: only its own folder.
-        "edit": {"*": "deny", f"residents/{resident}/*": level("files")},
-        "bash": shell,
-        "webfetch": level("web_fetch"),
-        "websearch": "deny",  # web search comes from Babo, with Babo's key, when the profile allows
-        "task": level("subagents"),
-        # Nobody may be waiting at a terminal: never stop to ask in these ways.
-        "question": "deny",
-        "doom_loop": "deny",
-        "skill": "deny",
-    }
+    def rule(action: str, resource: str, effect: str) -> dict[str, str]:
+        return {"action": action, "resource": resource, "effect": effect}
+
+    rules = [
+        rule("*", "*", "deny"),
+        # Reading, finding and searching anywhere in the town (the town is one git
+        # repository, so opencode treats it as the project); nothing outside it.
+        rule("read", "*", "allow"), rule("glob", "*", "allow"), rule("grep", "*", "allow"),
+        rule("external_directory", "*", "deny"),
+        # Edits are matched by their path relative to the resident's own folder,
+        # where it works: anything that leaves it (``../``) is another resident's.
+        rule("edit", "*", level("files")), rule("edit", "../*", "deny"),
+        rule("shell", "*", level("shell")),
+        rule("webfetch", "*", level("web_fetch")),
+        rule("subagent", "*", level("subagents")),
+        rule(f"{_tool_prefix(PROVIDER)}*", "*", "allow"),
+    ]
+    rules += [rule(f"{_tool_prefix(name)}*", "*", "allow") for name in mcp or []]
+    if commands and level("shell") != "allow":
+        rules += [rule("shell", piece, "allow") for command in commands for piece in _command_pieces(command)]
+    return rules
 
 
 def _priority(kind: str) -> str:
@@ -298,39 +341,48 @@ def _priority(kind: str) -> str:
 
 
 def opencode_config(town: Town, config: Config, session: Session, *, bundle: Path, config_path: Path, babo: str) -> dict[str, Any]:
+    """The resident's whole opencode configuration, in opencode 2's own format, passed inline."""
     profile = effective_profile(town, config, session.resident, session.overrides, by=session.by)
     model_id = profile.model or config.baton.model.model
     tokens = _context_tokens(config)
     prompt = (files("babo.baton") / "templates" / "opencode" / "resident.md").read_text(encoding="utf-8")
-    mcp: dict[str, Any] = {
-        "babo": {"type": "local", "enabled": True,
-                 "command": [babo, "mcp", "--as", session.resident, "-c", str(config_path)]},
+    servers: dict[str, Any] = {
+        # Tools stay on the model's own tool list (not behind opencode's Code Mode, which is denied).
+        PROVIDER: {"type": "local", "disabled": False, "codemode": False,
+                   "command": [babo, "mcp", "--as", session.resident, "-c", str(config_path)]},
     }
+    allowed_mcp: list[str] = []
     for name in profiles.mcp_servers(profile, sorted(config.tools.mcp_servers)):
         server = config.tools.mcp_servers.get(name)
-        if server is not None:
-            mcp[name] = _mcp_entry(server)
+        if server is not None and name != PROVIDER:
+            servers[name] = _mcp_entry(server)
+            allowed_mcp.append(name)
+    model = model_id if "/" in model_id else f"{PROVIDER}/{model_id}"
     return {
         "$schema": "https://opencode.ai/config.json",
-        "provider": {
+        "providers": {
             PROVIDER: {
-                "npm": "@ai-sdk/openai-compatible",
+                "package": "aisdk:@ai-sdk/openai-compatible",
                 "name": "Babo",
-                "options": {"baseURL": config.baton.model.endpoint,
-                            "headers": {"X-Baton-Resident": session.resident, "X-Baton-Priority": _priority(session.kind)}},
+                "settings": {"baseURL": config.baton.model.endpoint},
+                "headers": {"X-Baton-Resident": session.resident, "X-Baton-Priority": _priority(session.kind)},
                 "models": {model_id: {"name": model_id, "limit": {"context": tokens, "output": min(8192, tokens // 4)}}},
             },
         },
-        "model": model_id if "/" in model_id else f"{PROVIDER}/{model_id}",
-        "small_model": f"{PROVIDER}/{config.baton.model.model}",
+        "model": model,
         "default_agent": AGENT,
-        "agent": {AGENT: {"mode": "primary", "description": f"The resident {session.resident}", "prompt": prompt}},
+        "agents": {
+            AGENT: {"mode": "primary", "description": f"The resident {session.resident}", "system": prompt,
+                    "permissions": _permissions(town, session.resident, profile, unattended=session.kind.startswith("request:"),
+                                                commands=session.commands, mcp=allowed_mcp)},
+            # Titles come from the same model, through the same queue.
+            "title": {"model": f"{PROVIDER}/{config.baton.model.model}"},
+        },
         "instructions": [str(bundle)],
-        "permission": _permission(town, session.resident, profile, unattended=session.kind.startswith("request:"),
-                                  commands=session.commands),
-        "mcp": mcp,
+        "mcp": {"servers": servers},
+        # opencode's own summarizing is off: Babo never lets anything summarize a mind behind its back.
+        "compaction": {"auto": False},
         "autoupdate": False,
-        "share": "disabled",
     }
 
 
@@ -401,7 +453,7 @@ def _resident_env(config: Config, resident: str, *, password: str, inline: dict[
         env[f"XDG_{name.upper()}_HOME"] = str(root / name)
     env.update({name: "1" for name in _ENV_OFF})
     env["OPENCODE_CONFIG_CONTENT"] = json.dumps(inline)
-    env["OPENCODE_SERVER_PASSWORD"] = password
+    env["OPENCODE_PASSWORD"] = password
     env.pop("OPENCODE_CONFIG", None)
     env.pop("OPENCODE_CONFIG_DIR", None)
     return env
@@ -423,8 +475,9 @@ def _memory_env(town: Town, config: Config, session: Session, *, config_path: Pa
 
 def _install_plugin(config: Config, resident: str) -> None:
     plugins = Path(config.baton.opencode.data_dir).expanduser() / resident / "config" / "opencode" / "plugins"
-    plugins.mkdir(parents=True, exist_ok=True)
-    atomic_write(plugins / "babo.js", (files("babo.baton") / "templates" / "opencode" / "babo-plugin.js").read_text(encoding="utf-8"))
+    (plugins / "babo.js").unlink(missing_ok=True)  # opencode 1's plugin file; opencode 2 loads a folder
+    (plugins / "babo").mkdir(parents=True, exist_ok=True)
+    atomic_write(plugins / "babo" / "index.js", (files("babo.baton") / "templates" / "opencode" / "babo-plugin.js").read_text(encoding="utf-8"))
 
 
 def write_bundle(town: Town, config: Config, session: Session) -> Path:
@@ -465,14 +518,20 @@ def start(town: Town, config: Config, session: Session, *, config_path: Path) ->
             atomic_write(_runtime_path(town, session), json.dumps(asdict(run)) + "\n")
             try:
                 _wait_healthy(run, proc, config.baton.opencode.start_timeout_s, log_path=Path(log.name))
+                _wait_for_mcp(run, config.baton.opencode.start_timeout_s)
             except BatonError:
                 _stop(run)
                 _runtime_path(town, session).unlink(missing_ok=True)
                 raise
+        if session.opencode_id and not _has_session(run, session.opencode_id):
+            # Not in this opencode (one from opencode 1, say): carry on in a fresh session,
+            # which starts from the resident's baton like any other.
+            session.previous.append(session.opencode_id)
+            session.opencode_id = ""
         if not session.opencode_id:
             try:
                 with _client(run, 30) as client:
-                    session.opencode_id = str(_json(client.post("/session", json={"title": session.title}), "a new session")["id"])
+                    session.opencode_id = _new_opencode_session(client, session.title)
             except (BatonError, httpx.HTTPError):
                 # Don't leave an instance running for a session that never started.
                 _stop(run)
@@ -492,7 +551,7 @@ def _wait_healthy(run: Running, proc: subprocess.Popen[bytes], timeout_s: int, *
             raise BatonError(f"opencode stopped while starting (exit {proc.returncode}). {tail.strip()}")
         try:
             with _client(run, 2) as client:
-                resp = client.get("/global/health")
+                resp = client.get("/api/info")
         except httpx.HTTPError:
             time.sleep(0.3)
             continue
@@ -502,7 +561,7 @@ def _wait_healthy(run: Running, proc: subprocess.Popen[bytes], timeout_s: int, *
             except ValueError:
                 health = None
             if not isinstance(health, dict):
-                raise BatonError(f"This opencode started but has no health check (it answered with a web page): it {NOT_OURS}.")
+                raise BatonError(f"This opencode started but doesn't answer /api/info (it answered with a web page): it {NOT_OURS}.")
             problem = version_problem(str(cast(dict[str, Any], health).get("version", "")))
             if problem:
                 raise BatonError(problem)
@@ -510,6 +569,21 @@ def _wait_healthy(run: Running, proc: subprocess.Popen[bytes], timeout_s: int, *
         time.sleep(0.3)
     proc.terminate()
     raise BatonError(f"opencode didn't answer within {timeout_s} seconds.")
+
+
+def _wait_for_mcp(run: Running, timeout_s: int) -> None:
+    """opencode connects MCP servers in the background; the town's tools must be there for the first turn."""
+    deadline = time.monotonic() + timeout_s
+    with _client(run, 10) as client:
+        while time.monotonic() < deadline:
+            servers = cast(list[dict[str, Any]], _data(client.get("/api/mcp"), "the MCP servers"))
+            status = {str(s.get("name")): cast(dict[str, Any], s.get("status") or {}) for s in servers}
+            if PROVIDER in status and status[PROVIDER].get("status") not in ("pending", "connected"):
+                raise BatonError(f"The town's tools (babo mcp) didn't connect in opencode: {json.dumps(status[PROVIDER])}")
+            if not any(st.get("status") == "pending" for st in status.values()):
+                return
+            time.sleep(0.2)
+    raise BatonError(f"opencode's MCP servers didn't connect within {timeout_s} seconds (the town's tools among them).")
 
 
 def remove_session(town: Town, session: Session) -> None:
@@ -527,13 +601,7 @@ def remove_session(town: Town, session: Session) -> None:
 
 
 def _stop(run: Running) -> None:
-    """Ask opencode to close the instance (its sessions are already saved),
-    then stop the process; it can take its time over a plain SIGTERM."""
-    try:
-        with _client(run, 5) as client:
-            client.post("/instance/dispose")
-    except httpx.HTTPError:
-        pass
+    """Stop the instance (its sessions are already saved), and kill it if it takes its time."""
     try:
         os.killpg(run.pid, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):
@@ -575,13 +643,35 @@ def freeze(town: Town, session: Session, *, review: Config | None = None, config
 def send(town: Town, config: Config, session: Session, text: str, *, config_path: Path, timeout_s: float = 1800) -> str:
     """Send one message and wait for the resident's reply."""
     run = start(town, config, session, config_path=config_path)
+    deadline = time.monotonic() + timeout_s
     with _client(run, timeout_s) as client:
-        resp = client.post(f"/session/{session.opencode_id}/message", json={"agent": AGENT, "parts": [{"type": "text", "text": text}]})
-        data = cast(dict[str, Any], _json(resp, "a message"))
+        sent = str(_data(client.post(f"/api/session/{session.opencode_id}/prompt", json={"text": text}), "a message")["id"])
+        while True:
+            # Wait for the session to go idle; the answer comes with an "idle" message after ours.
+            client.post(f"/api/experimental/session/{session.opencode_id}/wait").raise_for_status()
+            after = _after(_messages(run, session), sent)
+            if any(m.get("type") == "idle" for m in after):
+                break
+            if time.monotonic() > deadline:
+                raise BatonError(f"{session.resident} didn't finish its turn within {int(timeout_s)} seconds.")
+            time.sleep(0.5)
     session.last_active = now_iso()
     save_session(town, session)
-    parts = cast(list[dict[str, Any]], data.get("parts") or [])
-    return "\n".join(str(p.get("text", "")) for p in parts if p.get("type") == "text").strip()
+    failed = [m for m in after if m.get("type") == "idle" and m.get("outcome") not in (None, "succeeded")]
+    if failed:
+        error = cast(dict[str, Any], failed[-1].get("error") or {})
+        raise BatonError(f"{session.resident}'s turn ended {failed[-1].get('outcome')}: {error.get('message', '')}".strip(": "))
+    return "\n".join(_text(m) for m in after if m.get("type") == "assistant" and _text(m)).strip()
+
+
+def _after(messages: list[dict[str, Any]], message_id: str) -> list[dict[str, Any]]:
+    ids = [str(m.get("id")) for m in messages]
+    return messages[ids.index(message_id) + 1:] if message_id in ids else []
+
+
+def _text(message: dict[str, Any]) -> str:
+    parts = cast(list[dict[str, Any]], message.get("content") or [])
+    return "\n".join(str(p.get("text", "")) for p in parts if p.get("type") == "text" and p.get("text")).strip()
 
 
 # -- memory: events, checkpoints, reviews -------------------------------------------------
@@ -590,7 +680,7 @@ def spool_path(town: Town, session: Session) -> Path:
     return _runtime_dir(town, session.resident) / f"{session.id}.spool.jsonl"
 
 
-_TOOL_ALIASES = {"bash": "exec"}  # the event log's names for opencode's tools, so its rules apply alike
+_TOOL_ALIASES = {"shell": "exec"}  # the event log's names for opencode's tools, so its rules apply alike
 
 
 def ingest(town: Town, session: Session) -> list[dict[str, Any]]:
@@ -613,7 +703,6 @@ def ingest(town: Town, session: Session) -> list[dict[str, Any]]:
         if raw.get("kind") == "tool":
             tool = _TOOL_ALIASES.get(str(raw.get("tool", "")), str(raw.get("tool", "")))
             args = cast(dict[str, Any], raw.get("args") if isinstance(raw.get("args"), dict) else {})
-            args = {("path" if k == "filePath" else k): v for k, v in args.items()}
             code = raw.get("exit_code")
             result = (f"Exit code: {code}\n" if isinstance(code, int) else "") + str(raw.get("output", ""))
             event = classify(tool, args, result, error=False)
@@ -671,8 +760,20 @@ def ingest_all(town: Town) -> int:
 
 
 def _messages(run: Running, session: Session) -> list[dict[str, Any]]:
+    """The session's whole history, oldest first."""
+    out: list[dict[str, Any]] = []
+    cursor: str | None = None
     with _client(run, 60) as client:
-        return cast(list[dict[str, Any]], _json(client.get(f"/session/{session.opencode_id}/message"), "the session's messages"))
+        while True:
+            # A cursor carries the order with it.
+            params: dict[str, str | int] = {"cursor": cursor} if cursor else {"order": "asc", "limit": 200}
+            body = _json(client.get(f"/api/session/{session.opencode_id}/message", params=params), "the session's messages")
+            page = cast(dict[str, Any], body)
+            data = cast(list[dict[str, Any]], page.get("data") or [])
+            out += data
+            cursor = cast(dict[str, Any], page.get("cursor") or {}).get("next")
+            if not cursor or not data:
+                return out
 
 
 def conversation(messages: list[dict[str, Any]], *, budget_tokens: int) -> list[dict[str, Any]]:
@@ -681,20 +782,18 @@ def conversation(messages: list[dict[str, Any]], *, budget_tokens: int) -> list[
 
     out: list[dict[str, Any]] = []
     for message in messages:
-        info = cast(dict[str, Any], message.get("info") or {})
-        role = str(info.get("role", ""))
-        if role not in ("user", "assistant"):
-            continue
+        kind = message.get("type")
         pieces: list[str] = []
-        for part in cast(list[dict[str, Any]], message.get("parts") or []):
-            if part.get("type") == "text" and part.get("text"):
-                pieces.append(str(part["text"]))
-            elif part.get("type") == "tool":
-                state = cast(dict[str, Any], part.get("state") or {})
-                pieces.append(f"[{part.get('tool')}] {json.dumps(state.get('input', {}), ensure_ascii=False)[:400]}"
-                              f" → {str(state.get('output', state.get('error', '')))[:600]}")
+        if kind == "user" and message.get("text"):
+            pieces.append(str(message["text"]))
+        elif kind == "assistant":
+            for part in cast(list[dict[str, Any]], message.get("content") or []):
+                if part.get("type") == "text" and part.get("text"):
+                    pieces.append(str(part["text"]))
+                elif part.get("type") == "tool":
+                    pieces.append(f"[{part.get('name')}] {json.dumps(_tool_input(part), ensure_ascii=False)[:400]} → {_tool_output(part)[:600]}")
         if pieces:
-            out.append({"role": role, "content": "\n".join(pieces)})
+            out.append({"role": "user" if kind == "user" else "assistant", "content": "\n".join(pieces)})
     kept: list[dict[str, Any]] = []
     used = 0
     for message in reversed(out):
@@ -704,6 +803,19 @@ def conversation(messages: list[dict[str, Any]], *, budget_tokens: int) -> list[
         kept.append(message)
         used += cost
     return list(reversed(kept))
+
+
+def _tool_input(part: dict[str, Any]) -> object:
+    state = cast(dict[str, Any], part.get("state") or {})
+    return state.get("input", {})
+
+
+def _tool_output(part: dict[str, Any]) -> str:
+    state = cast(dict[str, Any], part.get("state") or {})
+    if state.get("status") == "error":
+        return str(cast(dict[str, Any], state.get("error") or {}).get("message", "error"))
+    content = cast(list[dict[str, Any]], state.get("content") or [])
+    return "\n".join(str(c.get("text", "")) for c in content if c.get("type") == "text")
 
 
 def export_transcript(town: Town, session: Session, messages: list[dict[str, Any]]) -> Path:
@@ -751,9 +863,9 @@ def checkpoint(town: Town, config: Config, session: Session, *, trigger: str, co
 def _rotate(town: Town, session: Session, run: Running) -> None:
     """A full session continues in a fresh opencode session that starts from the resident's baton."""
     with _client(run, 30) as client:
-        created = _json(client.post("/session", json={"title": session.title}), "a new session")
+        created = _new_opencode_session(client, session.title)
     session.previous.append(session.opencode_id)
-    session.opencode_id = str(created["id"])
+    session.opencode_id = created
 
 
 def special_session(town: Town, config: Config, resident: str, kind: str) -> Session:
@@ -778,8 +890,8 @@ def attach_argv(config: Config, session: Session, run: Running) -> tuple[list[st
     """The command (and environment) that opens the session in opencode's terminal interface."""
     binary = opencode_bin(config) or "opencode"
     env = dict(os.environ)
-    env["OPENCODE_SERVER_PASSWORD"] = run.password
-    return [binary, "attach", run.url, "--session", session.opencode_id], env
+    env["OPENCODE_PASSWORD"] = run.password
+    return [binary, "--server", run.url, "--session", session.opencode_id], env
 
 
 def describe(town: Town, session: Session) -> dict[str, Any]:

@@ -59,7 +59,7 @@ jobs:
           node-version: "22"
 
       - name: Install opencode (residents run in it)
-        run: npm install -g opencode-ai@1.19.5 && opencode --version
+        run: npm install -g @opencode/cli@2.2.5 && opencode --version
 
       - name: Baton tests
         env:
