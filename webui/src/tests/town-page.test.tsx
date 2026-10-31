@@ -52,6 +52,8 @@ const sessions = {
   }] }],
 };
 
+const presets = [{ name: "town", model: "local-35b.gguf", default: true }, { name: "cloud", model: "gpt-cloud", default: false }];
+
 const mocks = vi.hoisted(() => ({ mutation: vi.fn(), fetch: vi.fn(), getToken: () => "token" }));
 vi.mock("@/providers/ClientProvider", () => ({ useClient: () => ({ client: { requestMutation: mocks.mutation }, getToken: mocks.getToken }) }));
 
@@ -60,7 +62,7 @@ beforeEach(async () => {
   mocks.mutation.mockReset().mockResolvedValue({ message: "Proposal accepted. The town is now called Lantern Hill.", town: town("Lantern Hill") });
   mocks.fetch.mockReset().mockImplementation((url: string) => Promise.resolve(new Response(
     JSON.stringify(url.endsWith("/api/town/review") ? review : url.endsWith("/api/town/settings") ? { settings }
-      : url.endsWith("/api/town/profiles") ? { profiles } : url.endsWith("/api/town/sessions") ? sessions : town()),
+      : url.endsWith("/api/town/profiles") ? { profiles, presets } : url.endsWith("/api/town/sessions") ? sessions : town()),
     { status: 200, headers: { "content-type": "application/json" } },
   )));
   vi.stubGlobal("fetch", mocks.fetch);
@@ -115,6 +117,18 @@ describe("town page", () => {
     fireEvent.click(within(archivist).getByRole("radio", { name: "Ask" }));
     await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.profile", { agent: "archivist", changes: { shell: "ask" } }, expect.any(Number)));
     expect(await screen.findByRole("status")).toHaveTextContent("Run commands: deny → ask");
+  });
+
+  it("gives a resident a model preset from Settings, like `babo profile archivist model cloud`", async () => {
+    mocks.mutation.mockResolvedValue({ message: "Profile of archivist: Model: Babo default → cloud.", profiles, presets });
+    render(<TownPage onBackToChat={() => {}} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Profiles" }));
+    const archivist = await screen.findByRole("region", { name: "archivist · archivist" });
+    const model = within(archivist).getByRole("combobox", { name: /Model/ });
+    expect(within(model).getByRole("option", { name: "Babo's default (town)" })).toBeInTheDocument();
+    fireEvent.change(model, { target: { value: "cloud" } });
+    fireEvent.click(within(archivist).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.profile", { agent: "archivist", changes: { model: "cloud" } }, expect.any(Number)));
   });
 
   it("shows what upkeep is waiting for and catches up on request, like `babo upkeep --now`", async () => {

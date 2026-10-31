@@ -46,7 +46,9 @@ class BatonModelConfig(Base):
     endpoint: str = "http://127.0.0.1:8091/v1"
     # llama-server itself; only the queue talks to it directly.
     upstream: str = "http://127.0.0.1:8080"
-    model: str = "local"
+    # The model preset (Settings › Models) Babo's own memory work uses; empty: the
+    # default preset. Residents and the Mayor choose theirs in their profiles.
+    model: str = ""
     api_key: str = ""
     # llama-server slots. All model calls share this many lanes, town-wide.
     slots: int = Field(default=1, ge=1)

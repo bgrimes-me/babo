@@ -63,7 +63,7 @@ Each step is its own pull request, merged once its tests pass.
 | — | This document | Done (a working draft) |
 | **F** | `babo reset` (back up and start fresh); the owner's name as a town setting and generic install steps; install reports kept local | Done |
 | **F2** | Named instances: several towns, or a test town beside a real one, each with its own services and ports | Planned |
-| **A** | Models from Settings everywhere (the default preset for everything unless a profile or session picks another), any provider through Babo's gateway with keys kept inside Babo | Planned |
+| **A** | Models from Settings everywhere (the default preset for everything unless a profile or session picks another), any provider through Babo's gateway with keys kept inside Babo | Done |
 | **B** | Sessions that just go: start with a task and the resident works on its own; live status; controls (stop, send a message, checkpoint now, freeze, archive, remove, switch model); opencode served through Babo (no password prompt, and Babo knows when you're there); wrap-up that follows presence (below); notifications; the same for the Mayor's chats and in the terminal | Planned |
 | **C** | Permissions and visibility: change a running session's permissions, *Allow all* per session, permission questions shown in Babo's interface, what a resident may read (its own folder by default) as a setting like any other, and *private* or *public* sessions | Planned |
 | **D** | One list for all sessions, the Mayor's and the residents': projects, pin, tags, rename, archive | Planned |

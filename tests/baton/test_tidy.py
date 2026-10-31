@@ -67,3 +67,13 @@ def test_the_installer_records_where_opencode_is(tmp_path: Path) -> None:
 
     data = town_config({}, town="~/t", upstream="http://x", model="m", n_ctx=8192, opencode_path="/home/ben/.opencode/bin/opencode")
     assert data["baton"]["opencode"]["bin"] == "/home/ben/.opencode/bin/opencode"
+
+
+def test_an_installs_copy_of_the_model_name_goes(tmp_path: Path) -> None:
+    babo = tmp_path / ".babo"
+    babo.mkdir()
+    (babo / "config.json").write_text(json.dumps({"modelPresets": {"big": {"model": "big.gguf"}},
+                                                  "baton": {"model": {"model": "/models/small.gguf", "slots": 1}}}))
+    said = tidy(babo_home=babo, user_home=tmp_path, checkout=None)
+    assert json.loads((babo / "config.json").read_text())["baton"]["model"] == {"slots": 1}
+    assert any("baton.model.model" in line for line in said)

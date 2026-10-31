@@ -4,7 +4,8 @@ Run by the installer at every install and upgrade (step 04), and safe to run
 any time. It only removes things Babo itself made and no longer uses, says what
 it removed, and never touches the town's history or anyone's work:
 
-- settings that no longer mean anything (``baton.night.time``) and names that
+- settings that no longer mean anything (``baton.night.time``, an install's copy
+  of the model name in ``baton.model.model``) and names that
   changed (the crew tool ``spawn`` is now ``subagent``) in Babo's config;
 - paths through ``~/.nanobot`` (the folder's name before the rename) in Babo's
   configs, and then the ``~/.nanobot`` link itself;
@@ -54,6 +55,11 @@ def _tidy_config(path: Path, said: list[str]) -> None:
             said.append(f"{path}: removed baton.night.time (upkeep replaced the nightly timer)")
             if not night:
                 del baton["night"]
+        model = baton.get("model")
+        presets = cast(dict[str, Any], data.get("modelPresets")) if isinstance(data.get("modelPresets"), dict) else {}
+        if isinstance(model, dict) and cast(dict[str, Any], model).get("model") and cast(dict[str, Any], model)["model"] not in presets:
+            stale = cast(dict[str, Any], model).pop("model")
+            said.append(f"{path}: removed baton.model.model ({stale}); Babo's own memory work now uses the default model preset from Settings › Models")
         toolsets = baton.get("toolsets")
         if isinstance(toolsets, dict):
             for office, names in cast(dict[str, Any], toolsets).items():

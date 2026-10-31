@@ -202,11 +202,12 @@ def profiles_overview(town: Town, cfg: BatonConfig, mcp_known: list[str]) -> lis
     return out
 
 
-def update_profile(town: Town, cfg: BatonConfig, agent: str, changes: dict[str, object], mcp_known: list[str]) -> str:
+def update_profile(town: Town, cfg: BatonConfig, agent: str, changes: dict[str, object], mcp_known: list[str],
+                   presets_known: list[str] | None = None) -> str:
     from babo.baton import profiles
 
     agent = profile_agent(agent)
-    said = profiles.update(town, cfg, agent, _office(town, agent), changes, mcp_known=mcp_known)
+    said = profiles.update(town, cfg, agent, _office(town, agent), changes, mcp_known=mcp_known, presets_known=presets_known)
     if not said:
         return "Nothing changed."
     if agent == profiles.NEW_RESIDENTS:
@@ -223,7 +224,10 @@ def sessions_overview(town: Town, config: Config) -> dict[str, Any]:
     from babo.baton import opencode
 
     residents = [r for r in Registry(town).all() if r.status == "active" and opencode.runs_in_opencode(r.office)]
+    from babo.baton.gateway import presets_overview
+
     return {
+        "presets": presets_overview(config),
         "opencode": opencode.opencode_bin(config) is not None,
         "residents": [{"id": r.id, "name": "" if r.name == "unchosen" else r.name, "office": r.office,
                        "sessions": opencode.overview(town, r.id)} for r in residents],

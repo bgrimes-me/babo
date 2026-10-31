@@ -70,10 +70,12 @@ def _update_settings(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _profiles() -> dict[str, Any]:
     from babo.baton import views
+    from babo.baton.gateway import presets_overview
     from babo.config.loader import load_config
 
     cfg = load_config()
-    return {"profiles": views.profiles_overview(Town.open(cfg.baton.town_path), cfg.baton, sorted(cfg.tools.mcp_servers))}
+    return {"profiles": views.profiles_overview(Town.open(cfg.baton.town_path), cfg.baton, sorted(cfg.tools.mcp_servers)),
+            "presets": presets_overview(cfg)}
 
 
 def _update_profile(agent: str, changes: dict[str, object]) -> str:
@@ -81,7 +83,9 @@ def _update_profile(agent: str, changes: dict[str, object]) -> str:
     from babo.config.loader import load_config
 
     cfg = load_config()
-    return views.update_profile(Town.open(cfg.baton.town_path), cfg.baton, agent, changes, sorted(cfg.tools.mcp_servers))
+    from babo.baton.gateway import preset_names
+
+    return views.update_profile(Town.open(cfg.baton.town_path), cfg.baton, agent, changes, sorted(cfg.tools.mcp_servers), preset_names(cfg))
 
 
 def _review() -> dict[str, Any]:

@@ -41,6 +41,17 @@ def test_town_config_keeps_the_owners_settings(tmp_path: Path) -> None:
     assert cfg.resolve_preset().model == "qwen"
 
 
+def test_running_the_installer_again_keeps_the_owners_models(tmp_path: Path) -> None:
+    first = town_config({}, town="~/baton-town", upstream="http://127.0.0.1:8080", model="small.gguf", n_ctx=8192)
+    # The owner adds a preset in Settings and makes it the default.
+    first["modelPresets"]["big"] = {"provider": "custom", "model": "big.gguf", "contextWindowTokens": 65536}
+    first["agents"]["defaults"]["modelPreset"] = "big"
+    again = town_config(first, town="~/baton-town", upstream="http://127.0.0.1:8080", model="what-llama-serves-now.gguf", n_ctx=4096)
+    assert again["agents"]["defaults"]["modelPreset"] == "big"
+    assert again["modelPresets"]["town"]["model"] == "small.gguf" and again["modelPresets"]["big"]["model"] == "big.gguf"
+    assert "model" not in again["baton"]["model"]
+
+
 def test_write_town_config_backs_up_and_is_repeatable(tmp_path: Path) -> None:
     path = tmp_path / "config.json"
     path.write_text(json.dumps({"api": {"timeout": 99}}))
@@ -62,8 +73,10 @@ def _doctor_router(body: dict[str, Any]) -> dict[str, Any]:
 
 
 async def test_doctor_passes_on_a_working_town(town: Town, index_path: Path, mock_llama: MockLlama, tmp_path: Path) -> None:
+    from babo.baton.gateway import RouterSource
+
     mock_llama.default = _doctor_router
-    queue = ModelQueue(BatonModelConfig(upstream=mock_llama.base_url))
+    queue = ModelQueue(BatonModelConfig(upstream=mock_llama.base_url), router=RouterSource(tmp_path / "config.json"))
     runner = web.AppRunner(queue.app())
     await runner.setup()
     site = web.TCPSite(runner, "127.0.0.1", 0)
@@ -83,6 +96,8 @@ async def test_doctor_passes_on_a_working_town(town: Town, index_path: Path, moc
     by_name = {c.name: c for c in checks}
     failures = {c.name: c.detail for c in checks if c.status == "FAIL"}
     assert failures == {}
+    assert "preset town: mock-model" in by_name["default model"].detail and "local" in by_name["default model"].detail
+    assert {r["model"] for r in mock_llama.requests} == {"mock-model"}  # Babo's own calls, routed to the default preset
     for name in ("endpoint (llama-server)", "model queue", "tool calling", "schema output", "checkpoint turn",
                  "MCP (baton-mcp)", "FTS index", "residents present", "compaction backup", "git"):
         assert by_name[name].status == "PASS", name

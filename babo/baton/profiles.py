@@ -141,8 +141,10 @@ def editable_keys() -> list[str]:
     return [c.key for c in CAPABILITIES] + ["mcp", "model", "memory.checkpoint_every_tool_calls", "memory.idle_minutes"]
 
 
-def with_changes(profile: Profile, changes: dict[str, object], *, agent: str, mcp_known: list[str]) -> Profile:
-    """Apply ``{key: value}`` changes as typed by a person (CLI or web) and validate them."""
+def with_changes(profile: Profile, changes: dict[str, object], *, agent: str, mcp_known: list[str],
+                 presets_known: list[str] | None = None) -> Profile:
+    """Apply ``{key: value}`` changes as typed by a person (CLI or web) and validate them.
+    ``presets_known``: the model presets in Settings › Models, when the caller has them."""
     data: dict[str, Any] = profile.model_dump()
     for key, raw in changes.items():
         value = raw.strip() if isinstance(raw, str) else raw
@@ -161,8 +163,11 @@ def with_changes(profile: Profile, changes: dict[str, object], *, agent: str, mc
             data["mcp"] = sorted(set(names))
         elif key == "model":
             if agent == MAYOR:
-                raise BatonError("The Mayor uses Babo's model; change it in Settings › Models.")
-            data["model"] = str(value)
+                raise BatonError("The Mayor uses Babo's default model; change it in Settings › Models.")
+            name = "" if value in (None, "default") else str(value)
+            if name and presets_known is not None and name not in presets_known:
+                raise BatonError(f"No model preset named {name!r} in Settings › Models (there are: {', '.join(presets_known) or 'none'}).")
+            data["model"] = name
         elif key.startswith("memory.") and key.split(".", 1)[1] in ProfileMemory.model_fields:
             field = key.split(".", 1)[1]
             data["memory"][field] = None if value in ("", None, "default") else value
@@ -196,11 +201,12 @@ def describe_changes(before: Profile, after: Profile) -> list[str]:
 
 # -- sessions ---------------------------------------------------------------
 
-def session_profile(profile: Profile, overrides: dict[str, object], *, agent: str, mcp_known: list[str]) -> Profile:
+def session_profile(profile: Profile, overrides: dict[str, object], *, agent: str, mcp_known: list[str],
+                    presets_known: list[str] | None = None) -> Profile:
     """A session's effective profile: the agent's profile with the session's changes."""
     if agent == MAYOR and overrides:
         raise BatonError("The Mayor has the same profile in every session; change the Mayor's profile instead.")
-    return with_changes(profile, overrides, agent=agent, mcp_known=mcp_known)
+    return with_changes(profile, overrides, agent=agent, mcp_known=mcp_known, presets_known=presets_known)
 
 
 def widening(base: Profile, session: Profile) -> list[str]:
@@ -240,9 +246,10 @@ def describe(town: Town, cfg: BatonConfig, agent: str, office: str, *, mcp_known
     }
 
 
-def update(town: Town, cfg: BatonConfig, agent: str, office: str, changes: dict[str, object], *, mcp_known: list[str]) -> list[str]:
+def update(town: Town, cfg: BatonConfig, agent: str, office: str, changes: dict[str, object], *, mcp_known: list[str],
+           presets_known: list[str] | None = None) -> list[str]:
     before = load(town, cfg, agent, office)
-    after = with_changes(before, changes, agent=agent, mcp_known=mcp_known)
+    after = with_changes(before, changes, agent=agent, mcp_known=mcp_known, presets_known=presets_known)
     said = describe_changes(before, after)
     if said:
         who = "new residents" if agent == NEW_RESIDENTS else agent

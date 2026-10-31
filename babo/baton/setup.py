@@ -3,7 +3,9 @@
 Adds Baton's settings to ``~/.babo/config.json`` without disturbing
 anything the owner already configured (channels, keys). The original file is
 backed up first. Re-running is safe: values the installer owns are refreshed,
-everything else is left as it is.
+everything else is left as it is. Models are the owner's: the first install
+adds a "town" preset for the local model server and makes it the default; after
+that, presets and the default are only ever changed in Settings › Models.
 """
 
 from __future__ import annotations
@@ -36,7 +38,7 @@ def town_config(
     slots: int = 1,
     queue_port: int = 8091,
     bwrap: bool = False,
-    box: str = "Agent",
+    box: str = "babo",
     babo_path: str = "",
     opencode_path: str = "",
 ) -> dict[str, Any]:
@@ -44,16 +46,15 @@ def town_config(
     queue = f"http://127.0.0.1:{queue_port}/v1"
     town_dir = str(Path(town).expanduser())
 
-    provider = _node(data, "providers", "custom")
-    provider["apiBase"] = queue
-    provider.setdefault("apiKey", "local")
-
-    preset = _node(data, "modelPresets", "town")
-    preset.update({"provider": "custom", "model": model, "contextWindowTokens": int(n_ctx)})
-
     defaults = _node(data, "agents", "defaults")
+    first_install = not data.get("modelPresets") and not defaults.get("modelPreset")
+    if first_install:
+        provider = _node(data, "providers", "custom")
+        provider.setdefault("apiBase", queue)
+        provider.setdefault("apiKey", "local")
+        _node(data, "modelPresets", "town").update({"provider": "custom", "model": model, "contextWindowTokens": int(n_ctx)})
+        defaults["modelPreset"] = "town"
     defaults["workspace"] = f"{town_dir}/residents/mayor"
-    defaults["modelPreset"] = "town"
     _node(defaults, "dream")["enabled"] = False
 
     tools = _node(data, "tools")
@@ -70,7 +71,9 @@ def town_config(
         # The full path: Babo's services don't see the PATH of an interactive shell.
         _node(baton, "opencode")["bin"] = opencode_path
     bm = _node(baton, "model")
-    bm.update({"endpoint": queue, "upstream": upstream.rstrip("/"), "model": model, "slots": int(slots), "queuePort": int(queue_port)})
+    bm.update({"endpoint": queue, "upstream": upstream.rstrip("/"), "slots": int(slots), "queuePort": int(queue_port)})
+    if bm.get("model") and bm.get("model") not in (data.get("modelPresets") or {}):
+        del bm["model"]  # an older install's copy of the model name; Babo uses the default preset
     return data
 
 

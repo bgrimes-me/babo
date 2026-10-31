@@ -176,10 +176,12 @@ def _profile_tools(town: Town, cfg: Config, resident: str, office: str) -> list[
 def queue(config: str | None = _CONFIG_OPT):
     """Run the model queue: the one line every model call in the town waits in."""
     from babo.baton.queue import serve
+    from babo.config.loader import get_config_path
 
     cfg = _config(config)
-    console.print(f"Model queue on {cfg.baton.model.queue_host}:{cfg.baton.model.queue_port} -> {cfg.baton.model.upstream}")
-    asyncio.run(serve(cfg.baton.model, cfg.baton.capture_dir))
+    console.print(f"Model queue on {cfg.baton.model.queue_host}:{cfg.baton.model.queue_port} -> {cfg.baton.model.upstream}"
+                  " (other providers through Babo's gateway)")
+    asyncio.run(serve(cfg.baton.model, cfg.baton.capture_dir, config_path=get_config_path().resolve()))
 
 
 @app.command()
@@ -628,7 +630,9 @@ def profile(
             return
         if agent is None or value is None:
             raise BatonError("Give an agent, a setting and a value, e.g. babo profile archivist web_search allow")
-        message = views.update_profile(town, cfg.baton, agent, {key: value}, mcp_known)
+        from babo.baton.gateway import preset_names
+
+        message = views.update_profile(town, cfg.baton, agent, {key: value}, mcp_known, preset_names(cfg))
     except BatonError as exc:
         _fail(exc)
         return
