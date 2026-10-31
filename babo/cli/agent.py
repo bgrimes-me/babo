@@ -379,6 +379,17 @@ def _run_classic(runtime_config: Config, *, message: str | None, session_id: str
                         break
 
             outbound_task = asyncio.create_task(_consume_outbound())
+            baton_runtime = getattr(agent_loop, "baton", None)
+            requests_seen: set[str] = set()
+
+            async def _ask_about_new_requests() -> None:
+                """Session requests wait for Squid: ask here, between turns, instead of leaving them for babo review."""
+                if baton_runtime is None:
+                    return
+                from babo.baton.cli import ask_about_new_requests
+
+                await asyncio.to_thread(ask_about_new_requests, baton_runtime.town, runtime_config, requests_seen)
+
 
             try:
                 while True:
@@ -441,6 +452,7 @@ def _run_classic(runtime_config: Config, *, message: str | None, session_id: str
                                 )
                         elif renderer and not renderer.streamed:
                             await renderer.close()
+                        await _ask_about_new_requests()
                     except KeyboardInterrupt:
                         cli_terminal._restore_terminal()
                         console.print("\nGoodbye!")

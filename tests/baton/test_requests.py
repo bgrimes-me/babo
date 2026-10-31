@@ -150,3 +150,99 @@ def test_a_request_session_denies_what_would_ask_and_allows_exactly_its_commands
     assert perm["edit"] == {"*": "deny", "residents/archivist/*": "deny"} and perm["webfetch"] == "allow"
     attended = opencode._permission(town, "archivist", profile)  # pyright: ignore[reportPrivateUsage]
     assert attended["bash"] == "ask"
+
+
+# -- allow all: Squid lets one of the Mayor's chats run requests without review --------------
+
+def _ask_from(box, session_key: str, **overrides: Any) -> str:
+    from babo.agent.tools.context import RequestContext, bind_request_context, reset_request_context
+
+    token = bind_request_context(RequestContext(channel="websocket", chat_id="abc", session_key=session_key))
+    try:
+        return _ask(box, **overrides)
+    finally:
+        reset_request_context(token)
+
+
+def test_with_allow_all_on_a_chats_requests_are_approved_as_asked_and_only_that_chats(town: Town, box) -> None:
+    from babo.baton import allow_all
+
+    allow_all.turn_on(town, "websocket:abc", hours=None)
+    said = _ask_from(box, "websocket:abc")
+    request = requests.all_requests(town)[0]
+    assert "approved automatically" in said and request.status == "approved" and request.decided_by == "allow-all"
+    assert request.approved_digest == request.digest() and request.session_key == "websocket:abc"
+    assert gitops.git(town, "log", "-1", "--format=%s").stdout.startswith("Session request by mayor (approved automatically: allow-all)")
+    # Another chat still waits for Squid.
+    _ask_from(box, "discord:123", task="Install htop.")
+    assert [r.status for r in requests.all_requests(town) if r.task == "Install htop."] == ["pending"]
+    assert views.pending_counts(town)["sessions"] == 1
+
+
+def test_allow_all_ends_on_time_or_when_turned_off_and_both_are_recorded(town: Town, box) -> None:
+    from datetime import datetime, timedelta
+
+    from babo.baton import allow_all
+
+    said = allow_all.turn_on(town, "websocket:abc", hours=1)
+    assert "until" in said and allow_all.is_on(town, "websocket:abc")
+    assert not allow_all.is_on(town, "websocket:abc", now=datetime.now().astimezone() + timedelta(hours=2))
+    assert "Allow all is off" in allow_all.turn_off(town, "websocket:abc")
+    _ask_from(box, "websocket:abc")
+    assert requests.all_requests(town)[0].status == "pending"
+    log = gitops.git(town, "log", "--format=%s").stdout
+    assert "Squid turned allow-all on for websocket:abc" in log and "Squid turned allow-all off for websocket:abc" in log
+    with pytest.raises(BatonError, match="session key"):
+        allow_all.turn_on(town, "not-a-key", hours=None)
+
+
+def test_recently_run_shows_what_allow_all_approved(town: Town, box, make_config) -> None:
+    from babo.baton import allow_all
+
+    allow_all.turn_on(town, "websocket:abc", hours=None)
+    _ask_from(box, "websocket:abc")
+    [recent] = views.review_items(town, make_config("mayor"))["recent"]
+    assert recent["decided_by"] == "allow-all" and recent["status"] == "approved"
+
+
+def test_the_terminal_warns_before_turning_allow_all_on(town: Town, tmp_path: Path, index_path: Path) -> None:
+    from typer.testing import CliRunner
+
+    from babo.baton import allow_all
+    from babo.baton.cli import app
+
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({"baton": {"town": str(town.root), "indexPath": str(index_path)}}))
+    runner = CliRunner()
+    declined = runner.invoke(app, ["allow-all", "websocket:abc", "-c", str(cfg)], input="n\n")
+    assert "can lead to commands running" in declined.output and "Nothing changed." in declined.output
+    assert not allow_all.is_on(town, "websocket:abc")
+    accepted = runner.invoke(app, ["allow-all", "websocket:abc", "--for", "2", "-c", str(cfg)], input="y\n")
+    assert accepted.exit_code == 0, accepted.output
+    assert allow_all.is_on(town, "websocket:abc")
+    listed = runner.invoke(app, ["allow-all", "-c", str(cfg)])
+    assert "websocket:abc" in listed.output
+
+
+def test_the_terminal_chat_asks_about_a_new_request_once_between_turns(town: Town, box, make_config, monkeypatch: pytest.MonkeyPatch) -> None:
+    from babo.baton import cli
+
+    _ask(box)
+    answers = iter(["a", "go ahead"])
+    asked: list[str] = []
+
+    def prompt(text: str, **_kwargs: Any) -> str:
+        asked.append(text)
+        return next(answers)
+
+    monkeypatch.setattr(cli.typer, "prompt", prompt)
+    seen: set[str] = set()
+    cli.ask_about_new_requests(town, make_config("mayor"), seen)
+    assert _only(town).status == "approved" and _only(town).decided_by == "squid"
+    assert asked[0].startswith("Approve and run it?")
+    _ask(box, task="Install vim.")
+    skips: list[str] = []
+    monkeypatch.setattr(cli.typer, "prompt", lambda text, **_k: skips.append(text) or "s")
+    cli.ask_about_new_requests(town, make_config("mayor"), seen)
+    cli.ask_about_new_requests(town, make_config("mayor"), seen)  # skipped once: not asked again in this chat
+    assert len(skips) == 1 and len(requests.pending(town)) == 1

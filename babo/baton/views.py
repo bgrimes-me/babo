@@ -113,7 +113,25 @@ def review_items(town: Town, config: Config | None = None) -> dict[str, Any]:
     flags = [{"id": str(f.get("path", "")), "to": str(f.get("to", "")), "by": str(f.get("by", "")),
               "at": str(f.get("at", "")), "claim": str(f.get("claim", ""))} for f in growth.stale_flags(town)]
     sessions = [_requests().describe(town, config, r) for r in _requests().pending(town)] if config is not None else []
-    return {"sessions": sessions, "tools": tools, "proposals": proposals, "founding": founding, "flags": flags}
+    recent = [{"id": r.id, "resident": r.resident, "task": first_line(r.task, 140), "status": r.status,
+               "decided": r.decided, "decided_by": r.decided_by, "commands": r.commands, "access": r.access,
+               "result": first_line(r.result, 300)} for r in _requests().recent(town)]
+    return {"sessions": sessions, "recent": recent, "tools": tools, "proposals": proposals, "founding": founding, "flags": flags}
+
+
+def mayor_chats(town: Town, *, limit: int = 10) -> list[dict[str, str]]:
+    """The Mayor's recent chats (web, chat apps, terminal), newest first, from his event log."""
+    from babo.baton.events import resident_events
+
+    latest: dict[str, str] = {}
+    for event in resident_events(town, "mayor"):
+        key = str(event.get("session", ""))
+        if not key or key.startswith(("night:", "visit:", "opencode:", "doctor:")) or key == "direct":
+            continue
+        at = str(event.get("at", ""))
+        if at > latest.get(key, ""):
+            latest[key] = at
+    return [{"key": k, "last_active": v} for k, v in sorted(latest.items(), key=lambda kv: kv[1], reverse=True)[:limit]]
 
 
 def decide(town: Town, kind: DecisionKind, item_id: str, *, yes: bool, reason: str, commit: bool = True,

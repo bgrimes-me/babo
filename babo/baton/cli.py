@@ -13,6 +13,7 @@ from rich.table import Table
 from babo.baton.town import BatonError, Town
 
 if TYPE_CHECKING:
+    from babo.baton.requests import SessionRequest
     from babo.config.schema import Config
 
 app = typer.Typer(help="The Baton town: residents, memory, upkeep, review.", no_args_is_help=True)
@@ -368,6 +369,47 @@ def _reason() -> str:
     return typer.prompt("Your reason (goes to the resident)").strip() or "(no reason given)"
 
 
+def ask_about_request(t: Town, cfg: Config, request: SessionRequest) -> bool:
+    """Show one session request word for word and ask Squid to approve, decline or skip it.
+
+    Used by ``babo review`` and, live, by the terminal chat after the Mayor asks."""
+    from babo.baton import requests as session_requests
+    from babo.baton import views
+
+    shown = session_requests.describe(t, cfg, request)
+    console.print(f"\n• {request.requested_by} asks for a session of [bold]{request.resident}[/bold] ({request.id})")
+    console.print(f"  Task: {request.task}")
+    console.print(f"  Why: {request.reason}")
+    console.print("  Access: " + (", ".join(f"{shown['access_labels'][k]} {v}" for k, v in request.access.items()) or "as in the profile"))
+    for command in request.commands:
+        console.print(f"  May run exactly: {command}")
+    if shown["wider"]:
+        console.print("  [yellow]Beyond its profile:[/yellow] " + "; ".join(shown["wider"]))
+    console.print("  It runs with nobody at a terminal; anything not allowed is denied.")
+    choice = _ask_decision("Approve and run it?", "approve", "decline")
+    if choice == "skip":
+        return False
+    try:
+        console.print(views.decide(t, "session", request.id, yes=choice == "yes", reason=_reason(), digest=shown["digest"]))
+        return True
+    except BatonError as exc:
+        console.print(f"[yellow]{exc}[/yellow]")
+        return False
+
+
+def ask_about_new_requests(t: Town, cfg: Config, seen: set[str]) -> None:
+    """In a live terminal chat: ask about each session request waiting for Squid that this chat hasn't shown yet."""
+    from babo.baton import requests as session_requests
+
+    for request in session_requests.pending(t):
+        if request.id in seen:
+            continue
+        seen.add(request.id)
+        console.print("\n[bold yellow]A session request is waiting for your approval.[/bold yellow]")
+        if not ask_about_request(t, cfg, request):
+            console.print("  Skipped: it waits in [bold]babo review[/bold] and on the Town page.")
+
+
 @app.command()
 def review(config: str | None = _CONFIG_OPT):
     """The weekly check-in: session requests, tools, proposals, founding requests, old flags. Plain questions, one at a time."""
@@ -385,24 +427,7 @@ def review(config: str | None = _CONFIG_OPT):
     asked = session_requests.pending(t)
     console.print(f"[bold]Session requests[/bold] ({len(asked)})")
     for request in asked:
-        shown = session_requests.describe(t, cfg, request)
-        console.print(f"\n• {request.requested_by} asks for a session of [bold]{request.resident}[/bold] ({request.id})")
-        console.print(f"  Task: {request.task}")
-        console.print(f"  Why: {request.reason}")
-        console.print("  Access: " + (", ".join(f"{shown['access_labels'][k]} {v}" for k, v in request.access.items()) or "as in the profile"))
-        for command in request.commands:
-            console.print(f"  May run exactly: {command}")
-        if shown["wider"]:
-            console.print("  [yellow]Beyond its profile:[/yellow] " + "; ".join(shown["wider"]))
-        console.print("  It runs with nobody at a terminal; anything not allowed is denied.")
-        choice = _ask_decision("Approve and run it?", "approve", "decline")
-        if choice == "skip":
-            continue
-        try:
-            console.print(views.decide(t, "session", request.id, yes=choice == "yes", reason=_reason(), digest=shown["digest"]))
-            decided += 1
-        except BatonError as exc:
-            console.print(f"[yellow]{exc}[/yellow]")
+        decided += ask_about_request(t, cfg, request)
 
     tools = growth.pending_tools(t)
     console.print(f"[bold]1. Proposed tools[/bold] ({len(tools)})")
@@ -760,3 +785,46 @@ def session_checkpoint(resident: str = typer.Argument(...), session_id: str = ty
         console.print(opencode.checkpoint(t, cfg, opencode.get_session(t, resident, session_id), trigger=trigger, config_path=_config_path()))
     except BatonError as exc:
         _fail(exc)
+
+
+@app.command("allow-all")
+def allow_all_command(
+    session: str | None = typer.Argument(None, help="The Mayor's chat, e.g. websocket:<id> or discord:<channel> (see the list)"),
+    hours: float | None = typer.Option(None, "--for", help="Hours it stays on (default: until you turn it off)"),
+    off: bool = typer.Option(False, "--off", help="Turn it off for that chat"),
+    yes: bool = typer.Option(False, "--yes", help="Skip the confirmation"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Let one of the Mayor's chats run session requests without your review (or turn that off)."""
+    from babo.baton import allow_all, views
+
+    t, _ = _town(config)
+    try:
+        if session is None:
+            grants = allow_all.active(t)
+            console.print("[bold]Allow all is on for:[/bold] " + (", ".join(
+                f"{k} ({'until ' + v['until'][:16].replace('T', ' ') if v.get('until') else 'until you turn it off'})"
+                for k, v in grants.items()) or "no chat"))
+            table = Table("the Mayor's recent chats", "last active")
+            for chat in views.mayor_chats(t):
+                table.add_row(chat["key"], chat["last_active"][:16].replace("T", " "))
+            console.print(table)
+            console.print("Turn it on with: babo allow-all <chat> [--for HOURS]   off with: babo allow-all <chat> --off")
+            return
+        if off:
+            console.print(allow_all.turn_off(t, session))
+            return
+        console.print(ALLOW_ALL_WARNING)
+        if not yes and not typer.confirm(f"Turn allow-all on for {session}?", default=False):
+            console.print("Nothing changed.")
+            return
+        console.print(allow_all.turn_on(t, session, hours=hours))
+    except BatonError as exc:
+        _fail(exc)
+
+
+ALLOW_ALL_WARNING = """[bold yellow]Allow all: the Mayor's session requests from this chat run without your review.[/bold yellow]
+- He can ask any resident to run anything, with any access: commands run as your user, on this machine.
+- Anyone who can talk to him in this chat, and anything he reads (web pages, messages), can lead to commands running.
+- Each request still runs in a resident's opencode session, and is recorded (Town › Review › Recently run).
+- Turn it off when you're done: babo allow-all <chat> --off"""

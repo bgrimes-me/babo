@@ -156,3 +156,30 @@ async def test_a_session_request_is_approved_from_the_web_only_for_what_was_show
                                                               "digest": shown["digest"]})
     assert status == 200 and "approved" in result["message"]
     assert requests.load(town, shown["id"]).status == "approved"
+
+
+async def test_a_chat_asks_for_waiting_session_requests_to_prompt_for_them(town: Town, index_path: Path, box, monkeypatch: pytest.MonkeyPatch) -> None:
+    routes = _routes(town, index_path, monkeypatch)
+    status, body = await _call(routes, "/api/town/session-requests")
+    assert status == 200 and body["pending"] == []
+    box("mayor").call("request_session", resident="archivist", task="Install nano.", reason="To edit notes.", commands=["sudo pacman -S nano"])
+    status, body = await _call(routes, "/api/town/session-requests")
+    [shown] = body["pending"]
+    assert shown["resident"] == "archivist" and shown["digest"] and shown["wider"] == ["Commands: sudo pacman -S nano"]
+    await _call(routes, "/api/town/decide", {"kind": "session", "id": shown["id"], "yes": False, "reason": "not now", "digest": shown["digest"]})
+    status, body = await _call(routes, "/api/town/session-requests")
+    assert body["pending"] == []
+
+
+async def test_allow_all_from_the_web_matches_babo_allow_all(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from babo.baton import allow_all
+
+    routes = _routes(town, index_path, monkeypatch)
+    status, body = await _call(routes, "/api/town/allow-all/update", {"key": "websocket:abc", "on": True, "hours": 1})
+    assert status == 200 and "websocket:abc" in body["active"] and allow_all.is_on(town, "websocket:abc")
+    status, body = await _call(routes, "/api/town/allow-all")
+    assert status == 200 and body["active"]["websocket:abc"]["until"]
+    status, text = await _call(routes, "/api/town/allow-all/update", {"key": "websocket:abc", "on": True, "hours": "lots"})
+    assert status == 400
+    status, body = await _call(routes, "/api/town/allow-all/update", {"key": "websocket:abc", "on": False})
+    assert status == 200 and body["active"] == {}

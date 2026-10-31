@@ -28,6 +28,7 @@ TOWN_MUTATION_PATHS = {
     "town.session.new": "/api/town/sessions/new",
     "town.session.resume": "/api/town/sessions/resume",
     "town.session.freeze": "/api/town/sessions/freeze",
+    "town.allow_all": "/api/town/allow-all/update",
 }
 _DECISION_KINDS = ("tool", "proposal", "founding", "flag", "session")
 _doctor_lock = asyncio.Lock()
@@ -88,6 +89,15 @@ def _review() -> dict[str, Any]:
 
     cfg = load_config()
     return views.review_items(Town.open(cfg.baton.town_path), cfg)
+
+
+def _pending_requests() -> dict[str, Any]:
+    from babo.baton import requests as session_requests
+    from babo.config.loader import load_config
+
+    cfg = load_config()
+    town = Town.open(cfg.baton.town_path)
+    return {"pending": [session_requests.describe(town, cfg, r) for r in session_requests.pending(town)]}
 
 
 def _sessions() -> dict[str, Any]:
@@ -159,6 +169,12 @@ class TownRoutes:
             from babo.config.loader import load_config
 
             return http_json_response({"settings": town_settings.current(load_config().baton)})
+        if got == "/api/town/session-requests":
+            return http_json_response(await asyncio.to_thread(_pending_requests))
+        if got == "/api/town/allow-all":
+            from babo.baton import allow_all
+
+            return http_json_response(await asyncio.to_thread(lambda: allow_all.status(_town())))
         if got == "/api/town/sessions":
             return http_json_response(await asyncio.to_thread(_sessions))
         if got == "/api/town/profiles":
@@ -190,6 +206,18 @@ class TownRoutes:
                 raise BatonError("missing changes")
             message = await asyncio.to_thread(lambda: _update_profile(agent, cast(dict[str, object], changes)))
             return http_json_response({"message": message, **await asyncio.to_thread(_profiles)})
+        elif got == "/api/town/allow-all/update":
+            from babo.baton import allow_all
+
+            key = _text(payload, "key", allow_all.MAX_KEY)
+            on, hours = payload.get("on"), payload.get("hours")
+            if not isinstance(on, bool):
+                raise BatonError("missing on")
+            if on and hours is not None and (isinstance(hours, bool) or not isinstance(hours, int | float)):
+                raise BatonError("hours must be a number, or null for until you turn it off")
+            message = await asyncio.to_thread(lambda: allow_all.turn_on(_town(), key, hours=float(hours) if hours is not None else None)
+                                              if on else allow_all.turn_off(_town(), key))
+            return http_json_response({"message": message, **await asyncio.to_thread(lambda: allow_all.status(_town()))})
         elif got.startswith("/api/town/sessions/"):
             message = await asyncio.to_thread(lambda: _session_change(got.rsplit("/", 1)[-1], payload))
             return http_json_response({"message": message, **await asyncio.to_thread(_sessions)})

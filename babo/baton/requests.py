@@ -61,6 +61,8 @@ class SessionRequest:
     decided: str = ""
     decision_reason: str = ""
     approved_digest: str = ""
+    session_key: str = ""  # the Mayor's chat it was asked from
+    decided_by: str = ""  # "squid", or "allow-all" when that chat had allow-all on
     session_id: str = ""
     result: str = ""
 
@@ -111,8 +113,11 @@ def pending(town: Town) -> list[SessionRequest]:
 # -- asking ----------------------------------------------------------------------
 
 def create(town: Town, *, requested_by: str, resident: str, task: str, reason: str,
-           access: dict[str, object] | None = None, commands: list[str] | None = None) -> SessionRequest:
-    """Record a request. It does nothing until Squid approves it."""
+           access: dict[str, object] | None = None, commands: list[str] | None = None,
+           session_key: str | None = None) -> SessionRequest:
+    """Record a request. It does nothing until Squid approves it, unless Squid
+    turned allow-all on for the chat it comes from: then it is approved now."""
+    from babo.baton import allow_all
     from babo.baton.opencode import runs_in_opencode
 
     target = Registry(town).resolve(resident)
@@ -142,11 +147,24 @@ def create(town: Town, *, requested_by: str, resident: str, task: str, reason: s
     request = SessionRequest(
         id=f"{stamp[:10]}-{slugify(target.id, 20)}-{secrets.token_hex(3)}", resident=target.id,
         task=task.strip(), reason=reason.strip(), access=clean, commands=wanted,
-        requested_by=requested_by, created=stamp,
+        requested_by=requested_by, created=stamp, session_key=session_key or "",
     )
+    if allow_all.is_on(town, session_key):
+        request.status = "approved"
+        request.decided = stamp
+        request.decided_by = "allow-all"
+        request.decision_reason = f"Approved automatically: allow-all is on for {session_key}."
+        request.approved_digest = request.digest()
     save(town, request)
-    gitops.commit_paths(town, [_path(town, request.id)], f"Session request by {requested_by}: {first_line(task, 60)}")
+    approved = " (approved automatically: allow-all)" if request.status == "approved" else ""
+    gitops.commit_paths(town, [_path(town, request.id)], f"Session request by {requested_by}{approved}: {first_line(task, 60)}")
     return request
+
+
+def recent(town: Town, *, limit: int = 10) -> list[SessionRequest]:
+    """Requests that were decided, newest first: what ran, with or without Squid's review."""
+    decided = [r for r in all_requests(town) if r.status != "pending"]
+    return sorted(decided, key=lambda r: r.decided or r.created, reverse=True)[:limit]
 
 
 # -- deciding ----------------------------------------------------------------------
@@ -172,6 +190,7 @@ def decide(town: Town, request_id: str, *, approve: bool, reason: str, digest: s
     if digest is not None and digest != request.digest():
         raise BatonError("That request changed after you opened it. Reload it and decide again.")
     request.decided = now_iso()
+    request.decided_by = SQUID
     request.decision_reason = reason.strip() or "(no reason given)"
     if approve:
         request.status = "approved"

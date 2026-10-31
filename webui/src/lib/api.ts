@@ -1589,6 +1589,8 @@ export interface TownSessionRequest {
   commands: string[];
   requested_by: string;
   created: string;
+  /** The chat it was asked from, like websocket:<id> or discord:<channel>. */
+  session_key: string;
   /** Fingerprint of what is shown; the approval counts only for this. */
   digest: string;
   access_labels: Record<string, string>;
@@ -1599,6 +1601,11 @@ export interface TownSessionRequest {
 
 export interface TownReview {
   sessions: TownSessionRequest[];
+  /** Requests already decided, newest first: what ran, and whether Squid or allow-all approved it. */
+  recent: {
+    id: string; resident: string; task: string; status: string; decided: string;
+    decided_by: string; commands: string[]; access: Record<string, string>; result: string;
+  }[];
   tools: {
     id: string; name: string; author: string; description: string;
     tested: boolean | null; isolation: string; review: string; code: string; test: string;
@@ -1731,4 +1738,28 @@ export function changeTownSession(
   payload: { resident: string; id?: string; title?: string; overrides?: Record<string, string> },
 ): Promise<TownSessions & { message: string }> {
   return mutation<TownSessions & { message: string }>(transport, `town.session.${action}`, payload, 120_000);
+}
+
+/** Session requests waiting for Squid, for the prompt that appears in a chat while one waits. */
+export function fetchPendingSessionRequests(token: string, base: string = ""): Promise<{ pending: TownSessionRequest[] }> {
+  return request<{ pending: TownSessionRequest[] }>(`${base}/api/town/session-requests`, token, undefined, API_READ_TIMEOUT_MS);
+}
+
+export interface TownAllowAll {
+  /** Chats (session keys) where the Mayor's session requests run without review; "until" is empty for "until turned off". */
+  active: Record<string, { since: string; until: string; by: string }>;
+}
+
+export function fetchTownAllowAll(token: string, base: string = ""): Promise<TownAllowAll> {
+  return request<TownAllowAll>(`${base}/api/town/allow-all`, token, undefined, API_READ_TIMEOUT_MS);
+}
+
+/** Turn allow-all on (for `hours`, or until turned off when null) or off for one of the Mayor's chats. Same as `babo allow-all`. */
+export function setTownAllowAll(
+  transport: WebUIMutationTransport,
+  key: string,
+  on: boolean,
+  hours: number | null = null,
+): Promise<TownAllowAll & { message: string }> {
+  return mutation<TownAllowAll & { message: string }>(transport, "town.allow_all", { key, on, hours });
 }
