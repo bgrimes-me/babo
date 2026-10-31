@@ -215,3 +215,47 @@ def test_proposals_tools_and_board(town: Town, box) -> None:
     assert prop.with_name(prop.stem + ".review.md").exists()
     with pytest.raises(BatonError):
         box("inspector").review_item("residents/mayor/SELF.md", "x")
+
+
+# -- tools whose own argument is called `name` (propose_tool, revise_self) ----------------
+_TOOL_CODE = "def run(input: str) -> str:\n    return input.upper()\n"
+_TOOL_TEST = "from tool import run\n\ndef test_it():\n    assert run('a') == 'A'\n"
+
+
+def test_every_tool_argument_can_pass_through_call() -> None:
+    """A tool argument must never collide with a parameter of Toolbox.call itself."""
+    import inspect
+
+    from babo.baton.tools.core import TOOL_SPECS, Toolbox
+
+    for spec in TOOL_SPECS.values():
+        arguments = dict.fromkeys(spec.parameters.get("properties", {}))
+        inspect.signature(Toolbox.call).bind(object(), spec.name, **arguments)  # raises TypeError on a clash
+
+
+def test_a_tool_argument_called_name_works_through_call(town: Town, box) -> None:
+    mayor = box("mayor")
+    said = mayor.call("propose_tool", name="shout", code=_TOOL_CODE, test=_TOOL_TEST, description="Upper-cases text")
+    assert said.startswith("Proposed tool shout.") and (town.tools / "pending" / "shout" / "tool.py").exists()
+    assert "Wren" in mayor.call("revise_self", new_text="I keep the front desk.", reason="naming", name="Wren")
+
+
+async def test_the_harness_passes_a_name_argument_to_the_tool(town: Town, box) -> None:
+    from babo.baton.tools.babo_adapter import baton_tools
+
+    tools = {t.name: t for t in baton_tools(box("mayor"))}
+    result = await tools["propose_tool"].execute(name="shout", code=_TOOL_CODE, test=_TOOL_TEST, description="Upper-cases text")
+    assert "Proposed tool shout." in str(result)
+
+
+async def test_opencode_residents_can_propose_a_tool_over_mcp(town: Town, box) -> None:
+    import mcp.types as types
+
+    from babo.baton.mcp_server import build_server
+
+    server = build_server(box("mayor"))
+    request = types.CallToolRequest(method="tools/call", params=types.CallToolRequestParams(
+        name="propose_tool", arguments={"name": "shout", "code": _TOOL_CODE, "test": _TOOL_TEST, "description": "Upper-cases text"}))
+    result = await server.request_handlers[types.CallToolRequest](request)
+    text = result.root.content[0].text  # type: ignore[union-attr]
+    assert text.startswith("Proposed tool shout."), text
