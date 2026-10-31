@@ -525,7 +525,7 @@ def test_a_session_opens_without_a_password_and_babo_knows_who_is_there(town: To
         assert link.startswith(f"{run.url}/auth/connect/")
         # The pairing link connects, through the door, with no password.
         assert "token" in httpx.get(link, timeout=10).json()
-        assert opencode.presence(town, session)["connections"] == 0  # that request is over
+        _wait(lambda: opencode.presence(town, session)["connections"] == 0, 10)  # that request is over
         watcher = socket.create_connection(("127.0.0.1", run.door_port))
         _wait(lambda: opencode.presence(town, session)["connections"] == 1, 10)
         assert opencode.wrap_up_reason(town, cfg, opencode.get_session(town, "archivist", session.id),
