@@ -57,13 +57,22 @@ export default {
     }
 
     // opencode lists an MCP server's tools a moment after it connects: the first turn waits
-    // (briefly) for the town's tools, so the resident never starts a session without them.
-    let townTools = false
+    // briefly for the town's tools, so the resident doesn't start a session without them. It
+    // waits only while the server is connected and its tools are on their way, never for long,
+    // and only once: a message must never be held up by tools that aren't coming.
+    let waited = false
+    const within = (promise, ms) => Promise.race([promise, new Promise((resolve) => setTimeout(() => resolve(null), ms))])
     const waitForTownTools = async () => {
-      const until = Date.now() + 30_000
-      while (!townTools && Date.now() < until) {
-        townTools = (await ctx.tool.list()).some((tool) => tool.id.startsWith("babo_"))
-        if (!townTools) await new Promise((resolve) => setTimeout(resolve, 100))
+      if (waited) return
+      waited = true
+      const until = Date.now() + 8_000
+      while (Date.now() < until) {
+        const tools = (await within(ctx.tool.list(), 2_000)) ?? []
+        if (tools.some((tool) => tool.id.startsWith("babo_"))) return
+        const servers = (await within(ctx.mcp.list(), 2_000))?.data ?? []
+        const town = servers.find((server) => server.name === "babo")
+        if (!town || town.status?.status !== "connected" && town.status?.status !== "pending") return
+        await new Promise((resolve) => setTimeout(resolve, 100))
       }
     }
 

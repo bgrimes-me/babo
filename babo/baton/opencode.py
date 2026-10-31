@@ -160,6 +160,24 @@ def _new_opencode_session(client: httpx.Client, title: str) -> str:
     return str(_data(client.post("/api/session", json={"title": title, "agent": AGENT}), "a new session")["id"])
 
 
+def babo_command(config: Config) -> str:
+    """The full path of the babo command, for what opencode starts (the town's tools, checkpoints).
+    Babo's services may not have it on their PATH, so the configured path comes first, then this very process."""
+    import sys
+
+    configured = config.baton.babo_path
+    if configured and Path(configured).expanduser().is_file():
+        return str(Path(configured).expanduser())
+    found = shutil.which("babo")
+    if found:
+        return found
+    me = Path(sys.argv[0]).resolve() if sys.argv and sys.argv[0] else None
+    if me is not None and me.name == "babo" and me.is_file():
+        return str(me)
+    sibling = Path(sys.executable).parent / "babo"
+    return str(sibling) if sibling.is_file() else "babo"
+
+
 def runs_in_opencode(office: str) -> bool:
     return office != profiles.MAYOR
 
@@ -514,7 +532,7 @@ def start(town: Town, config: Config, session: Session, *, config_path: Path) ->
             if binary is None:
                 raise BatonError("opencode is not installed (or baton.opencode.bin is wrong); residents other than the Mayor run in it. "
                                  "Install it with: curl -fsSL https://opencode.ai/install | bash")
-            babo = shutil.which("babo") or "babo"
+            babo = babo_command(config)
             inline = opencode_config(town, config, session, bundle=write_bundle(town, config, session), config_path=config_path, babo=babo)
             password = secrets.token_urlsafe(18)
             port = _free_port()
@@ -682,12 +700,30 @@ def prompt(town: Town, config: Config, session: Session, text: str, *, config_pa
     if not text.strip():
         raise BatonError("The message is empty.")
     run = start(town, config, session, config_path=config_path)
-    with _client(run, 30) as client:
-        sent = str(_data(client.post(f"/api/session/{session.opencode_id}/prompt", json={"text": text}), "a message")["id"])
+    try:
+        with _client(run, 90) as client:
+            sent = str(_data(client.post(f"/api/session/{session.opencode_id}/prompt", json={"text": text}), "a message")["id"])
+    except httpx.TimeoutException as exc:
+        raise BatonError(f"{session.resident}'s opencode didn't take the message within 90 seconds. "
+                         f"{_town_tools_problem(run) or 'Its log is in the town under state/runtime/opencode/.'}") from exc
     session = get_session(town, session.resident, session.id)
     session.last_active = now_iso()
     save_session(town, session)
     return sent
+
+
+def _town_tools_problem(run: Running) -> str:
+    """Why the town's tools aren't there, when they aren't (shown with errors and in the session's status)."""
+    try:
+        with _client(run, 5) as client:
+            servers = cast(list[dict[str, Any]], _data(client.get("/api/mcp"), "the MCP servers"))
+    except (BatonError, httpx.HTTPError):
+        return ""
+    town = next((s for s in servers if s.get("name") == PROVIDER), None)
+    status = cast(dict[str, Any], (town or {}).get("status") or {})
+    if town is None or status.get("status") == "connected":
+        return ""
+    return f"The town's tools (babo mcp) are {status.get('status')}: {status.get('error') or status.get('message') or ''}".strip(": ")
 
 
 def interrupt(town: Town, session: Session) -> bool:
