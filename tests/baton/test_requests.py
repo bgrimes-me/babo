@@ -222,3 +222,27 @@ def test_the_terminal_warns_before_turning_allow_all_on(town: Town, tmp_path: Pa
     assert allow_all.is_on(town, "websocket:abc")
     listed = runner.invoke(app, ["allow-all", "-c", str(cfg)])
     assert "websocket:abc" in listed.output
+
+
+def test_the_terminal_chat_asks_about_a_new_request_once_between_turns(town: Town, box, make_config, monkeypatch: pytest.MonkeyPatch) -> None:
+    from babo.baton import cli
+
+    _ask(box)
+    answers = iter(["a", "go ahead"])
+    asked: list[str] = []
+
+    def prompt(text: str, **_kwargs: Any) -> str:
+        asked.append(text)
+        return next(answers)
+
+    monkeypatch.setattr(cli.typer, "prompt", prompt)
+    seen: set[str] = set()
+    cli.ask_about_new_requests(town, make_config("mayor"), seen)
+    assert _only(town).status == "approved" and _only(town).decided_by == "squid"
+    assert asked[0].startswith("Approve and run it?")
+    _ask(box, task="Install vim.")
+    skips: list[str] = []
+    monkeypatch.setattr(cli.typer, "prompt", lambda text, **_k: skips.append(text) or "s")
+    cli.ask_about_new_requests(town, make_config("mayor"), seen)
+    cli.ask_about_new_requests(town, make_config("mayor"), seen)  # skipped once: not asked again in this chat
+    assert len(skips) == 1 and len(requests.pending(town)) == 1

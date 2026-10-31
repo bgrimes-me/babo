@@ -13,6 +13,7 @@ from rich.table import Table
 from babo.baton.town import BatonError, Town
 
 if TYPE_CHECKING:
+    from babo.baton.requests import SessionRequest
     from babo.config.schema import Config
 
 app = typer.Typer(help="The Baton town: residents, memory, upkeep, review.", no_args_is_help=True)
@@ -368,6 +369,47 @@ def _reason() -> str:
     return typer.prompt("Your reason (goes to the resident)").strip() or "(no reason given)"
 
 
+def ask_about_request(t: Town, cfg: Config, request: SessionRequest) -> bool:
+    """Show one session request word for word and ask Squid to approve, decline or skip it.
+
+    Used by ``babo review`` and, live, by the terminal chat after the Mayor asks."""
+    from babo.baton import requests as session_requests
+    from babo.baton import views
+
+    shown = session_requests.describe(t, cfg, request)
+    console.print(f"\n• {request.requested_by} asks for a session of [bold]{request.resident}[/bold] ({request.id})")
+    console.print(f"  Task: {request.task}")
+    console.print(f"  Why: {request.reason}")
+    console.print("  Access: " + (", ".join(f"{shown['access_labels'][k]} {v}" for k, v in request.access.items()) or "as in the profile"))
+    for command in request.commands:
+        console.print(f"  May run exactly: {command}")
+    if shown["wider"]:
+        console.print("  [yellow]Beyond its profile:[/yellow] " + "; ".join(shown["wider"]))
+    console.print("  It runs with nobody at a terminal; anything not allowed is denied.")
+    choice = _ask_decision("Approve and run it?", "approve", "decline")
+    if choice == "skip":
+        return False
+    try:
+        console.print(views.decide(t, "session", request.id, yes=choice == "yes", reason=_reason(), digest=shown["digest"]))
+        return True
+    except BatonError as exc:
+        console.print(f"[yellow]{exc}[/yellow]")
+        return False
+
+
+def ask_about_new_requests(t: Town, cfg: Config, seen: set[str]) -> None:
+    """In a live terminal chat: ask about each session request waiting for Squid that this chat hasn't shown yet."""
+    from babo.baton import requests as session_requests
+
+    for request in session_requests.pending(t):
+        if request.id in seen:
+            continue
+        seen.add(request.id)
+        console.print("\n[bold yellow]A session request is waiting for your approval.[/bold yellow]")
+        if not ask_about_request(t, cfg, request):
+            console.print("  Skipped: it waits in [bold]babo review[/bold] and on the Town page.")
+
+
 @app.command()
 def review(config: str | None = _CONFIG_OPT):
     """The weekly check-in: session requests, tools, proposals, founding requests, old flags. Plain questions, one at a time."""
@@ -385,24 +427,7 @@ def review(config: str | None = _CONFIG_OPT):
     asked = session_requests.pending(t)
     console.print(f"[bold]Session requests[/bold] ({len(asked)})")
     for request in asked:
-        shown = session_requests.describe(t, cfg, request)
-        console.print(f"\n• {request.requested_by} asks for a session of [bold]{request.resident}[/bold] ({request.id})")
-        console.print(f"  Task: {request.task}")
-        console.print(f"  Why: {request.reason}")
-        console.print("  Access: " + (", ".join(f"{shown['access_labels'][k]} {v}" for k, v in request.access.items()) or "as in the profile"))
-        for command in request.commands:
-            console.print(f"  May run exactly: {command}")
-        if shown["wider"]:
-            console.print("  [yellow]Beyond its profile:[/yellow] " + "; ".join(shown["wider"]))
-        console.print("  It runs with nobody at a terminal; anything not allowed is denied.")
-        choice = _ask_decision("Approve and run it?", "approve", "decline")
-        if choice == "skip":
-            continue
-        try:
-            console.print(views.decide(t, "session", request.id, yes=choice == "yes", reason=_reason(), digest=shown["digest"]))
-            decided += 1
-        except BatonError as exc:
-            console.print(f"[yellow]{exc}[/yellow]")
+        decided += ask_about_request(t, cfg, request)
 
     tools = growth.pending_tools(t)
     console.print(f"[bold]1. Proposed tools[/bold] ({len(tools)})")

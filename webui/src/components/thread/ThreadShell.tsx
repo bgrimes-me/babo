@@ -29,6 +29,7 @@ import {
 } from "@/components/thread/model-preset";
 import { ThreadHeader } from "@/components/thread/ThreadHeader";
 import { AllowAllControl } from "@/components/town/AllowAllControl";
+import { SessionRequestPrompt } from "@/components/town/SessionRequestPrompt";
 import { ThreadLoadingSkeleton } from "@/components/thread/ThreadLoadingSkeleton";
 import { StreamErrorNotice } from "@/components/thread/StreamErrorNotice";
 import { ThreadViewport, type ThreadViewportHandle } from "@/components/thread/ThreadViewport";
@@ -1303,6 +1304,7 @@ export function ThreadShell({
       {restoredFirstDraft?.chatId === chatId && restoredFirstDraft.error ? (
         <p role="alert" className="px-3 text-sm text-destructive">{restoredFirstDraft.error}</p>
       ) : null}
+      {session ? <SessionRequestPrompt sessionKey={session.key} /> : null}
       <SubagentTaskDock inputKey={latestSubagentInputKey(displayMessages)} />
       {session ? (
         <ThreadComposer

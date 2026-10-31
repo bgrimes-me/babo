@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertCircle, Check, ChevronLeft, Loader2, Stethoscope, X } from "lucide-react";
+import { AlertCircle, Check, ChevronLeft, Loader2, Stethoscope } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SettingsGroup } from "@/components/settings/shared/SettingsControls";
 import { MarkdownText } from "@/components/MarkdownText";
+import { DecisionCard, SessionRequestDetails } from "@/components/town/DecisionCard";
 import { useClient } from "@/providers/ClientProvider";
 import {
   decideTownItem,
@@ -292,22 +293,7 @@ function ReviewView({ token, transport, onChanged, onError }: {
         heading={t("town.sessionRequest", { defaultValue: "{{who}} asks for a session of {{resident}}", who: r.requested_by, resident: r.resident })}
         yes={t("town.approveRun", { defaultValue: "Approve and run" })} no={t("town.decline", { defaultValue: "Decline" })}
         note={t("town.requestRuns", { defaultValue: "It runs on your machine with nobody at a terminal: anything not allowed here is denied. The result goes to {{who}}.", who: r.requested_by })}>
-        <p className="whitespace-pre-wrap text-[13px]">{r.task}</p>
-        <p className="mt-2 text-xs text-muted-foreground">{t("town.why", { defaultValue: "Why:" })} {r.reason}</p>
-        <ul className="mt-2 space-y-0.5 text-xs">
-          {Object.entries(r.access).map(([key, level]) => <li key={key}>
-            {r.access_labels[key] ?? key}: <strong>{level}</strong>
-            <span className="text-muted-foreground"> ({t("town.inProfile", { defaultValue: "profile: {{level}}", level: r.profile[key] ?? "deny" })})</span>
-          </li>)}
-          {Object.keys(r.access).length === 0 && <li className="text-muted-foreground">{t("town.accessAsProfile", { defaultValue: "Access as in the resident's profile." })}</li>}
-        </ul>
-        {r.commands.length > 0 && <div className="mt-2">
-          <p className="text-xs text-muted-foreground">{t("town.exactCommands", { defaultValue: "May run exactly these commands, and no others:" })}</p>
-          <pre className="mt-1 whitespace-pre-wrap rounded bg-muted px-2 py-1 text-xs">{r.commands.join("\n")}</pre>
-        </div>}
-        {r.wider.length > 0 && <p role="note" className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-          {t("town.beyondProfile", { defaultValue: "Beyond its profile: {{what}}", what: r.wider.join("; ") })}
-        </p>}
+        <SessionRequestDetails request={r} />
       </DecisionCard>)}
     </ReviewSection>}
     {review.recent.length > 0 && <ReviewSection title={t("town.review.recent", { defaultValue: "Recently run" })}>
@@ -381,42 +367,6 @@ function Expandable({ label, text, code = false, open = false }: { label: string
       ? <pre className="mt-1 max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-2 font-mono text-xs">{text}</pre>
       : <div className="town-markdown mt-1 max-h-96 overflow-auto"><MarkdownText>{text}</MarkdownText></div>}
   </details>;
-}
-
-function DecisionCard({ kind, id, digest, heading, yes, no, yesDisabled = false, note = "", reasonLabel, onDecide, children }: {
-  kind: TownDecisionKind;
-  id: string;
-  /** For a session request: the fingerprint of what is shown, so the approval counts only for that. */
-  digest?: string;
-  heading: string;
-  yes: string;
-  no: string | null;
-  yesDisabled?: boolean;
-  note?: string;
-  reasonLabel?: string;
-  onDecide: (kind: TownDecisionKind, id: string, yes: boolean, reason: string, digest?: string) => Promise<void>;
-  children: React.ReactNode;
-}) {
-  const { t } = useTranslation();
-  const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
-  const act = async (answer: boolean) => {
-    setBusy(true);
-    try { await onDecide(kind, id, answer, reason, digest); }
-    finally { setBusy(false); }
-  };
-  return <div className="settings-list-row py-4">
-    <p className="text-[14px] font-medium">{heading}</p>
-    <div className="mt-1">{children}</div>
-    {note && <p className="mt-2 text-xs text-muted-foreground">{note}</p>}
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      <Input value={reason} maxLength={4000} onChange={(event) => setReason(event.target.value)} className="min-w-[12rem] flex-1"
-        aria-label={reasonLabel ?? t("town.reason", { defaultValue: "Your reason (goes to the resident)" })}
-        placeholder={reasonLabel ?? t("town.reason", { defaultValue: "Your reason (goes to the resident)" })} />
-      <Button disabled={busy || yesDisabled} onClick={() => void act(true)} className="gap-1"><Check className="h-4 w-4" />{yes}</Button>
-      {no && <Button variant="outline" disabled={busy} onClick={() => void act(false)} className="gap-1"><X className="h-4 w-4" />{no}</Button>}
-    </div>
-  </div>;
 }
 
 function DoctorView({ token }: { token: () => string }) {

@@ -91,6 +91,15 @@ def _review() -> dict[str, Any]:
     return views.review_items(Town.open(cfg.baton.town_path), cfg)
 
 
+def _pending_requests() -> dict[str, Any]:
+    from babo.baton import requests as session_requests
+    from babo.config.loader import load_config
+
+    cfg = load_config()
+    town = Town.open(cfg.baton.town_path)
+    return {"pending": [session_requests.describe(town, cfg, r) for r in session_requests.pending(town)]}
+
+
 def _sessions() -> dict[str, Any]:
     from babo.baton import views
     from babo.config.loader import load_config
@@ -160,6 +169,8 @@ class TownRoutes:
             from babo.config.loader import load_config
 
             return http_json_response({"settings": town_settings.current(load_config().baton)})
+        if got == "/api/town/session-requests":
+            return http_json_response(await asyncio.to_thread(_pending_requests))
         if got == "/api/town/allow-all":
             from babo.baton import allow_all
 

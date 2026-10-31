@@ -1589,6 +1589,8 @@ export interface TownSessionRequest {
   commands: string[];
   requested_by: string;
   created: string;
+  /** The chat it was asked from, like websocket:<id> or discord:<channel>. */
+  session_key: string;
   /** Fingerprint of what is shown; the approval counts only for this. */
   digest: string;
   access_labels: Record<string, string>;
@@ -1736,6 +1738,11 @@ export function changeTownSession(
   payload: { resident: string; id?: string; title?: string; overrides?: Record<string, string> },
 ): Promise<TownSessions & { message: string }> {
   return mutation<TownSessions & { message: string }>(transport, `town.session.${action}`, payload, 120_000);
+}
+
+/** Session requests waiting for Squid, for the prompt that appears in a chat while one waits. */
+export function fetchPendingSessionRequests(token: string, base: string = ""): Promise<{ pending: TownSessionRequest[] }> {
+  return request<{ pending: TownSessionRequest[] }>(`${base}/api/town/session-requests`, token, undefined, API_READ_TIMEOUT_MS);
 }
 
 export interface TownAllowAll {

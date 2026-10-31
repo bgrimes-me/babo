@@ -55,6 +55,8 @@ The Mayor talks to the outside world (the web interface, chat apps, web pages), 
 
 The request comes to your **Review** (the Town page, or `babo review`), word for word: the task, the reason, each kind of access, the exact shell commands, and what it adds beyond the resident's profile. **Approve and run** and the upkeep service starts that resident's session in opencode with exactly that access, sends the task, has the resident review the session into its memory, and writes the Mayor a letter with the result. **Decline** and he gets your reason.
 
+You don't have to go looking for it. While a request waits, every open chat in the web interface shows it above the message box, with **Approve and run** and **Decline** right there (it checks every few seconds, and also shows requests he made from another chat, like Discord, saying which). In the terminal chat (`babo agent`), after the turn in which he asks, it shows the request and asks you to approve, decline or skip it; anything you skip waits in the Review.
+
 - **Exact commands are the safe way to allow the shell.** Approve `sudo pacman -S --noconfirm nano` and that command runs, written exactly like that, and nothing else does.
 - **Nobody is at a terminal while it runs**, so anything not allowed is denied rather than asked. `sudo` works only if your machine allows that command without a password; Babo never holds your password.
 - **Your approval is for what you saw.** If the request changes after you opened it, the approval is refused; if its file changes after you approved it, it doesn't run.
