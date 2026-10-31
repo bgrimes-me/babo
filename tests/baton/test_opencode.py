@@ -277,3 +277,66 @@ def test_an_approved_request_may_run_exactly_its_commands_and_nothing_else(town:
     assert (home / "allowed.txt").exists() and not (home / "denied.txt").exists()
     assert any("Made allowed.txt" in i.body for i in unread(town, "mayor") if i.sender == "archivist")
     assert opencode.running(town, opencode.get_session(town, "archivist", done.session_id)) is None
+
+
+_FAKE_OPENCODE = '''#!/usr/bin/env python3
+"""An opencode that answers like one Babo can't use: FAKE_OPENCODE says how."""
+import json, os, sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+MODE, VERSION = os.environ["FAKE_OPENCODE"], os.environ.get("FAKE_OPENCODE_VERSION", "1.19.5")
+if sys.argv[1] == "--version":
+    print(VERSION)
+    sys.exit(0)
+
+class Handler(BaseHTTPRequestHandler):
+    def answer(self):
+        if self.path == "/global/health" and MODE != "no-health":
+            body, kind = json.dumps({"healthy": True, "version": VERSION}).encode(), "application/json"
+        else:  # what opencode does with a path it doesn't know: its web app
+            body, kind = b"<!doctype html><html></html>", "text/html"
+        self.send_response(200)
+        self.send_header("content-type", kind)
+        self.send_header("content-length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+    do_GET = do_POST = answer
+    def log_message(self, *args):
+        pass
+
+HTTPServer(("127.0.0.1", int(sys.argv[sys.argv.index("--port") + 1])), Handler).serve_forever()
+'''
+
+
+@pytest.mark.parametrize(("mode", "version", "message"), [
+    ("web-page", "1.19.5", "answered a new session with text/html instead of data"),
+    ("no-health", "1.19.5", "has no health check"),
+    ("too-old", "1.2.0", "opencode 1.2.0 is too old: Babo needs 1.19 or newer"),
+])
+def test_an_opencode_babo_cant_use_is_named_and_left_stopped(town: Town, config_file, tmp_path: Path,
+                                                            monkeypatch: pytest.MonkeyPatch, mode: str, version: str, message: str) -> None:
+    fake = tmp_path / "opencode"
+    fake.write_text(_FAKE_OPENCODE)
+    fake.chmod(0o755)
+    monkeypatch.setenv("FAKE_OPENCODE", mode)
+    monkeypatch.setenv("FAKE_OPENCODE_VERSION", version)
+    path, cfg = config_file(**{"baton.opencode": {"bin": str(fake), "dataDir": str(tmp_path / "data"), "startTimeoutS": 20}})
+    session = opencode.new_session(town, cfg, "archivist", title="Look at the notes.")
+    with pytest.raises(BatonError, match=message) as raised:
+        opencode.start(town, cfg, session, config_path=path)
+    assert "opencode upgrade" in str(raised.value)
+    assert opencode.running(town, session) is None
+    assert views.sessions_overview(town, cfg)["residents"][0]["sessions"][0]["status"] == "new"
+
+
+def test_the_doctor_says_when_opencode_is_too_old(tmp_path: Path, config_file, monkeypatch: pytest.MonkeyPatch) -> None:
+    from babo.baton.doctor import check_opencode
+
+    fake = tmp_path / "opencode"
+    fake.write_text(_FAKE_OPENCODE)
+    fake.chmod(0o755)
+    monkeypatch.setenv("FAKE_OPENCODE", "too-old")
+    monkeypatch.setenv("FAKE_OPENCODE_VERSION", "1.2.0")
+    _, cfg = config_file(**{"baton.opencode": {"bin": str(fake)}})
+    check = check_opencode(cfg)
+    assert check.status == "FAIL" and "too old" in check.detail and "opencode upgrade" in check.detail

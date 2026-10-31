@@ -67,6 +67,40 @@ _ENV_OFF = (
 )
 
 
+# The opencode Babo is built and tested against. Older ones lack parts of the
+# server API, and opencode answers any path it doesn't know with its web app.
+MIN_VERSION = (1, 19)
+UPGRADE = "Update it with: opencode upgrade"
+
+
+def parse_version(text: str) -> tuple[int, ...] | None:
+    import re
+
+    found = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", text)
+    return tuple(int(n) for n in found.groups() if n is not None) if found else None
+
+
+def version_problem(version: str) -> str | None:
+    """Why this opencode version won't do, or None if it will."""
+    parsed = parse_version(version)
+    if parsed is None:
+        return f"Babo couldn't tell which opencode this is ({version or 'no version'}); it needs {'.'.join(map(str, MIN_VERSION))} or newer. {UPGRADE}"
+    if parsed[:2] < MIN_VERSION:
+        return f"opencode {version} is too old: Babo needs {'.'.join(map(str, MIN_VERSION))} or newer. {UPGRADE}"
+    return None
+
+
+def _json(resp: httpx.Response, what: str) -> Any:
+    """opencode's answer as data; a clear error when it isn't (an unknown path gets its web page)."""
+    resp.raise_for_status()
+    try:
+        return resp.json()
+    except ValueError:
+        raise BatonError(f"opencode answered {what} with {resp.headers.get('content-type') or 'something'} instead of data: "
+                         f"this opencode doesn't have the API Babo uses. Babo needs opencode "
+                         f"{'.'.join(map(str, MIN_VERSION))} or newer; `babo doctor` shows which one it found. {UPGRADE}") from None
+
+
 def runs_in_opencode(office: str) -> bool:
     return office != profiles.MAYOR
 
@@ -392,12 +426,21 @@ def start(town: Town, config: Config, session: Session, *, config_path: Path) ->
             )
             run = Running(pid=proc.pid, port=port, password=password, started=now_iso())
             atomic_write(_runtime_path(town, session), json.dumps(asdict(run)) + "\n")
-            _wait_healthy(run, proc, config.baton.opencode.start_timeout_s, log_path=Path(log.name))
+            try:
+                _wait_healthy(run, proc, config.baton.opencode.start_timeout_s, log_path=Path(log.name))
+            except BatonError:
+                _stop(run)
+                _runtime_path(town, session).unlink(missing_ok=True)
+                raise
         if not session.opencode_id:
-            with _client(run, 30) as client:
-                created = client.post("/session", json={"title": session.title})
-                created.raise_for_status()
-                session.opencode_id = str(created.json()["id"])
+            try:
+                with _client(run, 30) as client:
+                    session.opencode_id = str(_json(client.post("/session", json={"title": session.title}), "a new session")["id"])
+            except (BatonError, httpx.HTTPError):
+                # Don't leave an instance running for a session that never started.
+                _stop(run)
+                _runtime_path(town, session).unlink(missing_ok=True)
+                raise
         session.status = "running"
         session.last_active = now_iso()
         save_session(town, session)
@@ -412,13 +455,47 @@ def _wait_healthy(run: Running, proc: subprocess.Popen[bytes], timeout_s: int, *
             raise BatonError(f"opencode stopped while starting (exit {proc.returncode}). {tail.strip()}")
         try:
             with _client(run, 2) as client:
-                if client.get("/global/health").status_code == 200:
-                    return
+                resp = client.get("/global/health")
         except httpx.HTTPError:
-            pass
+            time.sleep(0.3)
+            continue
+        if resp.status_code == 200:
+            try:
+                health = resp.json()
+            except ValueError:
+                health = None
+            if not isinstance(health, dict):
+                raise BatonError(f"opencode started but has no health check (it answered with its web page): it's older than "
+                                 f"Babo needs ({'.'.join(map(str, MIN_VERSION))} or newer). {UPGRADE}")
+            problem = version_problem(str(cast(dict[str, Any], health).get("version", "")))
+            if problem:
+                raise BatonError(problem)
+            return
         time.sleep(0.3)
     proc.terminate()
     raise BatonError(f"opencode didn't answer within {timeout_s} seconds.")
+
+
+def _stop(run: Running) -> None:
+    """Ask opencode to close the instance (its sessions are already saved),
+    then stop the process; it can take its time over a plain SIGTERM."""
+    try:
+        with _client(run, 5) as client:
+            client.post("/instance/dispose")
+    except httpx.HTTPError:
+        pass
+    try:
+        os.killpg(run.pid, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError):
+        pass
+    deadline = time.monotonic() + 3
+    while _alive(run.pid) and time.monotonic() < deadline:
+        time.sleep(0.2)
+    if _alive(run.pid):
+        try:
+            os.killpg(run.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
 
 
 def freeze(town: Town, session: Session, *, review: Config | None = None, config_path: Path | None = None) -> bool:
@@ -427,7 +504,7 @@ def freeze(town: Town, session: Session, *, review: Config | None = None, config
     session into its memory. True if it was running."""
     run = running(town, session)
     was_running = run is not None
-    if run is not None and review is not None and config_path is not None and session.kind == "work":
+    if run is not None and review is not None and config_path is not None and session.kind == "work" and session.opencode_id:
         try:
             checkpoint(town, review, session, trigger="session_end", config_path=config_path)
         except (BatonError, httpx.HTTPError) as exc:
@@ -437,25 +514,7 @@ def freeze(town: Town, session: Session, *, review: Config | None = None, config
             logger.warning("Babo: {}'s session {} was frozen without its review: {}", session.resident, session.id, exc)
         session = get_session(town, session.resident, session.id)
     if run is not None:
-        # Ask opencode to close the instance (its sessions are already saved),
-        # then stop the process; it can take its time over a plain SIGTERM.
-        try:
-            with _client(run, 5) as client:
-                client.post("/instance/dispose")
-        except httpx.HTTPError:
-            pass
-        try:
-            os.killpg(run.pid, signal.SIGTERM)
-        except (ProcessLookupError, PermissionError):
-            pass
-        deadline = time.monotonic() + 3
-        while _alive(run.pid) and time.monotonic() < deadline:
-            time.sleep(0.2)
-        if _alive(run.pid):
-            try:
-                os.killpg(run.pid, signal.SIGKILL)
-            except (ProcessLookupError, PermissionError):
-                pass
+        _stop(run)
     _runtime_path(town, session).unlink(missing_ok=True)
     ingest(town, session)
     session.status = "frozen"
@@ -468,8 +527,7 @@ def send(town: Town, config: Config, session: Session, text: str, *, config_path
     run = start(town, config, session, config_path=config_path)
     with _client(run, timeout_s) as client:
         resp = client.post(f"/session/{session.opencode_id}/message", json={"agent": AGENT, "parts": [{"type": "text", "text": text}]})
-        resp.raise_for_status()
-        data = cast(dict[str, Any], resp.json())
+        data = cast(dict[str, Any], _json(resp, "a message"))
     session.last_active = now_iso()
     save_session(town, session)
     parts = cast(list[dict[str, Any]], data.get("parts") or [])
@@ -564,9 +622,7 @@ def ingest_all(town: Town) -> int:
 
 def _messages(run: Running, session: Session) -> list[dict[str, Any]]:
     with _client(run, 60) as client:
-        resp = client.get(f"/session/{session.opencode_id}/message")
-        resp.raise_for_status()
-        return cast(list[dict[str, Any]], resp.json())
+        return cast(list[dict[str, Any]], _json(client.get(f"/session/{session.opencode_id}/message"), "the session's messages"))
 
 
 def conversation(messages: list[dict[str, Any]], *, budget_tokens: int) -> list[dict[str, Any]]:
@@ -645,10 +701,9 @@ def checkpoint(town: Town, config: Config, session: Session, *, trigger: str, co
 def _rotate(town: Town, session: Session, run: Running) -> None:
     """A full session continues in a fresh opencode session that starts from the resident's baton."""
     with _client(run, 30) as client:
-        created = client.post("/session", json={"title": session.title})
-        created.raise_for_status()
+        created = _json(client.post("/session", json={"title": session.title}), "a new session")
     session.previous.append(session.opencode_id)
-    session.opencode_id = str(created.json()["id"])
+    session.opencode_id = str(created["id"])
 
 
 def special_session(town: Town, config: Config, resident: str, kind: str) -> Session:
