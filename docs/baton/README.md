@@ -34,7 +34,7 @@ A new town has one resident, the **Mayor**. Others are founded when the town nee
 
 ## Residents in opencode
 
-The Mayor runs in Babo itself. Every other resident runs as its own opencode instance, which Babo starts for one of its **sessions** and stops when you freeze it. Babo sets each one up:
+The Mayor runs in Babo itself. Every other resident runs as its own opencode instance (opencode 2; `babo doctor` checks it), which Babo starts for one of its **sessions** and stops when you freeze it. Babo sets each one up:
 
 - **Who it is.** The session starts with the resident's identity, its own words about itself, its role, its neighbours, where it left off and its letters, under a short Babo prompt in place of opencode's own.
 - **The town's tools** (letters, memory, proposals, its office's commons tools, and web search with Babo's key if its profile allows) come from Babo.
