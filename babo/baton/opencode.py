@@ -210,6 +210,8 @@ class Session:
     opened: str = ""  # when someone last opened it from Babo
     archived: bool = False
     notified: str = ""  # what the owner was last told about it ("waiting", "wrapped up")
+    pinned: bool = False  # kept at the top of the session lists
+    tags: list[str] = field(default_factory=lambda: cast(list[str], []))  # the owner's own labels, for finding it again
 
     @property
     def key(self) -> str:
@@ -1176,8 +1178,9 @@ def describe(town: Town, session: Session) -> dict[str, Any]:
 
 
 def overview(town: Town, resident: str, *, archived: bool = False) -> list[dict[str, Any]]:
-    """A resident's work sessions; archived ones only when asked for."""
-    return [describe(town, s) for s in sessions(town, resident) if s.kind == "work" and s.archived == archived]
+    """A resident's work sessions, pinned ones first; archived ones only when asked for."""
+    found = [s for s in sessions(town, resident) if s.kind == "work" and s.archived == archived]
+    return [describe(town, s) for s in sorted(found, key=lambda s: not s.pinned)]  # pinned first, then the latest
 
 
 async def resident_turn(config: Config, town: Town, resident: str, message: str, *, kind: str,

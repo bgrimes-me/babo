@@ -194,9 +194,19 @@ _UPSTREAM_COMMAND_SPECS: tuple[BuiltinCommandSpec, ...] = (  # BATON: filtered b
 # BATON: Dream is off and hidden in this fork (residents author their own memory),
 # so its commands are neither offered in menus and help nor routed.
 HIDDEN_COMMANDS = frozenset({"/dream", "/dream-log", "/dream-restore", "/dream-prompt"})
+# BATON: the town's own commands. A chat with the Mayor is a session like a resident's,
+# so it gets the same "write your memory now" action.
+_BATON_COMMAND_SPECS: tuple[BuiltinCommandSpec, ...] = (
+    BuiltinCommandSpec(
+        "/checkpoint",
+        "Checkpoint now",
+        "Write a checkpoint now: the agent records, in its own words, where this chat is and what it learned.",
+        "book-open",
+    ),
+)
 BUILTIN_COMMAND_SPECS: tuple[BuiltinCommandSpec, ...] = tuple(
     spec for spec in _UPSTREAM_COMMAND_SPECS if spec.command not in HIDDEN_COMMANDS
-)
+) + _BATON_COMMAND_SPECS
 
 
 def builtin_command_palette() -> list[dict[str, str | bool]]:
@@ -238,6 +248,37 @@ async def cmd_stop(ctx: CommandContext) -> OutboundMessage:
         channel=msg.channel, chat_id=msg.chat_id, content=content,
         metadata=dict(msg.metadata or {})
     )
+
+
+async def cmd_checkpoint(ctx: CommandContext) -> OutboundMessage:
+    """BATON: have the agent write a checkpoint for this chat now (the Mayor's "checkpoint now")."""
+    loop = ctx.loop
+    msg = ctx.msg
+
+    def reply(content: str) -> OutboundMessage:
+        return OutboundMessage(channel=msg.channel, chat_id=msg.chat_id, content=content, metadata=dict(msg.metadata or {}))
+
+    runtime = getattr(loop, "baton", None)
+    formation = getattr(runtime, "formation", None)
+    if formation is None:
+        return reply("This agent isn't part of a town, so it has no checkpoints to write.")
+    messages = formation.last_messages.get(ctx.key)
+    if not messages:
+        session = ctx.session or await loop.sessions.state.get(ctx.key)
+        history = session.get_history()
+        if not history:
+            return reply("Nothing has happened in this chat yet, so there's nothing to checkpoint.")
+        messages = [{"role": "system", "content": loop.context.build_system_prompt(channel=msg.channel)}, *history]
+    try:
+        outcome = await formation.checkpoint_now(ctx.key, messages, "requested")
+    except Exception as exc:
+        logger.exception("Baton: /checkpoint failed for {}", ctx.key)
+        return reply(f"The checkpoint couldn't be written: {exc}")
+    thread = outcome.checkpoint.thread
+    if outcome.authored:
+        return reply(f"Checkpoint written: {thread}" if thread else "Checkpoint written.")
+    why = f" ({outcome.error})" if outcome.error else ""
+    return reply(f"The model didn't write a checkpoint{why}, so Babo recorded what happened instead.")
 
 
 async def cmd_restart(ctx: CommandContext) -> OutboundMessage:
@@ -1093,6 +1134,7 @@ def register_builtin_commands(router: CommandRouter) -> None:
     router.exact("/evaluator-prompt", cmd_evaluator_prompt)
     router.prefix("/evaluator-prompt ", cmd_evaluator_prompt)
     router.exact("/skill", cmd_skill)
+    router.exact("/checkpoint", cmd_checkpoint, session_queue=True)
     router.exact("/help", cmd_help)
     router.exact("/pairing", cmd_pairing)
     router.prefix("/pairing ", cmd_pairing)

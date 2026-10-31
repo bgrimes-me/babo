@@ -1737,10 +1737,15 @@ export interface TownSession {
   /** Who has it open (in a browser or a terminal), through its door. */
   presence?: { connections: number; last_seen: string };
   archived?: boolean;
+  /** Kept at the top of the lists. */
+  pinned?: boolean;
+  /** The owner's own labels. */
+  tags?: string[];
 }
 
 export type TownSessionAction =
-  "new" | "resume" | "freeze" | "remove" | "send" | "stop" | "checkpoint" | "model" | "answer" | "archive" | "unarchive";
+  "new" | "resume" | "freeze" | "remove" | "send" | "stop" | "checkpoint" | "model" | "answer" | "archive" | "unarchive"
+  | "organize";
 
 /** A one-time link that opens a running session's web page, connected (no password to type). */
 export function openTownSessionLink(transport: WebUIMutationTransport, resident: string, id: string): Promise<{ link: string }> {
@@ -1782,6 +1787,7 @@ export function changeTownSession(
   payload: {
     resident: string; id?: string; title?: string; task?: string; overrides?: Record<string, string>;
     text?: string; preset?: string; request?: string; decision?: string;
+    pinned?: boolean; tags?: string[];
   },
 ): Promise<TownSessions & { message: string }> {
   return mutation<TownSessions & { message: string }>(transport, `town.session.${action}`, payload, 120_000);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertCircle, Check, ChevronLeft, Loader2, Stethoscope } from "lucide-react";
+import { AlertCircle, Check, ChevronLeft, Loader2, Pin, Stethoscope } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SettingsGroup } from "@/components/settings/shared/SettingsControls";
 import { MarkdownText } from "@/components/MarkdownText";
 import { DecisionCard, SessionRequestDetails } from "@/components/town/DecisionCard";
+import type { ResidentSessionRef } from "@/components/town/ResidentSessionsList";
 import { NoticesPanel } from "@/components/town/NoticesPanel";
 import { useClient } from "@/providers/ClientProvider";
 import {
@@ -54,14 +55,17 @@ function when(value: string): string {
 
 /** The town: who lives here, what waits for the owner, what each agent may do, and whether everything works.
  *  The same data and decisions as `babo town`, `babo review`, `babo note`, `babo profile` and `babo doctor`. */
-export function TownPage({ mainNavigationExpanded = false, hostChromeInset = false, onBackToChat }: {
+export function TownPage({ mainNavigationExpanded = false, hostChromeInset = false, onBackToChat, focus = null }: {
+  /** A resident's session to show (picked in the sidebar): opens the Sessions tab on it. */
+  focus?: ResidentSessionRef | null;
   mainNavigationExpanded?: boolean;
   hostChromeInset?: boolean;
   onBackToChat: () => void;
 }) {
   const { t } = useTranslation();
   const { client, getToken } = useClient();
-  const [tab, setTab] = useState<TownTab>("town");
+  const [tab, setTab] = useState<TownTab>(focus ? "sessions" : "town");
+  useEffect(() => { if (focus) setTab("sessions"); }, [focus]);
   const [town, setTown] = useState<TownOverview | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -117,7 +121,7 @@ export function TownPage({ mainNavigationExpanded = false, hostChromeInset = fal
           {error && <p role="alert" className="settings-list-inset flex items-center gap-2 text-[13px] text-destructive"><AlertCircle className="h-4 w-4 shrink-0" />{error}</p>}
           {tab === "town" && <ResidentsView town={town} onChanged={changed} onError={setError} transport={client} />}
           {tab === "review" && <ReviewView token={getToken} transport={client} onChanged={changed} onError={setError} />}
-          {tab === "sessions" && <SessionsView token={getToken} transport={client} onNotice={(message) => { setNotice(message); setError(""); }} onError={setError} />}
+          {tab === "sessions" && <SessionsView focus={focus} token={getToken} transport={client} onNotice={(message) => { setNotice(message); setError(""); }} onError={setError} />}
           {tab === "profiles" && <ProfilesView token={getToken} transport={client} onNotice={(message) => { setNotice(message); setError(""); }} onError={setError} />}
           {tab === "doctor" && <DoctorView token={getToken} />}
           {tab === "settings" && <TownSettingsView token={getToken} transport={client} onNotice={(message) => { setNotice(message); setError(""); }} onError={setError} />}
@@ -562,7 +566,8 @@ const SESSION_CHANGES = [
 
 /** Residents other than the Mayor run in opencode, one session at a time or several.
  *  The same as `babo session list|new|open|freeze`. */
-function SessionsView({ token, transport, onNotice, onError }: {
+function SessionsView({ token, transport, onNotice, onError, focus = null }: {
+  focus?: ResidentSessionRef | null;
   token: () => string;
   transport: Parameters<typeof changeTownSession>[0];
   onNotice: (message: string) => void;
@@ -615,6 +620,7 @@ function SessionsView({ token, transport, onNotice, onError }: {
       <h2 className="settings-list-inset text-[13px] font-medium text-foreground">{r.name ? `${r.name} (${r.id})` : r.id} · <span className="text-muted-foreground">{r.office}</span></h2>
       <SettingsGroup>
         {r.sessions.map((s) => <SessionRow key={s.id} session={s} presets={data.presets ?? []} busy={busy === s.id}
+          focused={focus?.resident === r.id && focus.id === s.id}
           onAction={(action, extra) => void act(s.id, action, { resident: r.id, id: s.id, ...extra })}
           onOpen={() => openSession(r.id, s.id)} />)}
         <NewSessionForm resident={r.id} presets={data.presets ?? []} disabled={!data.opencode || busy === `new:${r.id}`} busy={busy === `new:${r.id}`}
@@ -626,16 +632,24 @@ function SessionsView({ token, transport, onNotice, onError }: {
 
 const SESSION_POLL_MS = 5_000;
 
-function SessionRow({ session, presets, busy, onAction, onOpen }: {
+type TownSessionExtra = Omit<Parameters<typeof changeTownSession>[2], "resident" | "id">;
+
+function SessionRow({ session, presets, busy, onAction, onOpen, focused = false }: {
+  focused?: boolean;
   session: TownSession;
   presets: TownPreset[];
   busy: boolean;
   onOpen: () => void;
-  onAction: (action: TownSessionAction, extra?: { text?: string; preset?: string; request?: string; decision?: string }) => void;
+  onAction: (action: TownSessionAction, extra?: TownSessionExtra) => void;
 }) {
   const { t } = useTranslation();
   const [removing, setRemoving] = useState(false);
   const [message, setMessage] = useState("");
+  const [organizing, setOrganizing] = useState(false);
+  const [name, setName] = useState(session.title);
+  const [tags, setTags] = useState((session.tags ?? []).join(", "));
+  const row = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (focused) row.current?.scrollIntoView?.({ block: "center" }); }, [focused]);
   const changes = Object.entries(session.overrides).filter(([key]) => key !== "model").map(([key, value]) => `${key}: ${value}`).join(", ");
   const running = session.status === "running";
   const live = session.live ?? { state: session.status, activity: "", questions: [] };
@@ -645,9 +659,14 @@ function SessionRow({ session, presets, busy, onAction, onOpen }: {
     running: t("town.sessionRunning", { defaultValue: "running" }), frozen: t("town.sessionFrozen", { defaultValue: "frozen" }),
     new: t("town.sessionNew", { defaultValue: "not started" }),
   }[live.state] ?? live.state;
-  return <div className="settings-list-row flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+  return <div ref={row} data-focused={focused || undefined}
+    className={cn("settings-list-row flex flex-wrap items-center gap-x-3 gap-y-2 py-3", focused && "rounded-lg ring-2 ring-sky-500/50")}>
     <span className="min-w-[14rem] flex-1">
-      <span className="block text-[14px] font-medium">{session.title}</span>
+      <span className="block text-[14px] font-medium">
+        {session.pinned && <Pin className="mr-1 inline h-3.5 w-3.5 text-muted-foreground" aria-label={t("town.pinned", { defaultValue: "pinned" })} />}
+        {session.title}
+        {(session.tags ?? []).map((tag) => <span key={tag} className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">#{tag}</span>)}
+      </span>
       <span className="mt-0.5 block text-xs text-muted-foreground">
         <span className={cn("font-medium", live.state === "working" && "text-foreground", live.state === "waiting" && "text-amber-600 dark:text-amber-400")}>{state}</span>
         {live.activity ? ` · ${live.activity}` : ""}
@@ -667,6 +686,23 @@ function SessionRow({ session, presets, busy, onAction, onOpen }: {
     {!running && (session.archived
       ? <Button variant="ghost" size="sm" disabled={busy} onClick={() => onAction("unarchive")}>{t("town.unarchive", { defaultValue: "Unarchive" })}</Button>
       : <Button variant="ghost" size="sm" disabled={busy} onClick={() => onAction("archive")}>{t("town.archive", { defaultValue: "Archive" })}</Button>)}
+    <Button variant="ghost" size="sm" disabled={busy} onClick={() => onAction("organize", { pinned: !session.pinned })}>
+      {session.pinned ? t("town.unpin", { defaultValue: "Unpin" }) : t("town.pin", { defaultValue: "Pin" })}
+    </Button>
+    <Button variant="ghost" size="sm" disabled={busy} onClick={() => { setName(session.title); setTags((session.tags ?? []).join(", ")); setOrganizing((v) => !v); }}>
+      {t("town.renameTag", { defaultValue: "Rename / tags" })}
+    </Button>
+    {organizing && <form className="flex basis-full flex-wrap items-center gap-2" onSubmit={(event) => {
+      event.preventDefault();
+      setOrganizing(false);
+      onAction("organize", { title: name, tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean) });
+    }}>
+      <Input className="min-w-[12rem] flex-1" value={name} maxLength={120} onChange={(event) => setName(event.target.value)}
+        aria-label={t("town.sessionName", { defaultValue: "Session name" })} />
+      <Input className="min-w-[12rem] flex-1" value={tags} maxLength={400} onChange={(event) => setTags(event.target.value)}
+        aria-label={t("town.sessionTags", { defaultValue: "Tags" })} placeholder={t("town.sessionTagsPlaceholder", { defaultValue: "Tags, separated by commas" })} />
+      <Button type="submit" size="sm" variant="secondary" disabled={busy || !name.trim()}>{t("town.save", { defaultValue: "Save" })}</Button>
+    </form>}
     {removing
       ? <span role="group" aria-label={t("town.removeSession", { defaultValue: "Remove" })} className="flex basis-full flex-wrap items-center justify-end gap-2 text-xs">
         <span className="text-muted-foreground">{t("town.removeWarning", { defaultValue: "Remove it for good? It stops without being reviewed into memory; what it did stays in the event log." })}</span>

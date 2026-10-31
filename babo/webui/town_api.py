@@ -37,6 +37,7 @@ TOWN_MUTATION_PATHS = {
     "town.session.link": "/api/town/sessions/link",
     "town.session.archive": "/api/town/sessions/archive",
     "town.session.unarchive": "/api/town/sessions/unarchive",
+    "town.session.organize": "/api/town/sessions/organize",
     "town.notices.read": "/api/town/notices/read",
     "town.allow_all": "/api/town/allow-all/update",
 }
@@ -150,6 +151,16 @@ def _session_change(action: str, payload: dict[str, Any]) -> str:
         return views.set_session_model(town, cfg, resident, session_id, cast(str, preset), config_path=config_path)
     if action == "archive" or action == "unarchive":
         return views.archive_session(town, resident, session_id, archived=action == "archive")
+    if action == "organize":
+        title, pinned, tags = payload.get("title"), payload.get("pinned"), payload.get("tags")
+        if tags is not None and not (isinstance(tags, list) and all(isinstance(t, str) for t in cast(list[object], tags))):
+            raise BatonError("tags must be a list of words")
+        return views.organize_session(
+            town, resident, session_id,
+            title=title if isinstance(title, str) else None,
+            pinned=pinned if isinstance(pinned, bool) else None,
+            tags=cast(list[str], tags) if tags is not None else None,
+        )
     if action == "answer":
         return views.answer_session_question(town, resident, session_id, _text(payload, "request", 120), _text(payload, "decision", 10))
     if action == "resume":

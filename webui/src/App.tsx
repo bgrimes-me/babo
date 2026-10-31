@@ -18,6 +18,7 @@ import { RemoteInstances } from "@/components/remote/RemoteInstances";
 import { useRemoteConnections } from "@/components/remote/remote-context";
 import { LazyRemoteConnectionsPage } from "@/components/remote/LazyRemoteConnectionsPage";
 import { TownPage } from "@/components/town/TownPage";
+import type { ResidentSessionRef } from "@/components/town/ResidentSessionsList";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SidebarResizeHandle, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH } from "@/components/SidebarResizeHandle";
 import { matchSidebarShortcut } from "@/lib/sidebar-shortcuts";
@@ -2206,8 +2207,18 @@ function Shell({
     setMobileSidebarOpen(false);
   }, [activeKey, navigate]);
 
+  // BATON: a resident's session picked in the sidebar opens on the Town page's Sessions tab.
+  const [townFocus, setTownFocus] = useState<ResidentSessionRef | null>(null);
   const onOpenTown = useCallback(() => {
     setSessionSearchOpen(false);
+    setTownFocus(null);
+    navigate({ view: "town", activeKey, settingsSection: "overview" });
+    setMobileSidebarOpen(false);
+  }, [activeKey, navigate]);
+
+  const onOpenTownSession = useCallback((session: ResidentSessionRef) => {
+    setSessionSearchOpen(false);
+    setTownFocus(session);
     navigate({ view: "town", activeKey, settingsSection: "overview" });
     setMobileSidebarOpen(false);
   }, [activeKey, navigate]);
@@ -2843,6 +2854,8 @@ function Shell({
     onOpenChannels,
     onOpenSkills,
     onOpenTown,
+    onOpenTownSession,
+    activeTownSessionId: view === "town" ? townFocus?.id ?? null : null,
     onSettingsIntent,
     onOpenSearch: onOpenSessionSearch,
     activeUtility: !managingConnections && (view === "apps" || view === "automations" || view === "skills" || view === "channels" || view === "town") ? view : null,
@@ -3163,6 +3176,7 @@ function Shell({
                   hostChromeInset={showHostChrome}
                   onBackToChat={onBackToChat}
                 /> : view === "town" ? <TownPage
+                  focus={townFocus}
                   mainNavigationExpanded={showMainSidebar && hostSidebarOpen}
                   hostChromeInset={showHostChrome}
                   onBackToChat={onBackToChat}
