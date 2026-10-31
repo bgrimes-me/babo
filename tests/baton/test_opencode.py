@@ -406,3 +406,41 @@ def test_a_broken_session_can_be_removed_and_what_it_did_stays(town: Town, confi
     assert any(e.get("kind") == "turn_start" and e.get("via") == "opencode" for e in resident_events(town, "archivist"))
     with pytest.raises(BatonError):
         views.remove_session(town, "archivist", session.id)
+
+
+@live
+def test_a_session_started_with_a_task_gets_going_and_can_be_steered(town: Town, config_file, mock_llama: MockLlama) -> None:
+    from babo.baton import gateway
+
+    path, cfg = config_file(**{"modelPresets": {"local": {"provider": "custom", "model": "mock-model", "contextWindowTokens": 32768},
+                                                "other": {"provider": "custom", "model": "other-model", "contextWindowTokens": 16384}}})
+    views.update_profile(town, cfg.baton, "archivist", {"shell": "ask"}, [], gateway.preset_names(cfg))
+    home = town.resident_dir("archivist")
+    mock_llama.script = [tool_call("shell", {"command": "touch started.txt"}), text("Started.")]
+    said = views.start_session(town, cfg, "archivist", title="", overrides={}, config_path=path, task="Start the index.\nThen tidy.")
+    session = opencode.sessions(town, "archivist")[-1]
+    try:
+        assert "is working on “Start the index.”" in said and session.task.startswith("Start the index.")
+        # It asks before running a command; the question shows up in Babo, and the owner answers it there.
+        _wait(lambda: opencode.live(town, session)["state"] == "waiting", 30)
+        [question] = opencode.live(town, session)["questions"]
+        assert question["action"] == "shell" and "touch started.txt" in question["resources"]
+        assert views.answer_session_question(town, "archivist", session.id, question["id"], "once") == "Allowed, this once."
+        _wait(lambda: opencode.live(town, session)["state"] == "idle", 30)
+        assert (home / "started.txt").exists()
+        # Another preset for this session: it restarts on it and carries on in the same opencode session.
+        before = opencode.get_session(town, "archivist", session.id).opencode_id
+        views.set_session_model(town, cfg, "archivist", session.id, "other", config_path=path)
+        mock_llama.default = text("Still here.")
+        assert opencode.send(town, cfg, opencode.get_session(town, "archivist", session.id), "Hello?", config_path=path) == "Still here."
+        assert opencode.get_session(town, "archivist", session.id).opencode_id == before
+        assert mock_llama.requests[-1]["model"] == "other"  # opencode only knows the preset; the gateway knows the model
+        # A long turn can be stopped; the session stays open.
+        mock_llama.delay_s = 8
+        views.send_to_session(town, cfg, "archivist", session.id, "Take your time.", config_path=path)
+        _wait(lambda: opencode.live(town, session)["state"] == "working", 20)
+        assert "Stopped what archivist was doing" in views.stop_session_turn(town, "archivist", session.id)
+        assert opencode.running(town, session) is not None
+    finally:
+        mock_llama.delay_s = 0
+        opencode.freeze(town, opencode.get_session(town, "archivist", session.id))

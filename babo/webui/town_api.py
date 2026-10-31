@@ -29,6 +29,11 @@ TOWN_MUTATION_PATHS = {
     "town.session.resume": "/api/town/sessions/resume",
     "town.session.freeze": "/api/town/sessions/freeze",
     "town.session.remove": "/api/town/sessions/remove",
+    "town.session.send": "/api/town/sessions/send",
+    "town.session.stop": "/api/town/sessions/stop",
+    "town.session.checkpoint": "/api/town/sessions/checkpoint",
+    "town.session.model": "/api/town/sessions/model",
+    "town.session.answer": "/api/town/sessions/answer",
     "town.allow_all": "/api/town/allow-all/update",
 }
 _DECISION_KINDS = ("tool", "proposal", "founding", "flag", "session")
@@ -125,9 +130,22 @@ def _session_change(action: str, payload: dict[str, Any]) -> str:
         if not isinstance(overrides, dict):
             raise BatonError("overrides must be an object")
         title = payload.get("title") if isinstance(payload.get("title"), str) else ""
+        task = payload.get("task") if isinstance(payload.get("task"), str) else ""
         return views.start_session(town, cfg, resident, title=cast(str, title)[:200], overrides=cast(dict[str, object], overrides),
-                                   config_path=get_config_path().resolve())
+                                   config_path=get_config_path().resolve(), task=cast(str, task)[:20000])
     session_id = _text(payload, "id", 80)
+    config_path = get_config_path().resolve()
+    if action == "send":
+        return views.send_to_session(town, cfg, resident, session_id, _text(payload, "text", 20000), config_path=config_path)
+    if action == "stop":
+        return views.stop_session_turn(town, resident, session_id)
+    if action == "checkpoint":
+        return views.checkpoint_session(town, cfg, resident, session_id, config_path=config_path)
+    if action == "model":
+        preset = payload.get("preset") if isinstance(payload.get("preset"), str) else ""
+        return views.set_session_model(town, cfg, resident, session_id, cast(str, preset), config_path=config_path)
+    if action == "answer":
+        return views.answer_session_question(town, resident, session_id, _text(payload, "request", 120), _text(payload, "decision", 10))
     if action == "resume":
         return views.resume_session(town, cfg, resident, session_id, config_path=get_config_path().resolve())
     if action == "remove":

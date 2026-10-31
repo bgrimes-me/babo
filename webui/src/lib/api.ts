@@ -1728,7 +1728,15 @@ export interface TownSession {
   /** Only while it runs: where opencode's own page for this session is, and its password (user "opencode"). */
   url: string;
   password: string;
+  /** What it's doing now; while it runs: working, idle, or waiting for an answer to a question. */
+  live?: {
+    state: "working" | "idle" | "waiting" | "starting" | "running" | "frozen" | "new";
+    activity: string;
+    questions: { id: string; action: string; resources: string[]; message: string }[];
+  };
 }
+
+export type TownSessionAction = "new" | "resume" | "freeze" | "remove" | "send" | "stop" | "checkpoint" | "model" | "answer";
 
 export interface TownSessions {
   presets: TownPreset[];
@@ -1743,8 +1751,11 @@ export function fetchTownSessions(token: string, base: string = ""): Promise<Tow
 /** Start, resume or freeze a resident's session in opencode (the same as `babo session new|open|freeze`). */
 export function changeTownSession(
   transport: WebUIMutationTransport,
-  action: "new" | "resume" | "freeze" | "remove",
-  payload: { resident: string; id?: string; title?: string; overrides?: Record<string, string> },
+  action: TownSessionAction,
+  payload: {
+    resident: string; id?: string; title?: string; task?: string; overrides?: Record<string, string>;
+    text?: string; preset?: string; request?: string; decision?: string;
+  },
 ): Promise<TownSessions & { message: string }> {
   return mutation<TownSessions & { message: string }>(transport, `town.session.${action}`, payload, 120_000);
 }

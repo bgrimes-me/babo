@@ -149,12 +149,33 @@ describe("town page", () => {
     expect(within(archivist).getByText("Tidy the commons")).toBeVisible();
     expect(within(archivist).getByRole("link", { name: "Open" })).toHaveAttribute("href", "http://127.0.0.1:4801");
     expect(within(archivist).getByText(/password pw/)).toBeVisible();
-    fireEvent.change(within(archivist).getByRole("textbox"), { target: { value: "Index the notes" } });
+    fireEvent.change(within(archivist).getByRole("textbox", { name: "What should archivist do?" }), { target: { value: "Index the notes" } });
     fireEvent.change(within(archivist).getByRole("combobox", { name: "Search the web" }), { target: { value: "allow" } });
-    fireEvent.click(within(archivist).getByRole("button", { name: "New session" }));
+    fireEvent.click(within(archivist).getByRole("button", { name: "Start" }));
     await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.new",
-      { resident: "archivist", title: "Index the notes", overrides: { web_search: "allow" } }, 120_000));
+      { resident: "archivist", task: "Index the notes", overrides: { web_search: "allow" } }, 120_000));
     expect(await screen.findByRole("status")).toHaveTextContent("is running");
+  });
+
+  it("shows what a running session is doing and lets the owner steer it, like `babo session list|send|stop`", async () => {
+    mocks.fetch.mockImplementation((url: string) => Promise.resolve(new Response(JSON.stringify(url.endsWith("/api/town/sessions")
+      ? { ...sessions, presets, residents: [{ ...sessions.residents[0], sessions: [{ ...sessions.residents[0].sessions[0],
+        live: { state: "waiting", activity: "waiting for your answer",
+          questions: [{ id: "per_1", action: "shell", resources: ["npm install"], message: "" }] } }] }] }
+      : town()), { status: 200, headers: { "content-type": "application/json" } })));
+    mocks.mutation.mockResolvedValue({ ...sessions, presets, message: "Allowed, this once." });
+    render(<TownPage onBackToChat={() => {}} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Sessions" }));
+    const archivist = await screen.findByRole("region", { name: "archivist" });
+    expect(await within(archivist).findByText("waiting for you")).toBeVisible();
+    expect(within(archivist).getByRole("alert")).toHaveTextContent("It asks to shell: npm install");
+    fireEvent.click(within(archivist).getByRole("button", { name: "Allow once" }));
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.answer",
+      { resident: "archivist", id: "s1", request: "per_1", decision: "once" }, 120_000));
+    fireEvent.change(within(archivist).getByRole("textbox", { name: "Send archivist a message" }), { target: { value: "Use pnpm instead." } });
+    fireEvent.click(within(archivist).getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.send",
+      { resident: "archivist", id: "s1", text: "Use pnpm instead." }, 120_000));
   });
 
   it("removes a broken session only after asking, like `babo session remove`", async () => {
