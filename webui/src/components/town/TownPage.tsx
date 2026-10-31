@@ -275,18 +275,41 @@ function ReviewView({ token, transport, onChanged, onError }: {
   }, [onError, token]);
   useEffect(() => { void load(); }, [load]);
 
-  const decide = async (kind: TownDecisionKind, id: string, yes: boolean, reason: string) => {
-    try { onChanged(await decideTownItem(transport, kind, id, yes, reason)); await load(); }
+  const decide = async (kind: TownDecisionKind, id: string, yes: boolean, reason: string, digest?: string) => {
+    try { onChanged(await decideTownItem(transport, kind, id, yes, reason, digest)); await load(); }
     catch (reason_) { onError(errorText(reason_)); }
   };
 
   if (!review) return <p className="settings-list-inset text-[13px] text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{t("town.loading", { defaultValue: "Loading the town…" })}</p>;
-  const empty = !review.tools.length && !review.proposals.length && !review.founding.length && !review.flags.length;
+  const empty = !review.sessions.length && !review.tools.length && !review.proposals.length && !review.founding.length && !review.flags.length;
   return <>
     <p className="settings-list-inset text-[13px] leading-6 text-muted-foreground">
       {t("town.reviewIntro", { defaultValue: "Nothing changes unless you decide. Whatever reason you give goes to the resident concerned. This is not an audit of anyone's memory." })}
     </p>
     {empty && <p className="settings-list-inset text-[13px]">{t("town.reviewEmpty", { defaultValue: "Nothing is waiting for you." })}</p>}
+    {review.sessions.length > 0 && <ReviewSection title={t("town.review.sessions", { defaultValue: "Session requests" })}>
+      {review.sessions.map((r) => <DecisionCard key={r.id} kind="session" id={r.id} digest={r.digest} onDecide={decide}
+        heading={t("town.sessionRequest", { defaultValue: "{{who}} asks for a session of {{resident}}", who: r.requested_by, resident: r.resident })}
+        yes={t("town.approveRun", { defaultValue: "Approve and run" })} no={t("town.decline", { defaultValue: "Decline" })}
+        note={t("town.requestRuns", { defaultValue: "It runs on your machine with nobody at a terminal: anything not allowed here is denied. The result goes to {{who}}.", who: r.requested_by })}>
+        <p className="whitespace-pre-wrap text-[13px]">{r.task}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{t("town.why", { defaultValue: "Why:" })} {r.reason}</p>
+        <ul className="mt-2 space-y-0.5 text-xs">
+          {Object.entries(r.access).map(([key, level]) => <li key={key}>
+            {r.access_labels[key] ?? key}: <strong>{level}</strong>
+            <span className="text-muted-foreground"> ({t("town.inProfile", { defaultValue: "profile: {{level}}", level: r.profile[key] ?? "deny" })})</span>
+          </li>)}
+          {Object.keys(r.access).length === 0 && <li className="text-muted-foreground">{t("town.accessAsProfile", { defaultValue: "Access as in the resident's profile." })}</li>}
+        </ul>
+        {r.commands.length > 0 && <div className="mt-2">
+          <p className="text-xs text-muted-foreground">{t("town.exactCommands", { defaultValue: "May run exactly these commands, and no others:" })}</p>
+          <pre className="mt-1 whitespace-pre-wrap rounded bg-muted px-2 py-1 text-xs">{r.commands.join("\n")}</pre>
+        </div>}
+        {r.wider.length > 0 && <p role="note" className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+          {t("town.beyondProfile", { defaultValue: "Beyond its profile: {{what}}", what: r.wider.join("; ") })}
+        </p>}
+      </DecisionCard>)}
+    </ReviewSection>}
     {review.tools.length > 0 && <ReviewSection title={t("town.review.tools", { defaultValue: "Proposed tools" })}>
       {review.tools.map((tool) => <DecisionCard key={tool.id} kind="tool" id={tool.id} onDecide={decide}
         heading={`${tool.name} — ${tool.author}`} yes={t("town.approve", { defaultValue: "Approve" })} no={t("town.reject", { defaultValue: "Reject" })}
@@ -347,16 +370,18 @@ function Expandable({ label, text, code = false, open = false }: { label: string
   </details>;
 }
 
-function DecisionCard({ kind, id, heading, yes, no, yesDisabled = false, note = "", reasonLabel, onDecide, children }: {
+function DecisionCard({ kind, id, digest, heading, yes, no, yesDisabled = false, note = "", reasonLabel, onDecide, children }: {
   kind: TownDecisionKind;
   id: string;
+  /** For a session request: the fingerprint of what is shown, so the approval counts only for that. */
+  digest?: string;
   heading: string;
   yes: string;
   no: string | null;
   yesDisabled?: boolean;
   note?: string;
   reasonLabel?: string;
-  onDecide: (kind: TownDecisionKind, id: string, yes: boolean, reason: string) => Promise<void>;
+  onDecide: (kind: TownDecisionKind, id: string, yes: boolean, reason: string, digest?: string) => Promise<void>;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
@@ -364,7 +389,7 @@ function DecisionCard({ kind, id, heading, yes, no, yesDisabled = false, note = 
   const [busy, setBusy] = useState(false);
   const act = async (answer: boolean) => {
     setBusy(true);
-    try { await onDecide(kind, id, answer, reason); }
+    try { await onDecide(kind, id, answer, reason, digest); }
     finally { setBusy(false); }
   };
   return <div className="settings-list-row py-4">

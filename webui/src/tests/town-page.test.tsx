@@ -8,12 +8,18 @@ const town = (name = "") => ({
   root: "/home/squid/baton-town",
   residents: [{ id: "mayor", name: "", office: "mayor", status: "active", founded: "", last_active: "", unread: 1, flags: 0 }],
   board: [],
-  pending: { tools: 0, proposals: 1, founding: 0, flags: 0 },
+  pending: { tools: 0, proposals: 1, founding: 0, flags: 0, sessions: 1 },
   last_upkeep: null,
   upkeep: { service: "running", running: false, waiting: ["mayor: 5 hours of activity to review"], waiting_for: "someone used the model in the last 10 minutes",
     catch_up_requested: false, last_pass: "", quiet_hours: "01:00-06:00", wait_minutes: 10 },
 });
 const review = {
+  sessions: [{
+    id: "2026-10-31-archivist-abc123", resident: "archivist", task: "Install nano.", reason: "To edit notes by hand.",
+    access: { web_fetch: "allow" }, commands: ["sudo pacman -S --noconfirm nano"], requested_by: "mayor", created: "",
+    digest: "f00dfeed", access_labels: { web_fetch: "Read web pages" }, profile: { web_fetch: "deny" },
+    wider: ["Read web pages: deny → allow", "Commands: sudo pacman -S --noconfirm nano"],
+  }],
   tools: [],
   proposals: [{ id: "2026-10-29-name-the-town.md", title: "Name the town", author: "mayor", project: "", town_name: "Lantern Hill", review: "", body: "# Name the town" }],
   founding: [],
@@ -62,12 +68,12 @@ describe("town page", () => {
     render(<TownPage onBackToChat={() => {}} />);
     expect(await screen.findByText("mayor", { selector: "span" })).toBeVisible();
     expect(screen.getByText(/The town has no name yet/)).toBeVisible();
-    expect(screen.getByRole("tab", { name: "Review (1)" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Review (2)" })).toBeVisible();
   });
 
   it("accepts a name proposal with Squid's reason, like `babo review`", async () => {
     render(<TownPage onBackToChat={() => {}} />);
-    fireEvent.click(await screen.findByRole("tab", { name: "Review (1)" }));
+    fireEvent.click(await screen.findByRole("tab", { name: "Review (2)" }));
     const card = (await screen.findByText("Name the town — mayor")).closest(".settings-list-row") as HTMLElement;
     expect(within(card).getByText(/Accepting names the town “Lantern Hill”/)).toBeVisible();
     fireEvent.change(within(card).getByRole("textbox"), { target: { value: "lovely" } });
@@ -131,5 +137,19 @@ describe("town page", () => {
     await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.new",
       { resident: "archivist", title: "Index the notes", overrides: { web_search: "allow" } }, 120_000));
     expect(await screen.findByRole("status")).toHaveTextContent("is running");
+  });
+
+  it("shows a session request word for word and approves exactly what was shown", async () => {
+    mocks.mutation.mockResolvedValue({ message: "Request approved: archivist will run it as soon as upkeep picks it up (within a minute).", town: town() });
+    render(<TownPage onBackToChat={() => {}} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Review (2)" }));
+    const card = (await screen.findByText("mayor asks for a session of archivist")).closest(".settings-list-row") as HTMLElement;
+    expect(within(card).getByText("Install nano.")).toBeVisible();
+    expect(within(card).getByText("sudo pacman -S --noconfirm nano")).toBeVisible();
+    expect(within(card).getByText(/Beyond its profile: Read web pages: deny → allow/)).toBeVisible();
+    fireEvent.change(within(card).getByRole("textbox"), { target: { value: "go ahead" } });
+    fireEvent.click(within(card).getByRole("button", { name: "Approve and run" }));
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.decide",
+      { kind: "session", id: "2026-10-31-archivist-abc123", yes: true, reason: "go ahead", digest: "f00dfeed" }, 150_000));
   });
 });

@@ -140,3 +140,19 @@ async def test_an_unexpected_failure_says_what_broke_and_what_to_do(town: Town, 
     monkeypatch.setattr("babo.baton.views.town_overview", broken)
     status, text = await _call(routes, "/api/town")
     assert status == 500 and "TypeError" in str(text) and "systemctl --user restart babo-queue babo-gateway babo-upkeep" in str(text)
+
+
+async def test_a_session_request_is_approved_from_the_web_only_for_what_was_shown(town: Town, index_path: Path, box, monkeypatch: pytest.MonkeyPatch) -> None:
+    from babo.baton import requests
+
+    routes = _routes(town, index_path, monkeypatch)
+    box("mayor").call("request_session", resident="archivist", task="Install nano.", reason="To edit notes.", commands=["sudo pacman -S nano"])
+    status, review = await _call(routes, "/api/town/review")
+    [shown] = review["sessions"]
+    assert status == 200 and shown["commands"] == ["sudo pacman -S nano"]
+    status, text = await _call(routes, "/api/town/decide", {"kind": "session", "id": shown["id"], "yes": True, "reason": "ok"})
+    assert status == 400 and "missing digest" in str(text)
+    status, result = await _call(routes, "/api/town/decide", {"kind": "session", "id": shown["id"], "yes": True, "reason": "ok",
+                                                              "digest": shown["digest"]})
+    assert status == 200 and "approved" in result["message"]
+    assert requests.load(town, shown["id"]).status == "approved"

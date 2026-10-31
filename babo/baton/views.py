@@ -21,7 +21,7 @@ from babo.baton.town import BatonError, Town
 if TYPE_CHECKING:
     from babo.config.schema import Config
 
-DecisionKind = Literal["tool", "proposal", "founding", "flag"]
+DecisionKind = Literal["tool", "proposal", "founding", "flag", "session"]
 
 
 def town_overview(town: Town, cfg: BatonConfig) -> dict[str, Any]:
@@ -49,6 +49,7 @@ def pending_counts(town: Town) -> dict[str, int]:
     return {
         "tools": len(growth.pending_tools(town)), "proposals": len(growth.open_proposals(town)),
         "founding": len(founding_requests(town)), "flags": len(growth.stale_flags(town)),
+        "sessions": len(_requests().pending(town)),
     }
 
 
@@ -87,7 +88,13 @@ def request_upkeep(town: Town) -> str:
     return upkeep.request_catch_up(town)
 
 
-def review_items(town: Town) -> dict[str, Any]:
+def _requests() -> Any:
+    from babo.baton import requests
+
+    return requests
+
+
+def review_items(town: Town, config: Config | None = None) -> dict[str, Any]:
     tools = [{
         "id": t.name, "name": t.name, "author": t.author, "description": t.description,
         "tested": t.tested, "isolation": t.isolation, "review": t.review,
@@ -105,12 +112,17 @@ def review_items(town: Town) -> dict[str, Any]:
                          "author": str(meta.get("author", "?")), "body": body.strip()})
     flags = [{"id": str(f.get("path", "")), "to": str(f.get("to", "")), "by": str(f.get("by", "")),
               "at": str(f.get("at", "")), "claim": str(f.get("claim", ""))} for f in growth.stale_flags(town)]
-    return {"tools": tools, "proposals": proposals, "founding": founding, "flags": flags}
+    sessions = [_requests().describe(town, config, r) for r in _requests().pending(town)] if config is not None else []
+    return {"sessions": sessions, "tools": tools, "proposals": proposals, "founding": founding, "flags": flags}
 
 
-def decide(town: Town, kind: DecisionKind, item_id: str, *, yes: bool, reason: str, commit: bool = True) -> str:
-    """Apply one of Squid's review decisions. Returns a short plain-language result."""
+def decide(town: Town, kind: DecisionKind, item_id: str, *, yes: bool, reason: str, commit: bool = True,
+           digest: str | None = None) -> str:
+    """Apply one of Squid's review decisions. Returns a short plain-language result.
+    ``digest``: for a session request, the fingerprint of the request as Squid saw it."""
     reason = reason.strip() or "(no reason given)"
+    if kind == "session":
+        return _requests().decide(town, item_id, approve=yes, reason=reason, digest=digest, commit=commit)
     if kind == "tool":
         growth.decide_tool(town, item_id, approve=yes, reason=reason)
         result = f"Tool {item_id} {'approved' if yes else 'rejected'}."

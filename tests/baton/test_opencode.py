@@ -254,3 +254,26 @@ async def test_upkeep_reviews_a_session_whose_instance_died(town: Town, config_f
     assert any(c.trigger == "session_end" for c in iter_checkpoints(town.resident_dir("archivist")))
     assert opencode.get_session(town, "archivist", session.id).status == "frozen"
     assert opencode.running(town, session) is None
+
+
+@live
+def test_an_approved_request_may_run_exactly_its_commands_and_nothing_else(town: Town, config_file, mock_llama: MockLlama, box) -> None:
+    from babo.baton import requests
+    from babo.baton.inbox import unread
+
+    path, cfg = config_file()
+    home = town.resident_dir("archivist")
+    mock_llama.default = _router([
+        tool_call("bash", {"command": "touch allowed.txt", "description": "make the file"}),
+        tool_call("bash", {"command": "touch denied.txt", "description": "not approved"}),
+        text("Made allowed.txt; the second command was refused."),
+    ])
+    box("mayor").call("request_session", resident="archivist", task="Create allowed.txt.", reason="A test.",
+                      commands=["touch allowed.txt"])
+    [request] = requests.all_requests(town)
+    requests.decide(town, request.id, approve=True, reason="ok", digest=request.digest())
+    done = requests.run(town, cfg, requests.load(town, request.id), config_path=path)
+    assert done.status == "done", done.result
+    assert (home / "allowed.txt").exists() and not (home / "denied.txt").exists()
+    assert any("Made allowed.txt" in i.body for i in unread(town, "mayor") if i.sender == "archivist")
+    assert opencode.running(town, opencode.get_session(town, "archivist", done.session_id)) is None

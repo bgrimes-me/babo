@@ -63,6 +63,7 @@ _EARLIER_SHIPPED: dict[str, frozenset[str]] = {
     "offices/mayor.md": frozenset({
         "796e6bb50d56aa9dac20b24712e6fee0f89ed7542111eadb9020ca3c22ade724",
         "e25af6ebdef63a8b29380bf84831b2a912793600e5ff93b42e5aa18a59d340ac",
+        "9637b003ac225e15161bddce0276bd77864723fd5efac4fce31003d5d0fdf1c2",
     }),
     "offices/archivist.md": frozenset({"f2ae5b783190f844e40284333105bce537920f877599b809ba7c1df436236df5"}),
     "offices/inspector.md": frozenset({

@@ -29,7 +29,7 @@ TOWN_MUTATION_PATHS = {
     "town.session.resume": "/api/town/sessions/resume",
     "town.session.freeze": "/api/town/sessions/freeze",
 }
-_DECISION_KINDS = ("tool", "proposal", "founding", "flag")
+_DECISION_KINDS = ("tool", "proposal", "founding", "flag", "session")
 _doctor_lock = asyncio.Lock()
 
 
@@ -80,6 +80,14 @@ def _update_profile(agent: str, changes: dict[str, object]) -> str:
 
     cfg = load_config()
     return views.update_profile(Town.open(cfg.baton.town_path), cfg.baton, agent, changes, sorted(cfg.tools.mcp_servers))
+
+
+def _review() -> dict[str, Any]:
+    from babo.baton import views
+    from babo.config.loader import load_config
+
+    cfg = load_config()
+    return views.review_items(Town.open(cfg.baton.town_path), cfg)
 
 
 def _sessions() -> dict[str, Any]:
@@ -143,7 +151,7 @@ class TownRoutes:
         if got == "/api/town":
             return http_json_response(await asyncio.to_thread(lambda: views.town_overview(_town(), _baton())))
         if got == "/api/town/review":
-            return http_json_response(await asyncio.to_thread(lambda: views.review_items(_town())))
+            return http_json_response(await asyncio.to_thread(lambda: _review()))
         if got == "/api/town/doctor":
             return http_json_response(await self._doctor())
         if got == "/api/town/settings":
@@ -163,12 +171,16 @@ class TownRoutes:
         if got == "/api/town/decide":
             kind = payload.get("kind")
             if kind not in _DECISION_KINDS:
-                raise BatonError("kind must be tool, proposal, founding or flag")
+                raise BatonError("kind must be tool, proposal, founding, flag or session")
             yes = payload.get("yes")
             if not isinstance(yes, bool):
                 raise BatonError("missing yes")
             item_id, reason = _text(payload, "id", 400), _text(payload, "reason")
-            message = await asyncio.to_thread(lambda: views.decide(_town(), cast(Any, kind), item_id, yes=yes, reason=reason))
+            digest = payload.get("digest")
+            if kind == "session" and not isinstance(digest, str):
+                raise BatonError("missing digest: approve a session request from what you were shown")
+            message = await asyncio.to_thread(lambda: views.decide(_town(), cast(Any, kind), item_id, yes=yes, reason=reason,
+                                                                   digest=digest if isinstance(digest, str) else None))
         elif got == "/api/town/note":
             resident, text = _text(payload, "resident", 80), _text(payload, "text")
             message = await asyncio.to_thread(lambda: views.leave_note(_town(), resident, text))
