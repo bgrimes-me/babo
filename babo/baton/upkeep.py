@@ -117,6 +117,7 @@ def due(town: Town, cfg: BatonConfig, *, now: datetime, model_idle_s: int | None
     from babo.baton import opencode
 
     opencode.ingest_all(town)
+    opencode.notify_waiting(town)
     closing = opencode.needing_review(town, config, now=now) if config is not None else []
     for session, why in closing:
         out.sessions.append(f"{session.resident}/{session.id}")

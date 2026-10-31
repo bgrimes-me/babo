@@ -65,11 +65,11 @@ Each step is its own pull request, merged once its tests pass.
 | **F2** | Named instances: several towns, or a test town beside a real one, each with its own services and ports | Planned |
 | **A** | Models from Settings everywhere (the default preset for everything unless a profile or session picks another), any provider through Babo's gateway with keys kept inside Babo | Done |
 | **B1** | Start with a task and the resident gets going; live status (working, idle, waiting for you); send, stop, checkpoint now, switch model, and answer its questions, in the web interface and the terminal | Done |
-| **B2** | The rest of B (below) | Next |
+| **B2** | Open without a password (a pairing link); a door per session that knows who is there; wrap-up that follows presence (below); notices; archive | Done |
 | **H1** | Tool-call repair at the gateway; the baton moved to the end of the prompt | Planned |
 | **H2** | `babo eval`: representative tasks with checks, a baseline per preset | Planned |
 | **H3** | Drift and loop detectors with short reminders, done-checks for tasks, capped memory files | Planned |
-| **B** | The rest of B: Sessions that just go: start with a task and the resident works on its own; live status; controls (stop, send a message, checkpoint now, freeze, archive, remove, switch model); opencode served through Babo (no password prompt, and Babo knows when you're there); wrap-up that follows presence (below); notifications; the same for the Mayor's chats and in the terminal | Planned |
+| **B3** | The Mayor's chats get the same session actions as residents' (the parity principle), with D | Planned |
 | **C** | Permissions and visibility: change a running session's permissions, *Allow all* per session, permission questions shown in Babo's interface, what a resident may read (its own folder by default) as a setting like any other, and *private* or *public* sessions | Planned |
 | **D** | One list for all sessions, the Mayor's and the residents': projects, pin, tags, rename, archive | Planned |
 | **E** | Docs the harness brings in at the right moment: a compact index of when to read what, injection on role entry, first tool use and errors, a logged `open_doc` fallback, curated skills, a task list agents keep as they work | Planned |

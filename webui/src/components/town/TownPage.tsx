@@ -7,12 +7,14 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SettingsGroup } from "@/components/settings/shared/SettingsControls";
 import { MarkdownText } from "@/components/MarkdownText";
 import { DecisionCard, SessionRequestDetails } from "@/components/town/DecisionCard";
+import { NoticesPanel } from "@/components/town/NoticesPanel";
 import { useClient } from "@/providers/ClientProvider";
 import {
   decideTownItem,
   fetchTown,
   fetchTownReview,
   changeTownSession,
+  openTownSessionLink,
   fetchTownProfiles,
   fetchTownSessions,
   fetchTownSettings,
@@ -569,27 +571,41 @@ function SessionsView({ token, transport, onNotice, onError }: {
   const { t } = useTranslation();
   const [data, setData] = useState<TownSessions | null>(null);
   const [busy, setBusy] = useState("");
+  const [archived, setArchived] = useState(false);
   useEffect(() => {
-    fetchTownSessions(token()).then(setData).catch((reason) => onError(errorText(reason)));
+    fetchTownSessions(token(), "", archived).then(setData).catch((reason) => onError(errorText(reason)));
     // While the tab is open, keep each running session's status live.
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") fetchTownSessions(token()).then(setData).catch(() => {});
+      if (document.visibilityState === "visible") fetchTownSessions(token(), "", archived).then(setData).catch(() => {});
     }, SESSION_POLL_MS);
     return () => window.clearInterval(timer);
-  }, [onError, token]);
+  }, [onError, token, archived]);
   if (!data) return <p className="settings-list-inset text-[13px] text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{t("town.loading", { defaultValue: "Loading the town…" })}</p>;
 
   const act = async (key: string, action: TownSessionAction, payload: Parameters<typeof changeTownSession>[2]) => {
     setBusy(key);
     try {
       const result = await changeTownSession(transport, action, payload);
-      setData(result); onNotice(result.message);
+      setData(archived ? await fetchTownSessions(token(), "", true) : result); onNotice(result.message);
     } catch (reason) { onError(errorText(reason)); }
     finally { setBusy(""); }
   };
+  const openSession = (resident: string, id: string) => {
+    // Open the tab now, while the click still counts, and send it to the session once the link is ready.
+    const tab = window.open("about:blank", "_blank");
+    openTownSessionLink(transport, resident, id)
+      .then(({ link }) => { if (tab) tab.location.href = link; else window.location.assign(link); })
+      .catch((reason) => { tab?.close(); onError(errorText(reason)); });
+  };
   return <>
+    <NoticesPanel />
     <p className="settings-list-inset text-[13px] leading-6 text-muted-foreground">
       {t("town.sessionsIntro", { defaultValue: "Residents other than the Mayor work in opencode. Each session starts from the resident's profile; freezing one stops it, and resuming it continues exactly where it was; removing one drops it for good. In the terminal: `babo session open <resident>`." })}
+    </p>
+    <p className="settings-list-inset text-[13px]">
+      <button type="button" className="underline underline-offset-2 text-muted-foreground" onClick={() => setArchived((v) => !v)}>
+        {archived ? t("town.showCurrent", { defaultValue: "Back to current sessions" }) : t("town.showArchived", { defaultValue: "Show archived sessions" })}
+      </button>
     </p>
     {!data.opencode && <p role="note" className="settings-list-inset text-[13px] text-destructive">
       {t("town.noOpencode", { defaultValue: "opencode isn't installed where Babo runs, so residents' sessions can't start. Install it in the box with: curl -fsSL https://opencode.ai/install | bash" })}
@@ -599,7 +615,8 @@ function SessionsView({ token, transport, onNotice, onError }: {
       <h2 className="settings-list-inset text-[13px] font-medium text-foreground">{r.name ? `${r.name} (${r.id})` : r.id} · <span className="text-muted-foreground">{r.office}</span></h2>
       <SettingsGroup>
         {r.sessions.map((s) => <SessionRow key={s.id} session={s} presets={data.presets ?? []} busy={busy === s.id}
-          onAction={(action, extra) => void act(s.id, action, { resident: r.id, id: s.id, ...extra })} />)}
+          onAction={(action, extra) => void act(s.id, action, { resident: r.id, id: s.id, ...extra })}
+          onOpen={() => openSession(r.id, s.id)} />)}
         <NewSessionForm resident={r.id} presets={data.presets ?? []} disabled={!data.opencode || busy === `new:${r.id}`} busy={busy === `new:${r.id}`}
           onStart={(task, overrides) => void act(`new:${r.id}`, "new", { resident: r.id, task, overrides })} />
       </SettingsGroup>
@@ -609,10 +626,11 @@ function SessionsView({ token, transport, onNotice, onError }: {
 
 const SESSION_POLL_MS = 5_000;
 
-function SessionRow({ session, presets, busy, onAction }: {
+function SessionRow({ session, presets, busy, onAction, onOpen }: {
   session: TownSession;
   presets: TownPreset[];
   busy: boolean;
+  onOpen: () => void;
   onAction: (action: TownSessionAction, extra?: { text?: string; preset?: string; request?: string; decision?: string }) => void;
 }) {
   const { t } = useTranslation();
@@ -636,16 +654,19 @@ function SessionRow({ session, presets, busy, onAction }: {
         {" · "}{t("town.lastActive", { defaultValue: "last active {{when}}", when: when(session.last_active) })}
         {changes ? ` · ${t("town.sessionChanges", { defaultValue: "this session: {{changes}}", changes })}` : ""}
       </span>
-      {running && <span className="mt-0.5 block text-xs text-muted-foreground">
-        {t("town.sessionLogin", { defaultValue: "opencode asks for a login: user opencode, password {{password}}", password: session.password })}
+      {running && (session.presence?.connections ?? 0) > 0 && <span className="mt-0.5 block text-xs text-muted-foreground">
+        {t("town.sessionOpenNow", { defaultValue: "open now (in {{count}} place(s)): it won't be wrapped up while you're there", count: session.presence?.connections ?? 0 })}
       </span>}
     </span>
-    {running && <Button asChild variant="secondary" size="sm"><a href={session.url} target="_blank" rel="noreferrer">{t("town.openSession", { defaultValue: "Open" })}</a></Button>}
+    {running && <Button variant="secondary" size="sm" onClick={onOpen}>{t("town.openSession", { defaultValue: "Open" })}</Button>}
     {running && live.state === "working" && <Button variant="ghost" size="sm" disabled={busy} onClick={() => onAction("stop")}>{t("town.stopTurn", { defaultValue: "Stop" })}</Button>}
     {running && <Button variant="ghost" size="sm" disabled={busy} onClick={() => onAction("checkpoint")}>{t("town.checkpointNow", { defaultValue: "Checkpoint now" })}</Button>}
     {running
       ? <Button variant="ghost" size="sm" disabled={busy} onClick={() => onAction("freeze")}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("town.freeze", { defaultValue: "Freeze" })}</Button>
       : <Button variant="ghost" size="sm" disabled={busy} onClick={() => onAction("resume")}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("town.resume", { defaultValue: "Resume" })}</Button>}
+    {!running && (session.archived
+      ? <Button variant="ghost" size="sm" disabled={busy} onClick={() => onAction("unarchive")}>{t("town.unarchive", { defaultValue: "Unarchive" })}</Button>
+      : <Button variant="ghost" size="sm" disabled={busy} onClick={() => onAction("archive")}>{t("town.archive", { defaultValue: "Archive" })}</Button>)}
     {removing
       ? <span role="group" aria-label={t("town.removeSession", { defaultValue: "Remove" })} className="flex basis-full flex-wrap items-center justify-end gap-2 text-xs">
         <span className="text-muted-foreground">{t("town.removeWarning", { defaultValue: "Remove it for good? It stops without being reviewed into memory; what it did stays in the event log." })}</span>

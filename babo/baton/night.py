@@ -283,6 +283,10 @@ class Night:
                                            trigger="session_end", config_path=get_config_path())
             await asyncio.to_thread(opencode.freeze, self.town, opencode.get_session(self.town, resident, session_id))
             self.log(f"session review {item}: {said}")
+            from babo.baton import notices
+
+            notices.add(self.town, "wrapped_up", f"{resident} wrapped up “{session.title}” and wrote its memory. {said}",
+                        resident=resident, session=session_id)
             self.ledger.mark(f"session:{item}", reviewed=True)
         except (BatonError, OSError, httpx.HTTPError) as exc:
             self.log(f"session review {item} failed: {exc}")

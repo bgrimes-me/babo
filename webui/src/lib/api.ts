@@ -1734,9 +1734,36 @@ export interface TownSession {
     activity: string;
     questions: { id: string; action: string; resources: string[]; message: string }[];
   };
+  /** Who has it open (in a browser or a terminal), through its door. */
+  presence?: { connections: number; last_seen: string };
+  archived?: boolean;
 }
 
-export type TownSessionAction = "new" | "resume" | "freeze" | "remove" | "send" | "stop" | "checkpoint" | "model" | "answer";
+export type TownSessionAction =
+  "new" | "resume" | "freeze" | "remove" | "send" | "stop" | "checkpoint" | "model" | "answer" | "archive" | "unarchive";
+
+/** A one-time link that opens a running session's web page, connected (no password to type). */
+export function openTownSessionLink(transport: WebUIMutationTransport, resident: string, id: string): Promise<{ link: string }> {
+  return mutation<{ link: string }>(transport, "town.session.link", { resident, id });
+}
+
+/** Something that happened that the owner would want to know: a session wrapped up, a resident waiting for an answer. */
+export interface TownNotice {
+  id: string;
+  at: string;
+  kind: "wrapped_up" | "waiting" | string;
+  text: string;
+  resident: string;
+  session: string;
+}
+
+export function fetchTownNotices(token: string, base: string = ""): Promise<{ notices: TownNotice[] }> {
+  return request<{ notices: TownNotice[] }>(`${base}/api/town/notices`, token, undefined, API_READ_TIMEOUT_MS);
+}
+
+export function readTownNotices(transport: WebUIMutationTransport, ids?: string[]): Promise<{ notices: TownNotice[] }> {
+  return mutation<{ notices: TownNotice[] }>(transport, "town.notices.read", ids ? { ids } : {});
+}
 
 export interface TownSessions {
   presets: TownPreset[];
@@ -1744,8 +1771,8 @@ export interface TownSessions {
   residents: { id: string; name: string; office: string; sessions: TownSession[] }[];
 }
 
-export function fetchTownSessions(token: string, base: string = ""): Promise<TownSessions> {
-  return request<TownSessions>(`${base}/api/town/sessions`, token, undefined, API_READ_TIMEOUT_MS);
+export function fetchTownSessions(token: string, base: string = "", archived = false): Promise<TownSessions> {
+  return request<TownSessions>(`${base}/api/town/sessions${archived ? "?archived=1" : ""}`, token, undefined, API_READ_TIMEOUT_MS);
 }
 
 /** Start, resume or freeze a resident's session in opencode (the same as `babo session new|open|freeze`). */

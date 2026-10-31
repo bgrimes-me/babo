@@ -147,8 +147,13 @@ describe("town page", () => {
     fireEvent.click(await screen.findByRole("tab", { name: "Sessions" }));
     const archivist = await screen.findByRole("region", { name: "archivist" });
     expect(within(archivist).getByText("Tidy the commons")).toBeVisible();
-    expect(within(archivist).getByRole("link", { name: "Open" })).toHaveAttribute("href", "http://127.0.0.1:4801");
-    expect(within(archivist).getByText(/password pw/)).toBeVisible();
+    // Open asks Babo for a one-time pairing link and opens the session's page with it: no password to type.
+    const tab = { location: { href: "" }, close: vi.fn() };
+    vi.stubGlobal("open", vi.fn(() => tab));
+    mocks.mutation.mockResolvedValueOnce({ link: "http://127.0.0.1:4802/auth/connect/abc" });
+    fireEvent.click(within(archivist).getByRole("button", { name: "Open" }));
+    await waitFor(() => expect(tab.location.href).toBe("http://127.0.0.1:4802/auth/connect/abc"));
+    expect(mocks.mutation).toHaveBeenCalledWith("town.session.link", { resident: "archivist", id: "s1" }, expect.any(Number));
     fireEvent.change(within(archivist).getByRole("textbox", { name: "What should archivist do?" }), { target: { value: "Index the notes" } });
     fireEvent.change(within(archivist).getByRole("combobox", { name: "Search the web" }), { target: { value: "allow" } });
     fireEvent.click(within(archivist).getByRole("button", { name: "Start" }));
