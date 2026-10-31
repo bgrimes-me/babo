@@ -308,13 +308,14 @@ HTTPServer(("127.0.0.1", int(sys.argv[sys.argv.index("--port") + 1])), Handler).
 '''
 
 
-@pytest.mark.parametrize(("mode", "version", "message"), [
-    ("web-page", "1.19.5", "answered a new session with text/html instead of data"),
-    ("no-health", "1.19.5", "has no health check"),
-    ("too-old", "1.2.0", "opencode 1.2.0 is too old: Babo needs 1.19 or newer"),
+@pytest.mark.parametrize(("mode", "version", "message", "remedy"), [
+    ("web-page", "1.19.5", "answered a new session with text/html instead of data", "opencode upgrade"),
+    ("no-health", "2.2.0", "has no health check", "set baton.opencode.bin"),
+    ("too-old", "1.2.0", "opencode 1.2.0 is too old: Babo needs 1.19 or newer", "opencode upgrade"),
 ])
 def test_an_opencode_babo_cant_use_is_named_and_left_stopped(town: Town, config_file, tmp_path: Path,
-                                                            monkeypatch: pytest.MonkeyPatch, mode: str, version: str, message: str) -> None:
+                                                            monkeypatch: pytest.MonkeyPatch, mode: str, version: str, message: str,
+                                                            remedy: str) -> None:
     fake = tmp_path / "opencode"
     fake.write_text(_FAKE_OPENCODE)
     fake.chmod(0o755)
@@ -324,19 +325,53 @@ def test_an_opencode_babo_cant_use_is_named_and_left_stopped(town: Town, config_
     session = opencode.new_session(town, cfg, "archivist", title="Look at the notes.")
     with pytest.raises(BatonError, match=message) as raised:
         opencode.start(town, cfg, session, config_path=path)
-    assert "opencode upgrade" in str(raised.value)
+    assert remedy in str(raised.value)
     assert opencode.running(town, session) is None
     assert views.sessions_overview(town, cfg)["residents"][0]["sessions"][0]["status"] == "new"
 
 
-def test_the_doctor_says_when_opencode_is_too_old(tmp_path: Path, config_file, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize(("mode", "version", "message"), [
+    ("too-old", "1.2.0", "too old"),
+    ("no-health", "2.2.0", "isn't the opencode Babo works with"),  # a newer version number from another program
+])
+def test_the_doctor_starts_opencode_to_check_it_is_one_babo_can_use(tmp_path: Path, config_file, monkeypatch: pytest.MonkeyPatch,
+                                                                    mode: str, version: str, message: str) -> None:
     from babo.baton.doctor import check_opencode
 
     fake = tmp_path / "opencode"
     fake.write_text(_FAKE_OPENCODE)
     fake.chmod(0o755)
-    monkeypatch.setenv("FAKE_OPENCODE", "too-old")
-    monkeypatch.setenv("FAKE_OPENCODE_VERSION", "1.2.0")
-    _, cfg = config_file(**{"baton.opencode": {"bin": str(fake)}})
+    monkeypatch.setenv("FAKE_OPENCODE", mode)
+    monkeypatch.setenv("FAKE_OPENCODE_VERSION", version)
+    _, cfg = config_file(**{"baton.opencode": {"bin": str(fake), "startTimeoutS": 20}})
     check = check_opencode(cfg)
-    assert check.status == "FAIL" and "too old" in check.detail and "opencode upgrade" in check.detail
+    assert check.status == "FAIL" and message in check.detail
+
+
+@live
+def test_the_doctor_passes_opencode_ai(config_file) -> None:
+    from babo.baton.doctor import check_opencode
+
+    _, cfg = config_file()
+    check = check_opencode(cfg)
+    assert check.status == "PASS", check.detail
+
+
+def test_a_broken_session_can_be_removed_and_what_it_did_stays(town: Town, config_file, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from babo.baton.events import resident_events
+
+    fake = tmp_path / "opencode"
+    fake.write_text(_FAKE_OPENCODE)
+    fake.chmod(0o755)
+    monkeypatch.setenv("FAKE_OPENCODE", "web-page")
+    path, cfg = config_file(**{"baton.opencode": {"bin": str(fake), "dataDir": str(tmp_path / "data"), "startTimeoutS": 20}})
+    session = opencode.new_session(town, cfg, "archivist", title="Never starts.")
+    with pytest.raises(BatonError):
+        opencode.start(town, cfg, session, config_path=path)
+    opencode.spool_path(town, session).write_text(json.dumps({"kind": "turn_start", "at": "2026-10-31T10:00:00+00:00"}) + "\n")
+    assert views.remove_session(town, "archivist", session.id) == "Removed archivist's session “Never starts.”."
+    assert views.sessions_overview(town, cfg)["residents"][0]["sessions"] == []
+    assert not list(opencode._runtime_dir(town, "archivist").glob(f"{session.id}*"))  # pyright: ignore[reportPrivateUsage]
+    assert any(e.get("kind") == "turn_start" and e.get("via") == "opencode" for e in resident_events(town, "archivist"))
+    with pytest.raises(BatonError):
+        views.remove_session(town, "archivist", session.id)

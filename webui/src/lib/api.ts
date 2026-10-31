@@ -1734,7 +1734,7 @@ export function fetchTownSessions(token: string, base: string = ""): Promise<Tow
 /** Start, resume or freeze a resident's session in opencode (the same as `babo session new|open|freeze`). */
 export function changeTownSession(
   transport: WebUIMutationTransport,
-  action: "new" | "resume" | "freeze",
+  action: "new" | "resume" | "freeze" | "remove",
   payload: { resident: string; id?: string; title?: string; overrides?: Record<string, string> },
 ): Promise<TownSessions & { message: string }> {
   return mutation<TownSessions & { message: string }>(transport, `town.session.${action}`, payload, 120_000);

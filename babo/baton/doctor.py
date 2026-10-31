@@ -8,6 +8,7 @@ verifies a throwaway session in a temporary directory.
 
 from __future__ import annotations
 
+import asyncio
 import shutil
 import subprocess
 import sys
@@ -176,7 +177,7 @@ def check_upkeep() -> Check:
 
 
 def check_opencode(cfg: Config) -> Check:
-    from babo.baton.opencode import opencode_bin, version_problem
+    from babo.baton.opencode import opencode_bin, probe, version_problem
 
     binary = opencode_bin(cfg)
     if binary is None:
@@ -190,8 +191,8 @@ def check_opencode(cfg: Config) -> Check:
     version = lines[-1] if lines else ""
     if result.returncode != 0:
         return Check("opencode", "FAIL", f"{binary} {version}".strip())
-    problem = version_problem(version)
-    return Check("opencode", "FAIL" if problem else "PASS", f"{binary}: {problem}" if problem else f"{binary} {version}")
+    problem = version_problem(version) or probe(cfg)
+    return Check("opencode", "FAIL" if problem else "PASS", f"{binary} {version}: {problem}" if problem else f"{binary} {version}, answers like opencode.ai's")
 
 
 def check_git(cfg: Config) -> Check:
@@ -228,7 +229,7 @@ async def run_doctor(cfg: Config, *, config_path: Path | None = None, include_ti
     checks += [await check_mcp(cfg, config_path), check_index(cfg), check_residents(cfg), check_backup()]
     if include_timer:
         checks.append(check_upkeep())
-    checks.append(check_opencode(cfg))
+    checks.append(await asyncio.to_thread(check_opencode, cfg))
     checks.append(check_git(cfg))
     checks += check_config(cfg)
     return checks

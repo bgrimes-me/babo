@@ -258,6 +258,14 @@ def freeze_session(town: Town, config: Config, resident: str, session_id: str, *
         else f"{resident}'s session “{session.title}” is frozen; its review didn't go through, so upkeep will do it."
 
 
+def remove_session(town: Town, resident: str, session_id: str) -> str:
+    from babo.baton import opencode
+
+    session = opencode.get_session(town, resident, session_id)
+    opencode.remove_session(town, session)
+    return f"Removed {resident}'s session “{session.title}”."
+
+
 def _child(folder: Any, name: str) -> Any:
     """A file directly inside ``folder``; anything that would leave it is refused."""
     if not name or "/" in name or "\\" in name or name.startswith("."):
