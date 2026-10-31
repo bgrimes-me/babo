@@ -20,6 +20,10 @@ const review = {
     digest: "f00dfeed", access_labels: { web_fetch: "Read web pages" }, profile: { web_fetch: "deny" },
     wider: ["Read web pages: deny → allow", "Commands: sudo pacman -S --noconfirm nano"],
   }],
+  recent: [{
+    id: "2026-10-30-archivist-def456", resident: "archivist", task: "Install htop.", status: "done", decided: "",
+    decided_by: "allow-all", commands: ["sudo pacman -S --noconfirm htop"], access: {}, result: "Installed htop 3.3.",
+  }],
   tools: [],
   proposals: [{ id: "2026-10-29-name-the-town.md", title: "Name the town", author: "mayor", project: "", town_name: "Lantern Hill", review: "", body: "# Name the town" }],
   founding: [],
@@ -151,5 +155,12 @@ describe("town page", () => {
     fireEvent.click(within(card).getByRole("button", { name: "Approve and run" }));
     await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.decide",
       { kind: "session", id: "2026-10-31-archivist-abc123", yes: true, reason: "go ahead", digest: "f00dfeed" }, 150_000));
+  });
+
+  it("lists what ran recently, and says when allow-all approved it", async () => {
+    render(<TownPage onBackToChat={() => {}} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Review (2)" }));
+    expect(await screen.findByText(/approved automatically \(allow all\)/)).toBeVisible();
+    expect(screen.getByText("Installed htop 3.3.")).toBeVisible();
   });
 });

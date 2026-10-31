@@ -156,3 +156,17 @@ async def test_a_session_request_is_approved_from_the_web_only_for_what_was_show
                                                               "digest": shown["digest"]})
     assert status == 200 and "approved" in result["message"]
     assert requests.load(town, shown["id"]).status == "approved"
+
+
+async def test_allow_all_from_the_web_matches_babo_allow_all(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from babo.baton import allow_all
+
+    routes = _routes(town, index_path, monkeypatch)
+    status, body = await _call(routes, "/api/town/allow-all/update", {"key": "websocket:abc", "on": True, "hours": 1})
+    assert status == 200 and "websocket:abc" in body["active"] and allow_all.is_on(town, "websocket:abc")
+    status, body = await _call(routes, "/api/town/allow-all")
+    assert status == 200 and body["active"]["websocket:abc"]["until"]
+    status, text = await _call(routes, "/api/town/allow-all/update", {"key": "websocket:abc", "on": True, "hours": "lots"})
+    assert status == 400
+    status, body = await _call(routes, "/api/town/allow-all/update", {"key": "websocket:abc", "on": False})
+    assert status == 200 and body["active"] == {}

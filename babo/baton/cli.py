@@ -760,3 +760,46 @@ def session_checkpoint(resident: str = typer.Argument(...), session_id: str = ty
         console.print(opencode.checkpoint(t, cfg, opencode.get_session(t, resident, session_id), trigger=trigger, config_path=_config_path()))
     except BatonError as exc:
         _fail(exc)
+
+
+@app.command("allow-all")
+def allow_all_command(
+    session: str | None = typer.Argument(None, help="The Mayor's chat, e.g. websocket:<id> or discord:<channel> (see the list)"),
+    hours: float | None = typer.Option(None, "--for", help="Hours it stays on (default: until you turn it off)"),
+    off: bool = typer.Option(False, "--off", help="Turn it off for that chat"),
+    yes: bool = typer.Option(False, "--yes", help="Skip the confirmation"),
+    config: str | None = _CONFIG_OPT,
+):
+    """Let one of the Mayor's chats run session requests without your review (or turn that off)."""
+    from babo.baton import allow_all, views
+
+    t, _ = _town(config)
+    try:
+        if session is None:
+            grants = allow_all.active(t)
+            console.print("[bold]Allow all is on for:[/bold] " + (", ".join(
+                f"{k} ({'until ' + v['until'][:16].replace('T', ' ') if v.get('until') else 'until you turn it off'})"
+                for k, v in grants.items()) or "no chat"))
+            table = Table("the Mayor's recent chats", "last active")
+            for chat in views.mayor_chats(t):
+                table.add_row(chat["key"], chat["last_active"][:16].replace("T", " "))
+            console.print(table)
+            console.print("Turn it on with: babo allow-all <chat> [--for HOURS]   off with: babo allow-all <chat> --off")
+            return
+        if off:
+            console.print(allow_all.turn_off(t, session))
+            return
+        console.print(ALLOW_ALL_WARNING)
+        if not yes and not typer.confirm(f"Turn allow-all on for {session}?", default=False):
+            console.print("Nothing changed.")
+            return
+        console.print(allow_all.turn_on(t, session, hours=hours))
+    except BatonError as exc:
+        _fail(exc)
+
+
+ALLOW_ALL_WARNING = """[bold yellow]Allow all: the Mayor's session requests from this chat run without your review.[/bold yellow]
+- He can ask any resident to run anything, with any access: commands run as your user, on this machine.
+- Anyone who can talk to him in this chat, and anything he reads (web pages, messages), can lead to commands running.
+- Each request still runs in a resident's opencode session, and is recorded (Town › Review › Recently run).
+- Turn it off when you're done: babo allow-all <chat> --off"""

@@ -310,6 +310,19 @@ function ReviewView({ token, transport, onChanged, onError }: {
         </p>}
       </DecisionCard>)}
     </ReviewSection>}
+    {review.recent.length > 0 && <ReviewSection title={t("town.review.recent", { defaultValue: "Recently run" })}>
+      {review.recent.map((r) => <div key={r.id} className="settings-list-row py-3">
+        <p className="text-[13px]"><span className="font-medium">{r.resident}</span>: {r.task}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {r.status} · {r.decided_by === "allow-all"
+            ? t("town.byAllowAll", { defaultValue: "approved automatically (allow all)" })
+            : r.status === "declined" ? t("town.declinedByYou", { defaultValue: "declined by you" }) : t("town.byYou", { defaultValue: "approved by you" })}
+          {r.decided ? ` · ${when(r.decided)}` : ""}
+          {r.commands.length ? ` · ${r.commands.join("; ")}` : ""}
+        </p>
+        {r.result && <p className="mt-1 whitespace-pre-wrap text-xs">{r.result}</p>}
+      </div>)}
+    </ReviewSection>}
     {review.tools.length > 0 && <ReviewSection title={t("town.review.tools", { defaultValue: "Proposed tools" })}>
       {review.tools.map((tool) => <DecisionCard key={tool.id} kind="tool" id={tool.id} onDecide={decide}
         heading={`${tool.name} — ${tool.author}`} yes={t("town.approve", { defaultValue: "Approve" })} no={t("town.reject", { defaultValue: "Reject" })}

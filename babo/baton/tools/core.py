@@ -421,10 +421,14 @@ class Toolbox:
 
     def request_session(self, resident: str, task: str, reason: str, access: dict[str, object] | None = None,
                         commands: list[str] | None = None) -> str:
+        from babo.agent.tools.context import current_request_session_key
         from babo.baton import requests
 
         request = requests.create(self.town, requested_by=self.resident_id, resident=resident, task=task, reason=reason,
-                                  access=access, commands=commands)
+                                  access=access, commands=commands, session_key=current_request_session_key())
+        if request.status == "approved":
+            return (f"Request {request.id} was approved automatically (Squid turned allow-all on for this chat). "
+                    "It starts within a minute; you'll get a letter with the result.")
         return (f"Request {request.id} is waiting for Squid's approval. Nothing runs until he approves it; "
                 "you'll get a letter with the result, or with his reason if he declines.")
 

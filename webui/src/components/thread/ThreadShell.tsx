@@ -28,6 +28,7 @@ import {
   toModelBadgeInfo,
 } from "@/components/thread/model-preset";
 import { ThreadHeader } from "@/components/thread/ThreadHeader";
+import { AllowAllControl } from "@/components/town/AllowAllControl";
 import { ThreadLoadingSkeleton } from "@/components/thread/ThreadLoadingSkeleton";
 import { StreamErrorNotice } from "@/components/thread/StreamErrorNotice";
 import { ThreadViewport, type ThreadViewportHandle } from "@/components/thread/ThreadViewport";
@@ -1453,7 +1454,8 @@ export function ThreadShell({
       hideSidebarToggle={hideSidebarToggle}
       hideThemeButton={hideThemeButton}
       hideTitle={hideHeaderTitle}
-      actions={headerActions}
+      actions={session ? <>{/* The Mayor's chat: let his session requests run without review, if Squid chooses. */}
+        <AllowAllControl sessionKey={session.key} />{headerActions}</> : headerActions}
       minimal={!session && !loading}
       promptNavigatorAction={promptNavigatorAction}
       sessionInfoAction={sessionInfoAction}
