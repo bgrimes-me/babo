@@ -11,7 +11,7 @@
 // model) so the cached start of the prompt never changes.
 
 import { spawn } from "node:child_process"
-import { appendFileSync, mkdirSync } from "node:fs"
+import { appendFileSync, mkdirSync, realpathSync } from "node:fs"
 import { dirname } from "node:path"
 
 const env = process.env
@@ -75,6 +75,29 @@ export default {
         await new Promise((resolve) => setTimeout(resolve, 100))
       }
     }
+
+    // The resident works in its own folder. A session opened somewhere else (say, opencode's web
+    // page opening the whole town) would see paths from there, and the edit fence matches paths
+    // relative to where a session works; so such a session may read, but never change anything.
+    const real = (path) => { try { return realpathSync(path) } catch { return path } }
+    const HOME = env.BABO_HOME ? real(env.BABO_HOME) : ""
+    const where = new Map()
+    const homeOf = async (sessionID) => {
+      if (!where.has(sessionID)) {
+        const session = await within(ctx.session.get({ sessionID }), 5_000)
+        const directory = session?.data?.location?.directory ?? session?.location?.directory
+        where.set(sessionID, directory ? real(directory) : null)
+      }
+      return where.get(sessionID)
+    }
+    await ctx.permission.hook("evaluate", async (event) => {
+      if (!HOME || ["read", "glob", "grep"].includes(event.action)) return
+      const directory = await homeOf(event.sessionID).catch(() => null)
+      if (directory !== HOME) {
+        event.effect = "deny"
+        event.message = `This resident changes things only in sessions that work in its own folder (${HOME}). Start one from Babo: the Sessions tab, or babo session new.`
+      }
+    })
 
     await ctx.session.hook("prompt", async () => {
       spool({ kind: "turn_start" })

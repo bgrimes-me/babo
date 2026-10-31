@@ -482,3 +482,28 @@ def test_a_message_gets_through_even_when_the_town_tools_never_arrive(town: Town
         assert "Hello?" in _texts(mock_llama.requests[-1])
     finally:
         opencode.freeze(town, session)
+
+
+@live
+def test_a_session_working_from_the_town_root_changes_nothing(town: Town, config_file, mock_llama: MockLlama) -> None:
+    """opencode's web page opens the whole town; a session made there must not get round the fence."""
+    path, cfg = config_file()
+    views.update_profile(town, cfg.baton, "archivist", {"files": "allow", "shell": "allow"}, [])
+    charter = (town.root / "CHARTER.md").read_text()
+    theirs = town.resident_dir("inspector") / "notes.md"
+    mock_llama.script = [tool_call("write", {"path": "CHARTER.md", "content": "Taken over."}),
+                         tool_call("write", {"path": "residents/inspector/notes.md", "content": "Taken over."}),
+                         tool_call("write", {"path": "anything.md", "content": "Taken over."}),
+                         tool_call("shell", {"command": "touch from-root.txt"}), text("Done.")]
+    session = opencode.new_session(town, cfg, "archivist", title="home")
+    try:
+        run = opencode.start(town, cfg, session, config_path=path)
+        with opencode._client(run, 30) as client:  # pyright: ignore[reportPrivateUsage]
+            made = client.post("/api/session", json={"title": "from the root", "agent": "resident",
+                                                     "location": {"directory": str(town.root)}}).json()["data"]["id"]
+            client.post(f"/api/session/{made}/prompt", json={"text": "Change the town."}).raise_for_status()
+        _wait(lambda: len(mock_llama.requests) >= 5, 60)
+    finally:
+        opencode.freeze(town, session)
+    assert (town.root / "CHARTER.md").read_text() == charter and not theirs.exists()
+    assert not (town.root / "anything.md").exists() and not (town.root / "from-root.txt").exists()
