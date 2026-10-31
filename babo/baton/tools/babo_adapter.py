@@ -66,7 +66,7 @@ def baton_tools(toolbox: Toolbox, extra_specs: dict[str, ToolSpec] | None = None
             out.append(BatonTool(spec, direct, is_async=True))
             continue
 
-        def run(_name: str = name, **kwargs: Any) -> str:
+        def run(_name: str = name, /, **kwargs: Any) -> str:
             return toolbox.call(_name, **kwargs)
 
         out.append(BatonTool(spec, run))

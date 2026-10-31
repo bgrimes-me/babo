@@ -268,7 +268,9 @@ class Toolbox:
         return self.me.office == "mayor" and not any(
             r.office == "archivist" and r.status == "active" for r in self.registry.all())
 
-    def call(self, name: str, **kwargs: object) -> str:
+    def call(self, name: str, /, **kwargs: object) -> str:
+        """Run a tool by name. ``name`` is positional-only because a tool may
+        have an argument called ``name`` (propose_tool, revise_self)."""
         if name in self.extra:
             return self.extra[name](**kwargs)
         spec = TOOL_SPECS.get(name)
