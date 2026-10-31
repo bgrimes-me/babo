@@ -312,6 +312,11 @@ def _mcp_entry(server: MCPServerConfig) -> dict[str, Any]:
     return entry
 
 
+# The town's own files and folders, as seen from its root.
+_TOWN_OWN = ("CHARTER.md", "HOUSE.md", "REGISTRY.md", ".baton-town", ".gitignore", ".git/*", "commons/*", "state/*",
+             "crew/*", "residents/*")
+
+
 def _tool_prefix(server: str) -> str:
     """How opencode names an MCP server's tools (and their permission action): ``<server>_<tool>``."""
     import re
@@ -354,6 +359,10 @@ def _permissions(town: Town, resident: str, profile: profiles.Profile, *, unatte
         # Edits are matched by their path relative to the resident's own folder,
         # where it works: anything that leaves it (``../``) is another resident's.
         rule("edit", "*", level("files")), rule("edit", "../*", "deny"),
+        # And by name, for a session seen from the town's root (Babo's plugin refuses those too):
+        # the town's own files and every resident's folder but its own.
+        *[rule("edit", pattern, "deny") for pattern in _TOWN_OWN],
+        rule("edit", f"residents/{resident}/*", level("files")),
         rule("shell", "*", level("shell")),
         rule("webfetch", "*", level("web_fetch")),
         rule("subagent", "*", level("subagents")),
@@ -496,6 +505,7 @@ def _memory_env(town: Town, config: Config, session: Session, *, config_path: Pa
     memory = config.baton.memory
     return {
         "BABO_BIN": babo, "BABO_CONFIG": str(config_path), "BABO_RESIDENT": session.resident, "BABO_SESSION": session.id,
+        "BABO_HOME": str(town.resident_dir(session.resident)),
         "BABO_SPOOL": str(spool_path(town, session)),
         "BABO_CHECKPOINT_EVERY": str(profile.memory.checkpoint_every_tool_calls or memory.checkpoint_every_tool_calls),
         "BABO_COMMIT_GATE": str(memory.commit_gate_after_tool_calls),
