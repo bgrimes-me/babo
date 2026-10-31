@@ -207,6 +207,9 @@ class Session:
     reviewed: str = ""  # when the resident last reviewed this session into its memory
     previous: list[str] = field(default_factory=lambda: cast(list[str], []))  # earlier opencode sessions, after one filled up
     task: str = ""  # what it was started with, if anything: sent as its first message
+    opened: str = ""  # when someone last opened it from Babo
+    archived: bool = False
+    notified: str = ""  # what the owner was last told about it ("waiting", "wrapped up")
 
     @property
     def key(self) -> str:
@@ -434,10 +437,18 @@ class Running:
     port: int
     password: str
     started: str
+    door_port: int = 0  # where people reach it (the door counts who is there); 0 before doors
+    door_pid: int = 0
+
+    @property
+    def api_url(self) -> str:
+        """opencode itself, for Babo's own calls (they never count as someone being there)."""
+        return f"http://127.0.0.1:{self.port}"
 
     @property
     def url(self) -> str:
-        return f"http://127.0.0.1:{self.port}"
+        """Where a person opens it: through the door."""
+        return f"http://127.0.0.1:{self.door_port or self.port}"
 
 
 def _runtime_dir(town: Town, resident: str) -> Path:
@@ -482,7 +493,7 @@ def _free_port() -> int:
 
 
 def _client(run: Running, timeout: float) -> httpx.Client:
-    return httpx.Client(base_url=run.url, auth=("opencode", run.password), timeout=timeout)
+    return httpx.Client(base_url=run.api_url, auth=("opencode", run.password), timeout=timeout)
 
 
 def _resident_env(config: Config, resident: str, *, password: str, inline: dict[str, Any]) -> dict[str, str]:
@@ -560,6 +571,8 @@ def start(town: Town, config: Config, session: Session, *, config_path: Path) ->
             try:
                 _wait_healthy(run, proc, config.baton.opencode.start_timeout_s, log_path=Path(log.name))
                 _wait_for_mcp(run, config.baton.opencode.start_timeout_s)
+                run = _open_door(town, session, run, log)
+                atomic_write(_runtime_path(town, session), json.dumps(asdict(run)) + "\n")
             except BatonError:
                 _stop(run)
                 _runtime_path(town, session).unlink(missing_ok=True)
@@ -582,6 +595,55 @@ def start(town: Town, config: Config, session: Session, *, config_path: Path) ->
         session.last_active = now_iso()
         save_session(town, session)
         return run
+
+
+def door_status_path(town: Town, session: Session) -> Path:
+    return _runtime_dir(town, session.resident) / f"{session.id}.door.json"
+
+
+def _open_door(town: Town, session: Session, run: Running, log: Any) -> Running:
+    """Start the session's door (``babo/baton/door.py``), the way people reach it."""
+    import sys
+
+    door_port = _free_port()
+    status = door_status_path(town, session)
+    status.unlink(missing_ok=True)
+    proc = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
+        [sys.executable, "-m", "babo.baton.door", str(door_port), str(run.port), str(status), str(run.pid)],
+        stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+    )
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        if status.exists():
+            return Running(pid=run.pid, port=run.port, password=run.password, started=run.started,
+                           door_port=door_port, door_pid=proc.pid)
+        if proc.poll() is not None:
+            break
+        time.sleep(0.05)
+    proc.kill()
+    raise BatonError("The session's door didn't open (see the session's log).")
+
+
+def presence(town: Town, session: Session) -> dict[str, Any]:
+    """Who is in the session through its door: how many connections are open, and when the last one was."""
+    try:
+        data = json.loads(door_status_path(town, session).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"connections": 0, "last_seen": ""}
+    return {"connections": int(data.get("connections") or 0), "last_seen": str(data.get("last_seen") or "")}
+
+
+def pairing_link(town: Town, session: Session) -> str:
+    """A one-time link that opens the session's web page, connected, with no password to type."""
+    run = running(town, session)
+    if run is None:
+        raise BatonError("That session isn't running; resume it first.")
+    with _client(run, 10) as client:
+        code = str(cast(dict[str, Any], _json(client.post("/api/pair", json={}), "a pairing code"))["code"])
+    session = get_session(town, session.resident, session.id)
+    session.opened = now_iso()
+    save_session(town, session)
+    return f"{run.url}/auth/connect/{code}"
 
 
 def _wait_healthy(run: Running, proc: subprocess.Popen[bytes], timeout_s: int, *, log_path: Path) -> None:
@@ -643,6 +705,11 @@ def remove_session(town: Town, session: Session) -> None:
 
 def _stop(run: Running) -> None:
     """Stop the instance (its sessions are already saved), and kill it if it takes its time."""
+    if run.door_pid:
+        try:
+            os.killpg(run.door_pid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            pass
     try:
         os.killpg(run.pid, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):
@@ -884,21 +951,66 @@ def _when(value: str) -> datetime:
     return parsed if parsed.tzinfo else parsed.astimezone()
 
 
+def wrap_up_reason(town: Town, config: Config, session: Session, *, now: datetime) -> str:
+    """Why upkeep should wrap a running session up now, or "" to leave it be.
+
+    It never wraps up a session while the resident is working, or while someone has it
+    open and something has happened lately; a session waiting on the owner's answer waits."""
+    oc = config.baton.opencode
+    state = live(town, session)
+    if state["state"] in ("working", "starting", "running"):
+        return ""
+    active = _when(session.last_active)
+    if state["state"] == "waiting":
+        return "it waited a day for an answer" if now - active >= timedelta(hours=oc.wrap_up_waiting_hours) else ""
+    here = presence(town, session)
+    if here["connections"]:
+        quiet = now - active >= timedelta(minutes=oc.freeze_after_idle_minutes)
+        return "open, but nothing has happened for a long while" if quiet else ""
+    seen = max(_when(here["last_seen"]), _when(session.opened))
+    if seen == _when(""):
+        return "done with its task" if now - active >= timedelta(minutes=oc.wrap_up_after_task_minutes) else ""
+    left = max(seen, active)
+    return "done, and everyone has left" if now - left >= timedelta(minutes=oc.wrap_up_after_leaving_minutes) else ""
+
+
+def notify_waiting(town: Town) -> list[str]:
+    """Tell the owner (once) about each running session waiting on their answer."""
+    from babo.baton import notices
+
+    told: list[str] = []
+    for resident in (r.id for r in Registry(town).all() if r.status == "active" and runs_in_opencode(r.office)):
+        for session in sessions(town, resident):
+            if session.kind != "work" or running(town, session) is None:
+                continue
+            state = live(town, session)
+            if state["state"] == "waiting" and session.notified != "waiting":
+                question = cast(list[dict[str, Any]], state["questions"])[0]
+                notices.add(town, "waiting", f"{resident} is waiting for your answer in “{session.title}”: may it "
+                            f"{question.get('action')} {' · '.join(cast(list[str], question.get('resources') or []))}?",
+                            resident=resident, session=session.id)
+                session.notified = "waiting"
+                save_session(town, session)
+                told.append(f"{resident}/{session.id}")
+            elif state["state"] != "waiting" and session.notified == "waiting":
+                session.notified = ""
+                save_session(town, session)
+    return told
+
+
 def needing_review(town: Town, config: Config, *, now: datetime) -> list[tuple[Session, str]]:
-    """Work sessions upkeep should review and freeze: nobody has used them for
-    ``freeze_after_idle_minutes``, or their instance stopped without a review."""
-    idle = timedelta(minutes=config.baton.opencode.freeze_after_idle_minutes)
+    """Work sessions upkeep should review and freeze now (see ``wrap_up_reason``), and
+    sessions whose instance stopped without a review."""
     out: list[tuple[Session, str]] = []
     for resident in (r.id for r in Registry(town).all() if r.status == "active" and runs_in_opencode(r.office)):
         for session in sessions(town, resident):
             if session.kind != "work" or not session.opencode_id:
                 continue
-            reviewed = _when(session.reviewed)
-            active = _when(session.last_active)
             if running(town, session) is not None:
-                if now - active >= idle:
-                    out.append((session, "idle"))
-            elif active > reviewed and session.status == "running":
+                why = wrap_up_reason(town, config, session, now=now)
+                if why:
+                    out.append((session, why))
+            elif _when(session.last_active) > _when(session.reviewed) and session.status == "running":
                 out.append((session, "stopped without a review"))
     return out
 
@@ -1059,11 +1171,13 @@ def attach_argv(config: Config, session: Session, run: Running) -> tuple[list[st
 def describe(town: Town, session: Session) -> dict[str, Any]:
     run = running(town, session)
     return {**asdict(session), "status": "running" if run else ("frozen" if session.status != "new" else "new"),
-            "url": run.url if run else "", "password": run.password if run else "", "live": live(town, session)}
+            "url": run.url if run else "", "password": run.password if run else "", "live": live(town, session),
+            "presence": presence(town, session) if run else {"connections": 0, "last_seen": ""}}
 
 
-def overview(town: Town, resident: str) -> list[dict[str, Any]]:
-    return [describe(town, s) for s in sessions(town, resident) if s.kind == "work"]
+def overview(town: Town, resident: str, *, archived: bool = False) -> list[dict[str, Any]]:
+    """A resident's work sessions; archived ones only when asked for."""
+    return [describe(town, s) for s in sessions(town, resident) if s.kind == "work" and s.archived == archived]
 
 
 async def resident_turn(config: Config, town: Town, resident: str, message: str, *, kind: str,

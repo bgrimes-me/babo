@@ -220,7 +220,7 @@ def update_profile(town: Town, cfg: BatonConfig, agent: str, changes: dict[str, 
 
 # -- residents' sessions in opencode -----------------------------------------------
 
-def sessions_overview(town: Town, config: Config) -> dict[str, Any]:
+def sessions_overview(town: Town, config: Config, *, archived: bool = False) -> dict[str, Any]:
     from babo.baton import opencode
 
     residents = [r for r in Registry(town).all() if r.status == "active" and opencode.runs_in_opencode(r.office)]
@@ -230,7 +230,7 @@ def sessions_overview(town: Town, config: Config) -> dict[str, Any]:
         "presets": presets_overview(config),
         "opencode": opencode.opencode_bin(config) is not None,
         "residents": [{"id": r.id, "name": "" if r.name == "unchosen" else r.name, "office": r.office,
-                       "sessions": opencode.overview(town, r.id)} for r in residents],
+                       "sessions": opencode.overview(town, r.id, archived=archived)} for r in residents],
     }
 
 
@@ -321,6 +321,24 @@ def freeze_session(town: Town, config: Config, resident: str, session_id: str, *
         return f"“{session.title}” wasn't running."
     return f"{resident} reviewed “{session.title}” into its memory, and the session is frozen." if reviewed != session.reviewed \
         else f"{resident}'s session “{session.title}” is frozen; its review didn't go through, so upkeep will do it."
+
+
+def session_link(town: Town, resident: str, session_id: str) -> str:
+    from babo.baton import opencode
+
+    return opencode.pairing_link(town, opencode.get_session(town, resident, session_id))
+
+
+def archive_session(town: Town, resident: str, session_id: str, *, archived: bool = True) -> str:
+    """Move a session to the archive (or back). Only a frozen one: archiving tidies the list, it doesn't stop anything."""
+    from babo.baton import opencode
+
+    session = opencode.get_session(town, resident, session_id)
+    if archived and opencode.running(town, session) is not None:
+        raise BatonError("Freeze the session first; archiving only tidies away sessions that are done.")
+    session.archived = archived
+    opencode.save_session(town, session)
+    return f"“{session.title}” is archived." if archived else f"“{session.title}” is back in the list."
 
 
 def remove_session(town: Town, resident: str, session_id: str) -> str:

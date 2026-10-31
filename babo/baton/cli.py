@@ -10,7 +10,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from babo.baton.town import BatonError, Town
+from babo.baton.town import BatonError, Town, now_iso
 
 if TYPE_CHECKING:
     from babo.baton.requests import SessionRequest
@@ -714,8 +714,10 @@ def _overrides(values: list[str]) -> dict[str, object]:
 
 
 @session_app.command("list")
-def session_list(resident: str | None = typer.Argument(None, help="Only this resident"), config: str | None = _CONFIG_OPT):
-    """Each resident's sessions: running, frozen or new."""
+def session_list(resident: str | None = typer.Argument(None, help="Only this resident"),
+                 archived: bool = typer.Option(False, "--archived", help="The archived sessions instead"),
+                 config: str | None = _CONFIG_OPT):
+    """Each resident's sessions: what each is doing now, or frozen, or new."""
     from babo.baton import opencode
     from babo.baton.registry import Registry
 
@@ -724,7 +726,7 @@ def session_list(resident: str | None = typer.Argument(None, help="Only this res
     table = Table("resident", "session", "title", "now", "last active", "changes for this session")
     try:
         for rid in residents:
-            for s in opencode.overview(t, rid):
+            for s in opencode.overview(t, rid, archived=archived):
                 changes = ", ".join(f"{k}={v}" for k, v in s["overrides"].items()) or "-"
                 now = s["live"]["state"] + (f": {s['live']['activity']}" if s["live"]["activity"] else "")
                 table.add_row(rid, s["id"], s["title"], now, (s["last_active"] or "never")[:16].replace("T", " "), changes)
@@ -800,11 +802,40 @@ def session_open(resident: str = typer.Argument(...), session_id: str | None = t
             session = opencode.new_session(t, cfg, resident)
         run = opencode.start(t, cfg, session, config_path=_config_path())
         argv, env = opencode.attach_argv(cfg, session, run)
+        session = opencode.get_session(t, resident, session.id)
+        session.opened = now_iso()
+        opencode.save_session(t, session)
     except BatonError as exc:
         _fail(exc)
         return
     console.print(f"Opening {resident}'s session {session.id}. When you leave, it keeps running until you freeze it: babo session freeze {resident}")
     os.execvpe(argv[0], argv, env)  # noqa: S606 - opencode's own terminal interface takes over
+
+
+@session_app.command("link")
+def session_link(resident: str = typer.Argument(...), session_id: str | None = typer.Argument(None), config: str | None = _CONFIG_OPT):
+    """A one-time link that opens a running session's web page, connected (no password to type)."""
+    from babo.baton import opencode, views
+
+    t, _ = _town(config)
+    try:
+        console.print(views.session_link(t, resident, opencode.get_session(t, resident, session_id).id))
+    except BatonError as exc:
+        _fail(exc)
+
+
+@session_app.command("archive")
+def session_archive(resident: str = typer.Argument(...), session_id: str = typer.Argument(...),
+                    undo: bool = typer.Option(False, "--undo", help="Bring it back into the list"),
+                    config: str | None = _CONFIG_OPT):
+    """Tidy a frozen session away into the archive (it stays, with its memory and transcript)."""
+    from babo.baton import views
+
+    t, _ = _town(config)
+    try:
+        console.print(views.archive_session(t, resident, session_id, archived=not undo))
+    except BatonError as exc:
+        _fail(exc)
 
 
 @session_app.command("send")
@@ -874,6 +905,22 @@ def session_checkpoint(resident: str = typer.Argument(...), session_id: str = ty
         console.print(opencode.checkpoint(t, cfg, opencode.get_session(t, resident, session_id), trigger=trigger, config_path=_config_path()))
     except BatonError as exc:
         _fail(exc)
+
+
+@app.command()
+def notices(read: bool = typer.Option(False, "--read", help="Mark them all as read"), config: str | None = _CONFIG_OPT):
+    """What happened that you'd want to know: sessions wrapped up, residents waiting for your answer."""
+    from babo.baton import notices as town_notices
+
+    t, _ = _town(config)
+    items = town_notices.recent(t, unread_only=True)
+    for item in items:
+        console.print(f"- {str(item['at'])[:16].replace('T', ' ')}  {item['text']}")
+    if not items:
+        console.print("Nothing new.")
+    if read and items:
+        town_notices.mark_read(t)
+        console.print("OK: marked as read")
 
 
 @app.command("allow-all")

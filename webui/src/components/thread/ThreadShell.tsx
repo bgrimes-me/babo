@@ -30,6 +30,7 @@ import {
 import { ThreadHeader } from "@/components/thread/ThreadHeader";
 import { AllowAllControl } from "@/components/town/AllowAllControl";
 import { SessionRequestPrompt } from "@/components/town/SessionRequestPrompt";
+import { NoticesPanel } from "@/components/town/NoticesPanel";
 import { ThreadLoadingSkeleton } from "@/components/thread/ThreadLoadingSkeleton";
 import { StreamErrorNotice } from "@/components/thread/StreamErrorNotice";
 import { ThreadViewport, type ThreadViewportHandle } from "@/components/thread/ThreadViewport";
@@ -1305,6 +1306,7 @@ export function ThreadShell({
         <p role="alert" className="px-3 text-sm text-destructive">{restoredFirstDraft.error}</p>
       ) : null}
       {session ? <SessionRequestPrompt sessionKey={session.key} /> : null}
+      {session ? <NoticesPanel /> : null}
       <SubagentTaskDock inputKey={latestSubagentInputKey(displayMessages)} />
       {session ? (
         <ThreadComposer

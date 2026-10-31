@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -507,3 +508,30 @@ def test_a_session_working_from_the_town_root_changes_nothing(town: Town, config
         opencode.freeze(town, session)
     assert (town.root / "CHARTER.md").read_text() == charter and not theirs.exists()
     assert not (town.root / "anything.md").exists() and not (town.root / "from-root.txt").exists()
+
+
+@live
+def test_a_session_opens_without_a_password_and_babo_knows_who_is_there(town: Town, config_file, mock_llama: MockLlama) -> None:
+    import socket
+
+    import httpx
+
+    path, cfg = config_file()
+    session = opencode.new_session(town, cfg, "archivist", title="door")
+    try:
+        run = opencode.start(town, cfg, session, config_path=path)
+        assert run.door_port and run.url != run.api_url
+        link = views.session_link(town, "archivist", session.id)
+        assert link.startswith(f"{run.url}/auth/connect/")
+        # The pairing link connects, through the door, with no password.
+        assert "token" in httpx.get(link, timeout=10).json()
+        assert opencode.presence(town, session)["connections"] == 0  # that request is over
+        watcher = socket.create_connection(("127.0.0.1", run.door_port))
+        _wait(lambda: opencode.presence(town, session)["connections"] == 1, 10)
+        assert opencode.wrap_up_reason(town, cfg, opencode.get_session(town, "archivist", session.id),
+                                       now=datetime.now().astimezone() + timedelta(minutes=30)) == ""
+        watcher.close()
+        _wait(lambda: opencode.presence(town, session)["connections"] == 0, 10)
+    finally:
+        opencode.freeze(town, session)
+    _wait(lambda: not opencode._alive(run.door_pid), 10)  # pyright: ignore[reportPrivateUsage]

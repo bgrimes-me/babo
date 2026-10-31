@@ -34,6 +34,10 @@ TOWN_MUTATION_PATHS = {
     "town.session.checkpoint": "/api/town/sessions/checkpoint",
     "town.session.model": "/api/town/sessions/model",
     "town.session.answer": "/api/town/sessions/answer",
+    "town.session.link": "/api/town/sessions/link",
+    "town.session.archive": "/api/town/sessions/archive",
+    "town.session.unarchive": "/api/town/sessions/unarchive",
+    "town.notices.read": "/api/town/notices/read",
     "town.allow_all": "/api/town/allow-all/update",
 }
 _DECISION_KINDS = ("tool", "proposal", "founding", "flag", "session")
@@ -110,12 +114,12 @@ def _pending_requests() -> dict[str, Any]:
     return {"pending": [session_requests.describe(town, cfg, r) for r in session_requests.pending(town)]}
 
 
-def _sessions() -> dict[str, Any]:
+def _sessions(archived: bool = False) -> dict[str, Any]:
     from babo.baton import views
     from babo.config.loader import load_config
 
     cfg = load_config()
-    return views.sessions_overview(Town.open(cfg.baton.town_path), cfg)
+    return views.sessions_overview(Town.open(cfg.baton.town_path), cfg, archived=archived)
 
 
 def _session_change(action: str, payload: dict[str, Any]) -> str:
@@ -144,6 +148,8 @@ def _session_change(action: str, payload: dict[str, Any]) -> str:
     if action == "model":
         preset = payload.get("preset") if isinstance(payload.get("preset"), str) else ""
         return views.set_session_model(town, cfg, resident, session_id, cast(str, preset), config_path=config_path)
+    if action == "archive" or action == "unarchive":
+        return views.archive_session(town, resident, session_id, archived=action == "archive")
     if action == "answer":
         return views.answer_session_question(town, resident, session_id, _text(payload, "request", 120), _text(payload, "decision", 10))
     if action == "resume":
@@ -201,7 +207,14 @@ class TownRoutes:
 
             return http_json_response(await asyncio.to_thread(lambda: allow_all.status(_town())))
         if got == "/api/town/sessions":
-            return http_json_response(await asyncio.to_thread(_sessions))
+            from babo.webui.http_utils import parse_query
+
+            archived = parse_query(request.path).get("archived", [""])[0] in ("1", "true")
+            return http_json_response(await asyncio.to_thread(lambda: _sessions(archived)))
+        if got == "/api/town/notices":
+            from babo.baton import notices
+
+            return http_json_response({"notices": await asyncio.to_thread(lambda: notices.recent(_town(), unread_only=True))})
         if got == "/api/town/profiles":
             return http_json_response(await asyncio.to_thread(_profiles))
         if not self.is_mutation_path(got):
@@ -243,6 +256,19 @@ class TownRoutes:
             message = await asyncio.to_thread(lambda: allow_all.turn_on(_town(), key, hours=float(hours) if hours is not None else None)
                                               if on else allow_all.turn_off(_town(), key))
             return http_json_response({"message": message, **await asyncio.to_thread(lambda: allow_all.status(_town()))})
+        elif got == "/api/town/sessions/link":
+            from babo.baton import views as town_views
+
+            resident, session_id = _text(payload, "resident", 80), _text(payload, "id", 80)
+            link = await asyncio.to_thread(lambda: town_views.session_link(_town(), resident, session_id))
+            return http_json_response({"link": link})
+        elif got == "/api/town/notices/read":
+            from babo.baton import notices
+
+            ids = payload.get("ids")
+            chosen = [str(i) for i in cast(list[object], ids)] if isinstance(ids, list) else None
+            changed = await asyncio.to_thread(lambda: notices.mark_read(_town(), chosen))
+            return http_json_response({"read": changed, "notices": await asyncio.to_thread(lambda: notices.recent(_town(), unread_only=True))})
         elif got.startswith("/api/town/sessions/"):
             message = await asyncio.to_thread(lambda: _session_change(got.rsplit("/", 1)[-1], payload))
             return http_json_response({"message": message, **await asyncio.to_thread(_sessions)})

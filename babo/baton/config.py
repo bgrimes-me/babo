@@ -99,8 +99,16 @@ class BatonOpencodeConfig(Base):
     # The model's context window in tokens, as opencode should assume it; 0 uses Babo's model setting.
     context_tokens: int = Field(default=0, ge=0)
     start_timeout_s: int = Field(default=60, ge=5)
-    # A session nobody has used for this long is reviewed and frozen by upkeep.
-    freeze_after_idle_minutes: int = Field(default=60, ge=5)
+    # When upkeep wraps a session up (the resident reviews it into its memory, it is frozen, and
+    # the owner is told). Who is there is known from the session's door (babo/baton/door.py).
+    # Done with its task, and nobody has opened it:
+    wrap_up_after_task_minutes: int = Field(default=2, ge=1)
+    # Done, and whoever had it open has left:
+    wrap_up_after_leaving_minutes: int = Field(default=15, ge=1)
+    # Open in someone's browser or terminal, but nothing has happened for this long (a forgotten tab):
+    freeze_after_idle_minutes: int = Field(default=120, ge=5)
+    # Waiting for the owner to answer a question:
+    wrap_up_waiting_hours: int = Field(default=24, ge=1)
     # Where opencode keeps each resident's sessions (outside the town repo).
     data_dir: str = "~/.local/share/babo/opencode"
 
