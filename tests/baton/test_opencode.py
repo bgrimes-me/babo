@@ -444,3 +444,41 @@ def test_a_session_started_with_a_task_gets_going_and_can_be_steered(town: Town,
     finally:
         mock_llama.delay_s = 0
         opencode.freeze(town, opencode.get_session(town, "archivist", session.id))
+
+
+_STUCK_MCP = '''#!/usr/bin/env python3
+"""A `babo` whose MCP server connects but never lists its tools."""
+import json, sys
+
+for line in sys.stdin:
+    message = json.loads(line)
+    if message.get("method") == "initialize":
+        reply = {"jsonrpc": "2.0", "id": message["id"], "result": {
+            "protocolVersion": message["params"].get("protocolVersion", "2024-11-05"),
+            "capabilities": {"tools": {}}, "serverInfo": {"name": "stuck", "version": "0"}}}
+        sys.stdout.write(json.dumps(reply) + "\\n")
+        sys.stdout.flush()
+'''
+
+
+@live
+def test_a_message_gets_through_even_when_the_town_tools_never_arrive(town: Town, config_file, mock_llama: MockLlama,
+                                                                     tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import time
+
+    stuck = tmp_path / "babo"
+    stuck.write_text(_STUCK_MCP)
+    stuck.chmod(0o755)
+    monkeypatch.setattr(opencode, "babo_command", lambda _config: str(stuck))
+    path, cfg = config_file()
+    mock_llama.default = text("Got it.")
+    session = opencode.new_session(town, cfg, "archivist", title="stuck tools")
+    try:
+        opencode.start(town, cfg, session, config_path=path)
+        began = time.monotonic()
+        views.send_to_session(town, cfg, "archivist", session.id, "Hello?", config_path=path)
+        assert time.monotonic() - began < 20  # never held up for long by tools that aren't coming
+        _wait(lambda: opencode.live(town, session)["state"] == "idle" and bool(mock_llama.requests), 40)
+        assert "Hello?" in _texts(mock_llama.requests[-1])
+    finally:
+        opencode.freeze(town, session)
