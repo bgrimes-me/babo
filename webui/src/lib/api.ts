@@ -1556,7 +1556,7 @@ export interface TownOverview {
   root: string;
   residents: TownResident[];
   board: { kind: string; author: string; created: string; text: string }[];
-  pending: { tools: number; proposals: number; founding: number; flags: number };
+  pending: { tools: number; proposals: number; founding: number; flags: number; sessions: number };
   last_upkeep: { pass: string; finished: boolean; steps: string[]; log: string } | null;
   upkeep: TownUpkeep;
 }
@@ -1577,9 +1577,28 @@ export function requestTownUpkeep(transport: WebUIMutationTransport): Promise<To
   return mutation<TownChange>(transport, "town.upkeep", {});
 }
 
-export type TownDecisionKind = "tool" | "proposal" | "founding" | "flag";
+export type TownDecisionKind = "tool" | "proposal" | "founding" | "flag" | "session";
+
+/** A session the Mayor asked for: shown word for word; approving runs it with exactly this access. */
+export interface TownSessionRequest {
+  id: string;
+  resident: string;
+  task: string;
+  reason: string;
+  access: Record<string, "allow" | "deny">;
+  commands: string[];
+  requested_by: string;
+  created: string;
+  /** Fingerprint of what is shown; the approval counts only for this. */
+  digest: string;
+  access_labels: Record<string, string>;
+  profile: Record<string, string>;
+  /** What it adds beyond the resident's profile, in words. */
+  wider: string[];
+}
 
 export interface TownReview {
+  sessions: TownSessionRequest[];
   tools: {
     id: string; name: string; author: string; description: string;
     tested: boolean | null; isolation: string; review: string; code: string; test: string;
@@ -1620,8 +1639,9 @@ export function decideTownItem(
   id: string,
   yes: boolean,
   reason: string,
+  digest?: string,
 ): Promise<TownChange> {
-  return mutation<TownChange>(transport, "town.decide", { kind, id, yes, reason }, PACKAGE_MUTATION_TIMEOUT_MS);
+  return mutation<TownChange>(transport, "town.decide", { kind, id, yes, reason, ...(digest ? { digest } : {}) }, PACKAGE_MUTATION_TIMEOUT_MS);
 }
 
 export function leaveTownNote(transport: WebUIMutationTransport, resident: string, text: string): Promise<TownChange> {

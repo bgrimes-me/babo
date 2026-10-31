@@ -227,11 +227,24 @@ def _heartbeat(town: Town, plan: Due, *, running: bool) -> None:
 
 async def watch(config: Config) -> None:
     """The upkeep service: check every minute, run a pass when one is due."""
+    from babo.baton import requests
+    from babo.config.loader import get_config_path
+
     cfg = config.baton
     town = Town.open(cfg.town_path)
     logger.info("Babo upkeep: watching {} (quiet hours {})", town.root, cfg.upkeep.quiet_hours)
+    for interrupted in requests.recover_interrupted(town):
+        logger.warning("Babo upkeep: session request {} was interrupted by a restart", interrupted)
+    request_job: asyncio.Future[Any] | None = None
     while True:
         try:
+            # Requests Squid approved run one at a time, beside upkeep, not instead of it.
+            if request_job is None or request_job.done():
+                approved = requests.next_approved(town)
+                if approved is not None:
+                    logger.info("Babo upkeep: running session request {} ({})", approved.id, approved.resident)
+                    request_job = asyncio.ensure_future(asyncio.to_thread(
+                        requests.run, town, config, approved, config_path=get_config_path().resolve()))
             catch_up = catch_up_requested(town)
             plan = due(town, cfg, now=datetime.now().astimezone(), model_idle_s=await model_idle_seconds(cfg), catch_up=catch_up,
                        config=config)

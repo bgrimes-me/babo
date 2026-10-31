@@ -140,6 +140,30 @@ TOOL_SPECS: dict[str, ToolSpec] = {
             offices=("mayor",),
         ),
         ToolSpec(
+            "request_session",
+            "Ask Squid to run a task in another resident's session, with the access it needs (for example to install a package or run a build). "
+            "Nothing happens until Squid approves; you get a letter with the result. Ask for the least access that will do: "
+            "prefer exact commands over turning the shell on. Commands run without a terminal, so give flags like --noconfirm or -y; "
+            "sudo works only if the machine allows it without a password.",
+            {
+                "type": "object",
+                "properties": {
+                    "resident": _str("Which resident does it (not yourself)."),
+                    "task": _str("What the session should do, plainly and completely."),
+                    "reason": _str("Why it's needed. Squid reads this before deciding."),
+                    "access": {
+                        "type": "object",
+                        "description": "Access beyond the resident's profile, each allow or deny: files, shell, subagents, web_fetch, web_search, image_generation.",
+                        "properties": {k: {"type": "string", "enum": ["allow", "deny"]}
+                                       for k in ("files", "shell", "subagents", "web_fetch", "web_search", "image_generation")},
+                    },
+                    "commands": _list("Exact shell commands the session may run, each written exactly as it will be run."),
+                },
+                "required": ["resident", "task", "reason"],
+            },
+            offices=("mayor",),
+        ),
+        ToolSpec(
             "commons_write",
             "Write or update a commons knowledge note. Add aliases and keywords so others find it.",
             {
@@ -394,6 +418,15 @@ class Toolbox:
         if kind == "founding_request":
             return f"Founding request posted ({self.scope.display(path)}). Squid decides in the weekly review."
         return f"Posted to the board: {self.scope.display(path)}."
+
+    def request_session(self, resident: str, task: str, reason: str, access: dict[str, object] | None = None,
+                        commands: list[str] | None = None) -> str:
+        from babo.baton import requests
+
+        request = requests.create(self.town, requested_by=self.resident_id, resident=resident, task=task, reason=reason,
+                                  access=access, commands=commands)
+        return (f"Request {request.id} is waiting for Squid's approval. Nothing runs until he approves it; "
+                "you'll get a letter with the result, or with his reason if he declines.")
 
     # -- archivist -------------------------------------------------------
     def _commons_path(self, ref: str) -> Path:

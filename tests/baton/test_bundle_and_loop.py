@@ -85,7 +85,8 @@ def test_resident_loop_uses_baton_context_and_pruned_tools(make_loop, town: Town
     assert {"search_memory", "read_note", "remember", "revise_self", "send_letter", "post_board"} <= names
     assert "commons_write" not in names and "web_search" not in names and "cron" not in names
     assert "subagent" in names  # the Mayor spawns crew
-    assert len(names) <= 14
+    assert "request_session" in names  # how the Mayor gets things done on the box
+    assert len(names) <= 15
     prompt = loop.context.build_system_prompt(channel="cli")
     assert "# Self" in prompt and "Role: Mayor" in prompt
     for upstream_only in ("SOUL.md", "USER.md", "MEMORY.md", "Dream"):

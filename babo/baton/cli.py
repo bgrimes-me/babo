@@ -370,16 +370,39 @@ def _reason() -> str:
 
 @app.command()
 def review(config: str | None = _CONFIG_OPT):
-    """The weekly check-in: tools, proposals, founding requests, old flags. Plain questions, one at a time."""
+    """The weekly check-in: session requests, tools, proposals, founding requests, old flags. Plain questions, one at a time."""
     from babo.baton import gitops, growth, views
+    from babo.baton import requests as session_requests
 
     try:
-        t, _ = _town(config)
+        t, cfg = _town(config)
     except BatonError as exc:
         _fail(exc)
         return
     decided = 0
     console.print("[bold]Weekly review[/bold]. Press Enter to skip anything; nothing changes unless you decide.\n")
+
+    asked = session_requests.pending(t)
+    console.print(f"[bold]Session requests[/bold] ({len(asked)})")
+    for request in asked:
+        shown = session_requests.describe(t, cfg, request)
+        console.print(f"\n• {request.requested_by} asks for a session of [bold]{request.resident}[/bold] ({request.id})")
+        console.print(f"  Task: {request.task}")
+        console.print(f"  Why: {request.reason}")
+        console.print("  Access: " + (", ".join(f"{shown['access_labels'][k]} {v}" for k, v in request.access.items()) or "as in the profile"))
+        for command in request.commands:
+            console.print(f"  May run exactly: {command}")
+        if shown["wider"]:
+            console.print("  [yellow]Beyond its profile:[/yellow] " + "; ".join(shown["wider"]))
+        console.print("  It runs with nobody at a terminal; anything not allowed is denied.")
+        choice = _ask_decision("Approve and run it?", "approve", "decline")
+        if choice == "skip":
+            continue
+        try:
+            console.print(views.decide(t, "session", request.id, yes=choice == "yes", reason=_reason(), digest=shown["digest"]))
+            decided += 1
+        except BatonError as exc:
+            console.print(f"[yellow]{exc}[/yellow]")
 
     tools = growth.pending_tools(t)
     console.print(f"[bold]1. Proposed tools[/bold] ({len(tools)})")

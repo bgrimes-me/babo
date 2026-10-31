@@ -92,6 +92,7 @@ class Session:
     created: str = ""
     last_active: str = ""
     by: str = "squid"
+    commands: list[str] = field(default_factory=lambda: cast(list[str], []))  # exact shell commands allowed, from an approved request
     reviewed: str = ""  # when the resident last reviewed this session into its memory
     previous: list[str] = field(default_factory=lambda: cast(list[str], []))  # earlier opencode sessions, after one filled up
 
@@ -141,7 +142,7 @@ def get_session(town: Town, resident: str, session_id: str | None = None) -> Ses
 
 def new_session(
     town: Town, config: Config, resident: str, *, title: str = "", overrides: dict[str, object] | None = None,
-    by: str = "squid", kind: str = "work",
+    by: str = "squid", kind: str = "work", commands: list[str] | None = None,
 ) -> Session:
     """Record a new session. Squid may change anything for it; the Mayor may
     only narrow it, because a resident's profile is Squid's to widen."""
@@ -152,7 +153,7 @@ def new_session(
     stamp = now_iso()
     session_id = stamp[:16].replace(":", "").replace("T", "-") + "-" + secrets.token_hex(2)
     session = Session(resident=resident, id=session_id, title=title.strip() or f"{resident}: {stamp[:16].replace('T', ' ')}",
-                      kind=kind, overrides=dict(overrides or {}), created=stamp, by=by)
+                      kind=kind, overrides=dict(overrides or {}), created=stamp, by=by, commands=list(commands or []))
     save_session(town, session)
     return session
 
@@ -188,9 +189,20 @@ def _mcp_entry(server: MCPServerConfig) -> dict[str, Any]:
     return entry
 
 
-def _permission(town: Town, resident: str, profile: profiles.Profile) -> dict[str, Any]:
+def _permission(town: Town, resident: str, profile: profiles.Profile, *, unattended: bool = False,
+                commands: list[str] | None = None) -> dict[str, Any]:
+    """opencode's permission rules for a session. ``unattended``: nobody is at a
+    terminal (an approved request), so whatever would ask is denied instead.
+    ``commands``: exact shell commands allowed even where the shell is not."""
     town.resident_dir(resident)  # validates the id
-    level = profile.level
+
+    def level(capability: str) -> str:
+        value = profile.level(capability)
+        return "deny" if unattended and value == "ask" else value
+
+    shell: str | dict[str, str] = level("shell")
+    if commands and shell != "allow":
+        shell = {"*": "deny", **dict.fromkeys(commands, "allow")}  # the last matching rule wins: exact commands
     return {
         "read": "allow",
         # Nothing outside the town (inside it, reading is allowed and editing is ruled below).
@@ -198,7 +210,7 @@ def _permission(town: Town, resident: str, profile: profiles.Profile) -> dict[st
         # The town is one git repository, so opencode treats the whole town as the
         # project and matches edits by their path inside it: only its own folder.
         "edit": {"*": "deny", f"residents/{resident}/*": level("files")},
-        "bash": level("shell"),
+        "bash": shell,
         "webfetch": level("web_fetch"),
         "websearch": "deny",  # web search comes from Babo, with Babo's key, when the profile allows
         "task": level("subagents"),
@@ -243,7 +255,8 @@ def opencode_config(town: Town, config: Config, session: Session, *, bundle: Pat
         "default_agent": AGENT,
         "agent": {AGENT: {"mode": "primary", "description": f"The resident {session.resident}", "prompt": prompt}},
         "instructions": [str(bundle)],
-        "permission": _permission(town, session.resident, profile),
+        "permission": _permission(town, session.resident, profile, unattended=session.kind.startswith("request:"),
+                                  commands=session.commands),
         "mcp": mcp,
         "autoupdate": False,
         "share": "disabled",

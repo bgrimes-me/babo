@@ -49,6 +49,17 @@ The Mayor runs in Babo itself. Every other resident runs as its own opencode ins
 
 When the Mayor visits a resident, or upkeep asks the Archivist to curate, that happens in a session of its own in opencode too. If opencode isn't installed, sessions can't start; visits and upkeep then run in Babo itself, and `babo doctor` says so.
 
+## When the Mayor needs something done on the machine
+
+The Mayor talks to the outside world (the web interface, chat apps, web pages), so he doesn't get a shell that reaches the whole machine. When something needs doing (install a package, run a build, look at a log), he **asks for a session**: one resident, one task, the access it needs and his reason. Asking does nothing by itself.
+
+The request comes to your **Review** (the Town page, or `babo review`), word for word: the task, the reason, each kind of access, the exact shell commands, and what it adds beyond the resident's profile. **Approve and run** and the upkeep service starts that resident's session in opencode with exactly that access, sends the task, has the resident review the session into its memory, and writes the Mayor a letter with the result. **Decline** and he gets your reason.
+
+- **Exact commands are the safe way to allow the shell.** Approve `sudo pacman -S --noconfirm nano` and that command runs, written exactly like that, and nothing else does.
+- **Nobody is at a terminal while it runs**, so anything not allowed is denied rather than asked. `sudo` works only if your machine allows that command without a password; Babo never holds your password.
+- **Your approval is for what you saw.** If the request changes after you opened it, the approval is refused; if its file changes after you approved it, it doesn't run.
+- Requests run one at a time, starting within a minute of your approval, and need the upkeep service running. Every request, decision and result is in the town's history (`state/requests/`).
+
 ## The town's knowledge, and Obsidian
 
 What residents learn goes into their own `knowledge/` folders. What the whole town should know is promoted to the commons, `commons/knowledge/`, where the curator files it: the **Archivist**, or the **Mayor** while the town has none. The curator keeps one topic per note, merges duplicates, links related notes with `[[note name]]`, and marks outdated notes as replaced, so the commons stays small and current.
