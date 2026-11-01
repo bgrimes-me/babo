@@ -1840,3 +1840,13 @@ export function fetchTownEval(token: string, base: string = ""): Promise<TownEva
 export function runTownEval(transport: WebUIMutationTransport, preset: string, baseline: boolean): Promise<TownEvalStatus & { message: string }> {
   return mutation<TownEvalStatus & { message: string }>(transport, "town.eval", { preset, baseline });
 }
+
+/** The guides Babo brings in when they're needed (`babo guides`). */
+export interface TownGuide {
+  name: string; title: string; when: string; tools: string[]; errors: string[]; offices: string[];
+  brought: number; opened: number; hint: string;
+}
+
+export function fetchTownGuides(token: string, base: string = ""): Promise<{ guides: TownGuide[] }> {
+  return request<{ guides: TownGuide[] }>(`${base}/api/town/guides`, token, undefined, API_READ_TIMEOUT_MS);
+}

@@ -105,6 +105,12 @@ The **Mayor** is the main agent. Its profile applies to every Mayor session (web
 
 The town's own settings (how often checkpoints happen, how much a resident sees when a session starts, when upkeep may run and its quiet hours, where to push a backup) are listed by `babo settings`, and changed with `babo settings <setting> <value>`. The **Settings** tab of the Town page in the web interface shows the same list. Your config file is backed up before each change, and each setting says when the change takes effect.
 
+## Guides, brought in when they're needed
+
+Small models rarely open a document they're only told about, so Babo brings the right guide in at the right moment instead: with the result of the first call of a tool in a session (the letters guide with a resident's first letter, the session-requests guide with the Mayor's first request), or after a call that was refused (what to do instead of trying again). Each comes once a session. Every agent's prompt starts with a short index of the guides for its office, saying when each matters, and any of them can be opened by hand with `read_note("guides/<name>.md")`.
+
+The guides are notes in the commons (`commons/guides/`). Babo ships a few and keeps them up to date until someone edits one; change them, or add your own, with a little frontmatter: `title`, `when`, and what brings it in (`tools`, `errors`, `offices`). `babo guides` (and *Guides* on the Town page's Settings tab) lists them with how often each was brought in or opened by hand; a guide that's opened by hand often probably needs a trigger.
+
 ## How well a model does the work: `babo eval`
 
 `babo eval` runs about thirty representative tasks on a model preset and checks each one itself: does the model pick the right tool, with the right arguments; leave tools alone when it should; follow a tool's result to the next step; act on where it left off (its baton); write a checkpoint Babo can file. They go through the gateway like every model call, so the score is what the town's agents actually get, and the report counts the tool calls the gateway had to repair.

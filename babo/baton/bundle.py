@@ -114,6 +114,10 @@ def build_bundle(
 
     # Fixed, never trimmed.
     fixed: list[tuple[str, str]] = [("who", who), ("self", self_text), ("role", role_text), ("neighbours", neighbours)]
+    from babo.baton.guides import index_text
+
+    if not bundle.first_session:  # (the first session has the charter in full; guides still come when they're needed)
+        fixed.append(("guides", index_text(town, resident.office)))
     if bundle.first_session:
         fixed.append(("charter", _read(town.charter)))
         fixed.append(("house", _read(town.house)))

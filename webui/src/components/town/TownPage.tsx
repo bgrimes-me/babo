@@ -10,6 +10,7 @@ import { DecisionCard, SessionRequestDetails } from "@/components/town/DecisionC
 import type { ResidentSessionRef } from "@/components/town/ResidentSessionsList";
 import { NoticesPanel } from "@/components/town/NoticesPanel";
 import { EvalPanel } from "@/components/town/EvalPanel";
+import { GuidesPanel } from "@/components/town/GuidesPanel";
 import { useClient } from "@/providers/ClientProvider";
 import {
   decideTownItem,
@@ -456,6 +457,7 @@ function TownSettingsView({ token, transport, onNotice, onError }: {
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("town.saveSettings", { defaultValue: "Save settings" })}
       </Button>
     </div>
+    <GuidesPanel />
   </>;
 }
 

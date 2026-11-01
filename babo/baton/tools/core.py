@@ -327,6 +327,14 @@ class Toolbox:
     def read_note(self, path: str) -> str:
         target = self.scope.resolve_ref(path)
         text = target.read_text(encoding="utf-8")
+        from babo.baton import guides
+
+        guide = guides.is_guide_path(self.town, target)
+        if guide:  # a guide opened by hand: logged, so guides people look for get a trigger
+            from babo.agent.tools.context import current_request_session_key
+            from babo.baton.events import append_event
+
+            append_event(self.town, self.resident_id, current_request_session_key(), guides.EVENT, name=guide, how="opened")
         if target.parent == (self.home / "inbox").resolve() or target.parent == self.home / "inbox":
             set_flag(target, read=True)
         return trim_to_tokens(text, READ_NOTE_MAX_TOKENS, "\n[…the note continues; ask for a section if you need more]")

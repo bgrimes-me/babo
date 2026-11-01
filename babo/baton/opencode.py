@@ -535,6 +535,7 @@ def _memory_env(town: Town, config: Config, session: Session, *, config_path: Pa
         "BABO_HOME": str(town.resident_dir(session.resident)),
         "BABO_SPOOL": str(spool_path(town, session)),
         "BABO_NOW": str(now_path(town, session)),
+        "BABO_GUIDES": str(guides_path(town, session)),
         "BABO_CHECKPOINT_EVERY": str(profile.memory.checkpoint_every_tool_calls or memory.checkpoint_every_tool_calls),
         "BABO_COMMIT_GATE": str(memory.commit_gate_after_tool_calls),
         "BABO_IDLE_MINUTES": str(profile.memory.idle_minutes or memory.idle_minutes),
@@ -570,7 +571,15 @@ def write_bundle(town: Town, config: Config, session: Session) -> Path:
     path = _runtime_dir(town, session.resident) / f"{session.id}.bundle.md"
     atomic_write(path, bundle.stable_text())
     atomic_write(now_path(town, session), bundle.now_text())
+    from babo.baton import guides
+
+    atomic_write(guides_path(town, session), guides.plugin_file(town, Registry(town).require_active(session.resident).office))
     return path
+
+
+def guides_path(town: Town, session: Session) -> Path:
+    """The guides Babo's plugin brings in for this session (their triggers and text)."""
+    return _runtime_dir(town, session.resident) / f"{session.id}.guides.json"
 
 
 def refresh_now(town: Town, config: Config, session: Session) -> None:
@@ -749,7 +758,8 @@ def remove_session(town: Town, session: Session) -> None:
     ingest(town, session)
     runtime = _runtime_dir(town, session.resident)
     for leftover in (_runtime_path(town, session), spool_path(town, session),
-                     runtime / f"{session.id}.bundle.md", now_path(town, session), runtime / f"{session.id}.log"):
+                     runtime / f"{session.id}.bundle.md", now_path(town, session), guides_path(town, session),
+                     runtime / f"{session.id}.log"):
         leftover.unlink(missing_ok=True)
     _session_path(town, session.resident, session.id).unlink(missing_ok=True)
 
@@ -999,6 +1009,9 @@ def ingest(town: Town, session: Session) -> list[dict[str, Any]]:
             written.append(append_event(town, session.resident, session.key, "tool", at=at, via="opencode", **tool_record(event)))
         elif raw.get("kind") == "turn_start":
             written.append(append_event(town, session.resident, session.key, "turn_start", at=at, via="opencode"))
+        elif raw.get("kind") == "guide":
+            append_event(town, session.resident, session.key, "guide", at=at, via="opencode",
+                         name=str(raw.get("name", ""))[:80], how=str(raw.get("how", ""))[:80])
     taking.unlink(missing_ok=True)
     if written:
         latest = max(str(r["at"]) for r in written)
