@@ -38,7 +38,7 @@ VISIT_SPEC = ToolSpec(
     },
     offices=("mayor",),
 )
-MAX_TOOLS_WARNING = 15  # the Mayor: 15 with request_session
+MAX_TOOLS_WARNING = 15  # the Mayor: 15 with send_errand
 
 CHECKPOINT_SPEC = ToolSpec(
     "checkpoint",

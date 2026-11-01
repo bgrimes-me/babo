@@ -412,7 +412,7 @@ def _reason() -> str:
 
 
 def ask_about_request(t: Town, cfg: Config, request: SessionRequest) -> bool:
-    """Show one session request word for word and ask the owner to approve, decline or skip it.
+    """Show one errand word for word and ask the owner to approve, decline or skip it.
 
     Used by ``babo review`` and, live, by the terminal chat after the Mayor asks."""
     from babo.baton import requests as session_requests
@@ -434,7 +434,7 @@ def ask_about_request(t: Town, cfg: Config, request: SessionRequest) -> bool:
     if choice == "skip":
         return False
     try:
-        console.print(views.decide(t, "session", request.id, yes=choice == "yes", reason=_reason(), digest=shown["digest"]))
+        console.print(views.decide(t, "errand", request.id, yes=choice == "yes", reason=_reason(), digest=shown["digest"]))
         return True
     except BatonError as exc:
         console.print(f"[yellow]{exc}[/yellow]")
@@ -442,21 +442,21 @@ def ask_about_request(t: Town, cfg: Config, request: SessionRequest) -> bool:
 
 
 def ask_about_new_requests(t: Town, cfg: Config, seen: set[str]) -> None:
-    """In a live terminal chat: ask about each session request waiting for the owner that this chat hasn't shown yet."""
+    """In a live terminal chat: ask about each errand waiting for the owner that this chat hasn't shown yet."""
     from babo.baton import requests as session_requests
 
     for request in session_requests.pending(t):
         if request.id in seen:
             continue
         seen.add(request.id)
-        console.print("\n[bold yellow]A session request is waiting for your approval.[/bold yellow]")
+        console.print("\n[bold yellow]An errand is waiting for your approval.[/bold yellow]")
         if not ask_about_request(t, cfg, request):
             console.print("  Skipped: it waits in [bold]babo review[/bold] and on the Town page.")
 
 
 @app.command()
 def review(config: str | None = _CONFIG_OPT):
-    """The weekly check-in: session requests, tools, proposals, founding requests, old flags. Plain questions, one at a time."""
+    """The weekly check-in: errands, tools, proposals, move-in requests, old flags. Plain questions, one at a time."""
     from babo.baton import gitops, growth, views
     from babo.baton import requests as session_requests
 
@@ -469,7 +469,7 @@ def review(config: str | None = _CONFIG_OPT):
     console.print("[bold]Weekly review[/bold]. Press Enter to skip anything; nothing changes unless you decide.\n")
 
     asked = session_requests.pending(t)
-    console.print(f"[bold]Session requests[/bold] ({len(asked)})")
+    console.print(f"[bold]Errands[/bold] ({len(asked)})")
     for request in asked:
         decided += ask_about_request(t, cfg, request)
 
@@ -505,14 +505,14 @@ def review(config: str | None = _CONFIG_OPT):
     from babo.baton.notes import split_frontmatter
 
     requests = founding_requests(t)
-    console.print(f"\n[bold]3. Founding requests[/bold] ({len(requests)})")
+    console.print(f"\n[bold]3. Move-in requests[/bold] ({len(requests)})")
     for req in requests:
         meta, body = split_frontmatter(req.read_text(encoding="utf-8"))
         console.print(f"\n• New office '{meta.get('office')}' requested by {meta.get('author')}:\n{body.strip()[:1500]}")
         console.print("  A new resident uses compute on your machine every day it is active.")
         choice = _ask_decision("Found this resident?", "approve", "decline")
         if choice != "skip":
-            console.print(views.decide(t, "founding", req.name, yes=choice == "yes", reason=_reason(), commit=False))
+            console.print(views.decide(t, "move_in", req.name, yes=choice == "yes", reason=_reason(), commit=False))
             decided += 1
 
     flags = growth.stale_flags(t)
@@ -1260,7 +1260,7 @@ def allow_all_command(
     yes: bool = typer.Option(False, "--yes", help="Skip the confirmation"),
     config: str | None = _CONFIG_OPT,
 ):
-    """Let one of the Mayor's chats run session requests without your review (or turn that off)."""
+    """Let one of the Mayor's chats send residents on errands without your review (or turn that off)."""
     from babo.baton import allow_all, views
 
     t, _ = _town(config)
@@ -1288,7 +1288,7 @@ def allow_all_command(
         _fail(exc)
 
 
-ALLOW_ALL_WARNING = """[bold yellow]Allow all: the Mayor's session requests from this chat run without your review.[/bold yellow]
+ALLOW_ALL_WARNING = """[bold yellow]Allow all: the Mayor's errands from this chat run without your review.[/bold yellow]
 - He can ask any resident to run anything, with any access: commands run as your user, on this machine.
 - Anyone who can talk to him in this chat, and anything he reads (web pages, messages), can lead to commands running.
 - Each request still runs in a resident's opencode session, and is recorded (Town › Review › Recently run).

@@ -1,4 +1,4 @@
-"""Allow all: the owner lets one of the Mayor's chats run session requests without review.
+"""Allow all: the owner lets one of the Mayor's chats send residents on errands without review.
 
 Normally every session the Mayor asks for waits for the owner's approval. With
 "allow all" on for one chat (a web chat, a Discord channel, the terminal),
@@ -72,7 +72,7 @@ def turn_on(town: Town, session_key: str, *, hours: float | None) -> str:
     atomic_write(_path(town), json.dumps(grants, indent=2) + "\n")
     lasting = f"until {until[:16].replace('T', ' ')}" if until else "until you turn it off"
     gitops.commit_paths(town, [_path(town)], f"{town.owner_name} turned allow-all on for {key} ({lasting})")
-    return f"Allow all is on for {key}, {lasting}. The Mayor's session requests from this chat run without your review."
+    return f"Allow all is on for {key}, {lasting}. The Mayor's errands from this chat run without your review."
 
 
 def turn_off(town: Town, session_key: str) -> str:
@@ -83,7 +83,7 @@ def turn_off(town: Town, session_key: str) -> str:
     del grants[key]
     atomic_write(_path(town), json.dumps(grants, indent=2) + "\n")
     gitops.commit_paths(town, [_path(town)], f"{town.owner_name} turned allow-all off for {key}")
-    return f"Allow all is off for {key}. The Mayor's session requests wait for your review again."
+    return f"Allow all is off for {key}. The Mayor's errands wait for your review again."
 
 
 def status(town: Town) -> dict[str, Any]:

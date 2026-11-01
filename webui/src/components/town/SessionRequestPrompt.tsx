@@ -43,8 +43,8 @@ export function SessionRequestPrompt({ sessionKey }: { sessionKey: string }) {
     </p>
     {ordered.map((r) => <DecisionCard key={r.id} kind="session" id={r.id} digest={r.digest} onDecide={decide}
       heading={r.session_key === sessionKey
-        ? t("sessionPrompt.here", { defaultValue: "{{who}} asks, in this chat, for a session of {{resident}}", who: r.requested_by, resident: r.resident })
-        : t("sessionPrompt.elsewhere", { defaultValue: "{{who}} asks, from {{chat}}, for a session of {{resident}}", who: r.requested_by, chat: r.session_key || "another chat", resident: r.resident })}
+        ? t("sessionPrompt.here", { defaultValue: "{{who}} wants to send {{resident}} on an errand (asked in this chat)", who: r.requested_by, resident: r.resident })
+        : t("sessionPrompt.elsewhere", { defaultValue: "{{who}} wants to send {{resident}} on an errand (asked from {{chat}})", who: r.requested_by, chat: r.session_key || "another chat", resident: r.resident })}
       yes={t("town.approveRun", { defaultValue: "Approve and run" })} no={t("town.decline", { defaultValue: "Decline" })}
       note={t("town.requestRuns", { defaultValue: "It runs on your machine with nobody at a terminal: anything not allowed here is denied. The result goes to {{who}}.", who: r.requested_by })}>
       <SessionRequestDetails request={r} />

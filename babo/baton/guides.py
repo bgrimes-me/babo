@@ -93,9 +93,12 @@ def _valid(pattern: str) -> bool:
 
 
 def _tool(name: str) -> str:
+    from babo.baton.aliases import TOOLS
+
     for prefix in _PREFIXES:
         if name.startswith(prefix):
             name = name[len(prefix):]
+    name = TOOLS.get(name, name)  # an old tool name (step 23)
     return _ALIASES.get(name, name)
 
 

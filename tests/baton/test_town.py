@@ -70,21 +70,21 @@ def test_directory_without_registry_entry_is_not_a_resident(town: Town) -> None:
 
 
 def test_founding_refuses_to_adopt_unfounded_directory(town: Town) -> None:
-    (town.board / "2026-01-01-founding_request-gardener.md").write_text(
-        "---\nkind: founding_request\noffice: gardener\nstatus: open\n---\n\nTends the projects.\n"
+    (town.board / "2026-01-01-move_in_request-gardener.md").write_text(
+        "---\nkind: move_in_request\noffice: gardener\nstatus: open\n---\n\nTends the projects.\n"
     )
     town.resident_dir("gardener").mkdir()
     (town.resident_dir("gardener") / "SELF.md").write_text("planted")
-    resident = approve_founding_request(town, town.board / "2026-01-01-founding_request-gardener.md", approved_by="owner")
+    resident = approve_founding_request(town, town.board / "2026-01-01-move_in_request-gardener.md", approved_by="owner")
     # A unique id is chosen; the planted directory is never adopted.
     assert resident.id == "gardener-2"
     assert (town.resident_dir("gardener") / "SELF.md").read_text() == "planted"
     assert Registry(town).get("gardener") is None
 
 
-def test_approved_founding_request_creates_resident(town: Town) -> None:
-    path = town.board / "2026-01-01-founding_request-gardener.md"
-    path.write_text("---\nkind: founding_request\noffice: gardener\nstatus: open\n---\n\nTends the projects.\n")
+def test_approved_move_in_request_creates_resident(town: Town) -> None:
+    path = town.board / "2026-01-01-move_in_request-gardener.md"
+    path.write_text("---\nkind: move_in_request\noffice: gardener\nstatus: open\n---\n\nTends the projects.\n")
     assert founding_requests(town) == [path]
     resident = approve_founding_request(town, path, approved_by="owner")
     assert resident.id == "gardener"
@@ -95,9 +95,9 @@ def test_approved_founding_request_creates_resident(town: Town) -> None:
         approve_founding_request(town, path, approved_by="owner")
 
 
-def test_declined_founding_request_creates_nothing(town: Town) -> None:
-    path = town.board / "2026-01-01-founding_request-x.md"
-    path.write_text("---\nkind: founding_request\noffice: x-office\nstatus: open\n---\n\nwhy\n")
+def test_declined_move_in_request_creates_nothing(town: Town) -> None:
+    path = town.board / "2026-01-01-move_in_request-x.md"
+    path.write_text("---\nkind: move_in_request\noffice: x-office\nstatus: open\n---\n\nwhy\n")
     decline_founding_request(town, path, declined_by="owner", reason="not now")
     assert len(Registry(town).all()) == 3
     assert not any(p.name.startswith("x-office") for p in town.residents_dir.iterdir())

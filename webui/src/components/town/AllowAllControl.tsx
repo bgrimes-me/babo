@@ -17,7 +17,7 @@ import { fetchTownAllowAll, setTownAllowAll } from "@/lib/api";
 
 type Duration = "1" | "8" | "off";
 
-/** "Allow all" for one of the Mayor's chats: his session requests from it run without review.
+/** "Allow all" for one of the Mayor's chats: his errands from it run without review.
  *  The same as `babo allow-all <chat>`. Off by default; turning it on asks first and says what it means. */
 export function AllowAllControl({ sessionKey }: { sessionKey: string }) {
   const { t } = useTranslation();
@@ -66,11 +66,11 @@ export function AllowAllControl({ sessionKey }: { sessionKey: string }) {
           <AlertDialogTitle>{t("allowAll.title", { defaultValue: "Let the Mayor run things without asking you?" })}</AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2 text-left text-[13px] leading-6">
-              <p>{t("allowAll.what", { defaultValue: "While this is on, every session the Mayor asks for from this chat is approved as he asks for it, and runs within a minute." })}</p>
+              <p>{t("allowAll.what", { defaultValue: "While this is on, every errand the Mayor sends a resident on from this chat is approved as he asks, and runs within a minute." })}</p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>{t("allowAll.any", { defaultValue: "He can ask any resident to run anything, with any access. Commands run as your user, on this machine." })}</li>
                 <li>{t("allowAll.injection", { defaultValue: "Anyone who can talk to him in this chat, and anything he reads (web pages, messages), can lead to commands running." })}</li>
-                <li>{t("allowAll.recorded", { defaultValue: "Each request still runs in a resident's own opencode session, and is recorded: Town › Review › Recently run." })}</li>
+                <li>{t("allowAll.recorded", { defaultValue: "Each errand still runs in a resident's own opencode session, and is recorded: Town › Review › Recently run." })}</li>
               </ul>
               <div className="pt-1">
                 <p className="mb-1 font-medium text-foreground">{t("allowAll.howLong", { defaultValue: "For how long?" })}</p>

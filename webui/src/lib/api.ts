@@ -1805,7 +1805,7 @@ export function changeTownSession(
 
 /** Session requests waiting for the owner, for the prompt that appears in a chat while one waits. */
 export function fetchPendingSessionRequests(token: string, base: string = ""): Promise<{ pending: TownSessionRequest[] }> {
-  return request<{ pending: TownSessionRequest[] }>(`${base}/api/town/session-requests`, token, undefined, API_READ_TIMEOUT_MS);
+  return request<{ pending: TownSessionRequest[] }>(`${base}/api/town/errands`, token, undefined, API_READ_TIMEOUT_MS);
 }
 
 export interface TownAllowAll {

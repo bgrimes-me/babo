@@ -48,7 +48,7 @@ TOWN_MUTATION_PATHS = {
     "town.rounds.approve": "/api/town/rounds/approve",
     "town.rounds.access": "/api/town/rounds/access",
 }
-_DECISION_KINDS = ("tool", "proposal", "founding", "flag", "session")
+_DECISION_KINDS = ("tool", "proposal", "move_in", "flag", "errand", "founding", "session")  # the last two: old names (step 23)
 _doctor_lock = asyncio.Lock()
 
 
@@ -248,7 +248,7 @@ class TownRoutes:
             from babo.config.loader import load_config
 
             return http_json_response({"settings": town_settings.current(load_config().baton)})
-        if got == "/api/town/session-requests":
+        if got in ("/api/town/errands", "/api/town/session-requests"):  # (the second: the old path, until step 23)
             return http_json_response(await asyncio.to_thread(_pending_requests))
         if got == "/api/town/allow-all":
             from babo.baton import allow_all
@@ -283,14 +283,14 @@ class TownRoutes:
         if got == "/api/town/decide":
             kind = payload.get("kind")
             if kind not in _DECISION_KINDS:
-                raise BatonError("kind must be tool, proposal, founding, flag or session")
+                raise BatonError("kind must be tool, proposal, move_in, flag or errand")
             yes = payload.get("yes")
             if not isinstance(yes, bool):
                 raise BatonError("missing yes")
             item_id, reason = _text(payload, "id", 400), _text(payload, "reason")
             digest = payload.get("digest")
-            if kind == "session" and not isinstance(digest, str):
-                raise BatonError("missing digest: approve a session request from what you were shown")
+            if kind in ("errand", "session") and not isinstance(digest, str):
+                raise BatonError("missing digest: approve an errand from what you were shown")
             message = await asyncio.to_thread(lambda: views.decide(_town(), cast(Any, kind), item_id, yes=yes, reason=reason,
                                                                    digest=digest if isinstance(digest, str) else None))
         elif got == "/api/town/note":

@@ -145,11 +145,11 @@ def decide_founding(town: Town, request: Path, *, approve: bool, reason: str) ->
     author = str(meta.get("author", "mayor"))
     if approve:
         resident = approve_founding_request(town, request, approved_by=OWNER, note=reason)
-        _tell(town, author, f"founding approved: {resident.id}",
-              f"{town.owner_name} approved the founding of `{resident.id}` (office: {resident.office}).\n\nReason: {reason}")
+        _tell(town, author, f"move-in approved: {resident.id}",
+              f"{town.owner_name} approved `{resident.id}` moving in (office: {resident.office}).\n\nReason: {reason}")
         return resident.id
     decline_founding_request(town, request, declined_by=OWNER, reason=reason)
-    _tell(town, author, "founding declined", f"{town.owner_name} declined the founding request {request.name}.\n\nReason: {reason}")
+    _tell(town, author, "move-in declined", f"{town.owner_name} declined the move-in request {request.name}.\n\nReason: {reason}")
     return ""
 
 

@@ -302,9 +302,9 @@ function ReviewView({ token, transport, onChanged, onError }: {
       {t("town.reviewIntro", { defaultValue: "Nothing changes unless you decide. Whatever reason you give goes to the resident concerned. This is not an audit of anyone's memory." })}
     </p>
     {empty && <p className="settings-list-inset text-[13px]">{t("town.reviewEmpty", { defaultValue: "Nothing is waiting for you." })}</p>}
-    {review.sessions.length > 0 && <ReviewSection title={t("town.review.sessions", { defaultValue: "Session requests" })}>
+    {review.sessions.length > 0 && <ReviewSection title={t("town.review.sessions", { defaultValue: "Errands" })}>
       {review.sessions.map((r) => <DecisionCard key={r.id} kind="session" id={r.id} digest={r.digest} onDecide={decide}
-        heading={t("town.sessionRequest", { defaultValue: "{{who}} asks for a session of {{resident}}", who: r.requested_by, resident: r.resident })}
+        heading={t("town.sessionRequest", { defaultValue: "{{who}} wants to send {{resident}} on an errand", who: r.requested_by, resident: r.resident })}
         yes={t("town.approveRun", { defaultValue: "Approve and run" })} no={t("town.decline", { defaultValue: "Decline" })}
         note={t("town.requestRuns", { defaultValue: "It runs on your machine with nobody at a terminal: anything not allowed here is denied. The result goes to {{who}}.", who: r.requested_by })}>
         <SessionRequestDetails request={r} />
@@ -347,7 +347,7 @@ function ReviewView({ token, transport, onChanged, onError }: {
         <Expandable label={t("town.inspectorReview", { defaultValue: "Inspector's review" })} text={p.review || t("town.noReview", { defaultValue: "(none yet)" })} />
       </DecisionCard>)}
     </ReviewSection>}
-    {review.founding.length > 0 && <ReviewSection title={t("town.review.founding", { defaultValue: "Founding requests" })}>
+    {review.founding.length > 0 && <ReviewSection title={t("town.review.founding", { defaultValue: "Move-in requests" })}>
       {review.founding.map((f) => <DecisionCard key={f.id} kind="founding" id={f.id} onDecide={decide}
         heading={t("town.newOffice", { defaultValue: "New office “{{office}}” — asked by {{who}}", office: f.office, who: f.author })}
         yes={t("town.found", { defaultValue: "Found this resident" })} no={t("town.decline", { defaultValue: "Decline" })}
