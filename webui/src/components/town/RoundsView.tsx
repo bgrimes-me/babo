@@ -4,7 +4,11 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { SettingsGroup } from "@/components/settings/shared/SettingsControls";
 import { useClient } from "@/providers/ClientProvider";
-import { fetchTownRounds, runTownRound, setTownRound, type TownRound, type TownRounds } from "@/lib/api";
+import { SessionAccessFields } from "@/components/town/AccessFields";
+import {
+  approveTownRehearsal, fetchTownRounds, rehearseTownRound, runTownRound, setTownRound, setTownRoundAccess,
+  type TownRehearsal, type TownRound, type TownRoundStep, type TownRounds,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const ROUNDS_POLL_MS = 10_000;
@@ -41,7 +45,10 @@ export function RoundsView({ onNotice, onError }: { onNotice: (message: string) 
     </p>)}
     {data.rounds.map((round) => <RoundCard key={round.name} round={round} busy={busy === round.name}
       onRun={() => void act(round.name, () => runTownRound(client, round.name))}
-      onSet={(change) => void act(round.name, () => setTownRound(client, round.name, change))} />)}
+      onSet={(change) => void act(round.name, () => setTownRound(client, round.name, change))}
+      onRehearse={(live) => void act(round.name, () => rehearseTownRound(client, round.name, live))}
+      onApprove={(id) => void act(round.name, () => approveTownRehearsal(client, round.name, id))}
+      onAccess={(step, access, commands) => void act(round.name, () => setTownRoundAccess(client, round.name, step, access, commands))} />)}
     <section aria-label={t("town.baboOwn", { defaultValue: "Part of Babo" })} className="mt-4">
       <h2 className="settings-list-inset text-[13px] font-medium text-foreground">{t("town.baboOwn", { defaultValue: "Part of Babo" })}</h2>
       <p className="settings-list-inset text-xs text-muted-foreground">{t("town.baboOwnIntro", { defaultValue: "What Babo does itself, for every resident, whatever the rounds: upkeep." })}</p>
@@ -53,8 +60,10 @@ export function RoundsView({ onNotice, onError }: { onNotice: (message: string) 
   </>;
 }
 
-function RoundCard({ round, busy, onRun, onSet }: {
+function RoundCard({ round, busy, onRun, onSet, onRehearse, onApprove, onAccess }: {
   round: TownRound; busy: boolean; onRun: () => void; onSet: (change: { enabled?: boolean; runs?: "wait" | "now" }) => void;
+  onRehearse: (live: boolean) => void; onApprove: (rehearsal: string) => void;
+  onAccess: (step: number, access: Record<string, string>, commands?: string[]) => void;
 }) {
   const { t } = useTranslation();
   const [last] = round.recent;
@@ -89,6 +98,8 @@ function RoundCard({ round, busy, onRun, onSet }: {
         <Button size="sm" variant="secondary" disabled={busy || !round.enabled} onClick={onRun} className="gap-1.5">
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}{t("town.runRound", { defaultValue: "Run now" })}
         </Button>
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => onRehearse(false)}>{t("town.rehearse", { defaultValue: "Rehearse" })}</Button>
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => onRehearse(true)}>{t("town.rehearseLive", { defaultValue: "Rehearse live" })}</Button>
         {round.runs === "now" && <p role="note" className="basis-full text-xs text-amber-600 dark:text-amber-400">
           {t("town.roundNowWarning", { defaultValue: "It won't wait for you to finish: while it runs, it shares the model with your chats and can slow them down (on a local model, noticeably)." })}
         </p>}
@@ -106,8 +117,63 @@ function RoundCard({ round, busy, onRun, onSet }: {
           <span className="mt-0.5 block text-xs text-muted-foreground">{step.duty}</span>
           {ran?.report && <details className="mt-1"><summary className="cursor-pointer text-xs text-muted-foreground">{t("town.roundReport", { defaultValue: "Its report" })}</summary>
             <p className="mt-1 whitespace-pre-wrap text-xs">{ran.report}</p></details>}
+          <StepAccess step={step} busy={busy} onAccess={(access, commands) => onAccess(index + 1, access, commands)} />
         </div>;
       })}
+      {round.rehearsal && <RehearsalReport rehearsal={round.rehearsal} busy={busy} onApprove={() => onApprove(round.rehearsal!.id)} />}
     </SettingsGroup>
   </section>;
+}
+
+/** What one step may do: its access beyond (or short of) the office's profile, and exact commands. Approving the round
+ *  approves exactly this; it runs with it, without asking. The same as `babo rounds access`. */
+function StepAccess({ step, busy, onAccess }: { step: TownRoundStep; busy: boolean; onAccess: (access: Record<string, string>, commands?: string[]) => void }) {
+  const { t } = useTranslation();
+  const saved = step.commands.join("\n");
+  const [commands, setCommands] = useState(saved);
+  useEffect(() => setCommands(saved), [saved]);  // only when what's saved changes, not on every refresh
+  const summary = [...Object.entries(step.access).map(([k, v]) => `${k}: ${v}`), ...step.commands.map((c) => `may run \`${c}\``)].join(" · ");
+  return <details className="mt-1">
+    <summary className="cursor-pointer text-xs text-muted-foreground">
+      {t("town.stepAccess", { defaultValue: "What it may do: {{what}}", what: summary || t("town.asProfile", { defaultValue: "as in the profile" }) })}
+    </summary>
+    <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2">
+      <SessionAccessFields values={step.access} disabled={busy} onChange={(key, value) => onAccess({ [key]: value || "profile" })} />
+    </div>
+    <label className="mt-2 block text-xs text-muted-foreground">
+      {t("town.stepCommands", { defaultValue: "Exact commands it may run, one per line" })}
+      <textarea className="mt-1 block w-full rounded border bg-background px-2 py-1 font-mono text-xs text-foreground" rows={2}
+        value={commands} disabled={busy} onChange={(event) => setCommands(event.target.value)} />
+    </label>
+    <Button size="sm" variant="ghost" className="mt-1" disabled={busy || commands === saved}
+      onClick={() => onAccess({}, commands.split("\n").map((c) => c.trim()).filter(Boolean))}>{t("town.saveCommands", { defaultValue: "Save the commands" })}</Button>
+  </details>;
+}
+
+/** The latest rehearsal: what each step asked for and what came of it, and the access Babo proposes. */
+function RehearsalReport({ rehearsal, busy, onApprove }: { rehearsal: TownRehearsal; busy: boolean; onApprove: () => void }) {
+  const { t } = useTranslation();
+  const proposes = rehearsal.proposal.some((p) => Object.keys(p.access).length || p.commands.length);
+  return <div className="settings-list-row py-3 text-[13px]" aria-label={t("town.rehearsalReport", { defaultValue: "Rehearsal report" })} role="region">
+    <span className="block font-medium">
+      {t("town.rehearsalHead", { defaultValue: "Rehearsal ({{how}}, {{when}}): {{status}}", how: rehearsal.live ? t("town.live", { defaultValue: "live" }) : t("town.unattended", { defaultValue: "unattended" }),
+        when: rehearsal.started.slice(0, 16).replace("T", " "), status: rehearsal.status })}
+    </span>
+    {rehearsal.steps.map((step, index) => {
+      const wanted = rehearsal.proposal[index];
+      return <div key={index} className="mt-1.5 text-xs">
+        <span className="font-medium">{index + 1}. {step.office}</span>{step.resident ? ` (${step.resident})` : ""}: {step.status}{step.note ? ` · ${step.note}` : ""}
+        {step.stopped && <span className="block text-amber-600 dark:text-amber-400">{t("town.rehearsalStopped", { defaultValue: "Something it asked for was refused, so it may not have got to the end: approve this much and rehearse again to see the rest." })}</span>}
+        {step.asked.map((a, i) => <span key={i} className="block text-muted-foreground">{t("town.rehearsalAsked", { defaultValue: "asked to {{action}}: {{what}} ({{decision}})", action: a.action, what: a.resources.join(" · "), decision: a.decision })}</span>)}
+        {wanted && (Object.keys(wanted.access).length > 0 || wanted.commands.length > 0) && <span className="block">
+          {t("town.rehearsalProposes", { defaultValue: "proposes: {{what}}", what: [...Object.entries(wanted.access).map(([k, v]) => `${k} ${v}`), ...wanted.commands.map((c) => `may run \`${c}\``)].join(", ") })}
+        </span>}
+        {wanted?.cannot.map((c) => <span key={c} className="block text-muted-foreground">{t("town.rehearsalCannot", { defaultValue: "can't be given to a round: {{what}}", what: c })}</span>)}
+      </div>;
+    })}
+    {rehearsal.status !== "running" && proposes && !rehearsal.approved && <Button size="sm" className="mt-2" disabled={busy} onClick={onApprove}>
+      {t("town.approveAccess", { defaultValue: "Approve this access" })}
+    </Button>}
+    {rehearsal.approved && <p className="mt-2 text-xs text-muted-foreground">{t("town.accessApproved", { defaultValue: "Approved {{when}}.", when: rehearsal.approved.slice(0, 16).replace("T", " ") })}</p>}
+  </div>;
 }

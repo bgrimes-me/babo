@@ -321,7 +321,15 @@ def change_session_access(town: Town, config: Config, resident: str, session_id:
 def answer_session_question(town: Town, resident: str, session_id: str, request_id: str, decision: str) -> str:
     from babo.baton import opencode
 
-    opencode.answer_permission(town, opencode.get_session(town, resident, session_id), request_id, decision)
+    session = opencode.get_session(town, resident, session_id)
+    asked = next((q for q in opencode.live(town, session)["questions"] if q.get("id") == request_id), None) if session.rehearsal else None
+    # A refusal says so: without a reason, opencode stops the resident's turn where it is.
+    note = f"{town.owner_name} said no to that. Carry on without it if you can, or say plainly what you'd need." if decision == "reject" else ""
+    opencode.answer_permission(town, session, request_id, decision, message=note)
+    if asked is not None:  # a live rehearsal: the answer goes into its report
+        from babo.baton import rehearsal
+
+        rehearsal.note_answer(town, session, asked, decision)
     return {"once": "Allowed, this once.", "always": "Allowed for the rest of this session.", "reject": "Refused."}[decision]
 
 
