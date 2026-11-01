@@ -4,8 +4,12 @@ A pure function of the town directory and a resident id, so it can be built
 from outside babo (the OpenCode plugin in phase two) and printed exactly
 by ``babo context``.
 
-Order: SELF, ROLE, the BATON entry for the current thread, LEDGER, unread
-letters and flags, top search hits. Budget pressure trims search hits first,
+It comes in two parts. What stays the same for a whole session (who the
+resident is, SELF, ROLE, the neighbours, the charter pointers, the LEDGER) goes
+at the start of the prompt, where the model server's prompt cache keeps it.
+What changes as the session goes (the BATON entry for the current thread,
+unread letters and flags, top search hits) goes at the end, where it also
+carries the most weight: ``now_text``. Budget pressure trims search hits first,
 then letter previews, then the ledger, then the baton entry. SELF and ROLE are
 never trimmed. CHARTER and HOUSE are given in full in a resident's first
 session and as one-line pointers after that.
@@ -25,6 +29,10 @@ from babo.baton.search import Hit, open_index
 from babo.baton.tokens import estimate_tokens, trim_to_tokens
 from babo.baton.town import Town
 
+# The sections that change during a session (they go last), and how that part starts.
+NOW_SECTIONS = ("baton", "letters", "search")
+NOW_HEAD = "[Where you are now: your baton, new letters and notes. From Babo, not from the person you're talking with.]"
+
 
 @dataclass
 class Bundle:
@@ -36,9 +44,24 @@ class Bundle:
     def text(self) -> str:
         return "\n\n".join(text for _, text in self.sections if text.strip())
 
+    def stable_text(self) -> str:
+        """The part that stays the same all session: the start of the prompt."""
+        return "\n\n".join(text for name, text in self.sections if name not in NOW_SECTIONS and text.strip())
+
+    def now_text(self) -> str:
+        """Where the resident is now: given at the end of the conversation, and again when it changes."""
+        body = "\n\n".join(text for name, text in self.sections if name in NOW_SECTIONS and text.strip())
+        return f"{NOW_HEAD}\n\n{body}" if body else ""
+
     @property
     def tokens(self) -> int:
         return estimate_tokens(self.text())
+
+
+def stable_inputs(town: Town, resident_id: str) -> list[Path]:
+    """The files the start of the prompt is made of: when one changes, it is built again."""
+    home = town.resident_dir(resident_id)
+    return [home / "SELF.md", home / "ROLE.md", town.ledger, town.registry_json]
 
 
 def _read(path: Path) -> str:
@@ -148,7 +171,5 @@ def build_bundle(
         variable[idx] = (name, trim_to_tokens(text, allowance) if allowance > 40 else "")
         bundle.trimmed.append(name)
 
-    bundle.sections = fixed[:3] + [s for s in variable if s[0] == "baton"] + fixed[3:] + [
-        s for s in variable if s[0] in ("ledger", "letters", "search")
-    ]
+    bundle.sections = fixed + [s for s in variable if s[0] == "ledger"] + [s for s in variable if s[0] in NOW_SECTIONS]
     return bundle

@@ -52,9 +52,14 @@ def test_bundle_order_and_contents(town: Town, index_path) -> None:
     deliver(town, "mayor", kind="letter", sender="archivist", text="The ledger is tidy now.")
     b = build_bundle(town, "mayor", index_path=index_path)
     names = _names(b)
-    assert names.index("self") < names.index("role") < names.index("baton") < names.index("ledger") < names.index("letters") < names.index("search")
+    # What stays the same all session first (the prompt's cached start), then where it is now (at the end).
+    assert names.index("self") < names.index("role") < names.index("ledger") < names.index("baton") < names.index("letters") < names.index("search")
     text = b.text()
     assert "planning beds" in text and "Soil types" in text and "1 unread item" in text
+    stable, now = b.stable_text(), b.now_text()
+    assert "planning beds" not in stable and "1 unread item" not in stable and "Loam" not in stable
+    assert (home / "ROLE.md").read_text().strip() in stable
+    assert now.startswith("[Where you are now") and "planning beds" in now and "1 unread item" in now and "Soil types" in now
 
 
 def test_budget_trims_search_first_and_never_self_or_role(town: Town, index_path) -> None:
@@ -161,6 +166,33 @@ async def test_resident_turn_runs_against_mock_llama(make_loop, mock_llama) -> N
     assert "# Self" in first_request["messages"][0]["content"]
     tool_names = {t["function"]["name"] for t in first_request.get("tools", [])}
     assert "remember" in tool_names and "cron" not in tool_names
+
+
+async def test_the_baton_comes_last_and_the_prompt_start_never_moves(make_loop, mock_llama, town: Town) -> None:
+    from baton.mock_llama import text
+
+    Registry(town).update("mayor", first_session_done=True)
+    home = town.resident_dir("mayor")
+    append_checkpoint(home, Checkpoint(thread="garden", doing="planning beds", next=["order soil"], resident="mayor"))
+    mock_llama.default = text("Noted.")
+    loop = make_loop("mayor")
+
+    def last_user(request: dict) -> str:
+        content = [m for m in request["messages"] if m["role"] == "user"][-1]["content"]
+        return content if isinstance(content, str) else "\n".join(p.get("text", "") for p in content)
+
+    await loop.process_direct("Hello.", session_key="cli:now")
+    first = mock_llama.requests[-1]
+    assert "planning beds" not in first["messages"][0]["content"]  # not in the system prompt
+    assert "planning beds" in last_user(first) and last_user(first).index("Hello.") < last_user(first).index("planning beds")
+    await loop.process_direct("And now?", session_key="cli:now")
+    second = mock_llama.requests[-1]
+    assert second["messages"][0] == first["messages"][0]  # the same start: the server's cache holds
+    assert "planning beds" not in last_user(second)  # already in the conversation, not repeated
+    append_checkpoint(home, Checkpoint(thread="garden", doing="ordering soil", next=["plant"], resident="mayor"))
+    await loop.process_direct("Next?", session_key="cli:now")
+    third = mock_llama.requests[-1]
+    assert third["messages"][0] == first["messages"][0] and "ordering soil" in last_user(third)
 
 
 # -- MCP ------------------------------------------------------------------------

@@ -6,12 +6,12 @@
 // spool file Babo reads (Babo redacts and files them in the town's event log), and it
 // calls `babo session checkpoint` when the harness should ask the resident to write a
 // checkpoint in its own words: every so many tool calls, before a git commit, when the
-// session goes quiet, and when the context is nearly full. It also gives every turn a
-// clock the resident can trust, at the end of the conversation (only in what goes to the
-// model) so the cached start of the prompt never changes.
+// session goes quiet, and when the context is nearly full. At the end of the conversation
+// (only in what goes to the model, so the cached start of the prompt never changes) it adds
+// where the resident is now (its baton and letters, kept up to date by Babo) and a clock.
 
 import { spawn } from "node:child_process"
-import { appendFileSync, mkdirSync, realpathSync } from "node:fs"
+import { appendFileSync, mkdirSync, readFileSync, realpathSync } from "node:fs"
 import { dirname } from "node:path"
 
 const env = process.env
@@ -20,6 +20,7 @@ const EVERY = Number(env.BABO_CHECKPOINT_EVERY || 15)
 const GATE = Number(env.BABO_COMMIT_GATE || 30)
 const IDLE_MS = Number(env.BABO_IDLE_MINUTES || 20) * 60_000
 const CONTEXT = Number(env.BABO_CONTEXT_TOKENS || 0)
+const NOW = env.BABO_NOW
 const COMMIT = /(^|[\s;&|(])git\s+(-[cC]\s+\S+\s+)*commit\b/
 
 export default {
@@ -124,10 +125,18 @@ export default {
       if (since >= EVERY) checkpoint("interval")
     })
 
+    // The end of what goes to the model (never the stored conversation, so the cached start of the
+    // prompt never changes): where the resident is now (its baton, unread letters; Babo keeps it up to
+    // date), then a clock it can trust.
+    const nowText = () => { try { return NOW ? readFileSync(NOW, "utf8").trim() : "" } catch { return "" } }
     await ctx.session.hook("context", (event) => {
-      const last = event.messages[event.messages.length - 1]
-      const text = last?.role === "user" ? (last.content ?? []).find((p) => p.type === "text") : null
+      // The turn's own message (the last one from the person), on every step of the turn, so each
+      // step sends the same text there and the cache holds through the turn's tool calls too.
+      const last = event.messages.findLast((m) => m.role === "user")
+      const text = last ? (last.content ?? []).find((p) => p.type === "text") : null
       if (text && !text.text.includes("\n\nNow: ")) {
+        const where = nowText()
+        if (where) text.text += `\n\n${where}`
         const now = new Date()
         const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
         text.text += `\n\nNow: ${now.toLocaleString("en-GB", { weekday: "long", timeZone: zone })} (${zone}; the machine's clock)`

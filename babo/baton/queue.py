@@ -33,6 +33,7 @@ from loguru import logger
 
 from babo.baton.config import BatonModelConfig
 from babo.baton.gateway import ProviderCallError, RouterSource, as_stream, call_provider
+from babo.baton.toolcall_repair import StreamRepair, offered_tools, repair_completion, repair_stream
 
 PRIORITIES = {"interactive": 0, "visit": 1, "upkeep": 2}
 UPKEEP = PRIORITIES["upkeep"]
@@ -110,6 +111,7 @@ class ModelQueue:
         self.busy = 0
         self.last_busy = time.time()
         self._session: aiohttp.ClientSession | None = None
+        self.repaired = 0  # tool calls a model wrote as text, turned back into calls
 
     def app(self) -> web.Application:
         app = web.Application(client_max_size=64 * 1024 * 1024)
@@ -143,6 +145,7 @@ class ModelQueue:
             "slots": self.slots.slots, "active": self.slots.active, "waiting": self.slots.waiting,
             "served": self.slots.served, "max_active": self.slots.max_active, "uptime_s": int(time.time() - self.started),
             "idle_s": 0 if self.busy else int(time.time() - self.last_busy),
+            "repaired_tool_calls": self.repaired,
         }
 
     async def _status(self, _req: web.Request) -> web.Response:
@@ -162,6 +165,7 @@ class ModelQueue:
         resident = resident_of(request.headers, body)
         priority = PRIORITIES.get(request.headers.get("X-Baton-Priority", "interactive"), 0)
         self._capture(resident, request.path, body)
+        tools: dict[str, dict[str, Any]] = {}
         if self.router is not None and request.method == "POST" and request.path.endswith("chat/completions"):
             try:
                 parsed = cast(dict[str, Any], json.loads(body))
@@ -169,8 +173,9 @@ class ModelQueue:
                 parsed = None
             if isinstance(parsed, dict):
                 route = self.router.get().resolve(str(parsed.get("model") or ""))
+                tools = offered_tools(parsed)
                 if not route.local:
-                    return await self._provider(request, route, parsed, resident)
+                    return await self._provider(request, route, parsed, resident, tools)
                 body = json.dumps({**parsed, "model": route.model}).encode()
         url = self.config.upstream.rstrip("/") + request.rel_url.path_qs
         headers = {k: v for k, v in request.headers.items() if k.lower() not in _HOP_HEADERS and not k.lower().startswith("x-baton-")}
@@ -197,6 +202,8 @@ class ModelQueue:
 
         try:
             async with self._client().request(request.method, url, data=body, headers=headers) as upstream:
+                if tools and upstream.status == 200:
+                    return await self._repaired(request, upstream, tools, resident)
                 response = web.StreamResponse(status=upstream.status)
                 for key, value in upstream.headers.items():
                     if key.lower() not in _HOP_HEADERS and key.lower() != "content-encoding":
@@ -213,7 +220,33 @@ class ModelQueue:
             release()
 
 
-    async def _provider(self, request: web.Request, route: Any, body: dict[str, Any], resident: str) -> web.StreamResponse:
+    async def _repaired(self, request: web.Request, upstream: aiohttp.ClientResponse, tools: dict[str, dict[str, Any]],
+                        resident: str) -> web.StreamResponse:
+        """The model server's answer, with any tool call it missed (left as text) repaired."""
+        if "text/event-stream" not in upstream.headers.get("Content-Type", ""):
+            raw = await upstream.read()
+            try:
+                completion = cast(dict[str, Any], json.loads(raw))
+            except ValueError:
+                return web.Response(body=raw, status=upstream.status, content_type=upstream.content_type)
+            self._count(repair_completion(completion, tools), resident)
+            return web.json_response(completion)
+        response = web.StreamResponse(status=200, headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache"})
+        await response.prepare(request)
+        repair = StreamRepair(tools)
+        async for chunk in repair_stream(upstream.content.iter_any(), repair):
+            await response.write(chunk)
+        await response.write_eof()
+        self._count(repair.repaired, resident)
+        return response
+
+    def _count(self, repaired: int, resident: str) -> None:
+        if repaired:
+            self.repaired += repaired
+            logger.info("Baton gateway: repaired {} tool call(s) {} wrote as text", repaired, resident or "a resident")
+
+    async def _provider(self, request: web.Request, route: Any, body: dict[str, Any], resident: str,
+                        tools: dict[str, dict[str, Any]]) -> web.StreamResponse:
         """A preset on another provider: Babo's provider code makes the call; no local slot is used."""
         assert self.router is not None
         try:
@@ -224,6 +257,7 @@ class ModelQueue:
         except Exception as exc:  # setup problems (no key, unknown provider) are the owner's to see
             logger.warning("Baton gateway: {} ({}) for {}: {}", route.preset_name, route.model, resident, exc)
             return web.json_response({"error": {"message": f"model preset {route.preset_name}: {exc}"}}, status=502)
+        self._count(repair_completion(completion, tools), resident)
         if not body.get("stream"):
             return web.json_response(completion)
         response = web.StreamResponse(status=200, headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache"})

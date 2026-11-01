@@ -67,7 +67,7 @@ Each step is its own pull request, merged once its tests pass.
 | **A** | Models from Settings everywhere (the default preset for everything unless a profile or session picks another), any provider through Babo's gateway with keys kept inside Babo | Done |
 | **B1** | Start with a task and the resident gets going; live status (working, idle, waiting for you); send, stop, checkpoint now, switch model, and answer its questions, in the web interface and the terminal | Done |
 | **B2** | Open without a password (a pairing link); a door per session that knows who is there; wrap-up that follows presence (below); notices; archive | Done |
-| **H1** | Tool-call repair at the gateway; the baton moved to the end of the prompt | Planned |
+| **H1** | Tool-call repair at the gateway; the baton moved to the end of the prompt | Done |
 | **H2** | `babo eval`: representative tasks with checks, a baseline per preset | Planned |
 | **H3** | Drift and loop detectors with short reminders, done-checks for tasks, capped memory files | Planned |
 | **B3** | The Mayor's chats get the same session actions as residents' (the parity principle): `/checkpoint` beside `/stop` and `/model` | Done |
@@ -75,6 +75,7 @@ Each step is its own pull request, merged once its tests pass.
 | **D** | One list for all sessions: residents' sessions in the sidebar beside the Mayor's chats; rename, pin, tags and archive for residents' sessions in the web interface and the terminal. Still to come: tags for the Mayor's chats, and projects for residents' sessions (with C's folder access) | Partly done |
 | **E** | Docs the harness brings in at the right moment: a compact index of when to read what, injection on role entry, first tool use and errors, a logged `open_doc` fallback, curated skills, a task list agents keep as they work | Planned |
 | **G** | Own time: a small budget in quiet hours for each resident to reflect, revise itself, write a lesson or a letter, or pursue something of its own | Planned |
+| — | Polish, when the plan above is done: *Open* lands right in the session's own page (today it opens the town's project, where you pick the session) | Noted |
 | — | Later: a world to visit (a MUD, reached as a plugin), containers per resident behind the gateway | Ideas |
 
 ### Context for small models: what the research says, and what changes (H, E)
@@ -91,8 +92,8 @@ The rule that follows is the one Babo is built on: **the harness decides, the mo
 
 Babo already follows much of this: the harness decides when memory forms and what the session starts with (under a token budget), checkpoints are schema-checked, a full session continues from its baton, the session log is searched by a tool rather than injected, tools are kept few, and the clock is placed last. What changes:
 
-- **H1: Repairing tool calls at the gateway.** Local models sometimes write a tool call in a form the server doesn't parse, and the call silently becomes plain text. Every call passes through the gateway, so a tolerant parser there repairs them for everyone.
-- **H1: The baton moves last.** Who the agent is and its role stay fixed at the start of the prompt, so the model server's prompt cache keeps working. The baton, new letters and any docs the harness adds go at the end, where they also carry most weight.
+- **H1: Repairing tool calls at the gateway** (done). Local models sometimes write a tool call in a form the server doesn't parse, and the call silently becomes plain text. Every call passes through the gateway, so it repairs them there for everyone: the JSON form (`<tool_call>{"name": …}</tool_call>`) and the XML form Qwen models write (`<function=…><parameter=…>`), only for tools the request offered, all or nothing, streams included (only text that may start a call is held back). The queue's status counts the repairs (`repaired_tool_calls`).
+- **H1: The baton moves last** (done). Who the agent is, its role, its neighbours and the ledger stay fixed at the start of the prompt, so the model server's prompt cache keeps working. Where it is now (its baton, new letters, notes found for its thread) goes at the end, where it also carries most weight: for the Mayor, added to the turn's message whenever the conversation doesn't show it yet (and kept in the history after that); for a resident in opencode, added by Babo's plugin to the turn's message on every step, from a file Babo keeps up to date (after a checkpoint, when a letter comes).
 - **H2: `babo eval`.** About thirty representative tasks with checks the harness can run, scored on any model preset, so every change is measured on the owner's own hardware rather than guessed.
 - **E, redesigned.** A compact index, always present, says *when* to read each doc. The harness injects the right doc at the right moment (entering a role, first use of a tool, a particular error). An `open_doc` fallback is logged, and docs opened often become new trigger rules. We don't rely on the model choosing to load things.
 - **H3: Drift and loop detectors.** For example the same call repeated, or a disallowed tool tried. Each gets one short reminder placed last, and a hand-off to the owner if it happens again. Tasks can carry done-checks the harness runs before it accepts "finished". Memory files get size caps.
