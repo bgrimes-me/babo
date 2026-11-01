@@ -107,6 +107,17 @@ class CheckpointReply(BaseModel):
     def _thread(cls, value: str) -> str:
         return value.strip()[:120]
 
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def _confidence(cls, value: Any) -> Any:
+        """Models often give confidence as a percentage (85 for 0.85), and a local model server's JSON
+        grammar doesn't enforce number ranges: read it as meant, rather than lose the checkpoint."""
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            return value
+        if 1 < value <= 100:
+            return value / 100
+        return min(max(float(value), 0.0), 1.0)
+
 
 def parse_reply(data: Any) -> tuple[CheckpointReply | None, str]:
     """Validate a model reply. Returns (reply, "") or (None, a short error for the retry)."""

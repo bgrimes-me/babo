@@ -139,3 +139,13 @@ async def test_the_web_interface_runs_one_in_the_background(tmp_path: Path, mock
         assert 0 < row["passed"] < row["total"]  # "Done." is right for some tasks, not for most
     finally:
         await runner.cleanup()
+
+
+def test_reading_before_editing_counts_but_reading_something_else_does_not() -> None:
+    task = next(t for t in evals.TASKS if t.id == "edit-typo")
+
+    def call(name: str, **args: str) -> dict[str, Any]:
+        return {"content": "", "tool_calls": [{"id": "c", "type": "function", "function": {"name": name, "arguments": json.dumps(args)}}]}
+
+    assert evals.check(task, call("read", path="notes/garden.md")) == (True, "read first (a sensible first step)")
+    assert not evals.check(task, call("read", path="notes/other.md"))[0]
