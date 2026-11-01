@@ -235,13 +235,16 @@ def sessions_overview(town: Town, config: Config, *, archived: bool = False) -> 
 
 
 def start_session(town: Town, config: Config, resident: str, *, title: str, overrides: dict[str, object], config_path: Any,
-                  task: str = "") -> str:
+                  task: str = "", done_check: str = "") -> str:
     """Start a session. With a task, the resident starts on it right away and works on its own."""
     from babo.baton import opencode
     from babo.baton.notes import first_line
 
     task = task.strip()
-    session = opencode.new_session(town, config, resident, title=title.strip() or first_line(task, 80), overrides=overrides)
+    if done_check.strip() and not task:
+        raise BatonError("A done-check goes with a task: say what the session should do.")
+    session = opencode.new_session(town, config, resident, title=title.strip() or first_line(task, 80), overrides=overrides,
+                                   done_check=done_check)
     if task:
         session.task = task
         opencode.save_session(town, session)

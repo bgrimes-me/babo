@@ -76,8 +76,13 @@ class Promote(BaseModel):
     reason: str = ""
 
 
+# Memory stays small: a checkpoint's lists keep their first items, each a line or two (H3's caps).
+LIST_ITEMS = 8
+ITEM_CHARS = 300
+
+
 def _clean(items: list[str]) -> list[str]:
-    return [s.strip() for s in items if s and s.strip()][:20]
+    return [s.strip()[:ITEM_CHARS] for s in items if s and s.strip()][:LIST_ITEMS]
 
 
 class CheckpointReply(BaseModel):

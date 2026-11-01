@@ -177,40 +177,51 @@ def stats(town: Town) -> list[dict[str, Any]]:
 _MARK = "_baton_guides"
 
 
-def install(tool: Any, *, town: Town, resident_id: str, office: str, shown: Shown) -> None:
-    """Bring guides in with a tool's results: the tool's ``execute`` is wrapped in place (like the commit gate)."""
+def install(tool: Any, *, town: Town, resident_id: str, office: str, shown: Shown, watch: Any = None) -> None:
+    """Add what the harness has to say to a tool's results: a guide that's needed now, and (with a
+    ``drift.Watch``) a reminder when the agent goes round in circles. The tool's ``execute`` is
+    wrapped in place, like the commit gate."""
     if getattr(tool, _MARK, False):
         return
     from babo.agent.tools.base import ToolResult
     from babo.agent.tools.context import current_request_session_key
+    from babo.baton import drift
     from babo.baton.events import append_event
 
     inner = tool.execute
     name = str(tool.name)
 
-    def due(result: str, failed: bool) -> list[Guide]:
-        session = current_request_session_key() or "direct"
-        found = shown.due(session, [g for g in load(town) if g.for_office(office)], name, result, failed=failed)
-        for guide, how in found:
-            append_event(town, resident_id, current_request_session_key(), EVENT, name=guide.name, how=how)
-        return [g for g, _ in found]
+    def extras(result: str, failed: bool, args: dict[str, Any]) -> list[str]:
+        key = current_request_session_key()
+        session = key or "direct"
+        out: list[str] = []
+        for guide, how in shown.due(session, [g for g in load(town) if g.for_office(office)], name, result, failed=failed):
+            append_event(town, resident_id, key, EVENT, name=guide.name, how=how)
+            out.append(guide.text())
+        tripped = watch.see(session, name, args, failed=failed, result=result) if watch is not None else None
+        if tripped is not None:
+            rule, times = tripped
+            append_event(town, resident_id, key, drift.EVENT, rule=rule, tool=name, times=times)
+            out.append(drift.reminder(rule, name))
+            if times == 2:
+                drift.tell_owner(town, resident_id, session, "", rule, name)
+        return out
 
     async def execute(**kwargs: Any) -> Any:
         try:
             result = await inner(**kwargs)
         except Exception as exc:
-            guides = due(str(exc), True)
-            if not guides:
+            said = extras(str(exc), True, kwargs)
+            if not said:
                 raise
-            return ToolResult.error(f"Error: {exc}\n\n" + "\n\n".join(g.text() for g in guides))
+            return ToolResult.error(f"Error: {exc}\n\n" + "\n\n".join(said))
         if not isinstance(result, str):
             return result
         failed = bool(getattr(result, "is_error", False)) or result.startswith(("Error", "Blocked"))
-        guides = due(result, failed)
-        if not guides:
+        said = extras(result, failed, kwargs)
+        if not said:
             return result
-        text = result + "\n\n" + "\n\n".join(g.text() for g in guides)
-        return ToolResult(text, is_error=bool(getattr(result, "is_error", False)))
+        return ToolResult(result + "\n\n" + "\n\n".join(said), is_error=bool(getattr(result, "is_error", False)))
 
     object.__setattr__(tool, "execute", execute)
     object.__setattr__(tool, _MARK, True)

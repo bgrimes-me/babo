@@ -839,6 +839,7 @@ def session_new(
     resident: str = typer.Argument(...),
     task: str = typer.Option("", "--task", help="What it should do; it starts on it right away and works on its own"),
     title: str = typer.Option("", "--title", help="A name for the session (default: the task's first line)"),
+    done_check: str = typer.Option("", "--done-check", help="A command that must succeed (in the resident's folder) before the task counts as done, e.g. 'pytest -q'"),
     set_: list[str] = typer.Option([], "--set", help="Change the profile for this session only, e.g. --set shell=deny or --set model=<preset>"),
     config: str | None = _CONFIG_OPT,
 ):
@@ -847,7 +848,8 @@ def session_new(
 
     t, cfg = _town(config)
     try:
-        said = views.start_session(t, cfg, resident, title=title, overrides=_overrides(set_), config_path=_config_path(), task=task)
+        said = views.start_session(t, cfg, resident, title=title, overrides=_overrides(set_), config_path=_config_path(), task=task,
+                                   done_check=done_check)
         session = max((s for s in opencode.sessions(t, resident) if s.kind == "work"), key=lambda s: s.created)
     except BatonError as exc:
         _fail(exc)

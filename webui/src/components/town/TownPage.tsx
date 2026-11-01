@@ -669,7 +669,8 @@ function SessionsView({ token, transport, onNotice, onError, focus = null }: {
           onAction={(action, extra) => void act(s.id, action, { resident: r.id, id: s.id, ...extra })}
           onOpen={() => openSession(r.id, s.id)} />)}
         <NewSessionForm resident={r.id} presets={data.presets ?? []} disabled={!data.opencode || busy === `new:${r.id}`} busy={busy === `new:${r.id}`}
-          onStart={(task, overrides) => void act(`new:${r.id}`, "new", { resident: r.id, task, overrides })} />
+          onStart={(task, overrides, doneCheck) => void act(`new:${r.id}`, "new",
+            { resident: r.id, task, overrides, ...(doneCheck.trim() ? { done_check: doneCheck.trim() } : {}) })} />
       </SettingsGroup>
     </section>)}
   </>;
@@ -717,6 +718,10 @@ function SessionRow({ session, presets, busy, onAction, onOpen, focused = false 
         {live.activity ? ` · ${live.activity}` : ""}
         {" · "}{t("town.lastActive", { defaultValue: "last active {{when}}", when: when(session.last_active) })}
         {changes ? ` · ${t("town.sessionChanges", { defaultValue: "this session: {{changes}}", changes })}` : ""}
+        {session.done_check ? ` · ${{
+          passed: t("town.donePassed", { defaultValue: "done-check passed" }),
+          failed: t("town.doneFailed", { defaultValue: "done-check still failing" }),
+        }[session.done_status ?? ""] ?? t("town.doneWaiting", { defaultValue: "done when `{{check}}` succeeds", check: session.done_check })}` : ""}
       </span>
       {running && (session.presence?.connections ?? 0) > 0 && <span className="mt-0.5 block text-xs text-muted-foreground">
         {t("town.sessionOpenNow", { defaultValue: "open now (in {{count}} place(s)): it won't be wrapped up while you're there", count: session.presence?.connections ?? 0 })}
@@ -811,18 +816,22 @@ function NewSessionForm({ resident, presets, disabled, busy, onStart }: {
   presets: TownPreset[];
   disabled: boolean;
   busy: boolean;
-  onStart: (task: string, overrides: Record<string, string>) => void;
+  onStart: (task: string, overrides: Record<string, string>, doneCheck: string) => void;
 }) {
   const { t } = useTranslation();
   const [title, setTitle] = useState("");  // the task: what it should do
+  const [doneCheck, setDoneCheck] = useState("");
   const [overrides, setOverrides] = useState<Record<string, string>>({});
-  return <form className="settings-list-row flex flex-col gap-3 py-3" onSubmit={(event) => { event.preventDefault(); onStart(title, overrides); setTitle(""); setOverrides({}); }}>
+  return <form className="settings-list-row flex flex-col gap-3 py-3" onSubmit={(event) => { event.preventDefault(); onStart(title, overrides, doneCheck); setTitle(""); setOverrides({}); setDoneCheck(""); }}>
     <div className="flex flex-wrap gap-2">
       <Input className="min-w-[14rem] flex-1" value={title} maxLength={200} onChange={(event) => setTitle(event.target.value)}
         aria-label={t("town.sessionTask", { defaultValue: "What should {{who}} do?", who: resident })}
         placeholder={t("town.sessionTaskPlaceholder", { defaultValue: "What should it do? It starts right away (leave empty for an idle session)" })} />
       <Button type="submit" disabled={disabled}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : title.trim() ? t("town.startTask", { defaultValue: "Start" }) : t("town.newSession", { defaultValue: "New session" })}</Button>
     </div>
+    {title.trim() && <Input value={doneCheck} maxLength={2000} onChange={(event) => setDoneCheck(event.target.value)}
+      aria-label={t("town.doneCheck", { defaultValue: "Done when this command succeeds" })}
+      placeholder={t("town.doneCheckPlaceholder", { defaultValue: "Optional: done when this command succeeds in its folder, e.g. pytest -q or test -f index.md" })} />}
     <details>
       <summary className="cursor-pointer text-xs text-muted-foreground">{t("town.sessionOptions", { defaultValue: "Change what this session may do" })}</summary>
       <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">

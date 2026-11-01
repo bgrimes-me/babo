@@ -215,6 +215,10 @@ class Session:
     notified: str = ""  # what the owner was last told about it ("waiting", "wrapped up")
     pinned: bool = False  # kept at the top of the session lists
     tags: list[str] = field(default_factory=lambda: cast(list[str], []))  # the owner's own labels, for finding it again
+    done_check: str = ""  # the owner's command that must succeed before the task counts as done
+    done_status: str = ""  # "" (not yet) | passed | failed
+    done_tries: int = 0
+    done_checked: str = ""  # when it last ran
 
     @property
     def key(self) -> str:
@@ -262,7 +266,7 @@ def get_session(town: Town, resident: str, session_id: str | None = None) -> Ses
 
 def new_session(
     town: Town, config: Config, resident: str, *, title: str = "", overrides: dict[str, object] | None = None,
-    by: str = OWNER, kind: str = "work", commands: list[str] | None = None,
+    by: str = OWNER, kind: str = "work", commands: list[str] | None = None, done_check: str = "",
 ) -> Session:
     """Record a new session. The owner may change anything for it; the Mayor may
     only narrow it, because a resident's profile is the owner's to widen."""
@@ -270,10 +274,13 @@ def new_session(
     if not runs_in_opencode(agent.office):
         raise BatonError("The Mayor runs in Babo itself; talk to it with `babo` or the web interface.")
     effective_profile(town, config, resident, overrides or {}, by=by)
+    if done_check.strip() and not is_owner(by):
+        raise BatonError(f"Only {town.owner_name} can give a session a done-check: it runs as a command on the machine.")
     stamp = now_iso()
     session_id = stamp[:16].replace(":", "").replace("T", "-") + "-" + secrets.token_hex(2)
     session = Session(resident=resident, id=session_id, title=title.strip() or f"{resident}: {stamp[:16].replace('T', ' ')}",
-                      kind=kind, overrides=dict(overrides or {}), created=stamp, by=by, commands=list(commands or []))
+                      kind=kind, overrides=dict(overrides or {}), created=stamp, by=by, commands=list(commands or []),
+                      done_check=done_check.strip())
     save_session(town, session)
     return session
 
@@ -1009,6 +1016,13 @@ def ingest(town: Town, session: Session) -> list[dict[str, Any]]:
             written.append(append_event(town, session.resident, session.key, "tool", at=at, via="opencode", **tool_record(event)))
         elif raw.get("kind") == "turn_start":
             written.append(append_event(town, session.resident, session.key, "turn_start", at=at, via="opencode"))
+        elif raw.get("kind") == "drift":
+            from babo.baton import drift
+
+            rule, tool, times = str(raw.get("rule", ""))[:40], str(raw.get("tool", ""))[:80], raw.get("times")
+            append_event(town, session.resident, session.key, drift.EVENT, at=at, via="opencode", rule=rule, tool=tool, times=times)
+            if times == 2:
+                drift.tell_owner(town, session.resident, session.id, session.title, rule, tool)
         elif raw.get("kind") == "guide":
             append_event(town, session.resident, session.key, "guide", at=at, via="opencode",
                          name=str(raw.get("name", ""))[:80], how=str(raw.get("how", ""))[:80])
@@ -1042,6 +1056,8 @@ def wrap_up_reason(town: Town, config: Config, session: Session, *, now: datetim
     active = _when(session.last_active)
     if state["state"] == "waiting":
         return "it waited a day for an answer" if now - active >= timedelta(hours=oc.wrap_up_waiting_hours) else ""
+    if session.done_check and not session.done_status:
+        return ""  # its done-check hasn't passed (or given up) yet: upkeep runs it first
     here = presence(town, session)
     if here["connections"]:
         quiet = now - active >= timedelta(minutes=oc.freeze_after_idle_minutes)
@@ -1051,6 +1067,61 @@ def wrap_up_reason(town: Town, config: Config, session: Session, *, now: datetim
         return "done with its task" if now - active >= timedelta(minutes=oc.wrap_up_after_task_minutes) else ""
     left = max(seen, active)
     return "done, and everyone has left" if now - left >= timedelta(minutes=oc.wrap_up_after_leaving_minutes) else ""
+
+
+DONE_TRIES = 2
+DONE_TIMEOUT_S = 120
+
+
+def run_done_check(town: Town, session: Session) -> tuple[bool, str]:
+    """Run a session's done-check in the resident's folder: (passed, the end of what it printed)."""
+    try:
+        done = subprocess.run(["bash", "-lc", session.done_check], cwd=town.resident_dir(session.resident),
+                              capture_output=True, text=True, timeout=DONE_TIMEOUT_S, check=False)
+    except subprocess.TimeoutExpired:
+        return False, f"(it took longer than {DONE_TIMEOUT_S} seconds)"
+    except OSError as exc:
+        return False, f"(it could not run: {exc})"
+    output = (done.stdout + done.stderr).strip()
+    return done.returncode == 0, (output[-1500:] or f"(exit code {done.returncode}, no output)")
+
+
+def check_done(town: Town, config: Config, *, config_path: Path) -> list[str]:
+    """Run the done-check of each running session that has finished its turn since the last check.
+    Passed: it may wrap up. Failed: the resident hears what failed and carries on, up to DONE_TRIES
+    times; then the owner hears that it isn't done, and it may wrap up."""
+    from babo.baton import notices
+
+    said: list[str] = []
+    for resident in (r.id for r in Registry(town).all() if r.status == "active" and runs_in_opencode(r.office)):
+        for session in sessions(town, resident):
+            if session.kind != "work" or not session.done_check or session.done_status or running(town, session) is None:
+                continue
+            if live(town, session)["state"] != "idle" or _when(session.done_checked) >= _when(session.last_active):
+                continue
+            passed, output = run_done_check(town, session)
+            session = get_session(town, resident, session.id)
+            session.done_checked = now_iso()
+            if passed:
+                session.done_status = "passed"
+                said.append(f"{resident}/{session.id}: done-check passed")
+            else:
+                session.done_tries += 1
+                if session.done_tries >= DONE_TRIES:
+                    session.done_status = "failed"
+                    notices.add(town, "not_done", f"{resident}'s “{session.title}” isn't done: its done-check `{session.done_check}` "
+                                f"still fails after {session.done_tries} tries. It will wrap up; resume it, or look at it with them.",
+                                resident=resident, session=session.id)
+                else:
+                    message = (f"[From Babo] The task isn't done yet: its check `{session.done_check}` failed:\n\n{output}\n\n"
+                               "Carry on until it passes (or say plainly what stands in the way).")
+                    save_session(town, session)
+                    prompt(town, config, session, message, config_path=config_path)
+                    session = get_session(town, resident, session.id)
+                    session.done_checked = now_iso()
+                said.append(f"{resident}/{session.id}: done-check failed ({session.done_tries})")
+            save_session(town, session)
+    return said
 
 
 def notify_waiting(town: Town) -> list[str]:

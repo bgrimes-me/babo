@@ -135,12 +135,41 @@ export default {
       return out
     }
 
+    // Going round in circles: the same call again and again, or a tool tried again right after it
+    // was refused. One short reminder with that call's result; Babo tells the owner the second time.
+    // (The same rules as Babo's own, in drift.py.)
+    const recent = []
+    const tripped = {}
+    const REFUSED = ["permission denied", "permission.rejected", "blocked", "not allowed", "is not available"]
+    const sortKeys = (value) => Array.isArray(value) ? value.map(sortKeys)
+      : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map((k) => [k, sortKeys(value[k])])) : value
+    const drift = (tool, input, failed, text) => {
+      const sig = `${tool} ${JSON.stringify(sortKeys(input ?? {}))}`
+      const wasRefused = failed && REFUSED.some((word) => text.toLowerCase().includes(word))
+      const refusedBefore = recent.some((call) => call.tool === tool && call.refused)
+      recent.push({ sig, tool, refused: wasRefused })
+      if (recent.length > 6) recent.shift()
+      let rule = ""
+      if (recent.filter((call) => call.sig === sig).length >= 3) rule = "repeat"
+      else if (refusedBefore && wasRefused) rule = "refused_again"
+      if (!rule) return ""
+      recent.length = 0
+      tripped[rule] = (tripped[rule] ?? 0) + 1
+      spool({ kind: "drift", rule, tool, times: tripped[rule] })
+      const what = rule === "repeat" ? `You've made the same \`${tool}\` call 3 times; it will give the same answer.`
+        : `\`${tool}\` was refused, and trying it again will be refused again.`
+      return `[Babo: ${what} Step back: what do you actually need? Try a different way, or say plainly what's in the way and stop there.]`
+    }
+
     await ctx.tool.hook("execute.after", (event) => {
       const said = event.status === "error" ? String(event.error?.message ?? "") + " " + JSON.stringify(event.error?.error ?? {})
         : (event.result?.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n")
-      for (const guide of dueGuides(event.tool, said, event.status === "error")) {
-        if (event.status !== "error" && event.result) (event.result.content ??= []).push({ type: "text", text: guide.text })
-        else withTurn.push(guide.text)
+      const notes = dueGuides(event.tool, said, event.status === "error").map((guide) => guide.text)
+      const reminder = drift(String(event.tool), event.input, event.status === "error", said)
+      if (reminder) notes.push(reminder)
+      for (const note of notes) {
+        if (event.status !== "error" && event.result) (event.result.content ??= []).push({ type: "text", text: note })
+        else withTurn.push(note)
       }
       const result = event.result ?? {}
       const text = (result.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n")

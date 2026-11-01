@@ -50,6 +50,8 @@ def _list(desc: str) -> dict[str, Any]:
     return {"type": "array", "items": {"type": "string"}, "description": desc}
 
 
+SELF_MAX_TOKENS = 1200  # SELF.md is in every prompt: it stays small (H3's caps)
+
 TOOL_SPECS: dict[str, ToolSpec] = {
     spec.name: spec
     for spec in (
@@ -348,6 +350,12 @@ class Toolbox:
     def revise_self(self, new_text: str, reason: str, name: str | None = None) -> str:
         if not new_text.strip():
             raise BatonError("new_text is empty. SELF.md was not changed.")
+        from babo.baton.tokens import estimate_tokens
+
+        size = estimate_tokens(new_text)
+        if size > SELF_MAX_TOKENS:
+            raise BatonError(f"SELF.md is who you are, kept short so it's always in view: at most about {SELF_MAX_TOKENS} tokens "
+                             f"(this was about {size}). Say it in fewer words; details belong in your notes. SELF.md was not changed.")
         changed: list[Path] = []
         message = f"{self.resident_id}: revise SELF ({reason.strip()[:80] or 'no reason given'})"
         if name:
