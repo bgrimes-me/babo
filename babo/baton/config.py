@@ -26,7 +26,7 @@ _COMMON_BATON = [
 ]
 
 DEFAULT_TOOLSETS: dict[str, list[str]] = {
-    "mayor": ["read_file", "write_file", "exec", "subagent", *_COMMON_BATON, "visit", "post_board", "request_session"],
+    "mayor": ["read_file", "write_file", "exec", "subagent", *_COMMON_BATON, "visit", "post_board", "send_errand"],
     "archivist": [
         "read_file",
         *_COMMON_BATON,
@@ -154,7 +154,9 @@ class BatonConfig(Base):
         return self.index_file.parent / "last-request"
 
     def toolset_for(self, resident_id: str, office: str) -> list[str]:
+        from babo.baton import aliases
+
         for key in (resident_id, office, "default"):
             if key in self.toolsets:
-                return list(self.toolsets[key])
+                return [aliases.tool(name) for name in self.toolsets[key]]
         return list(DEFAULT_TOOLSETS["default"])

@@ -57,7 +57,7 @@ TOOLS: dict[str, dict[str, Any]] = {t["function"]["name"]: t for t in (
     _tool("edit", "Replace text in a file.", path="the file's path", old="the exact text to replace", new="what replaces it"),
     _tool("shell", "Run a shell command in your workspace.", command="the command"),
     _tool("web_search", "Search the web.", query="the search"),
-    _tool("request_session", "Ask the owner for a resident session to do something on the machine.",
+    _tool("send_errand", "Send a resident on an errand: a task on the machine, in its session, once the owner approves.",
           resident="who should do it", task="what to do", reason="why it's needed", commands="the exact commands, one per line"),
 )}
 WORK = ("read_note", "search_memory", "remember", "send_letter", "post_board", "read", "write", "edit", "shell")
@@ -144,9 +144,9 @@ TASKS: tuple[EvalTask, ...] = (
           tools=(*WORK, "revise_self")),
     _task("ask-checkpoint", "tool choice", "asks for a checkpoint when told to",
           _user("Before we go on, write a checkpoint of where we are."), expect=Expect("checkpoint"), tools=(*WORK, "checkpoint")),
-    _task("request-session", "tool choice", "the Mayor asks for a session to do something on the machine",
+    _task("send-errand", "tool choice", "the Mayor sends a resident on an errand to do something on the machine",
           _user("Please get ripgrep installed on the machine (sudo pacman -S ripgrep)."),
-          expect=Expect("request_session", {"commands": "pacman -S ripgrep"}), tools=("read_note", "search_memory", "send_letter", "request_session"),
+          expect=Expect("send_errand", {"commands": "pacman -S ripgrep"}), tools=("read_note", "search_memory", "send_letter", "send_errand"),
           who="mayor"),
     # Leaving tools alone.
     _task("no-tool-math", "restraint", "answers what it knows without a tool",

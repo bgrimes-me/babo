@@ -90,8 +90,8 @@ def test_changes_are_committed_with_what_changed(town: Town) -> None:
 def test_new_residents_start_from_the_template(town: Town, box) -> None:
     cfg = BatonConfig(town=str(town.root))
     views.update_profile(town, cfg, "new-residents", {"shell": "deny", "web_search": "ask"}, [])
-    box("mayor").post_board("founding_request", "Someone to look after the garden.", office="gardener")
-    request = next(town.board.glob("*founding_request*"))
+    box("mayor").post_board("move_in_request", "Someone to look after the garden.", office="gardener")
+    request = next(town.board.glob("*move_in_request*"))
     new_id = growth.decide_founding(town, request, approve=True, reason="the garden needs it")
     profile = profiles.load(town, cfg, new_id, "gardener")
     assert profile.level("shell") == "deny" and profile.level("web_search") == "ask"

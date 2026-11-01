@@ -21,7 +21,7 @@ from babo.baton.town import OWNER, BatonError, Town
 if TYPE_CHECKING:
     from babo.config.schema import Config
 
-DecisionKind = Literal["tool", "proposal", "founding", "flag", "session"]
+DecisionKind = Literal["tool", "proposal", "move_in", "flag", "errand", "founding", "session"]  # the last two: old names (step 23)
 
 
 def town_overview(town: Town, cfg: BatonConfig) -> dict[str, Any]:
@@ -137,9 +137,12 @@ def mayor_chats(town: Town, *, limit: int = 10) -> list[dict[str, str]]:
 def decide(town: Town, kind: DecisionKind, item_id: str, *, yes: bool, reason: str, commit: bool = True,
            digest: str | None = None) -> str:
     """Apply one of the owner's review decisions. Returns a short plain-language result.
-    ``digest``: for a session request, the fingerprint of the request as the owner saw it."""
+    ``digest``: for an errand, the fingerprint of the request as the owner saw it."""
     reason = reason.strip() or "(no reason given)"
-    if kind == "session":
+    from babo.baton import aliases
+
+    kind = cast(DecisionKind, aliases.decision(kind))
+    if kind == "errand":
         return _requests().decide(town, item_id, approve=yes, reason=reason, digest=digest, commit=commit)
     if kind == "tool":
         growth.decide_tool(town, item_id, approve=yes, reason=reason)
@@ -147,9 +150,9 @@ def decide(town: Town, kind: DecisionKind, item_id: str, *, yes: bool, reason: s
     elif kind == "proposal":
         growth.decide_proposal(town, _child(town.proposals / "open", item_id), accept=yes, reason=reason)
         result = f"Proposal {'accepted' if yes else 'declined'}." + (f" The town is now called {town.name}." if yes and town.name else "")
-    elif kind == "founding":
+    elif kind == "move_in":
         new_id = growth.decide_founding(town, _child(town.board, item_id), approve=yes, reason=reason)
-        result = f"Founded: {new_id}." if new_id else "Founding request declined."
+        result = f"Moved in: {new_id}." if new_id else "Move-in request declined."
     elif kind == "flag":
         if not yes:
             return "Flag kept open."

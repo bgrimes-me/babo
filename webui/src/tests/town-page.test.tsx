@@ -240,10 +240,10 @@ describe("town page", () => {
   });
 
   it("shows a session request word for word and approves exactly what was shown", async () => {
-    mocks.mutation.mockResolvedValue({ message: "Request approved: archivist will run it as soon as upkeep picks it up (within a minute).", town: town() });
+    mocks.mutation.mockResolvedValue({ message: "Errand approved: archivist will run it as soon as upkeep picks it up (within a minute).", town: town() });
     render(<TownPage onBackToChat={() => {}} />);
     fireEvent.click(await screen.findByRole("tab", { name: "Review (2)" }));
-    const card = (await screen.findByText("mayor asks for a session of archivist")).closest(".settings-list-row") as HTMLElement;
+    const card = (await screen.findByText("mayor wants to send archivist on an errand")).closest(".settings-list-row") as HTMLElement;
     expect(within(card).getByText("Install nano.")).toBeVisible();
     expect(within(card).getByText("sudo pacman -S --noconfirm nano")).toBeVisible();
     expect(within(card).getByText(/Beyond its profile: Read web pages: deny → allow/)).toBeVisible();

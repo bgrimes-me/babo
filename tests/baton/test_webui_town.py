@@ -146,7 +146,7 @@ async def test_a_session_request_is_approved_from_the_web_only_for_what_was_show
     from babo.baton import requests
 
     routes = _routes(town, index_path, monkeypatch)
-    box("mayor").call("request_session", resident="archivist", task="Install nano.", reason="To edit notes.", commands=["sudo pacman -S nano"])
+    box("mayor").call("send_errand", resident="archivist", task="Install nano.", reason="To edit notes.", commands=["sudo pacman -S nano"])
     status, review = await _call(routes, "/api/town/review")
     [shown] = review["sessions"]
     assert status == 200 and shown["commands"] == ["sudo pacman -S nano"]
@@ -162,7 +162,7 @@ async def test_a_chat_asks_for_waiting_session_requests_to_prompt_for_them(town:
     routes = _routes(town, index_path, monkeypatch)
     status, body = await _call(routes, "/api/town/session-requests")
     assert status == 200 and body["pending"] == []
-    box("mayor").call("request_session", resident="archivist", task="Install nano.", reason="To edit notes.", commands=["sudo pacman -S nano"])
+    box("mayor").call("send_errand", resident="archivist", task="Install nano.", reason="To edit notes.", commands=["sudo pacman -S nano"])
     status, body = await _call(routes, "/api/town/session-requests")
     [shown] = body["pending"]
     assert shown["resident"] == "archivist" and shown["digest"] and shown["wider"] == ["Commands: sudo pacman -S nano"]

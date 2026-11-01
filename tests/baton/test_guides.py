@@ -13,7 +13,7 @@ from babo.baton.town import Town
 
 def test_babo_ships_guides_and_keeps_them_up_to_date_until_someone_edits_one(town: Town) -> None:
     names = {g.name for g in guides.load(town)}
-    assert {"letters", "checkpoints", "commons-notes", "session-requests", "when-blocked", "reviews"} <= names
+    assert {"letters", "checkpoints", "commons-notes", "errands", "when-blocked", "reviews"} <= names
     letters = guides.folder(town) / "letters.md"
     assert "{{ owner }}" not in letters.read_text() and "Robin" in letters.read_text()
     letters.write_text(letters.read_text().replace("One letter, one matter", "One matter per letter"))
@@ -24,7 +24,7 @@ def test_babo_ships_guides_and_keeps_them_up_to_date_until_someone_edits_one(tow
 def test_the_index_is_in_the_prompts_start_and_lists_the_offices_guides(town: Town) -> None:
     Registry(town).update("mayor", first_session_done=True)
     mayor = build_bundle(town, "mayor").stable_text()
-    assert "## Guides" in mayor and "`session-requests`: before you ask for a session" in mayor
+    assert "## Guides" in mayor and "`errands`: before you send a resident on an errand" in mayor
     assert "`commons-notes`" not in mayor  # the Archivist's, not the Mayor's
     assert "## Guides" not in build_bundle(town, "archivist").stable_text()  # its first session: the charter in full instead
     Registry(town).update("archivist", first_session_done=True)
@@ -73,7 +73,7 @@ def test_a_guide_opened_by_hand_is_logged_and_one_looked_for_often_gets_a_hint(t
 def test_opencode_gets_its_guides_with_their_triggers(town: Town) -> None:
     data = json.loads(guides.plugin_file(town, "archivist"))
     names = {g["name"] for g in data}
-    assert "commons-notes" in names and "session-requests" not in names
+    assert "commons-notes" in names and "errands" not in names
     blocked = next(g for g in data if g["name"] == "when-blocked")
     assert blocked["errors"] and blocked["text"].startswith("[Guide from Babo")
 

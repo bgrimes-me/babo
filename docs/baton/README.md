@@ -11,7 +11,7 @@ Babo is a small **town of agents** that share your local model and keep a memory
 
 ## The residents
 
-A new town has one resident, the **Mayor**. Others are founded when the town needs them: the Mayor posts a founding request, and you approve or decline it in your review. Residents start without names; choosing a name, a voice or a personality is up to each of them, if and when they want. Two offices are described in the charter already:
+A new town has one resident, the **Mayor**. Others **move in** when the town needs them: the Mayor posts a move-in request, and you approve or decline it in your review. An office described but held by nobody is a *vacancy*. Residents start without names; choosing a name, a voice or a personality is up to each of them, if and when they want. Two offices are described in the charter already:
 
 - **Mayor:** the front desk. When you type `babo`, you're talking to the Mayor. It runs projects, hands work to others, spawns temporary helpers ("crew"), writes letters, visits other residents, and can ask you to found a new resident.
 - **Archivist** (once founded): keeps the commons tidy; until there is one, the Mayor does. It turns notes residents nominate into shared knowledge, merges duplicates, keeps both sides when two views disagree, and keeps the list of what the town can do (`commons/LEDGER.md`).
@@ -59,21 +59,21 @@ The Mayor runs in Babo itself. Every other resident runs as its own opencode ins
 
 When the Mayor visits a resident, or a round gives a resident its step, that happens in a session of its own in opencode too. If opencode isn't installed, sessions can't start; visits and upkeep then run in Babo itself, and `babo doctor` says so.
 
-## When the Mayor needs something done on the machine
+## When the Mayor needs something done on the machine: errands
 
-The Mayor talks to the outside world (the web interface, chat apps, web pages), so he doesn't get a shell that reaches the whole machine. When something needs doing (install a package, run a build, look at a log), he **asks for a session**: one resident, one task, the access it needs and his reason. Asking does nothing by itself.
+The Mayor talks to the outside world (the web interface, chat apps, web pages), so he doesn't get a shell that reaches the whole machine. When something needs doing (install a package, run a build, look at a log), he sends a resident on an **errand**: one resident, one task, the access it needs and his reason. Asking does nothing by itself.
 
-The request comes to your **Review** (the Town page, or `babo review`), word for word: the task, the reason, each kind of access, the exact shell commands, and what it adds beyond the resident's profile. **Approve and run** and the upkeep service starts that resident's session in opencode with exactly that access, sends the task, has the resident review the session into its memory, and writes the Mayor a letter with the result. **Decline** and he gets your reason.
+The errand comes to your **Review** (the Town page, or `babo review`), word for word: the task, the reason, each kind of access, the exact shell commands, and what it adds beyond the resident's profile. **Approve and run** and the upkeep service starts that resident's session in opencode with exactly that access, sends the task, has the resident review the session into its memory, and writes the Mayor a letter with the result. **Decline** and he gets your reason.
 
-You don't have to go looking for it. While a request waits, every open chat in the web interface shows it above the message box, with **Approve and run** and **Decline** right there (it checks every few seconds, and also shows requests he made from another chat, like Discord, saying which). In the terminal chat (`babo agent`), after the turn in which he asks, it shows the request and asks you to approve, decline or skip it; anything you skip waits in the Review.
+You don't have to go looking for it. While an errand waits, every open chat in the web interface shows it above the message box, with **Approve and run** and **Decline** right there (it checks every few seconds, and also shows errands he asked for from another chat, like Discord, saying which). In the terminal chat (`babo agent`), after the turn in which he asks, it shows the errand and asks you to approve, decline or skip it; anything you skip waits in the Review.
 
-- **Private or public.** A session the Mayor asks for is *private* unless he asks for it to be *public*: from a private one he gets the resident's own summary of what it did; from a public one also its full output (what it ran and what came back, secrets redacted). The request shows which, and it is part of what you approve.
+- **Private or public.** An errand is *private* unless he asks for it to be *public*: from a private one he gets the resident's own summary of what it did; from a public one also its full output (what it ran and what came back, secrets redacted). The errand shows which, and it is part of what you approve.
 - **Exact commands are the safe way to allow the shell.** Approve `sudo pacman -S --noconfirm nano` and that command runs, written exactly like that, and nothing else does.
 - **Nobody is at a terminal while it runs**, so anything not allowed is denied rather than asked. `sudo` works only if your machine allows that command without a password; Babo never holds your password.
-- **Your approval is for what you saw.** If the request changes after you opened it, the approval is refused; if its file changes after you approved it, it doesn't run.
-- Requests run one at a time, starting within a minute of your approval, and need the upkeep service running. Every request, decision and result is in the town's history (`state/requests/`).
+- **Your approval is for what you saw.** If the errand changes after you opened it, the approval is refused; if its file changes after you approved it, it doesn't run.
+- Errands run one at a time, starting within a minute of your approval, and need the upkeep service running. Every errand, decision and result is in the town's history (`state/requests/`).
 
-**Allow all.** If you want the Mayor to get on with it, you can let one of his chats run its requests without your review: the **Allow all** button in the chat's header (it asks first, says what it means, and asks for how long: an hour, eight hours, or until you turn it off), or `babo allow-all <chat> [--for HOURS]` in the terminal (`babo allow-all` lists his recent chats; `--off` turns it off). While it is on, the chat shows it, requests from that chat are approved as he asks and run within a minute, with any access he asks for, and **Review › Recently run** lists each one, marked "approved automatically". Turning it on and off is recorded in the town's history. Keep in mind what it means: commands run as your user, and anyone who can talk to him in that chat, or anything he reads, can lead to commands running. In a Discord channel with other people in it, think twice.
+**Allow all.** If you want the Mayor to get on with it, you can let one of his chats send residents on errands without your review: the **Allow all** button in the chat's header (it asks first, says what it means, and asks for how long: an hour, eight hours, or until you turn it off), or `babo allow-all <chat> [--for HOURS]` in the terminal (`babo allow-all` lists his recent chats; `--off` turns it off). While it is on, the chat shows it, errands from that chat are approved as he asks and run within a minute, with any access he asks for, and **Review › Recently run** lists each one, marked "approved automatically". Turning it on and off is recorded in the town's history. Keep in mind what it means: commands run as your user, and anyone who can talk to him in that chat, or anything he reads, can lead to commands running. In a Discord channel with other people in it, think twice.
 
 ## The town's knowledge, and Obsidian
 
@@ -89,7 +89,7 @@ Run `babo review` once a week, or open the **Town** page in the web interface (`
 
 - **Proposed tools**, with their test results and the Inspector's review. A tool only runs for real after you approve it, because it runs on your machine.
 - **Proposals** to change how the town works, including requests to promote a project. Accept or decline.
-- **Founding requests** for new residents. Each one costs compute every day, so this is your call.
+- **Move-in requests** for newcomers. Each one costs compute every day, so this is your call.
 - **Flags** that have stayed open for more than a week.
 
 Whatever reason you give goes to the resident concerned. The review is not an audit of anyone's memory.
@@ -134,9 +134,13 @@ Results are kept in the town, under `state/eval/`.
 
 A new town has no name. The residents choose one: any of them can propose a name with `propose_change`, and it comes to you in `babo review` like any other proposal. Accept it and the town takes the name at once; every resident sees it at the start of their next session, and `babo town` shows it. You can also name it yourself with `babo town --name "…"`, but it's nicer to let them.
 
-## Founding a new resident
+## Old names
 
-The Mayor posts a founding request to the board when it thinks the town needs someone new. It shows up in your next review. If you approve, the resident is created with a plain description of its job, and chooses its own name later. Nothing else can create a resident.
+The town has its own words now: a newcomer *moves in* (that was "founding a resident"), and the Mayor sends a resident on an *errand* (that was a "session request"). The old names (the Mayor's `request_session`, board posts of kind `founding_request`, the old API path) still work for now, saying they're going; a later step removes them, once you've confirmed everything works under the new ones. Your town's own files were updated when you upgraded.
+
+## A newcomer moves in
+
+The Mayor posts a move-in request to the board when it thinks the town needs someone new. It shows up in your next review. If you approve, the newcomer moves in with a plain description of its job, and chooses its own name later. Nothing else brings a resident to town.
 
 ## When something goes wrong
 

@@ -28,7 +28,7 @@ describe("session request prompt", () => {
     mocks.fetch.mockImplementationOnce(() => respond([nano])).mockImplementation(() => respond([]));
     mocks.mutation.mockResolvedValue({ message: "approved", town: {} });
     render(<SessionRequestPrompt sessionKey="websocket:abc" />);
-    expect(await screen.findByText("mayor asks, in this chat, for a session of archivist")).toBeVisible();
+    expect(await screen.findByText("mayor wants to send archivist on an errand (asked in this chat)")).toBeVisible();
     expect(screen.getByText("sudo pacman -S nano")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Approve and run" }));
     await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.decide",
@@ -43,6 +43,6 @@ describe("session request prompt", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     mocks.fetch.mockImplementation(() => respond([{ ...nano, session_key: "discord:42" }]));
     await vi.advanceTimersByTimeAsync(5_000);
-    expect(await screen.findByText("mayor asks, from discord:42, for a session of archivist")).toBeVisible();
+    expect(await screen.findByText("mayor wants to send archivist on an errand (asked from discord:42)")).toBeVisible();
   });
 });

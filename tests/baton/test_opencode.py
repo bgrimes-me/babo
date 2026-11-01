@@ -490,7 +490,7 @@ def test_an_approved_request_may_run_exactly_its_commands_and_nothing_else(town:
         tool_call("shell", {"command": "touch denied.txt"}),
         text("Made allowed.txt; the second command was refused."),
     ])
-    box("mayor").call("request_session", resident="archivist", task="Create allowed.txt.", reason="A test.",
+    box("mayor").call("send_errand", resident="archivist", task="Create allowed.txt.", reason="A test.",
                       commands=["touch allowed.txt"])
     [request] = requests.all_requests(town)
     requests.decide(town, request.id, approve=True, reason="ok", digest=request.digest())

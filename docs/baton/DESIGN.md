@@ -33,7 +33,7 @@ These are the rules every change is checked against.
 | **Babo's plugin in opencode** | Records each tool call into the town's event log, asks for checkpoints at the right moments, and gives each turn a clock. |
 | **The model gateway** | Every model call goes through Babo's queue, which keeps a local model from being asked for more than it can serve at once and orders work by priority (your work, then visits, then upkeep). |
 | **Upkeep** | A service that runs whenever something is due and the model is free: memory reviews, curation of the commons, the Inspector's checks, freezing idle sessions, running approved requests; quiet hours catch anything left over. |
-| **Review** | Where the owner decides: proposed tools, proposals, founding requests, old flags, and session requests. It is in the web interface's Town page, in `babo review`, and it pops up live in chats when something is waiting. |
+| **Review** | Where the owner decides: proposed tools, proposals, move-in requests, old flags, and errands. It is in the web interface's Town page, in `babo review`, and it pops up live in chats when something is waiting. |
 
 ### Settings, in layers
 
@@ -43,7 +43,7 @@ These are the rules every change is checked against.
 
 ### Sessions today
 
-- **Starting**: the owner starts a resident's session in the web interface or with `babo session new`; the Mayor asks for one with `request_session` (task, reason, access, exact commands) and the owner approves it, live in the chat, in the terminal or in Review. With **Allow all** on for one of the Mayor's chats, his requests from that chat run without review.
+- **Starting**: the owner starts a resident's session in the web interface or with `babo session new`; the Mayor sends a resident on an errand with `send_errand` (task, reason, access, exact commands) and the owner approves it, live in the chat, in the terminal or in Review. With **Allow all** on for one of the Mayor's chats, his errands from that chat run without review.
 - **Working**: the resident works in opencode; the owner can open the session (`babo session open`, or *Open* in the web interface), and steer it from Babo (send, stop, checkpoint now, another model, answer its questions).
 - **Organizing**: every session, the Mayor's chats and residents' sessions alike, is in the sidebar and can be renamed, pinned and archived; residents' sessions also take tags (`babo session rename|pin|tag|archive`).
 - **Ending**: freezing has the resident review the session into its memory, then stops it; resuming continues exactly where it left off. Upkeep freezes sessions nobody has used for a while, and reviews any that stopped without a review. *Remove* drops a broken session without a review.
@@ -52,7 +52,7 @@ These are the rules every change is checked against.
 
 - **A one-off job.** "Have the Archivist tidy the notes about the garden." The resident works on its own, writes what it learned, wraps up and lets you know. Nothing is left running.
 - **Working alongside a resident.** You start a session for the Inspector to review a change, join it in opencode, discuss it for a while, and leave; it wraps up after you've gone.
-- **The Mayor needs something on the machine.** He asks for a session (say, to install a package with one exact command); you approve it from the chat; a resident runs exactly that command and writes back.
+- **The Mayor needs something on the machine.** He sends a resident on an errand (say, to install a package with one exact command); you approve it from the chat; a resident runs exactly that command and writes back.
 - **Growing the town.** The Mayor proposes a new resident for recurring work; you approve; it gets a home, a role and a profile, and it improves with every session.
 
 ## The plan
@@ -77,12 +77,12 @@ Each step is its own pull request, merged once its tests pass. Steps are numbere
 | 12 | Loop and drift detectors, done-checks for tasks, capped memory files (H3) |
 | 13 | Rounds: the engine; the night round shipped as a file (the Archivist curates, or the Mayor while there's none; then the Inspector); upkeep keeps only Babo's own work; the Rounds tab and `babo rounds` (list, show, run, set); *waits its turn* or *runs right away* |
 | 14 | Rehearsals, unattended or live, with a report and the access it proposes, approved in one step; access and exact commands per step, set by hand or approved from a rehearsal; each step in its own session, nobody at a terminal, at upkeep's priority; a refused question now tells the resident why, so it carries on (opencode otherwise stopped the turn) |
+| 15 | The town's vocabulary: newcomers *move in* (move-in requests), the Mayor sends residents on *errands* (`send_errand`); the old names stay, listed in one place (`babo/baton/aliases.py`) and logging that they're going, until step 23; the town's own files migrated on upgrade. *Moved away* comes with step 16, when residents can leave |
 
 ### Next, in this order
 
 | # | Step |
 |---|---|
-| 15 | **Vocabulary**: newcomers *move in*, *vacancies*, *errands*, *moved away*; the old names stay as temporary aliases |
 | 16 | **Offices as templates; vacancies; move-in requests with the rounds a newcomer joins**; the Mayor reads and proposes rounds; the web form to move someone in |
 | 17 | **Skills**, brought in like guides (E, part 2) |
 | 18 | **A task list** agents keep as they work (E, part 3) |
@@ -168,8 +168,8 @@ A session's *visibility* is chosen when it starts, like its other settings. **Pr
 - **Commons**: what the town shares: knowledge notes, skills, tools, proposals, projects, the board.
 - **Office**: a resident's role (archivist, inspector, …); the Mayor's office is the town's main agent.
 - **Profile**: what an agent may do; sessions start from it.
-- **Errand**: a task the Mayor sends a resident on, with the access it needs, once the owner approves (was: session request; from step 15).
-- **Move in**: a newcomer joining the town in an office, with its profile and rounds, once the owner approves (was: founding a resident; from step 15).
+- **Errand**: a task the Mayor sends a resident on, with the access it needs, once the owner approves (was: session request).
+- **Move in**: a newcomer joining the town in an office, with its profile and rounds, once the owner approves (was: founding a resident).
 - **Rehearsal**: a round run so that what it would need is written down (unattended) or approved one by one (live), before it runs for real.
 - **Round**: the town's work: when it runs, and its steps in order, each an office's duty with the access it needs.
 - **Upkeep**: Babo's own work: memory forming, the commons as a store, the records, and the clock that runs the rounds.

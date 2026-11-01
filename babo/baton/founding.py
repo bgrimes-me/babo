@@ -19,7 +19,7 @@ import json
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from jinja2 import Template
 
@@ -107,6 +107,28 @@ _EARLIER_SHIPPED: dict[str, frozenset[str]] = {
         "ac233be67a9a7ccccc686323e496a1a2c3e5b3d199c5fdaec15ecec8bbecb88c",
     }),
 }
+
+
+def _migrate_vocabulary(town: Town) -> list[str]:
+    """Step 15's words in the town's own files, once: move-in requests on the board (they were founding
+    requests), and the errands guide in place of the session-requests one (unless someone edited it)."""
+    from babo.baton import aliases
+
+    changed: list[str] = []
+    for post in sorted(town.board.glob("*.md")) if town.board.exists() else []:
+        meta, body = split_frontmatter(post.read_text(encoding="utf-8"))
+        kind = str(meta.get("kind") or "")
+        if kind in aliases.BOARD_KINDS:
+            meta["kind"] = aliases.BOARD_KINDS[kind]
+            atomic_write(post, join_frontmatter(meta, body))
+            changed.append(post.relative_to(town.root).as_posix())
+    for old, new in aliases.GUIDES.items():
+        path = town.commons / "guides" / f"{old}.md"
+        rel = path.relative_to(town.root).as_posix()
+        if path.exists() and (town.commons / "guides" / f"{new}.md").exists() and _sha(path.read_text(encoding="utf-8")) == _shipped(town).get(rel):
+            path.unlink()  # Babo's own, unedited: the new one replaces it
+            changed.append(rel)
+    return changed
 
 
 def ship_rounds(town: Town) -> list[str]:
@@ -237,6 +259,7 @@ def found_town(root: str | Path, *, offices: tuple[str, ...] = FOUNDING_OFFICES,
             created.append(rel)
         elif _refresh_if_untouched(town, target, f"{kind}/{guide.name}"):
             updated.append(rel)
+    updated += _migrate_vocabulary(town)
     if not town.responses.exists():
         atomic_write(town.responses, "# Responses to the charter\n\nResidents may answer the charter here.\n")
     gitignore = town.root / ".gitignore"
@@ -308,11 +331,18 @@ def _earlier_owner(town: Town) -> str:
 
 
 # -- founding requests ----------------------------------------------------
+def _move_in(meta: dict[str, Any]) -> bool:
+    """A move-in request (or one posted under its old name, a founding request)."""
+    from babo.baton import aliases
+
+    return aliases.board_kind(str(meta.get("kind") or "")) == "move_in_request"
+
+
 def founding_requests(town: Town, status: str = "open") -> list[Path]:
     out: list[Path] = []
     for path in sorted(town.board.glob("*.md")):
         meta, _ = split_frontmatter(path.read_text(encoding="utf-8"))
-        if meta.get("kind") == "founding_request" and meta.get("status", "open") == status:
+        if _move_in(meta) and meta.get("status", "open") == status:
             out.append(path)
     return out
 
@@ -331,10 +361,10 @@ def approve_founding_request(town: Town, request: Path, *, approved_by: str, not
     """Found the resident a founding request asks for. Called only from review."""
     request = request.resolve()
     if request.parent != town.board.resolve():
-        raise BatonError("Founding requests live on the board")
+        raise BatonError("Move-in requests live on the board")
     meta, body = split_frontmatter(request.read_text(encoding="utf-8"))
-    if meta.get("kind") != "founding_request":
-        raise BatonError(f"{request.name} is not a founding request")
+    if not _move_in(meta):
+        raise BatonError(f"{request.name} is not a move-in request")
     if meta.get("status", "open") != "open":
         raise BatonError(f"{request.name} is already {meta.get('status')}")
     office = str(meta.get("office") or "").strip() or "resident"
@@ -346,7 +376,7 @@ def approve_founding_request(town: Town, request: Path, *, approved_by: str, not
         role = Template(template_text("offices/default.md")).render(
             office_title=office.replace("-", " ").title(), description=body.strip(),
         )
-    authority = _authority(f"founding request {request.name}", approved_by, _TOKEN)
+    authority = _authority(f"move-in request {request.name}", approved_by, _TOKEN)
     resident = _found_resident(town, resident_id, slugify(office), role, authority)
     if slugify(office) in DESCRIBED_OFFICES:
         _record_role(town, resident_id)
@@ -362,7 +392,7 @@ def approve_founding_request(town: Town, request: Path, *, approved_by: str, not
 
 def decline_founding_request(town: Town, request: Path, *, declined_by: str, reason: str) -> None:
     meta, body = split_frontmatter(request.read_text(encoding="utf-8"))
-    if meta.get("kind") != "founding_request" or meta.get("status", "open") != "open":
-        raise BatonError(f"{request.name} is not an open founding request")
+    if not _move_in(meta) or meta.get("status", "open") != "open":
+        raise BatonError(f"{request.name} is not an open move-in request")
     meta.update({"status": "declined", "decided": now_iso(), "decided_by": declined_by, "decision_note": reason})
     atomic_write(request, join_frontmatter(meta, body))

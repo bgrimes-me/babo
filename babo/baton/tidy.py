@@ -6,7 +6,8 @@ it removed, and never touches the town's history or anyone's work:
 
 - settings that no longer mean anything (``baton.night.time``, an install's copy
   of the model name in ``baton.model.model``) and names that
-  changed (the crew tool ``spawn`` is now ``subagent``) in Babo's config;
+  changed (the crew tool ``spawn`` is now ``subagent``; the Mayor's
+  ``request_session`` is now ``send_errand``) in Babo's config;
 - paths through ``~/.nanobot`` (the folder's name before the rename) in Babo's
   configs, and then the ``~/.nanobot`` link itself;
 - old config backups beyond the newest few;
@@ -66,6 +67,10 @@ def _tidy_config(path: Path, said: list[str]) -> None:
                 if isinstance(names, list) and "spawn" in names:
                     cast(dict[str, Any], toolsets)[office] = ["subagent" if n == "spawn" else n for n in cast(list[Any], names)]
                     said.append(f"{path}: the {office} toolset's 'spawn' is now 'subagent'")
+                names = cast(dict[str, Any], toolsets)[office]
+                if isinstance(names, list) and "request_session" in names:
+                    cast(dict[str, Any], toolsets)[office] = ["send_errand" if n == "request_session" else n for n in cast(list[Any], names)]
+                    said.append(f"{path}: the {office} toolset's 'request_session' is now 'send_errand'")
     if json.dumps(data, sort_keys=True) != before:
         if ".nanobot" in before and ".nanobot" not in json.dumps(data):
             said.append(f"{path}: paths through ~/.nanobot now point to ~/.babo")

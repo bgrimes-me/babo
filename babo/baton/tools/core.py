@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from babo.baton import gitops
+from babo.baton import aliases, gitops
 from babo.baton.inbox import deliver, set_flag
 from babo.baton.notes import Note, first_line, join_frontmatter, split_frontmatter, write_note
 from babo.baton.registry import UNCHOSEN, Registry, Resident
@@ -29,7 +29,7 @@ from babo.baton.town import BatonError, Town, atomic_write, now_iso, slugify, to
 
 _NAME_RE = re.compile(r"^[A-Za-z][A-Za-z' -]{0,39}$")
 _TOOL_NAME_RE = re.compile(r"^[a-z][a-z0-9_]{1,39}$")
-BOARD_KINDS = ("open_role", "request", "founding_request")
+BOARD_KINDS = ("open_role", "request", "move_in_request")
 READ_NOTE_MAX_TOKENS = 2500
 
 
@@ -129,25 +129,26 @@ TOOL_SPECS: dict[str, ToolSpec] = {
         ),
         ToolSpec(
             "post_board",
-            "Post to the town notice board: an open role, a request, or a founding request for a new resident (the owner approves).",
+            "Post to the town notice board: an open role, a request, or a move-in request for a newcomer (the owner approves).",
             {
                 "type": "object",
                 "properties": {
                     "kind": {"type": "string", "enum": list(BOARD_KINDS)},
-                    "text": _str("The post. For a founding request, describe the office and why it is needed."),
-                    "office": _str("For a founding request: short office name, e.g. gardener."),
+                    "text": _str("The post. For a move-in request, describe the office and why it is needed."),
+                    "office": _str("For a move-in request: short office name, e.g. gardener."),
                 },
                 "required": ["kind", "text"],
             },
             offices=("mayor",),
         ),
         ToolSpec(
-            "request_session",
-            "Ask the owner to run a task in another resident's session, with the access it needs (for example to install a package or run a build). "
+            "send_errand",
+            "Send another resident on an errand: a task in its own session, with the access it needs (for example to install a package or run a "
+            "build), once the owner approves. "
             "Nothing happens until the owner approves; you get a letter with the result. Ask for the least access that will do: "
             "prefer exact commands over turning the shell on. Commands run without a terminal, so give flags like --noconfirm or -y; "
             "sudo works only if the machine allows it without a password. "
-            "A session is private unless you ask for it to be public: from a private one you get only the resident's own summary "
+            "An errand is private unless you ask for it to be public: from a private one you get only the resident's own summary "
             "of what it did. If you need to see the output yourself (a command's result, what it found, files it made), ask for "
             "visibility public.",
             {
@@ -304,6 +305,7 @@ class Toolbox:
         have an argument called ``name`` (propose_tool, revise_self)."""
         if name in self.extra:
             return self.extra[name](**kwargs)
+        name = aliases.tool(name)
         spec = TOOL_SPECS.get(name)
         if spec is None:
             raise BatonError(f"There is no tool called {name}. Your tools: {', '.join(self.available())}.")
@@ -423,12 +425,13 @@ class Toolbox:
 
     # -- mayor -----------------------------------------------------------
     def post_board(self, kind: str, text: str, office: str | None = None) -> str:
+        kind = aliases.board_kind(kind)
         if kind not in BOARD_KINDS:
             raise BatonError(f"kind must be one of {', '.join(BOARD_KINDS)}. Use one of those and post again.")
         meta: dict[str, object] = {"kind": kind, "author": self.resident_id, "created": now_iso(), "status": "open"}
-        if kind == "founding_request":
+        if kind == "move_in_request":
             if not office or not office.strip():
-                raise BatonError("A founding request needs an office name (e.g. gardener).")
+                raise BatonError("A move-in request needs an office name (e.g. gardener).")
             meta["office"] = slugify(office, 28)
         path = self.town.board / f"{today()}-{kind}-{slugify(office or first_line(text, 40))}.md"
         n = 2
@@ -436,12 +439,12 @@ class Toolbox:
             path = path.with_name(f"{path.stem}-{n}.md")
             n += 1
         atomic_write(path, join_frontmatter(meta, text.strip() + "\n"))
-        if kind == "founding_request":
-            return f"Founding request posted ({self.scope.display(path)}). {self.town.owner_name} decides in the weekly review."
+        if kind == "move_in_request":
+            return f"Move-in request posted ({self.scope.display(path)}). {self.town.owner_name} decides in Review."
         return f"Posted to the board: {self.scope.display(path)}."
 
-    def request_session(self, resident: str, task: str, reason: str, access: dict[str, object] | None = None,
-                        commands: list[str] | None = None, visibility: str = "private") -> str:
+    def send_errand(self, resident: str, task: str, reason: str, access: dict[str, object] | None = None,
+                    commands: list[str] | None = None, visibility: str = "private") -> str:
         from babo.agent.tools.context import current_request_session_key
         from babo.baton import requests
 
@@ -449,9 +452,9 @@ class Toolbox:
                                   access=access, commands=commands, session_key=current_request_session_key(),
                                   visibility=visibility)
         if request.status == "approved":
-            return (f"Request {request.id} was approved automatically ({self.town.owner_name} turned allow-all on for this chat). "
+            return (f"Errand {request.id} was approved automatically ({self.town.owner_name} turned allow-all on for this chat). "
                     "It starts within a minute; you'll get a letter with the result.")
-        return (f"Request {request.id} is waiting for {self.town.owner_name}'s approval. Nothing runs until it is approved; "
+        return (f"Errand {request.id} is waiting for {self.town.owner_name}'s approval. Nothing runs until it is approved; "
                 "you'll get a letter with the result, or with the reason if it is declined.")
 
     # -- archivist -------------------------------------------------------

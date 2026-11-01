@@ -205,7 +205,7 @@ def test_proposals_tools_and_board(town: Town, box) -> None:
         mayor.propose_tool("word_count", "def run(input): return ''", "", "dup")
     with pytest.raises(BatonError):
         mayor.propose_tool("Bad Name", "def run(input): return ''", "", "x")
-    out = mayor.post_board("founding_request", "We need someone to tend the garden.", office="gardener")
+    out = mayor.post_board("move_in_request", "We need someone to tend the garden.", office="gardener")
     assert "Robin decides" in out
     assert len(Registry(town).all()) == 3  # posting never founds
     box("inspector").review_item("commons/tools/pending/word_count", "Safe; pure function.")

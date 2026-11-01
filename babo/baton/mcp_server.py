@@ -43,6 +43,9 @@ def build_server(toolbox: Toolbox, extra: list[Tool] | None = None) -> Server:
             except TypeError as exc:
                 result = f"Error: wrong arguments for {name}: {exc}"
             return [types.TextContent(type="text", text=str(result))]
+        from babo.baton import aliases
+
+        name = aliases.tool(name)
         if name not in names:
             return [types.TextContent(type="text", text=f"Error: {name} is not available to {toolbox.resident_id}")]
         try:

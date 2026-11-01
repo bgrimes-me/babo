@@ -252,7 +252,7 @@ async def watch(config: Config) -> None:
     town = Town.open(cfg.town_path)
     logger.info("Babo upkeep: watching {} (quiet hours {})", town.root, cfg.upkeep.quiet_hours)
     for interrupted in requests.recover_interrupted(town):
-        logger.warning("Babo upkeep: session request {} was interrupted by a restart", interrupted)
+        logger.warning("Babo upkeep: errand {} was interrupted by a restart", interrupted)
     request_job: asyncio.Future[Any] | None = None
     rehearsal_job: asyncio.Future[Any] | None = None
     while True:
@@ -271,7 +271,7 @@ async def watch(config: Config) -> None:
             if request_job is None or request_job.done():
                 approved = requests.next_approved(town)
                 if approved is not None:
-                    logger.info("Babo upkeep: running session request {} ({})", approved.id, approved.resident)
+                    logger.info("Babo upkeep: running errand {} ({})", approved.id, approved.resident)
                     request_job = asyncio.ensure_future(asyncio.to_thread(
                         requests.run, town, config, approved, config_path=get_config_path().resolve()))
             catch_up = catch_up_requested(town)

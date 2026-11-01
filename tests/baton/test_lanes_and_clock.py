@@ -136,8 +136,8 @@ def test_an_archivist_founded_on_request_gets_the_charters_role(tmp_path) -> Non
     from babo.baton.tools.core import Toolbox
 
     town, _ = found_town(tmp_path / "town")
-    Toolbox(town, "mayor", tmp_path / "index.sqlite3").post_board("founding_request", "Someone to keep the commons.", office="archivist")
-    request = next(town.board.glob("*founding_request*"))
+    Toolbox(town, "mayor", tmp_path / "index.sqlite3").post_board("move_in_request", "Someone to keep the commons.", office="archivist")
+    request = next(town.board.glob("*move_in_request*"))
     new_id = growth.decide_founding(town, request, approve=True, reason="the commons is growing")
     assert new_id == "archivist"
     assert (town.resident_dir("archivist") / "ROLE.md").read_text() == template_text("offices/archivist.md")

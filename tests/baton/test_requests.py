@@ -16,7 +16,7 @@ from babo.baton.town import BatonError, Town
 def _ask(box, **overrides: Any) -> str:
     args: dict[str, Any] = {"resident": "archivist", "task": "Install nano.", "reason": "To edit notes by hand.",
                             "access": {"web_fetch": "allow"}, "commands": ["sudo pacman -S --noconfirm nano"], **overrides}
-    return box("mayor").call("request_session", **args)
+    return box("mayor").call("send_errand", **args)
 
 
 def _only(town: Town) -> requests.SessionRequest:
@@ -29,10 +29,10 @@ def test_the_mayor_asks_and_nothing_runs_until_the_owner_decides(town: Town, box
     request = _only(town)
     assert "waiting for Robin's approval" in said and request.status == "pending"
     assert request.access == {"web_fetch": "allow"} and request.commands == ["sudo pacman -S --noconfirm nano"]
-    assert gitops.git(town, "log", "-1", "--format=%s").stdout.startswith("Session request by mayor: Install nano.")
+    assert gitops.git(town, "log", "-1", "--format=%s").stdout.startswith("Errand from mayor: Install nano.")
     assert views.pending_counts(town)["sessions"] == 1
     with pytest.raises(BatonError, match="only the mayor"):
-        box("archivist").call("request_session", resident="inspector", task="x", reason="y")
+        box("archivist").call("send_errand", resident="inspector", task="x", reason="y")
 
 
 @pytest.mark.parametrize(("overrides", "message"), [
@@ -66,7 +66,7 @@ def test_the_owner_sees_it_word_for_word_with_what_it_adds_and_approves_only_tha
 def test_a_declined_request_tells_the_mayor_why(town: Town, box) -> None:
     _ask(box)
     request = _only(town)
-    assert views.decide(town, "session", request.id, yes=False, reason="Use the web editor.", digest=request.digest()) == "Request declined."
+    assert views.decide(town, "session", request.id, yes=False, reason="Use the web editor.", digest=request.digest()) == "Errand declined."
     letters = [i for i in unread(town, "mayor") if i.sender == "owner"]
     assert _only(town).status == "declined" and "Use the web editor." in letters[-1].body
 
@@ -177,7 +177,7 @@ def test_with_allow_all_on_a_chats_requests_are_approved_as_asked_and_only_that_
     request = requests.all_requests(town)[0]
     assert "approved automatically" in said and request.status == "approved" and request.decided_by == "allow-all"
     assert request.approved_digest == request.digest() and request.session_key == "websocket:abc"
-    assert gitops.git(town, "log", "-1", "--format=%s").stdout.startswith("Session request by mayor (approved automatically: allow-all)")
+    assert gitops.git(town, "log", "-1", "--format=%s").stdout.startswith("Errand from mayor (approved automatically: allow-all)")
     # Another chat still waits for Robin.
     _ask_from(box, "discord:123", task="Install htop.")
     assert [r.status for r in requests.all_requests(town) if r.task == "Install htop."] == ["pending"]
@@ -278,7 +278,7 @@ def test_a_private_session_tells_the_mayor_its_summary_and_a_public_one_its_full
 def test_the_request_tool_tells_the_mayor_to_ask_for_public_to_see_the_output() -> None:
     from babo.baton.tools.core import TOOL_SPECS
 
-    spec = TOOL_SPECS["request_session"]
+    spec = TOOL_SPECS["send_errand"]
     assert "visibility public" in spec.description and spec.parameters["properties"]["visibility"]["enum"] == ["private", "public"]
 
 
@@ -288,3 +288,21 @@ def test_visibility_is_part_of_what_the_owner_approves(town: Town, box) -> None:
     digest = request.digest()
     request.visibility = "private"
     assert request.digest() != digest
+
+
+def test_the_old_names_still_work_until_step_23(town: Town, box) -> None:
+    """Errands were session requests, and move-in requests were founding requests: the old names still work, for now."""
+    from babo.baton import aliases, views
+    from babo.baton.founding import found_town, founding_requests
+
+    said = box("mayor").call("request_session", resident="archivist", task="Install nano.", reason="To edit notes.")
+    assert "Errand" in said and "waiting for Robin's approval" in said
+    request = _only(town)
+    assert views.decide(town, "session", request.id, yes=False, reason="Not now.", digest=request.digest()) == "Errand declined."
+    assert "Move-in request posted" in box("mayor").call("post_board", kind="founding_request", text="Tends the garden.", office="gardener")
+    # An old post on the board is migrated once, on upgrade.
+    (town.board / "2026-01-01-founding_request-baker.md").write_text("---\nkind: founding_request\noffice: baker\nstatus: open\n---\n\nBakes.\n")
+    found_town(town.root, offices=("mayor",))
+    assert "kind: move_in_request" in (town.board / "2026-01-01-founding_request-baker.md").read_text()
+    assert len(founding_requests(town)) == 2
+    assert aliases.GOING == "step 23"

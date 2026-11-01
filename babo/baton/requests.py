@@ -1,4 +1,4 @@
-"""Session requests: the Mayor asks, the owner approves, Babo runs.
+"""Errands (once called session requests): the Mayor asks, the owner approves, Babo runs.
 
 The Mayor doesn't do things on the box himself. When something needs doing
 (install a package, run a build, look at a log), he asks for a session: one
@@ -124,7 +124,7 @@ def create(town: Town, *, requested_by: str, resident: str, task: str, reason: s
 
     target = Registry(town).resolve(resident)
     if target is None or target.status != "active":
-        raise BatonError(f"No resident called '{resident}'. Ask for one of the town's residents, or post a founding request.")
+        raise BatonError(f"No resident called '{resident}'. Ask for one of the town's residents, or post a move-in request for a newcomer.")
     if not runs_in_opencode(target.office):
         raise BatonError("The Mayor can't be given a session; ask for another resident to do it.")
     if not task.strip():
@@ -162,7 +162,7 @@ def create(town: Town, *, requested_by: str, resident: str, task: str, reason: s
         request.approved_digest = request.digest()
     save(town, request)
     approved = " (approved automatically: allow-all)" if request.status == "approved" else ""
-    gitops.commit_paths(town, [_path(town, request.id)], f"Session request by {requested_by}{approved}: {first_line(task, 60)}")
+    gitops.commit_paths(town, [_path(town, request.id)], f"Errand from {requested_by}{approved}: {first_line(task, 60)}")
     return request
 
 
@@ -200,21 +200,21 @@ def decide(town: Town, request_id: str, *, approve: bool, reason: str, digest: s
     if approve:
         request.status = "approved"
         request.approved_digest = request.digest()
-        said = f"Request approved: {request.resident} will run it as soon as upkeep picks it up (within a minute)."
+        said = f"Errand approved: {request.resident} will run it as soon as upkeep picks it up (within a minute)."
     else:
         request.status = "declined"
-        said = "Request declined."
+        said = "Errand declined."
         _tell(town, request, OWNER, f"{town.owner_name} declined your request for {request.resident}: {first_line(request.task, 80)}\n\n"
                                     f"Reason: {request.decision_reason}")
     path = save(town, request)
     if commit:
-        gitops.commit_paths(town, [path], f"{town.owner_name} {'approved' if approve else 'declined'} session request {request.id}")
+        gitops.commit_paths(town, [path], f"{town.owner_name} {'approved' if approve else 'declined'} errand {request.id}")
     return said
 
 
 def _tell(town: Town, request: SessionRequest, sender: str, text: str) -> None:
     if Registry(town).get(request.requested_by) is not None:
-        deliver(town, request.requested_by, kind="reply", sender=sender, subject=f"request {request.id}", text=text)
+        deliver(town, request.requested_by, kind="reply", sender=sender, subject=f"errand {request.id}", text=text)
 
 
 # -- running -----------------------------------------------------------------------
@@ -234,8 +234,8 @@ def recover_interrupted(town: Town) -> list[str]:
             request.status = "failed"
             request.result = "Interrupted: Babo restarted while it ran. Ask again if it still needs doing."
             save(town, request)
-            gitops.commit_paths(town, [_path(town, request.id)], f"Session request {request.id} interrupted")
-            _tell(town, request, HARNESS, f"Your request {request.id} for {request.resident} was interrupted: {request.result}")
+            gitops.commit_paths(town, [_path(town, request.id)], f"Errand {request.id} interrupted")
+            _tell(town, request, HARNESS, f"Your errand {request.id} for {request.resident} was interrupted: {request.result}")
             out.append(request.id)
     return out
 
@@ -251,7 +251,7 @@ def _unchanged_since_approval(town: Town, request: SessionRequest) -> bool:
 
 def task_message(town: Town, request: SessionRequest) -> str:
     lines = [
-        f"[request {request.id}, approved by {town.owner_name}] {request.task}",
+        f"[errand {request.id}, approved by {town.owner_name}] {request.task}",
         "",
         f"Why: {request.reason}",
         "Nobody is at a terminal while this runs: don't ask questions; do the task, then say plainly what you did and what came of it.",
@@ -267,17 +267,17 @@ def run(town: Town, config: Config, request: SessionRequest, *, config_path: Pat
     from babo.baton import opencode
 
     if request.status != "approved":
-        raise BatonError(f"Request {request.id} is {request.status}, not approved.")
+        raise BatonError(f"Errand {request.id} is {request.status}, not approved.")
     if not _unchanged_since_approval(town, request):
         request.status = "failed"
         request.result = "Not run: the request changed after it was approved."
         save(town, request)
-        gitops.commit_paths(town, [_path(town, request.id)], f"Session request {request.id} not run: changed after approval")
-        _tell(town, request, HARNESS, f"Your request {request.id} was not run: it changed after {town.owner_name} approved it. Ask again.")
+        gitops.commit_paths(town, [_path(town, request.id)], f"Errand {request.id} not run: changed after approval")
+        _tell(town, request, HARNESS, f"Your errand {request.id} was not run: it changed after {town.owner_name} approved it. Ask again.")
         return request
     request.status = "running"
     save(town, request)
-    gitops.commit_paths(town, [_path(town, request.id)], f"Session request {request.id} running")
+    gitops.commit_paths(town, [_path(town, request.id)], f"Errand {request.id} running")
     session = None
     output = ""
     try:
@@ -300,10 +300,10 @@ def run(town: Town, config: Config, request: SessionRequest, *, config_path: Pat
         if session is not None:
             opencode.freeze(town, opencode.get_session(town, request.resident, session.id))
     save(town, request)
-    gitops.commit_paths(town, [_path(town, request.id)], f"Session request {request.id} {request.status}")
+    gitops.commit_paths(town, [_path(town, request.id)], f"Errand {request.id} {request.status}")
     outcome = "finished" if request.status == "done" else "failed"
     # The result is the resident's own account of what it did.
-    text = f"Your request {request.id} for {request.resident} {outcome}: {first_line(request.task, 80)}\n\n{request.result[:4000]}"
+    text = f"Your errand {request.id} for {request.resident} {outcome}: {first_line(request.task, 80)}\n\n{request.result[:4000]}"
     if output:  # a public session: what it did, step by step, as well as its own account
         text += f"\n\n## The session's full output (public)\n\n{output}"
     _tell(town, request, request.resident if request.status == "done" else HARNESS, text)
