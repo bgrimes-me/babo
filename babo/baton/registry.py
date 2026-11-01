@@ -30,7 +30,7 @@ class Resident:
     office: str
     founded: str
     name: str = UNCHOSEN
-    status: str = "active"  # active | resting
+    status: str = "active"  # active | resting | moved_away
     first_session_done: bool = False
     last_active: str = ""
     extra: dict[str, object] = field(default_factory=dict)

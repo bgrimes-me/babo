@@ -47,6 +47,8 @@ TOWN_MUTATION_PATHS = {
     "town.rounds.rehearse": "/api/town/rounds/rehearse",
     "town.rounds.approve": "/api/town/rounds/approve",
     "town.rounds.access": "/api/town/rounds/access",
+    "town.move_in": "/api/town/move-in",
+    "town.move_away": "/api/town/move-away",
 }
 _DECISION_KINDS = ("tool", "proposal", "move_in", "flag", "errand", "founding", "session")  # the last two: old names (step 23)
 _doctor_lock = asyncio.Lock()
@@ -71,6 +73,10 @@ def _text(payload: dict[str, Any], key: str, limit: int = 4000) -> str:
     if len(value) > limit:
         raise BatonError(f"{key} is longer than {limit} characters")
     return value
+
+
+def _optional_text(payload: dict[str, Any], key: str, limit: int = 4000) -> str:
+    return _text(payload, key, limit) if payload.get(key) is not None else ""
 
 
 def _update_settings(payload: dict[str, Any]) -> dict[str, Any]:
@@ -269,6 +275,10 @@ class TownRoutes:
             from babo.baton import rounds
 
             return http_json_response(await asyncio.to_thread(lambda: rounds.overview(_town())))
+        if got == "/api/town/offices":
+            from babo.baton import offices
+
+            return http_json_response(await asyncio.to_thread(lambda: offices.overview(_town())))
         if got == "/api/town/guides":
             from babo.baton import guides
 
@@ -363,6 +373,21 @@ class TownRoutes:
             baseline_too = payload.get("baseline") is True
             message = await asyncio.to_thread(lambda: _start_eval(preset, baseline_too))
             return http_json_response({"message": message, **await asyncio.to_thread(_eval_status)})
+        elif got == "/api/town/move-in":
+            office = _text(payload, "office", 80)
+            role, why = _optional_text(payload, "role", 20000), _optional_text(payload, "why")
+            profile, joins = payload.get("profile"), payload.get("joins")
+            if profile is not None and not isinstance(profile, dict):
+                raise BatonError("profile is settings like shell: allow")
+            if joins is not None and not isinstance(joins, list):
+                raise BatonError("joins is a list of rounds, each with a duty")
+            message = await asyncio.to_thread(lambda: views.move_in(
+                _town(), office, role=role, why=why,
+                profile={str(k): str(v) for k, v in cast(dict[object, object], profile).items()} if profile else None,
+                joins=cast(list[dict[str, object]], joins) if joins else None))
+        elif got == "/api/town/move-away":
+            resident = _text(payload, "resident", 80)
+            message = await asyncio.to_thread(lambda: views.move_away(_town(), resident))
         elif got == "/api/town/upkeep/now":
             message = await asyncio.to_thread(lambda: views.request_upkeep(_town()))
         elif got == "/api/town/name":

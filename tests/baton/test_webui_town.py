@@ -183,3 +183,22 @@ async def test_allow_all_from_the_web_matches_babo_allow_all(town: Town, index_p
     assert status == 400
     status, body = await _call(routes, "/api/town/allow-all/update", {"key": "websocket:abc", "on": False})
     assert status == 200 and body["active"] == {}
+
+
+async def test_offices_move_in_and_move_away_from_the_web(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    routes = _routes(town, index_path, monkeypatch)
+    status, got = await _call(routes, "/api/town/offices")
+    assert status == 200 and {"archivist", "inspector"} <= {o["name"] for o in got["offices"]}
+    status, result = await _call(routes, "/api/town/move-in", {"office": "reporter", "role": "You write the paper.",
+                                                               "profile": {"web_fetch": "allow"},
+                                                               "joins": [{"round": "night", "duty": "Write the morning edition."}]})
+    assert status == 200 and "reporter moved in" in result["message"] and "joined “night”" in result["message"]
+    assert "reporter" in [r["id"] for r in result["town"]["residents"]]
+    [office] = [o for o in result["town"]["offices"]["offices"] if o["name"] == "reporter"]
+    assert office["holders"] == ["reporter"] and not office["vacant"]
+    status, error = await _call(routes, "/api/town/move-in", {"office": "baker", "profile": {"root": "allow"}, "role": "x"})
+    assert status == 400 and "isn't part of a profile" in error
+    status, result = await _call(routes, "/api/town/move-away", {"resident": "reporter"})
+    assert status == 200 and "moved away" in result["message"]
+    [office] = [o for o in result["town"]["offices"]["offices"] if o["name"] == "reporter"]
+    assert office["vacant"]

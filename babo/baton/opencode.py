@@ -330,7 +330,7 @@ def _mcp_entry(server: MCPServerConfig) -> dict[str, Any]:
 
 # The town's own files and folders, as seen from its root.
 _TOWN_OWN = ("CHARTER.md", "HOUSE.md", "REGISTRY.md", ".baton-town", ".gitignore", ".git/*", "commons/*", "state/*",
-             "crew/*", "residents/*", "rounds/*")
+             "crew/*", "residents/*", "rounds/*", "offices/*")
 
 
 def _tool_prefix(server: str) -> str:

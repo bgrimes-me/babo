@@ -46,7 +46,7 @@ class Scope:
         if len(rel.parts) == 1:
             return rel.parts[0] in PUBLIC_TOP_LEVEL
         head = rel.parts[0]
-        if head == "commons":
+        if head in ("commons", "rounds", "offices"):  # the town's knowledge, and how it works
             return True
         if head == "residents":
             return rel.parts[1] == self.resident_id
@@ -70,7 +70,7 @@ class Scope:
             path = self.town.skills / name / "SKILL.md"
         elif ref.startswith("guides/") and not (self.home / ref).exists():
             path = self.town.commons / ref  # the town's guides, as their index names them
-        elif ref.startswith(("commons/", "residents/", "crew/")) or ref in PUBLIC_TOP_LEVEL:
+        elif ref.startswith(("commons/", "residents/", "crew/", "rounds/", "offices/")) or ref in PUBLIC_TOP_LEVEL:
             path = self.town.root / ref
         elif Path(ref).is_absolute():
             path = Path(ref)
