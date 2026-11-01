@@ -57,32 +57,69 @@ These are the rules every change is checked against.
 
 ## The plan
 
-Each step is its own pull request, merged once its tests pass.
+Each step is its own pull request, merged once its tests pass. Steps are numbered in the order they're done and keep their number; the letters in brackets are what they were called before the plan was renumbered.
 
-| Step | What | Status |
-|---|---|---|
-| — | This document | Done (a working draft) |
-| **F** | `babo reset` (back up and start fresh); the owner's name as a town setting and generic install steps; install reports kept local | Done |
-| **F2** | Named instances: several towns, or a test town beside a real one, each with its own services and ports | Planned |
-| **A** | Models from Settings everywhere (the default preset for everything unless a profile or session picks another), any provider through Babo's gateway with keys kept inside Babo | Done |
-| **B1** | Start with a task and the resident gets going; live status (working, idle, waiting for you); send, stop, checkpoint now, switch model, and answer its questions, in the web interface and the terminal | Done |
-| **B2** | Open without a password (a pairing link); a door per session that knows who is there; wrap-up that follows presence (below); notices; archive | Done |
-| **H1** | Tool-call repair at the gateway; the baton moved to the end of the prompt | Done |
-| **H2** | `babo eval`: representative tasks with checks, a baseline per preset (terminal and the Doctor tab) | Done |
-| **H3** | Drift and loop detectors with short reminders, done-checks for tasks, capped memory files | Done |
-| **B3** | The Mayor's chats get the same session actions as residents' (the parity principle): `/checkpoint` beside `/stop` and `/model` | Done |
-| **C** | Permissions and visibility: change a running session's permissions, *Allow all* per session, permission questions shown in Babo's interface, what a resident may read (its own folder by default) as a setting like any other, and *private* or *public* sessions | Done |
-| **C2** | Folders outside the town (a project on the machine) as a session's or profile's setting, read or change, with the project as the session's place in the list (D's projects for residents' sessions) | Planned |
-| **D** | One list for all sessions: residents' sessions in the sidebar beside the Mayor's chats; rename, pin, tags and archive for residents' sessions in the web interface and the terminal. Still to come: tags for the Mayor's chats, and projects for residents' sessions (with C's folder access) | Partly done |
-| **E** | Docs the harness brings in at the right moment: a compact index of when to read what, injection on role entry, first tool use and errors, a logged `open_doc` fallback, curated skills, a task list agents keep as they work | Partly done: guides with their index, triggers and logged opening. Still to come: skills brought in the same way, the task list |
-| **G** | Own time: a small budget in quiet hours for each resident to reflect, revise itself, write a lesson or a letter, or pursue something of its own | Planned |
-| — | Polish, when the plan above is done: *Open* lands right in the session's own page (today it opens the town's project, where you pick the session) | Noted |
-| **I1** | Status while something works, everywhere: `/checkpoint`, *Checkpoint now*, freezing, an eval run show that they're busy (and what they're doing) until they finish, in the web interface, the terminal and chat apps | Planned |
-| **I2** | What Babo is doing, and its logs: a place in the web interface to see what is happening now (turns, sessions, upkeep, the model queue, requests) and to read the logs, with the same in the terminal | Planned |
-| **I3** | A visual overhaul: one design language (matching btgprojects.dev), buttons for one-click actions, switches for toggles, sliders for ranges; everything configurable and visible in the web interface, with any exceptions agreed | Later |
-| — | Later: a world to visit (a MUD, reached as a plugin), containers per resident behind the gateway | Ideas |
+### Done
 
-### Context for small models: what the research says, and what changes (H, E)
+| # | Step |
+|---|---|
+| 1 | This document (a working draft) |
+| 2 | `babo reset` (back up and start fresh); the owner's name as a town setting; generic install steps; install reports kept local (F) |
+| 3 | Models from Settings everywhere, any provider through Babo's gateway, keys kept inside Babo (A) |
+| 4 | Sessions that just go: start with a task, live status, send, stop, checkpoint now, switch model, answer its questions (B1) |
+| 5 | Open without a password; a door per session that knows who is there; wrap-up that follows presence; notices; archive (B2) |
+| 6 | One list for all sessions; rename, pin, tags and archive for residents' sessions; `/checkpoint` for the Mayor (B3, D) |
+| 7 | Tool-call repair at the gateway; the baton moved to the end of the prompt (H1) |
+| 8 | `babo eval`: representative tasks with checks, a baseline per preset (H2) |
+| 9 | Permissions and visibility: changes while a session runs, *Allow all* per session, what a resident may read, private or public sessions (C) |
+| 10 | Guides brought in at the right moment (E, part 1) |
+| 11 | What the first eval baseline taught: confidence as a percentage, sensible first steps |
+| 12 | Loop and drift detectors, done-checks for tasks, capped memory files (H3) |
+
+### Next, in this order
+
+| # | Step |
+|---|---|
+| 13 | **Rounds** (below): the engine; the night round shipped as a file; upkeep keeps only Babo's own work; the Rounds tab and `babo rounds`; when each round runs |
+| 14 | **Rehearsals and access per round**: unattended or live; the rehearsal report and the access it proposes |
+| 15 | **Vocabulary**: newcomers *move in*, *vacancies*, *errands*, *moved away*; the old names stay as temporary aliases |
+| 16 | **Offices as templates; vacancies; move-in requests with the rounds a newcomer joins**; the Mayor reads and proposes rounds; the web form to move someone in |
+| 17 | **Skills**, brought in like guides (E, part 2) |
+| 18 | **A task list** agents keep as they work (E, part 3) |
+| 19 | **Status while something works**, everywhere: `/checkpoint`, *Checkpoint now*, freezing, eval runs, round runs (I1) |
+| 20 | **What Babo is doing, and its logs**: what is happening now (turns, sessions, rounds, upkeep, the model queue, errands) and the logs, in the web interface and the terminal (I2) |
+| 21 | **Own time**: a slot for each resident to reflect, revise itself, write a lesson or a letter, or pursue something of its own, shown beside the rounds (G) |
+| 22 | **Folders outside the town** (a project on the machine) as a session's or profile's setting, with projects for residents' sessions (C2) |
+| 23 | **Remove the old names**: the temporary aliases from step 15 go, once the owner has confirmed everything works under the new ones |
+| 24 | **A visual overhaul**: one design language (matching btgprojects.dev), buttons for one-click actions, switches for toggles, sliders for ranges; everything configurable and visible in the web interface, with exceptions agreed (I3) |
+| 25 | **Named instances**: several towns, or a test town beside a real one (F2) |
+| — | Later: a world to visit (a MUD, reached as a plugin); containers per resident; *Open* landing right in the session's own page; tags for the Mayor's chats |
+
+### What Babo does, and what residents do
+
+**Babo decides when, gathers the material, checks the result and keeps the records; the residents do the work itself.** Two kinds of work follow from that:
+
+- **Babo's own work, always on**, for every resident and never a workflow: memory forming (checkpoints, memory reviews, the review of a session as it wraps up, transcripts); the commons as a store (notes, the queue of notes waiting to be curated, supersede and contest, the search index); the records (ledger, registry, secret scrub, the town's commits); filing events, notices, done-checks, guides and loop reminders; and the clock (waiting for a free model, quiet hours, priorities). This is **upkeep**.
+- **The town's work**, everything an office does, in **rounds**: who curates the commons, who inspects, who writes the newspaper, who watches the machine. A town can have any rounds; the baseline town ships one.
+
+### Rounds
+
+A round is what a watchman, a postman or a doctor does: at set times or when something happens, it goes from house to house. Each is a readable file in the town (`rounds/<name>.md`): a title, when it runs, and its steps in order. Each step names an **office** (not a person, so rounds outlive residents and wait for vacancies to be filled), its **duty** in plain words, the **access** it needs, and an optional **condition** Babo checks first ("only if notes are waiting to be curated").
+
+- **When**: a schedule ("daily at 03:00"), something that happens in the town ("a checkpoint is filed", "a session wraps up", "a letter comes for the inspector", "a proposal is filed", "a newcomer moves in"), "when the model is free", or "after another round".
+- **Chained**: each step gets the previous step's report as its starting material. A step that fails stops the round, and the owner gets a notice.
+- **Run** as that resident's own turn, in its own upkeep session, with its memory, guides and loop reminders as always.
+- **When it runs**: *waits its turn* (the default: once its trigger fires, it runs when nobody is using the model), or *runs when triggered* (at the lowest priority, with a plain note that it competes with the owner for the local model).
+- **Access**: per step, starting from the office's profile, set by hand on the Rounds tab or in the Mayor's proposal. Approving a round approves exactly the access shown, as with an errand; after that it runs without asking.
+- **Rehearsals**: a round can run as a rehearsal first. *Unattended*: reading and writing in the resident's own folder are allowed; everything else (other files, commands, web pages) is refused and written down. *Live*: the owner watches, and each permission question comes to them (*Allow once*, *Refuse*); each one allowed is recorded. Either way the rehearsal report lists, per step, what it tried (commands exactly as written, files, pages) and the access Babo proposes from that, exact commands rather than "the shell"; one click approves the round with it. A step that needs a refused command's output to go on stops there, and the report says where; approve that much and rehearse again.
+- **Visible**: the Rounds tab shows each round's trigger, steps, access, last run and result, and next run, with *Run now*, *Rehearse* and editing (`babo rounds list|show|run|rehearse` in the terminal). Babo's own work is listed there too, read-only, as "part of Babo".
+- **The Mayor** reads rounds, and proposes new ones, changes and removals (with a rehearsal report if he ran one); the owner decides in Review.
+
+**Offices and newcomers.** An office is a template: its ROLE.md, its starting profile, and the rounds it takes part in. Babo ships the archivist and the inspector. The baseline town is the Mayor alone, with those two offices *vacant*; a round's steps for a vacant office are skipped (the queue waits, and the owner sees it). A newcomer's move-in request says which office (vacant, or a new one with its role), its profile, and which rounds it joins (new steps in existing rounds, or new rounds), and the owner approves it as a whole, in Review or with the web form for moving someone in.
+
+**Vocabulary.** Generic things keep plain names (sessions, profiles, settings, checkpoints, eval, doctor, guides, notices, *Allow all*). The town's own words: a town is *founded*; a newcomer *moves in* (a *move-in request*); an office with nobody in it is a *vacancy*; the Mayor sends a resident on an *errand* (what was a session request); a resident who leaves has *moved away*; the town's work is done in *rounds*; Babo's own is *upkeep*. Old names stay as aliases, listed in one place and saying they're going, until step 23 removes them; the town's own files are migrated once on upgrade instead.
+
+### Context for small models: what the research says (steps 7, 8, 10, 12)
 
 A research pass on how harnesses should give a model its identity, role, docs and tools, especially a small local model, found:
 - **Monolithic context files** don't reliably help.
@@ -106,7 +143,7 @@ Babo already follows much of this: the harness decides when memory forms and wha
 
 Procedures (skills, how-tos) stay curated: the Archivist and the owner's review. A resident's own `SELF.md` stays its own. Writing it is part of what Babo is for, not a performance tool, but it is kept small and out of the task-critical part of the prompt.
 
-### Wrap-up that follows presence (B)
+### Wrap-up that follows presence (step 5)
 
 | Situation | What happens |
 |---|---|
@@ -118,7 +155,7 @@ Procedures (skills, how-tos) stay curated: the Archivist and the owner's review.
 
 All of these are settings.
 
-### Private and public sessions (C)
+### Private and public sessions (step 9)
 
 A session's *visibility* is chosen when it starts, like its other settings. **Private** (the default): whoever asked for it gets the resident's own summary, as a letter; the transcript stays in the resident's folder. **Public**: whoever asked (usually the Mayor) also gets the full output (commands' results, the transcript, files made), and the transcript can be read in the town. The Mayor's request tool says plainly that he must ask for *public* to see the output himself.
 
@@ -129,4 +166,9 @@ A session's *visibility* is chosen when it starts, like its other settings. **Pr
 - **Commons**: what the town shares: knowledge notes, skills, tools, proposals, projects, the board.
 - **Office**: a resident's role (archivist, inspector, …); the Mayor's office is the town's main agent.
 - **Profile**: what an agent may do; sessions start from it.
-- **Upkeep**: the town's maintenance, run when due and the model is free.
+- **Errand**: a task the Mayor sends a resident on, with the access it needs, once the owner approves (was: session request; from step 15).
+- **Move in**: a newcomer joining the town in an office, with its profile and rounds, once the owner approves (was: founding a resident; from step 15).
+- **Rehearsal**: a round run so that what it would need is written down (unattended) or approved one by one (live), before it runs for real.
+- **Round**: the town's work: when it runs, and its steps in order, each an office's duty with the access it needs.
+- **Upkeep**: Babo's own work: memory forming, the commons as a store, the records, and the clock that runs the rounds.
+- **Vacancy**: an office with nobody in it; its steps in rounds wait until it's filled.
