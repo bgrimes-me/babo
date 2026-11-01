@@ -3,10 +3,12 @@
 The Mayor runs in Babo itself. Every other resident runs as an opencode
 instance (``opencode serve``) started by Babo for one of its sessions:
 
-- **Identity on load.** The session-start bundle (who it is, its SELF and
-  ROLE, its neighbours, where it left off, its letters) is written to a file
-  opencode reads as instructions, under a short Babo prompt that replaces
-  opencode's own.
+- **Identity on load.** What stays the same all session (who it is, its SELF
+  and ROLE, its neighbours, the ledger) is written to a file opencode reads as
+  instructions, under a short Babo prompt that replaces opencode's own: the
+  start of every prompt, which the model server keeps cached. Where it is now
+  (its baton, unread letters, notes for its thread) is kept beside it, and
+  Babo's plugin adds it at the end of each turn, where it carries most weight.
 - **The town's tools** come from ``babo mcp --as <resident>`` (letters,
   memory, proposals, the commons tools of its office), plus web search with
   Babo's key when its profile allows.
@@ -48,6 +50,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 from filelock import FileLock
+from loguru import logger
 
 from babo.baton import profiles
 from babo.baton.registry import Registry
@@ -520,6 +523,7 @@ def _memory_env(town: Town, config: Config, session: Session, *, config_path: Pa
         "BABO_BIN": babo, "BABO_CONFIG": str(config_path), "BABO_RESIDENT": session.resident, "BABO_SESSION": session.id,
         "BABO_HOME": str(town.resident_dir(session.resident)),
         "BABO_SPOOL": str(spool_path(town, session)),
+        "BABO_NOW": str(now_path(town, session)),
         "BABO_CHECKPOINT_EVERY": str(profile.memory.checkpoint_every_tool_calls or memory.checkpoint_every_tool_calls),
         "BABO_COMMIT_GATE": str(memory.commit_gate_after_tool_calls),
         "BABO_IDLE_MINUTES": str(profile.memory.idle_minutes or memory.idle_minutes),
@@ -534,16 +538,50 @@ def _install_plugin(config: Config, resident: str) -> None:
     atomic_write(plugins / "babo" / "index.js", (files("babo.baton") / "templates" / "opencode" / "babo-plugin.js").read_text(encoding="utf-8"))
 
 
-def write_bundle(town: Town, config: Config, session: Session) -> Path:
+def _bundle(town: Town, config: Config, resident: str) -> Any:
     from babo.baton.bundle import build_bundle
 
-    bundle = build_bundle(town, session.resident, max_tokens=config.baton.bundle.max_tokens,
-                          search_hits=config.baton.bundle.search_hits,
-                          letter_preview_lines=config.baton.bundle.letter_preview_lines,
-                          index_path=config.baton.index_file)
+    return build_bundle(town, resident, max_tokens=config.baton.bundle.max_tokens,
+                        search_hits=config.baton.bundle.search_hits,
+                        letter_preview_lines=config.baton.bundle.letter_preview_lines,
+                        index_path=config.baton.index_file)
+
+
+def now_path(town: Town, session: Session) -> Path:
+    """Where the resident is now (its baton, unread letters): Babo's plugin adds it at the end of each turn."""
+    return _runtime_dir(town, session.resident) / f"{session.id}.now.md"
+
+
+def write_bundle(town: Town, config: Config, session: Session) -> Path:
+    """The session's instructions (what stays the same all session: the start of every prompt, which the
+    model server keeps cached) and, beside it, where the resident is now (which goes last)."""
+    bundle = _bundle(town, config, session.resident)
     path = _runtime_dir(town, session.resident) / f"{session.id}.bundle.md"
-    atomic_write(path, bundle.text())
+    atomic_write(path, bundle.stable_text())
+    atomic_write(now_path(town, session), bundle.now_text())
     return path
+
+
+def refresh_now(town: Town, config: Config, session: Session) -> None:
+    """Bring "where you are now" up to date: after a checkpoint, when a letter comes."""
+    text = _bundle(town, config, session.resident).now_text()
+    path = now_path(town, session)
+    try:
+        if path.read_text(encoding="utf-8") == text:
+            return
+    except OSError:
+        pass
+    atomic_write(path, text)
+
+
+def refresh_running_now(town: Town, config: Config) -> None:
+    for resident in Registry(town).all():
+        for session in sessions(town, resident.id):
+            if running(town, session) is not None:
+                try:
+                    refresh_now(town, config, session)
+                except (OSError, BatonError):
+                    logger.exception("Baton: could not refresh where {} is now", resident.id)
 
 
 def start(town: Town, config: Config, session: Session, *, config_path: Path) -> Running:
@@ -700,7 +738,7 @@ def remove_session(town: Town, session: Session) -> None:
     ingest(town, session)
     runtime = _runtime_dir(town, session.resident)
     for leftover in (_runtime_path(town, session), spool_path(town, session),
-                     runtime / f"{session.id}.bundle.md", runtime / f"{session.id}.log"):
+                     runtime / f"{session.id}.bundle.md", now_path(town, session), runtime / f"{session.id}.log"):
         leftover.unlink(missing_ok=True)
     _session_path(town, session.resident, session.id).unlink(missing_ok=True)
 
@@ -737,8 +775,6 @@ def freeze(town: Town, session: Session, *, review: Config | None = None, config
             checkpoint(town, review, session, trigger="session_end", config_path=config_path)
         except (BatonError, httpx.HTTPError) as exc:
             # The safety net in upkeep reviews it later; stopping must not depend on the model.
-            from loguru import logger
-
             logger.warning("Babo: {}'s session {} was frozen without its review: {}", session.resident, session.id, exc)
         session = get_session(town, session.resident, session.id)
     if run is not None:
@@ -1114,6 +1150,10 @@ def checkpoint(town: Town, config: Config, session: Session, *, trigger: str, co
         messages = _messages(run, session)
         bundle_path = _runtime_dir(town, session.resident) / f"{session.id}.bundle.md"
         bundle = bundle_path.read_text(encoding="utf-8") if bundle_path.exists() else write_bundle(town, config, session).read_text(encoding="utf-8")
+        try:
+            bundle += "\n\n" + now_path(town, session).read_text(encoding="utf-8")
+        except OSError:
+            pass
         prompt = (files("babo.baton") / "templates" / "opencode" / "resident.md").read_text(encoding="utf-8")
         profile = effective_profile(town, config, session.resident, session.overrides, by=session.by)
         preset = preset_for(config, profile)
@@ -1133,6 +1173,7 @@ def checkpoint(town: Town, config: Config, session: Session, *, trigger: str, co
         if trigger == "context_full":
             _rotate(town, session, run)
         save_session(town, session)
+        refresh_now(town, config, session)  # the new baton, at the end of its next turn
         return f"{'Written by ' + session.resident if outcome.authored else 'Recorded from the event log'}: {outcome.checkpoint.thread}"
 
 

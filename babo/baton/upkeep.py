@@ -118,6 +118,8 @@ def due(town: Town, cfg: BatonConfig, *, now: datetime, model_idle_s: int | None
 
     opencode.ingest_all(town)
     opencode.notify_waiting(town)
+    if config is not None:
+        opencode.refresh_running_now(town, config)  # new letters reach running residents at their next turn
     closing = opencode.needing_review(town, config, now=now) if config is not None else []
     for session, why in closing:
         out.sessions.append(f"{session.resident}/{session.id}")

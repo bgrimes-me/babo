@@ -235,6 +235,9 @@ def test_a_resident_in_opencode_forms_memory_like_any_other(town: Town, config_f
                                   tool_call("write", {"path": str(others), "content": "Taken over."}), text("Written.")])
     session = opencode.new_session(town, cfg, "archivist", title="index")
     home = town.resident_dir("archivist")
+    from babo.baton.baton_file import Checkpoint, append_checkpoint
+
+    append_checkpoint(home, Checkpoint(thread="the index", doing="listing the notes", next=["write index.md"], resident="archivist"))
     try:
         assert opencode.send(town, cfg, session, "Start an index.", config_path=path) == "Written."
         assert note.read_text() == "# Index\n"
@@ -242,6 +245,12 @@ def test_a_resident_in_opencode_forms_memory_like_any_other(town: Town, config_f
         # The clock arrives with the turn, not in the cached system prompt.
         user_turn = next(m for m in mock_llama.requests[0]["messages"] if m["role"] == "user")
         assert "Now: " in str(user_turn["content"]) and "Now: " not in str(mock_llama.requests[0]["messages"][0]["content"])
+        # So does where it is now (its baton): last, not in the system prompt, and on every step of the turn
+        # (the turn's message reads the same on each step, so the cache holds; the system prompt never changes).
+        assert "listing the notes" in str(user_turn["content"]) and "listing the notes" not in str(mock_llama.requests[0]["messages"][0]["content"])
+        steps = [r for r in mock_llama.requests if r.get("tools") and r["messages"][0] == mock_llama.requests[0]["messages"][0]]
+        assert len(steps) >= 2
+        assert all("[Where you are now" in str(next(m for m in r["messages"] if m["role"] == "user")["content"]) for r in steps)
         # Every tool call asked for a checkpoint; the plugin called Babo, Babo asked the resident.
         _wait(lambda: any(c.trigger == "interval" for c in iter_checkpoints(home)))
         events = [e for e in resident_events(town, "archivist") if e.get("session") == session.key]

@@ -151,8 +151,11 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
                 limit=baton_cfg.memory.commit_gate_after_tool_calls, counters=formation.counters,
             )
     loop._hook_factories.append(formation.hook_factory)  # pyright: ignore[reportPrivateUsage]
-    # A clock the resident can trust, on every turn.
+    # Where it is now (baton, letters) at the end of the conversation, when it changes; then a clock it can trust, on every turn.
     from babo.baton.clock import clock_provider
+    from babo.baton.context import now_provider
+
+    loop.register_runtime_context_provider(now_provider(loop))
 
     loop.register_runtime_context_provider(clock_provider(town, resident_id))
     from babo.baton.compaction import BatonConsolidator
