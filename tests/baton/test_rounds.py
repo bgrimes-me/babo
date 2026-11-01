@@ -37,10 +37,13 @@ class Ctx:
     def __init__(self, town: Town, fail: str = "") -> None:
         self.town, self.work_dir, self.fail = town, town.state / "upkeep" / "test", fail
         self.turns: list[tuple[str, str]] = []
+        self.sessions: list[tuple[str, dict[str, str], list[str]]] = []
         self.lines: list[str] = []
 
-    async def agent_turn(self, resident: str, message: str, session_key: str) -> str:
+    async def agent_turn(self, resident: str, message: str, session_key: str, kind: str = "upkeep",
+                         access: dict[str, str] | None = None, commands: list[str] | None = None) -> str:
         self.turns.append((resident, message))
+        self.sessions.append((kind, access or {}, commands or []))
         if resident == self.fail:
             raise RuntimeError("the model wasn't reachable")
         return f"{resident} did its part."

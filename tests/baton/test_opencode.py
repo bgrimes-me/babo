@@ -368,6 +368,89 @@ def test_a_resident_going_round_in_circles_is_reminded_and_the_owner_told(town: 
         opencode.freeze(town, session)
 
 
+CHECK_ROUND = """---
+title: The machine round
+when: {daily: '07:00'}
+steps:
+  - office: archivist
+    duty: Check that nano is installed, and note it.
+---
+"""
+
+
+@live
+def test_an_unattended_rehearsal_writes_down_what_a_round_needs_and_puts_its_work_back(town: Town, config_file, mock_llama: MockLlama) -> None:
+    from babo.baton import rehearsal, rounds
+
+    path, cfg = config_file()
+    (rounds.folder(town) / "machine.md").write_text(CHECK_ROUND)
+    note = town.resident_dir("archivist") / "machine.md"
+    mock_llama.default = _router([tool_call("shell", {"command": "pacman -Q nano", "description": "check nano"}),
+                                  tool_call("write", {"path": str(note), "content": "nano: unknown\n"}), text("I'd need to run pacman -Q nano.")])
+    report = rehearsal.rehearse(town, cfg, "machine", live=False, config_path=path)
+    [step] = report.steps
+    assert step.status == "rehearsed" and step.stopped and step.resident == "archivist"
+    assert [(a.action, a.resources, a.decision) for a in step.asked] == [("shell", ["pacman -Q nano"], "refused")]
+    assert not note.exists()  # its work is put back
+    assert report.proposal() == [{"office": "archivist", "access": {}, "commands": ["pacman -Q nano"], "cannot": []}]
+    assert "may run `pacman -Q nano`" in rehearsal.approve(town, report.id)
+    assert rounds.get(town, "machine").steps[0].commands == ("pacman -Q nano",)
+
+
+@live
+def test_a_live_rehearsal_asks_the_owner_and_keeps_what_they_allowed(town: Town, config_file, mock_llama: MockLlama) -> None:
+    import threading
+
+    from babo.baton import rehearsal, rounds
+
+    path, cfg = config_file()
+    (rounds.folder(town) / "machine.md").write_text(CHECK_ROUND)
+    mock_llama.default = _router([tool_call("shell", {"command": "pacman -Q nano", "description": "check nano"}), text("nano 8.2")])
+    done: list[rehearsal.Rehearsal] = []
+    worker = threading.Thread(target=lambda: done.append(rehearsal.rehearse(town, cfg, "machine", live=True, config_path=path)))
+    worker.start()
+    try:
+        def waiting() -> opencode.Session | None:
+            for s in opencode.sessions(town, "archivist"):
+                if s.rehearsal and opencode.running(town, s) is not None and opencode.live(town, s)["state"] == "waiting":
+                    return s
+            return None
+
+        _wait(lambda: waiting() is not None, 60)
+        session = waiting()
+        assert session is not None and session.kind == "work"  # it shows on the Sessions tab, with its question
+        [question] = opencode.live(town, session)["questions"]
+        views.answer_session_question(town, "archivist", session.id, question["id"], "once")
+    finally:
+        worker.join(120)
+    [report] = done
+    assert [(a.action, a.resources, a.decision) for a in report.steps[0].asked] == [("shell", ["pacman -Q nano"], "allowed")]
+    assert report.proposal()[0]["commands"] == ["pacman -Q nano"] and not report.steps[0].stopped
+
+
+@live
+def test_a_refused_question_lets_the_resident_carry_on(town: Town, config_file, mock_llama: MockLlama) -> None:
+    import threading
+
+    path, cfg = config_file()
+    mock_llama.default = _router([tool_call("shell", {"command": "rm -rf build", "description": "clean"}), text("I left the build alone.")])
+    session = opencode.new_session(town, cfg, "archivist", title="ask", overrides={"shell": "ask"})
+    replies: list[str] = []
+    worker = threading.Thread(target=lambda: replies.append(opencode.send(town, cfg, session, "Clean the build.", config_path=path)))
+    try:
+        opencode.start(town, cfg, session, config_path=path)
+        worker.start()
+        _wait(lambda: opencode.live(town, opencode.get_session(town, "archivist", session.id))["state"] == "waiting", 60)
+        [question] = opencode.live(town, opencode.get_session(town, "archivist", session.id))["questions"]
+        assert views.answer_session_question(town, "archivist", session.id, question["id"], "reject") == "Refused."
+        worker.join(60)
+        assert replies == ["I left the build alone."]  # the turn finished, rather than stopping where it was
+        refusal = [m for r in mock_llama.requests for m in r["messages"] if m["role"] == "tool"]
+        assert any("Robin said no to that" in str(m["content"]) for m in refusal)
+    finally:
+        opencode.freeze(town, session)
+
+
 @live
 async def test_upkeep_reviews_a_session_whose_instance_died(town: Town, config_file, mock_llama: MockLlama) -> None:
     import signal

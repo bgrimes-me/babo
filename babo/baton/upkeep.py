@@ -254,8 +254,19 @@ async def watch(config: Config) -> None:
     for interrupted in requests.recover_interrupted(town):
         logger.warning("Babo upkeep: session request {} was interrupted by a restart", interrupted)
     request_job: asyncio.Future[Any] | None = None
+    rehearsal_job: asyncio.Future[Any] | None = None
     while True:
         try:
+            # Rehearsals asked for run one at a time, beside upkeep (a live one waits for the owner).
+            if rehearsal_job is None or rehearsal_job.done():
+                from babo.baton import rehearsal
+
+                asked = rehearsal.next_request(town)
+                if asked is not None:
+                    logger.info("Babo upkeep: rehearsing round {} ({})", asked["round"], "live" if asked.get("live") else "unattended")
+                    rehearsal_job = asyncio.ensure_future(asyncio.to_thread(
+                        rehearsal.rehearse, town, config, str(asked["round"]), live=bool(asked.get("live")),
+                        config_path=get_config_path().resolve()))
             # Requests the owner approved run one at a time, beside upkeep, not instead of it.
             if request_job is None or request_job.done():
                 approved = requests.next_approved(town)

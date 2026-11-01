@@ -59,6 +59,10 @@ class Step:
     duty: str
     material: str = "none"
     fallback: str = ""  # an office that does it while ``office`` is vacant ("or: mayor")
+    # What it may do beyond (or short of) the office's profile, as for a session (shell: allow, read: town),
+    # and exact shell commands it may run. Approving the round approves exactly these.
+    access: dict[str, str] = field(default_factory=lambda: cast(dict[str, str], {}))
+    commands: tuple[str, ...] = ()
 
     def who(self, town: Town) -> str:
         return holder(town, self.office) or (holder(town, self.fallback) if self.fallback else "")
@@ -134,6 +138,40 @@ def _when(raw: object) -> dict[str, Any]:
     return when
 
 
+ACCESS_LEVELS = ("allow", "ask", "deny")
+
+
+def _access(raw: object) -> dict[str, str]:
+    from babo.baton.profiles import CAPABILITIES
+
+    if raw in (None, ""):
+        return {}
+    if not isinstance(raw, dict):
+        raise RoundError("a step's `access` is settings like shell: allow")
+    keys = {c.key for c in CAPABILITIES}
+    out: dict[str, str] = {}
+    for key, value in cast(dict[str, object], raw).items():
+        value = str(value).strip().lower()
+        if key == "read":
+            if value not in ("own", "town"):
+                raise RoundError("a step's `read` is own or town")
+        elif key not in keys:
+            raise RoundError(f"`{key}` isn't something a step can be given (it can be: {', '.join(sorted(keys))}, read)")
+        elif value not in ACCESS_LEVELS:
+            raise RoundError(f"a step's `{key}` is allow, ask or deny")
+        out[str(key)] = value
+    return out
+
+
+def _commands(raw: object) -> tuple[str, ...]:
+    if raw in (None, ""):
+        return ()
+    items = [raw] if isinstance(raw, str) else cast(list[object], raw) if isinstance(raw, list) else None
+    if items is None or any("\n" in str(c) for c in items):
+        raise RoundError("a step's `commands` are exact shell commands, one per item")
+    return tuple(str(c).strip() for c in items if str(c).strip())
+
+
 def parse(name: str, text: str) -> Round:
     meta, body = split_frontmatter(text)
     steps: list[Step] = []
@@ -146,7 +184,8 @@ def parse(name: str, text: str) -> Round:
             raise RoundError("each step has an office and a duty")
         if material not in MATERIALS:
             raise RoundError(f"`material` is one of: {', '.join(MATERIALS)}")
-        steps.append(Step(office, duty, material, str(step.get("or") or "").strip()))
+        steps.append(Step(office, duty, material, str(step.get("or") or "").strip(),
+                          _access(step.get("access")), _commands(step.get("commands"))))
     if not steps:
         raise RoundError("a round has at least one step")
     runs = str(meta.get("runs") or "wait")
@@ -403,7 +442,8 @@ class Context(Protocol):
 
     town: Town
     work_dir: Path
-    agent_turn: Callable[[str, str, str], Awaitable[str]]
+    # (resident, message, session key, session kind, access, exact commands): the step's own session in opencode
+    agent_turn: Callable[..., Awaitable[str]]
 
     def log(self, line: str) -> None: ...
 
@@ -459,7 +499,7 @@ async def run(ctx: Context, r: Round, *, trigger: str, session_key: str,
                    + ("" if material == "-" else f"\n\n{material}")
                    + "\n\nWhen you're done, say in a few lines what you did; it's the report the next step and the owner see.")
         try:
-            report = await ctx.agent_turn(resident, message, session_key)
+            report = await ctx.agent_turn(resident, message, session_key, f"round:{r.name}:{index}", dict(step.access), list(step.commands))
         except Exception as exc:  # the owner hears; the rest of the round waits for the next time
             record.steps.append(StepRun(step.office, resident, "failed", f"{type(exc).__name__}: {exc}"))
             record.status = "failed"
@@ -514,6 +554,16 @@ BABO_OWN = (
 )
 
 
+def _latest_rehearsal(town: Town, name: str) -> dict[str, Any] | None:
+    from babo.baton import rehearsal
+
+    try:
+        latest = rehearsal.latest(town, name)
+    except BatonError:
+        return None
+    return None if latest is None else {**asdict(latest), "proposal": latest.proposal()}
+
+
 def overview(town: Town) -> dict[str, Any]:
     rounds, broken = load(town)
     state = load_state(town)
@@ -528,6 +578,7 @@ def overview(town: Town) -> dict[str, Any]:
             "last_run": mine.get("last_run", ""), "last_status": mine.get("last_status", ""),
             "next_run": upcoming.isoformat(timespec="minutes") if upcoming is not None else "",
             "recent": runs(town, r.name, limit=5),
+            "rehearsal": _latest_rehearsal(town, r.name),
         })
     return {"rounds": rows, "broken": broken, "babo": [{"title": t, "what": w} for t, w in BABO_OWN]}
 

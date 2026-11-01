@@ -859,6 +859,90 @@ def rounds_run(name: str = typer.Argument(...), here: bool = typer.Option(False,
         console.print(f"  {i}. {step['office']} {step['resident']}: {step['status']} {step['note']}".rstrip())
 
 
+@rounds_app.command("rehearse")
+def rounds_rehearse(name: str = typer.Argument(...),
+                    live: bool = typer.Option(False, "--live", help="Each question comes to you (Sessions tab) instead of being refused and written down"),
+                    here: bool = typer.Option(False, "--here", help="Rehearse now in this terminal (unattended only), not through the upkeep service"),
+                    config: str | None = _CONFIG_OPT):
+    """Rehearse a round: find out what its steps need before it runs for real; nothing they change is kept."""
+    from babo.baton import rehearsal
+
+    t, cfg = _town(config)
+    try:
+        if not here:
+            console.print(rehearsal.request(t, name, live=live))
+            return
+        if live:
+            raise BatonError("A live rehearsal runs through the upkeep service, so you can answer its questions on the Sessions tab.")
+        report = rehearsal.rehearse(t, cfg, name, live=False, config_path=_config_path())
+    except BatonError as exc:
+        _fail(exc)
+        return
+    _print_rehearsal(report)
+
+
+def _print_rehearsal(report: Any) -> None:
+    console.print(f"[bold]Rehearsal of {report.round}[/bold] ({'live' if report.live else 'unattended'}, {report.started[:16].replace('T', ' ')}): "
+                  f"{report.status}" + (f"; approved {report.approved[:16].replace('T', ' ')}" if report.approved else ""))
+    for i, (step, wanted) in enumerate(zip(report.steps, report.proposal(), strict=True), 1):
+        console.print(f"  {i}. {step.office} {step.resident}: {step.status} {step.note}".rstrip()
+                      + (" [yellow](stopped at a refusal: rehearse again once approved to see the rest)[/yellow]" if step.stopped else ""))
+        for asked in step.asked:
+            console.print(f"     asked to {asked.action}: {' · '.join(asked.resources)} — {asked.decision}")
+        if wanted["access"] or wanted["commands"]:
+            console.print("     proposes: " + ", ".join([*(f"{k} {v}" for k, v in wanted["access"].items()), *(f"may run `{c}`" for c in wanted["commands"])]))
+        for item in wanted["cannot"]:
+            console.print(f"     [dim]can't be given to a round: {item}[/dim]")
+    console.print(f"Approve its access with: babo rounds approve {report.round}")
+
+
+@rounds_app.command("report")
+def rounds_report(name: str = typer.Argument(...), config: str | None = _CONFIG_OPT):
+    """A round's latest rehearsal: what each step asked for, and the access Babo proposes."""
+    from babo.baton import rehearsal
+
+    t, _ = _town(config)
+    latest = rehearsal.latest(t, name)
+    if latest is None:
+        _fail(BatonError(f"“{name}” hasn't been rehearsed yet: babo rounds rehearse {name}"))
+        return
+    _print_rehearsal(latest)
+
+
+@rounds_app.command("approve")
+def rounds_approve(name: str = typer.Argument(...), rehearsal_id: str | None = typer.Option(None, "--rehearsal", help="Which rehearsal (default: the latest)"),
+                   config: str | None = _CONFIG_OPT):
+    """Give a round exactly the access its rehearsal proposes (it runs with it from then on, without asking)."""
+    from babo.baton import rehearsal
+
+    t, _ = _town(config)
+    try:
+        latest = rehearsal.load(t, rehearsal_id) if rehearsal_id else rehearsal.latest(t, name)
+        if latest is None:
+            raise BatonError(f"“{name}” hasn't been rehearsed yet: babo rounds rehearse {name}")
+        console.print(rehearsal.approve(t, latest.id))
+    except BatonError as exc:
+        _fail(exc)
+
+
+@rounds_app.command("access")
+def rounds_access(name: str = typer.Argument(...), step: int = typer.Argument(..., help="The step's number"),
+                  set_: list[str] = typer.Argument(None, help="Settings, e.g. shell=allow read=town ('profile' goes back to the profile's)"),
+                  command: list[str] = typer.Option([], "--command", help="An exact shell command the step may run (repeat for several)"),
+                  no_commands: bool = typer.Option(False, "--no-commands", help="Take away the exact commands it had"),
+                  config: str | None = _CONFIG_OPT):
+    """Set what one step of a round may do, by hand."""
+    from babo.baton import rehearsal
+
+    t, _ = _town(config)
+    try:
+        changes = {k: str(v) for k, v in _overrides(list(set_ or [])).items()}
+        commands = [] if no_commands else (list(command) or None)
+        console.print(rehearsal.set_step_access(t, name, step, changes, commands))
+    except BatonError as exc:
+        _fail(exc)
+
+
 @rounds_app.command("set")
 def rounds_set(name: str = typer.Argument(...),
                on: bool | None = typer.Option(None, "--on/--off", help="Turn the round on or off"),

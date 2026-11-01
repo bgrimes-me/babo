@@ -207,7 +207,8 @@ class Night:
     def _offsets(self) -> dict[str, int]:
         return read_offsets(self.town)
 
-    async def _real_agent_turn(self, resident: str, message: str, session_key: str) -> str:
+    async def _real_agent_turn(self, resident: str, message: str, session_key: str, kind: str = "upkeep",
+                               access: dict[str, str] | None = None, commands: list[str] | None = None) -> str:
         from babo.agent.loop import AgentLoop
         from babo.agent.tools.registry import ToolRegistry
         from babo.baton.opencode import resident_turn
@@ -223,7 +224,8 @@ class Night:
             finally:
                 await loop.aclose()
 
-        return await resident_turn(self.config, self.town, resident, message, kind="upkeep", in_babo=in_babo)
+        return await resident_turn(self.config, self.town, resident, message, kind=kind, in_babo=in_babo,
+                                   access=access, commands=commands)
 
     # -- the run -------------------------------------------------------------
     async def run(self) -> dict[str, Any]:

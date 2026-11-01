@@ -1856,7 +1856,18 @@ export function fetchTownGuides(token: string, base: string = ""): Promise<{ gui
 }
 
 /** The town's work: rounds (`babo rounds`), and what Babo does itself. */
-export interface TownRoundStep { office: string; duty: string; material: string; fallback: string; holder: string }
+export interface TownRoundStep {
+  office: string; duty: string; material: string; fallback: string; holder: string;
+  /** What it may do beyond (or short of) the office's profile, and exact commands it may run. */
+  access: Record<string, string>; commands: string[];
+}
+/** A rehearsal of a round: what each step asked for, and the access Babo proposes from that. */
+export interface TownRehearsal {
+  id: string; round: string; live: boolean; started: string; finished: string; status: string; approved: string;
+  steps: { office: string; resident: string; status: string; note: string; report: string; stopped: boolean;
+    asked: { action: string; resources: string[]; decision: string }[] }[];
+  proposal: { office: string; access: Record<string, string>; commands: string[]; cannot: string[] }[];
+}
 export interface TownRoundRun {
   round: string; trigger: string; started: string; finished: string; status: string;
   steps: { office: string; resident: string; status: string; note: string; report: string }[];
@@ -1864,6 +1875,7 @@ export interface TownRoundRun {
 export interface TownRound {
   name: string; title: string; about: string; when: string; runs: "wait" | "now"; enabled: boolean;
   steps: TownRoundStep[]; last_run: string; last_status: string; next_run: string; recent: TownRoundRun[];
+  rehearsal: TownRehearsal | null;
 }
 export interface TownRounds {
   rounds: TownRound[];
@@ -1883,4 +1895,17 @@ export function runTownRound(transport: WebUIMutationTransport, name: string): P
 
 export function setTownRound(transport: WebUIMutationTransport, name: string, change: { enabled?: boolean; runs?: "wait" | "now" }): Promise<TownRounds & { message: string }> {
   return mutation<TownRounds & { message: string }>(transport, "town.rounds.set", { name, ...change });
+}
+
+export function rehearseTownRound(transport: WebUIMutationTransport, name: string, live: boolean): Promise<TownRounds & { message: string }> {
+  return mutation<TownRounds & { message: string }>(transport, "town.rounds.rehearse", { name, live });
+}
+
+export function approveTownRehearsal(transport: WebUIMutationTransport, name: string, rehearsal: string): Promise<TownRounds & { message: string }> {
+  return mutation<TownRounds & { message: string }>(transport, "town.rounds.approve", { name, rehearsal });
+}
+
+export function setTownRoundAccess(transport: WebUIMutationTransport, name: string, step: number, access: Record<string, string>,
+  commands?: string[]): Promise<TownRounds & { message: string }> {
+  return mutation<TownRounds & { message: string }>(transport, "town.rounds.access", { name, step, access, ...(commands !== undefined ? { commands } : {}) });
 }

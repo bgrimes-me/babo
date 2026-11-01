@@ -44,6 +44,9 @@ TOWN_MUTATION_PATHS = {
     "town.eval": "/api/town/eval/run",
     "town.rounds.run": "/api/town/rounds/run",
     "town.rounds.set": "/api/town/rounds/set",
+    "town.rounds.rehearse": "/api/town/rounds/rehearse",
+    "town.rounds.approve": "/api/town/rounds/approve",
+    "town.rounds.access": "/api/town/rounds/access",
 }
 _DECISION_KINDS = ("tool", "proposal", "founding", "flag", "session")
 _doctor_lock = asyncio.Lock()
@@ -327,11 +330,26 @@ class TownRoutes:
         elif got.startswith("/api/town/sessions/"):
             message = await asyncio.to_thread(lambda: _session_change(got.rsplit("/", 1)[-1], payload))
             return http_json_response({"message": message, **await asyncio.to_thread(_sessions)})
-        elif got in ("/api/town/rounds/run", "/api/town/rounds/set"):
-            from babo.baton import rounds
+        elif got in ("/api/town/rounds/run", "/api/town/rounds/set", "/api/town/rounds/rehearse", "/api/town/rounds/approve",
+                     "/api/town/rounds/access"):
+            from babo.baton import rehearsal, rounds
 
             name = _text(payload, "name", 80)
-            if got.endswith("/run"):
+            if got.endswith("/rehearse"):
+                message = await asyncio.to_thread(lambda: rehearsal.request(_town(), name, live=payload.get("live") is True))
+            elif got.endswith("/approve"):
+                rehearsal_id = _text(payload, "rehearsal", 200)
+                message = await asyncio.to_thread(lambda: rehearsal.approve(_town(), rehearsal_id))
+            elif got.endswith("/access"):
+                step, access, commands = payload.get("step"), cast(object, payload.get("access") or {}), payload.get("commands")
+                if not isinstance(step, int) or not isinstance(access, dict):
+                    raise BatonError("missing step or access")
+                if commands is not None and not (isinstance(commands, list) and all(isinstance(c, str) for c in cast(list[object], commands))):
+                    raise BatonError("commands must be a list of exact commands")
+                changes = {str(k): str(v) for k, v in cast(dict[object, object], access).items()}
+                message = await asyncio.to_thread(lambda: rehearsal.set_step_access(
+                    _town(), name, step, changes, cast(list[str], commands) if commands is not None else None))
+            elif got.endswith("/run"):
                 message = await asyncio.to_thread(lambda: rounds.request_run(_town(), name))
             else:
                 enabled, runs = payload.get("enabled"), payload.get("runs")

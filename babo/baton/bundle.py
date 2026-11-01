@@ -58,6 +58,9 @@ class Bundle:
         return estimate_tokens(self.text())
 
 
+SELF_NAME = "SELF.md"  # who the resident is, in its own words (written only by revise_self and founding)
+
+
 def stable_inputs(town: Town, resident_id: str) -> list[Path]:
     """The files the start of the prompt is made of: when one changes, it is built again."""
     home = town.resident_dir(resident_id)

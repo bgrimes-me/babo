@@ -219,6 +219,7 @@ class Session:
     done_status: str = ""  # "" (not yet) | passed | failed
     done_tries: int = 0
     done_checked: str = ""  # when it last ran
+    rehearsal: str = ""  # "<rehearsal id>:<step>" while it rehearses a round's step: the owner's answers are recorded
 
     @property
     def key(self) -> str:
@@ -402,7 +403,9 @@ def _permissions(town: Town, resident: str, profile: profiles.Profile, *, unatte
 
 def _priority(kind: str) -> str:
     """Where the session's model calls wait in the queue: someone's work first, then visits, then upkeep."""
-    return "upkeep" if kind == "upkeep" else "visit" if kind.startswith("visit:") else "interactive"
+    if kind == "upkeep" or kind.startswith(("round:", "rehearsal:")):
+        return "upkeep"
+    return "visit" if kind.startswith("visit:") else "interactive"
 
 
 def opencode_config(town: Town, config: Config, session: Session, *, bundle: Path, config_path: Path, babo: str) -> dict[str, Any]:
@@ -439,7 +442,7 @@ def opencode_config(town: Town, config: Config, session: Session, *, bundle: Pat
         "default_agent": AGENT,
         "agents": {
             AGENT: {"mode": "primary", "description": f"The resident {session.resident}", "system": prompt,
-                    "permissions": _permissions(town, session.resident, profile, unattended=session.kind.startswith("request:"),
+                    "permissions": _permissions(town, session.resident, profile, unattended=session.kind.startswith(("request:", "round:")),
                                                 commands=session.commands, mcp=allowed_mcp)},
             # Titles come from the same model, through the same gateway.
             "title": {"model": model},
@@ -885,15 +888,17 @@ def permission_requests(run: Running, session: Session) -> list[dict[str, Any]]:
         return cast(list[dict[str, Any]], _data(client.get(f"/api/session/{session.opencode_id}/permission"), "permission requests"))
 
 
-def answer_permission(town: Town, session: Session, request_id: str, decision: str) -> None:
-    """Answer a question the resident's opencode is waiting on: once, always (for this session) or reject."""
+def answer_permission(town: Town, session: Session, request_id: str, decision: str, *, message: str = "") -> None:
+    """Answer a question the resident's opencode is waiting on: once, always (for this session) or reject
+    (with ``message``, the reason it's told, so it carries on rather than stop)."""
     if decision not in ("once", "always", "reject"):
         raise BatonError("Answer with once, always or reject.")
     run = running(town, session)
     if run is None:
         raise BatonError("That session isn't running.")
     with _client(run, 30) as client:
-        client.post(f"/api/session/{session.opencode_id}/permission/{request_id}/reply", json={"decision": decision}).raise_for_status()
+        body = {"decision": decision, **({"message": message} if message else {})}
+        client.post(f"/api/session/{session.opencode_id}/permission/{request_id}/reply", json=body).raise_for_status()
 
 
 def allow_everything() -> dict[str, str]:
@@ -1309,18 +1314,30 @@ def _rotate(town: Town, session: Session, run: Running) -> None:
     session.opencode_id = created
 
 
-def special_session(town: Town, config: Config, resident: str, kind: str) -> Session:
-    """The one session a resident keeps for visits from someone, or for upkeep."""
+def special_session(town: Town, config: Config, resident: str, kind: str, *, access: dict[str, str] | None = None,
+                    commands: list[str] | None = None) -> Session:
+    """The one session a resident keeps for visits from someone, for upkeep, or for one step of a round
+    (with the access its round gives it, which the owner approved with the round)."""
     for s in sessions(town, resident):
         if s.kind == kind:
+            if access is not None and (s.overrides != access or s.commands != list(commands or [])):
+                effective_profile(town, config, resident, cast(dict[str, object], dict(access)), by=OWNER)  # validates
+                s.overrides, s.commands, s.by = cast(dict[str, object], dict(access)), list(commands or []), OWNER
+                save_session(town, s)
             return s
-    title = {"upkeep": f"{resident}: upkeep"}.get(kind, f"{resident}: visits from {kind.split(':', 1)[-1]}")
-    return new_session(town, config, resident, title=title, kind=kind)
+    if kind.startswith("round:"):
+        _, name, index = kind.split(":", 2)
+        title = f"{resident}: round {name}, step {index}"
+    else:
+        title = {"upkeep": f"{resident}: upkeep"}.get(kind, f"{resident}: visits from {kind.split(':', 1)[-1]}")
+    return new_session(town, config, resident, title=title, kind=kind, overrides=cast(dict[str, object], dict(access or {})),
+                       commands=list(commands or []), by=OWNER)
 
 
-def one_turn(town: Town, config: Config, resident: str, message: str, *, kind: str, config_path: Path) -> str:
-    """One turn in a resident's visit or upkeep session; the instance is frozen again afterwards."""
-    session = special_session(town, config, resident, kind)
+def one_turn(town: Town, config: Config, resident: str, message: str, *, kind: str, config_path: Path,
+             access: dict[str, str] | None = None, commands: list[str] | None = None) -> str:
+    """One turn in a resident's visit, upkeep or round-step session; the instance is frozen again afterwards."""
+    session = special_session(town, config, resident, kind, access=access, commands=commands)
     try:
         return send(town, config, session, message, config_path=config_path)
     finally:
@@ -1349,12 +1366,14 @@ def overview(town: Town, resident: str, *, archived: bool = False) -> list[dict[
 
 
 async def resident_turn(config: Config, town: Town, resident: str, message: str, *, kind: str,
-                        in_babo: Callable[[], Awaitable[str]]) -> str:
+                        in_babo: Callable[[], Awaitable[str]], access: dict[str, str] | None = None,
+                        commands: list[str] | None = None) -> str:
     """One turn of a resident: in opencode when it lives there and opencode is
     installed, otherwise in Babo itself (``in_babo``)."""
     from babo.config.loader import get_config_path
 
     agent = Registry(town).require_active(resident)
     if runs_in_opencode(agent.office) and opencode_bin(config) is not None:
-        return await asyncio.to_thread(one_turn, town, config, resident, message, kind=kind, config_path=get_config_path())
+        return await asyncio.to_thread(one_turn, town, config, resident, message, kind=kind, config_path=get_config_path(),
+                                       access=access, commands=commands)
     return await in_babo()
