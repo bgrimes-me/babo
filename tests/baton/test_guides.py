@@ -84,5 +84,8 @@ def test_the_terminal_lists_the_guides(town: Town, make_config, monkeypatch) -> 
     from babo.baton import cli
 
     monkeypatch.setattr(cli, "_town", lambda _config: (town, make_config("mayor")))
-    result = CliRunner().invoke(cli.app, ["guides"], env={"COLUMNS": "250"})
+    from rich.console import Console
+
+    monkeypatch.setattr(cli, "console", Console(width=300, force_terminal=False))  # a wide table, whatever the terminal
+    result = CliRunner().invoke(cli.app, ["guides"])
     assert result.exit_code == 0 and "letters" in result.output and "first send_letter" in result.output
