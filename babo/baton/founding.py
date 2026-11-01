@@ -210,6 +210,18 @@ def found_town(root: str | Path, *, offices: tuple[str, ...] = FOUNDING_OFFICES,
             created.append(rel)
         elif _refresh_if_untouched(town, town.root / rel, name):
             updated.append(rel)
+    # The guides Babo ships (brought in at the right moment), kept up to date while nobody has edited them.
+    for guide in sorted((_TEMPLATES / "guides").iterdir(), key=lambda p: p.name):
+        if not guide.name.endswith(".md"):
+            continue
+        rel = f"commons/guides/{guide.name}"
+        target = town.root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not target.exists():
+            _write_shipped(town, target, template_text(f"guides/{guide.name}", town.owner_name))
+            created.append(rel)
+        elif _refresh_if_untouched(town, target, f"guides/{guide.name}"):
+            updated.append(rel)
     if not town.responses.exists():
         atomic_write(town.responses, "# Responses to the charter\n\nResidents may answer the charter here.\n")
     gitignore = town.root / ".gitignore"

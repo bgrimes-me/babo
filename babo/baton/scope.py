@@ -68,6 +68,8 @@ class Scope:
         elif ref.startswith("skill:"):
             name = ref.split(":", 1)[1].strip()
             path = self.town.skills / name / "SKILL.md"
+        elif ref.startswith("guides/") and not (self.home / ref).exists():
+            path = self.town.commons / ref  # the town's guides, as their index names them
         elif ref.startswith(("commons/", "residents/", "crew/")) or ref in PUBLIC_TOP_LEVEL:
             path = self.town.root / ref
         elif Path(ref).is_absolute():

@@ -21,6 +21,7 @@ const GATE = Number(env.BABO_COMMIT_GATE || 30)
 const IDLE_MS = Number(env.BABO_IDLE_MINUTES || 20) * 60_000
 const CONTEXT = Number(env.BABO_CONTEXT_TOKENS || 0)
 const NOW = env.BABO_NOW
+const GUIDES = env.BABO_GUIDES
 const COMMIT = /(^|[\s;&|(])git\s+(-[cC]\s+\S+\s+)*commit\b/
 
 export default {
@@ -112,7 +113,35 @@ export default {
       if (command && COMMIT.test(command) && since >= Math.min(GATE, EVERY)) await checkpoint("commit")
     })
 
+    // Guides Babo brings in when they're needed: with the result of the first call of a tool in
+    // this session, or after a call that was refused or failed in a way a guide covers. Once each.
+    // (A refused call's result is opencode's own, so that guide goes with the turn, beside the baton.)
+    let guides = null
+    const shownGuides = new Set()
+    const withTurn = []
+    const loadGuides = () => {
+      if (guides === null) { try { guides = GUIDES ? JSON.parse(readFileSync(GUIDES, "utf8")) : [] } catch { guides = [] } }
+      return guides
+    }
+    const toolName = (name) => { const bare = String(name).replace(/^babo_/, ""); return { bash: "shell", exec: "shell" }[bare] ?? bare }
+    const dueGuides = (tool, text, failed) => {
+      const out = []
+      for (const guide of loadGuides()) {
+        if (shownGuides.has(guide.name)) continue
+        const how = (guide.tools ?? []).includes(toolName(tool)) ? `tool:${toolName(tool)}`
+          : failed && (guide.errors ?? []).some((pattern) => { try { return new RegExp(pattern.replace(/^\(\?i\)/, ""), pattern.startsWith("(?i)") ? "i" : "").test(text) } catch { return false } }) ? "error" : ""
+        if (how) { shownGuides.add(guide.name); out.push(guide); spool({ kind: "guide", name: guide.name, how }) }
+      }
+      return out
+    }
+
     await ctx.tool.hook("execute.after", (event) => {
+      const said = event.status === "error" ? String(event.error?.message ?? "") + " " + JSON.stringify(event.error?.error ?? {})
+        : (event.result?.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n")
+      for (const guide of dueGuides(event.tool, said, event.status === "error")) {
+        if (event.status !== "error" && event.result) (event.result.content ??= []).push({ type: "text", text: guide.text })
+        else withTurn.push(guide.text)
+      }
       const result = event.result ?? {}
       const text = (result.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("\n")
       const exit = result.output?.exit ?? result.metadata?.exit
@@ -141,6 +170,8 @@ export default {
         const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
         text.text += `\n\nNow: ${now.toLocaleString("en-GB", { weekday: "long", timeZone: zone })} (${zone}; the machine's clock)`
       }
+      // A guide that came after a refusal: once it is in, it stays (the same text on every later step).
+      if (text) for (const guide of withTurn) if (!text.text.includes(guide)) text.text += `\n\n${guide}`
     })
 
     const controller = new AbortController()

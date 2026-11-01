@@ -644,6 +644,24 @@ def eval_command(
             console.print(f"Kept as {name}'s baseline.")
 
 
+@app.command("guides")
+def guides_command(config: str | None = _CONFIG_OPT):
+    """The guides Babo brings in when they're needed: what triggers each, and how often it was brought in or opened by hand."""
+    from babo.baton import guides
+
+    t, _ = _town(config)
+    table = Table("guide", "when", "brought in by", "for", "brought in", "opened by hand")
+    rows = guides.stats(t)
+    for row in rows:
+        triggers = ", ".join([*(f"first {tool}" for tool in row["tools"]), *(["an error"] if row["errors"] else [])]) or "-"
+        table.add_row(row["name"], row["when"], triggers, ", ".join(row["offices"]) or "everyone", str(row["brought"]), str(row["opened"]))
+    console.print(table)
+    for row in rows:
+        if row["hint"]:
+            console.print(f"[yellow]{row['name']}[/yellow]: {row['hint']}")
+    console.print(f"They are notes in {guides.folder(t)}: change one, or add your own (frontmatter: title, when, tools, errors, offices).")
+
+
 @app.command("init-config")
 def init_config(
     upstream: str = typer.Option(..., "--upstream", help="llama-server address, e.g. http://127.0.0.1:8080"),

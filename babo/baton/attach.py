@@ -151,6 +151,21 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
                 limit=baton_cfg.memory.commit_gate_after_tool_calls, counters=formation.counters,
             )
     loop._hook_factories.append(formation.hook_factory)  # pyright: ignore[reportPrivateUsage]
+    # Guides, brought in with a tool's result when they're needed (and for tools registered later too).
+    from babo.baton import guides
+
+    shown = guides.Shown()
+    for tool_name in list(loop.tools.tool_names):
+        tool = loop.tools.get(tool_name)
+        if tool is not None:
+            guides.install(tool, town=town, resident_id=resident_id, office=resident.office, shown=shown)
+    register = loop.tools.register
+
+    def with_guides(tool: Tool) -> None:
+        guides.install(tool, town=town, resident_id=resident_id, office=resident.office, shown=shown)
+        register(tool)
+
+    loop.tools.register = with_guides  # type: ignore[method-assign]
     # Where it is now (baton, letters) at the end of the conversation, when it changes; then a clock it can trust, on every turn.
     from babo.baton.clock import clock_provider
     from babo.baton.context import now_provider

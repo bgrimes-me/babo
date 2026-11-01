@@ -322,6 +322,29 @@ def test_a_running_session_gets_new_permissions_and_carries_on(town: Town, confi
 
 
 @live
+def test_guides_come_with_the_result_that_needs_them_in_opencode_too(town: Town, config_file, mock_llama: MockLlama) -> None:
+    from babo.baton.events import resident_events
+
+    path, cfg = config_file()
+    secret = town.resident_dir("mayor") / "SELF.md"
+    mock_llama.default = _router([tool_call("babo_send_letter", {"to": "inspector", "text": "The index is ready."}),
+                                  tool_call("read", {"path": str(secret)}), text("Done.")])
+    session = opencode.new_session(town, cfg, "archivist", title="guides")
+    try:
+        opencode.send(town, cfg, session, "Tell the inspector, then read the Mayor's SELF.md.", config_path=path)
+        tools = [m for r in mock_llama.requests if r.get("tools") for m in r["messages"] if m["role"] == "tool"]
+        assert any("[Guide from Babo: Writing letters." in str(m["content"]) for m in tools)  # with the letter's result
+        last = [r for r in mock_llama.requests if r.get("tools")][-1]
+        turn = next(m for m in last["messages"] if m["role"] == "user")
+        assert "[Guide from Babo: When something is refused." in str(turn["content"])  # a refusal's guide goes with the turn
+        opencode.ingest(town, opencode.get_session(town, "archivist", session.id))
+        shown = [(e["name"], e["how"]) for e in resident_events(town, "archivist") if e["kind"] == "guide"]
+        assert ("letters", "tool:send_letter") in shown and ("when-blocked", "error") in shown
+    finally:
+        opencode.freeze(town, session)
+
+
+@live
 async def test_upkeep_reviews_a_session_whose_instance_died(town: Town, config_file, mock_llama: MockLlama) -> None:
     import signal
     from datetime import datetime, timedelta
