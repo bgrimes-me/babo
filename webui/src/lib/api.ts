@@ -1816,3 +1816,21 @@ export function setTownAllowAll(
 ): Promise<TownAllowAll & { message: string }> {
   return mutation<TownAllowAll & { message: string }>(transport, "town.allow_all", { key, on, hours });
 }
+
+/** `babo eval`: each preset's latest score (and its baseline's), and the run going on now. */
+export interface TownEvalStatus {
+  running: { preset: string; done: number; total: number; passed: number; error: string } | null;
+  latest: { preset: string; model?: string; at: string; passed: number; total: number;
+    baseline: { at: string; passed: number; total: number } | null }[];
+  presets: string[];
+  tasks: number;
+}
+
+export function fetchTownEval(token: string, base: string = ""): Promise<TownEvalStatus> {
+  return request<TownEvalStatus>(`${base}/api/town/eval`, token, undefined, API_READ_TIMEOUT_MS);
+}
+
+/** Start an eval of one preset in the background (every task), optionally keeping it as the preset's baseline. */
+export function runTownEval(transport: WebUIMutationTransport, preset: string, baseline: boolean): Promise<TownEvalStatus & { message: string }> {
+  return mutation<TownEvalStatus & { message: string }>(transport, "town.eval", { preset, baseline });
+}

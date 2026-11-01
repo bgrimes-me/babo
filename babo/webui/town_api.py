@@ -40,6 +40,7 @@ TOWN_MUTATION_PATHS = {
     "town.session.organize": "/api/town/sessions/organize",
     "town.notices.read": "/api/town/notices/read",
     "town.allow_all": "/api/town/allow-all/update",
+    "town.eval": "/api/town/eval/run",
 }
 _DECISION_KINDS = ("tool", "proposal", "founding", "flag", "session")
 _doctor_lock = asyncio.Lock()
@@ -121,6 +122,28 @@ def _sessions(archived: bool = False) -> dict[str, Any]:
 
     cfg = load_config()
     return views.sessions_overview(Town.open(cfg.baton.town_path), cfg, archived=archived)
+
+
+def _eval_status() -> dict[str, Any]:
+    from babo.baton import evals
+    from babo.baton.gateway import preset_names
+    from babo.config.loader import load_config
+
+    cfg = load_config()
+    return evals.background_status(Town.open(cfg.baton.town_path), preset_names(cfg))
+
+
+def _start_eval(preset: str, baseline_too: bool) -> str:
+    """`babo eval --preset <preset>` from the web interface: in the background, with every task."""
+    from babo.baton import evals
+    from babo.baton.gateway import Router, preset_names
+    from babo.config.loader import load_config
+
+    cfg = load_config()
+    if preset not in preset_names(cfg):
+        raise BatonError(f"There's no model preset called '{preset}'.")
+    return evals.start_background(Town.open(cfg.baton.town_path), cfg.baton.model, preset,
+                                  real_model=Router(cfg).resolve(preset).model, baseline_too=baseline_too)
 
 
 def _session_change(action: str, payload: dict[str, Any]) -> str:
@@ -228,6 +251,8 @@ class TownRoutes:
             return http_json_response({"notices": await asyncio.to_thread(lambda: notices.recent(_town(), unread_only=True))})
         if got == "/api/town/profiles":
             return http_json_response(await asyncio.to_thread(_profiles))
+        if got == "/api/town/eval":
+            return http_json_response(await asyncio.to_thread(_eval_status))
         if not self.is_mutation_path(got):
             return http_error(404, "Not found")
         payload = self._payload(request)
@@ -283,6 +308,11 @@ class TownRoutes:
         elif got.startswith("/api/town/sessions/"):
             message = await asyncio.to_thread(lambda: _session_change(got.rsplit("/", 1)[-1], payload))
             return http_json_response({"message": message, **await asyncio.to_thread(_sessions)})
+        elif got == "/api/town/eval/run":
+            preset = _text(payload, "preset", 120)
+            baseline_too = payload.get("baseline") is True
+            message = await asyncio.to_thread(lambda: _start_eval(preset, baseline_too))
+            return http_json_response({"message": message, **await asyncio.to_thread(_eval_status)})
         elif got == "/api/town/upkeep/now":
             message = await asyncio.to_thread(lambda: views.request_upkeep(_town()))
         elif got == "/api/town/name":
