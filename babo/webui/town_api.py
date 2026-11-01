@@ -42,6 +42,8 @@ TOWN_MUTATION_PATHS = {
     "town.notices.read": "/api/town/notices/read",
     "town.allow_all": "/api/town/allow-all/update",
     "town.eval": "/api/town/eval/run",
+    "town.rounds.run": "/api/town/rounds/run",
+    "town.rounds.set": "/api/town/rounds/set",
 }
 _DECISION_KINDS = ("tool", "proposal", "founding", "flag", "session")
 _doctor_lock = asyncio.Lock()
@@ -260,6 +262,10 @@ class TownRoutes:
             return http_json_response({"notices": await asyncio.to_thread(lambda: notices.recent(_town(), unread_only=True))})
         if got == "/api/town/profiles":
             return http_json_response(await asyncio.to_thread(_profiles))
+        if got == "/api/town/rounds":
+            from babo.baton import rounds
+
+            return http_json_response(await asyncio.to_thread(lambda: rounds.overview(_town())))
         if got == "/api/town/guides":
             from babo.baton import guides
 
@@ -321,6 +327,19 @@ class TownRoutes:
         elif got.startswith("/api/town/sessions/"):
             message = await asyncio.to_thread(lambda: _session_change(got.rsplit("/", 1)[-1], payload))
             return http_json_response({"message": message, **await asyncio.to_thread(_sessions)})
+        elif got in ("/api/town/rounds/run", "/api/town/rounds/set"):
+            from babo.baton import rounds
+
+            name = _text(payload, "name", 80)
+            if got.endswith("/run"):
+                message = await asyncio.to_thread(lambda: rounds.request_run(_town(), name))
+            else:
+                enabled, runs = payload.get("enabled"), payload.get("runs")
+                changed = await asyncio.to_thread(lambda: rounds.set_options(
+                    _town(), name, enabled=enabled if isinstance(enabled, bool) else None, runs=runs if isinstance(runs, str) else None))
+                message = f"“{changed.title}” is {'on' if changed.enabled else 'off'}, and " + (
+                    "waits for a free model." if changed.runs == "wait" else "runs when triggered.")
+            return http_json_response({"message": message, **await asyncio.to_thread(lambda: rounds.overview(_town()))})
         elif got == "/api/town/eval/run":
             preset = _text(payload, "preset", 120)
             baseline_too = payload.get("baseline") is True

@@ -1854,3 +1854,33 @@ export interface TownGuide {
 export function fetchTownGuides(token: string, base: string = ""): Promise<{ guides: TownGuide[] }> {
   return request<{ guides: TownGuide[] }>(`${base}/api/town/guides`, token, undefined, API_READ_TIMEOUT_MS);
 }
+
+/** The town's work: rounds (`babo rounds`), and what Babo does itself. */
+export interface TownRoundStep { office: string; duty: string; material: string; fallback: string; holder: string }
+export interface TownRoundRun {
+  round: string; trigger: string; started: string; finished: string; status: string;
+  steps: { office: string; resident: string; status: string; note: string; report: string }[];
+}
+export interface TownRound {
+  name: string; title: string; about: string; when: string; runs: "wait" | "now"; enabled: boolean;
+  steps: TownRoundStep[]; last_run: string; last_status: string; next_run: string; recent: TownRoundRun[];
+}
+export interface TownRounds {
+  rounds: TownRound[];
+  /** Round files Babo can't read, and why. */
+  broken: Record<string, string>;
+  /** Babo's own work, which always runs (upkeep). */
+  babo: { title: string; what: string }[];
+}
+
+export function fetchTownRounds(token: string, base: string = ""): Promise<TownRounds> {
+  return request<TownRounds>(`${base}/api/town/rounds`, token, undefined, API_READ_TIMEOUT_MS);
+}
+
+export function runTownRound(transport: WebUIMutationTransport, name: string): Promise<TownRounds & { message: string }> {
+  return mutation<TownRounds & { message: string }>(transport, "town.rounds.run", { name });
+}
+
+export function setTownRound(transport: WebUIMutationTransport, name: string, change: { enabled?: boolean; runs?: "wait" | "now" }): Promise<TownRounds & { message: string }> {
+  return mutation<TownRounds & { message: string }>(transport, "town.rounds.set", { name, ...change });
+}

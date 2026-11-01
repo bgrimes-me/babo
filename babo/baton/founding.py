@@ -109,6 +109,18 @@ _EARLIER_SHIPPED: dict[str, frozenset[str]] = {
 }
 
 
+def ship_rounds(town: Town) -> list[str]:
+    """The rounds the baseline town has, for a town from before rounds (or one whose rounds/ is gone)."""
+    out: list[str] = []
+    for item in sorted((_TEMPLATES / "rounds").iterdir(), key=lambda p: p.name):
+        target = town.root / "rounds" / item.name
+        if item.name.endswith(".md") and not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            _write_shipped(town, target, template_text(f"rounds/{item.name}", town.owner_name))
+            out.append(f"rounds/{item.name}")
+    return out
+
+
 def _refresh_if_untouched(town: Town, path: Path, template: str) -> bool:
     """Replace ``path`` with the current template if it is an unedited earlier version."""
     current = template_text(template, town.owner_name)
@@ -210,17 +222,20 @@ def found_town(root: str | Path, *, offices: tuple[str, ...] = FOUNDING_OFFICES,
             created.append(rel)
         elif _refresh_if_untouched(town, town.root / rel, name):
             updated.append(rel)
-    # The guides Babo ships (brought in at the right moment), kept up to date while nobody has edited them.
-    for guide in sorted((_TEMPLATES / "guides").iterdir(), key=lambda p: p.name):
+    # The guides Babo ships (brought in at the right moment) and the rounds the baseline town has,
+    # kept up to date while nobody has edited them.
+    shipped = [("guides", "commons/guides", g) for g in sorted((_TEMPLATES / "guides").iterdir(), key=lambda p: p.name)]
+    shipped += [("rounds", "rounds", r) for r in sorted((_TEMPLATES / "rounds").iterdir(), key=lambda p: p.name)]
+    for kind, where, guide in shipped:
         if not guide.name.endswith(".md"):
             continue
-        rel = f"commons/guides/{guide.name}"
+        rel = f"{where}/{guide.name}"
         target = town.root / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         if not target.exists():
-            _write_shipped(town, target, template_text(f"guides/{guide.name}", town.owner_name))
+            _write_shipped(town, target, template_text(f"{kind}/{guide.name}", town.owner_name))
             created.append(rel)
-        elif _refresh_if_untouched(town, target, f"guides/{guide.name}"):
+        elif _refresh_if_untouched(town, target, f"{kind}/{guide.name}"):
             updated.append(rel)
     if not town.responses.exists():
         atomic_write(town.responses, "# Responses to the charter\n\nResidents may answer the charter here.\n")

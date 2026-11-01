@@ -1,4 +1,4 @@
-"""An upkeep pass: memory reviews, curation, inspection and the commit.
+"""An upkeep pass: memory reviews, the rounds that are due, and the commit.
 
 ``babo upkeep`` decides when a pass is due (see ``babo.baton.upkeep``); this
 module runs one. Every model call goes through the model queue at the lowest
@@ -13,9 +13,10 @@ simply resumes. If the model can't be reached, the pass is logged and skipped.
 2. Memory reviews ("folds"): each of those residents reviews what happened
    since its last review and writes it into its memory (and may revise
    SELF.md), in its own words.
-3. Archivist turn: the promotion queue.
-4. Inspector turn: the diffs, pending tools and open proposals.
-5. Plumbing post-pass (no model): LEDGER, REGISTRY, search index, secret
+3. The town's work: the rounds that are due (``babo.baton.rounds``); the
+   shipped night round has the Archivist curate the promotion queue and the
+   Inspector review the diffs, pending tools and open proposals.
+4. Plumbing post-pass (no model): LEDGER, REGISTRY, search index, secret
    scrub, one commit with a readable summary, push if a remote is set.
 """
 
@@ -43,11 +44,10 @@ from babo.baton.inbox import items, set_flag
 from babo.baton.knowledge_map import write_map
 from babo.baton.ledger import write_ledger
 from babo.baton.model_client import BatonModelClient
-from babo.baton.notes import first_line, split_frontmatter
+from babo.baton.notes import first_line
 from babo.baton.registry import Registry
 from babo.baton.search import reindex
 from babo.baton.secrets import find_secrets, redact_text
-from babo.baton.tools.core import proposal_files
 from babo.baton.tooltest import run_pending_tool_tests
 from babo.baton.town import Town, atomic_write, now_iso
 
@@ -163,6 +163,7 @@ class Night:
         night: str | None = None,
         residents: list[str] | None = None,
         sessions: list[str] | None = None,
+        rounds: list[tuple[str, str]] | None = None,
         agent_turn: AgentTurn | None = None,
         client: BatonModelClient | None = None,
         interrupt_after: str | None = None,
@@ -176,6 +177,8 @@ class Night:
         self.only = set(residents) if residents is not None else None
         # Residents' opencode sessions ("<resident>/<session>") to review and freeze first.
         self.sessions = list(sessions or [])
+        # The rounds this pass runs, each with why ((name, why)); None means the ones that are due now.
+        self.rounds = rounds
         self.state_dir = self.town.state / "upkeep"
         self.work_dir = self.state_dir / self.night
         self.ledger = NightLedger.load(self.state_dir / f"{self.night}.json")
@@ -254,12 +257,7 @@ class Night:
                 if not self.ledger.done(step):
                     await self.fold(resident)
                 self._checkpoint_interrupt(step)
-            if not self.ledger.done("archivist"):
-                await self.archivist_turn()
-            self._checkpoint_interrupt("archivist")
-            if not self.ledger.done("inspector"):
-                await self.inspector_turn()
-            self._checkpoint_interrupt("inspector")
+            await self.run_rounds()
             if not self.ledger.done("postpass"):
                 summary.update(self.postpass())
         finally:
@@ -430,80 +428,30 @@ class Night:
         self.ledger.mark(f"fold:{resident}", authored=outcome.authored, thread=outcome.checkpoint.thread)
         self.log(f"memory review {resident}: {'written by ' + resident if outcome.authored else 'mechanical (the review turn failed)'}")
 
-    # -- 3. archivist ---------------------------------------------------------------
-    def pending_promotions(self) -> list[Path]:
-        return [p for p in sorted(self.town.promotions.glob("*.md"))
-                if split_frontmatter(p.read_text(encoding="utf-8"))[0].get("status", "pending") == "pending"]
+    # -- 3. the town's work: rounds --------------------------------------------------
+    async def run_rounds(self) -> None:
+        """The rounds that are due (or that this pass was given), in their files' order."""
+        from babo.baton import rounds
 
-    async def archivist_turn(self) -> None:
-        pending = self.pending_promotions()
-        if not pending:
-            self.ledger.mark("archivist", promotions=0)
-            return
-        from babo.baton.knowledge_map import INDEX_NAME
-        from babo.baton.notes import Note
-
-        known = [Note.load(p) for p in sorted(self.town.knowledge.glob("*.md")) if p.name != INDEX_NAME]
-        topics = sorted({k.lower() for n in known if n.status == "active" for k in n.keywords})
-        lines = [f"{NIGHT_MARK} From the Baton harness (time now {_now()}). You curate the commons: keep it small, current and easy to find "
-                 f"your way around. The promotion queue has {len(pending)} nomination(s). For each: write it into the commons with "
-                 "commons_write, or merge it into the note that already covers it (one topic per note). Give it one to three keywords, "
-                 "reusing the topics below where they fit: they make the map of the commons (commons/knowledge/INDEX.md). Link related "
-                 "notes in the body with [[note name]]. Supersede notes it makes outdated, and where two views genuinely disagree use "
-                 "commons_contest to keep both. Write to the author with send_letter when you change or decline their note. "
-                 "You may decline a nomination; say why in a letter.",
-                 f"\nTopics so far: {', '.join(topics) or '(none yet)'}",
-                 "Notes in the commons: " + ("; ".join(f"{n.title} ([[{n.path.stem}]])" for n in known if n.status == "active")[:3000] or "(none yet)")]
-        for p in pending:
-            meta, body = split_frontmatter(p.read_text(encoding="utf-8"))
-            lines.append(f"\n## {meta.get('title')} (from {meta.get('from')}, `{p.relative_to(self.town.root)}`)\n"
-                         f"Reason: {meta.get('reason', '')}\nAliases: {meta.get('aliases', [])} Keywords: {meta.get('keywords', [])}\n\n{body.strip()[:3000]}")
-        curator = curator_of(self.town)
-        reply = await self.agent_turn(curator, "\n".join(lines), f"night:{self.night}")
-        for p in pending:
-            meta, body = split_frontmatter(p.read_text(encoding="utf-8"))
-            from babo.baton.notes import join_frontmatter
-
-            meta.update({"status": "reviewed", "reviewed": now_iso()})
-            atomic_write(p, join_frontmatter(meta, body))
-        self.ledger.mark("archivist", promotions=len(pending))
-        self.log(f"{curator} (curating): {len(pending)} nomination(s) reviewed — {first_line(reply, 120)}")
-
-    # -- 4. inspector ---------------------------------------------------------------
-    def inspector_material(self) -> str | None:
-        parts: list[str] = []
-        diffs_dir = self.work_dir / "diffs"
-        for diff in sorted(diffs_dir.glob("*.md")) if diffs_dir.exists() else []:
-            parts.append(diff.read_text(encoding="utf-8")[-4000:])
-        for folder in sorted(p for p in (self.town.tools / "pending").glob("*") if p.is_dir()):
-            if (folder / "REVIEW.md").exists():
+        chosen = self.rounds if self.rounds is not None else [(r.name, why) for r, why in rounds.due(self.town, now=datetime.now().astimezone())]
+        every, _ = rounds.load(self.town)
+        # Rounds that run whenever there's work come along in every pass: today's changes are only known now.
+        names = {name for name, _ in chosen}
+        chosen += [(r.name, "in this upkeep pass") for r in every if r.enabled and r.when.get("model_free") and r.name not in names]
+        for name, why in chosen:
+            step = f"round:{name}"
+            if self.ledger.done(step):
                 continue
-            def read(name: str) -> str:
-                path = folder / name
-                return path.read_text(encoding="utf-8")[:2500] if path.exists() else "(missing)"
-            parts.append(f"# Pending tool `{folder.name}` (commons/tools/pending/{folder.name})\n\n{read('TOOL.md')}\n\n"
-                         f"tool.py:\n```python\n{read('tool.py')}\n```\n\ntest_tool.py:\n```python\n{read('test_tool.py')}\n```\n\n"
-                         f"Test result:\n{read('TEST-RESULT.md')}")
-        for prop in proposal_files(self.town.proposals / "open"):
-            if prop.with_name(prop.stem + ".review.md").exists():
+            try:
+                r = rounds.get(self.town, name)
+            except rounds.RoundError as exc:
+                self.log(f"round {name}: {exc}")
+                self.ledger.mark(step, status="missing")
                 continue
-            parts.append(f"# Open proposal ({prop.relative_to(self.town.root)})\n\n{prop.read_text(encoding='utf-8')[:2500]}")
-        if not parts:
-            return None
-        head = (f"{NIGHT_MARK} From the Baton harness (time now {_now()}). Material for the Inspector. Compare each resident's checkpoint "
-                "claims with the event log; when they disagree, file_flag to that resident with the evidence (a note to a "
-                "colleague, not a verdict). Review each pending tool and open proposal for risk with review_item.")
-        return head + "\n\n" + "\n\n---\n\n".join(parts)
-
-    async def inspector_turn(self) -> None:
-        material = self.inspector_material()
-        if material is None or not any(r.office == "inspector" and r.status == "active" for r in Registry(self.town).all()):
-            # With no Inspector, tools and proposals still reach the owner; they just arrive without its review.
-            self.ledger.mark("inspector", ran=False)
-            return
-        reply = await self.agent_turn("inspector", material, f"night:{self.night}")
-        self.ledger.mark("inspector", ran=True)
-        self.log(f"inspector: {first_line(reply, 120)}")
+            record = await rounds.run(self, r, trigger=why, session_key=f"night:{self.night}",
+                                      done=self.ledger.done, mark=lambda key, info: self.ledger.mark(key, **info))
+            self.ledger.mark(step, status=record.status, steps=[s.status for s in record.steps])
+            self._checkpoint_interrupt(step)
 
     # -- 5. post-pass ----------------------------------------------------------------
     def scrub(self) -> list[str]:
