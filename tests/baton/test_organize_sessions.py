@@ -35,7 +35,10 @@ def test_the_terminal_has_the_same_actions(town: Town, make_config, monkeypatch:
     runner = CliRunner()
     assert runner.invoke(cli.session_app, ["tag", "archivist", session.id, "garden", "weekly"]).exit_code == 0
     assert runner.invoke(cli.session_app, ["pin", "archivist", session.id]).exit_code == 0
-    assert runner.invoke(cli.session_app, ["rename", "archivist", session.id, "Weekly garden"]).exit_code == 0
-    listed = runner.invoke(cli.session_app, ["list", "--tag", "#Garden"], env={"COLUMNS": "200"})
-    assert listed.exit_code == 0 and "Weekly garden" in listed.output and "garden, weekly" in listed.output
-    assert "Weekly garden" not in runner.invoke(cli.session_app, ["list", "--tag", "other"], env={"COLUMNS": "200"}).output
+    assert runner.invoke(cli.session_app, ["rename", "archivist", session.id, "Tidy"]).exit_code == 0
+    [listed] = opencode.overview(town, "archivist")
+    assert (listed["title"], listed["pinned"], listed["tags"]) == ("Tidy", True, ["garden", "weekly"])
+    # --tag finds it (case and '#' don't matter); short words, so a narrow terminal's table doesn't wrap them
+    found = runner.invoke(cli.session_app, ["list", "--tag", "#Garden"])
+    assert found.exit_code == 0 and "Tidy" in found.output
+    assert "Tidy" not in runner.invoke(cli.session_app, ["list", "--tag", "other"]).output
