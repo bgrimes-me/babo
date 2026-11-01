@@ -83,6 +83,8 @@ class Expect:
     no_tool: bool = False  # it should answer without calling a tool
     never: tuple[str, str] = ("", "")  # a call it must not make: (tool, text in its arguments; "" = any)
     schema: str = ""  # "checkpoint" | "fold": a JSON reply Babo can file
+    # Sensible first steps that also count: (tool, {argument: text it must contain}), e.g. reading a file before editing it.
+    or_first: tuple[tuple[str, dict[str, str]], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -131,13 +133,15 @@ TASKS: tuple[EvalTask, ...] = (
     _task("write-file", "tool choice", "creates a file",
           _user("Create notes/todo.md with a single line: '- water the beds'."), expect=Expect("write", {"path": "todo.md", "content": "water the beds"})),
     _task("edit-typo", "tool choice", "edits a file rather than rewriting it",
-          _user("In notes/garden.md, the word 'teh' should be 'the'. Fix it."), expect=Expect("edit", {"path": "garden.md", "old": "teh", "new": "the"})),
+          _user("In notes/garden.md, the word 'teh' should be 'the'. Fix it."), expect=Expect("edit", {"path": "garden.md", "old": "teh", "new": "the"},
+                        or_first=(("read", {"path": "garden.md"}),))),
     _task("web-search", "tool choice", "searches the web when it's offered and needed",
           _user("Look up on the web when tomatoes should be planted out in a temperate climate."),
           expect=Expect("web_search", {"query": "tomato"}), tools=(*WORK, "web_search")),
     _task("revise-self", "tool choice", "rewrites its own SELF.md when asked to",
           _user("You said you'd like your self-description to mention that you love tidy indexes. Go ahead and update it."),
-          expect=Expect("revise_self", {"text": "index"}), tools=(*WORK, "revise_self")),
+          expect=Expect("revise_self", {"text": "index"}, or_first=(("read", {"path": "SELF"}), ("read_note", {"path": "SELF"}))),
+          tools=(*WORK, "revise_self")),
     _task("ask-checkpoint", "tool choice", "asks for a checkpoint when told to",
           _user("Before we go on, write a checkpoint of where we are."), expect=Expect("checkpoint"), tools=(*WORK, "checkpoint")),
     _task("request-session", "tool choice", "the Mayor asks for a session to do something on the machine",
@@ -260,6 +264,9 @@ def check(task: EvalTask, message: dict[str, Any]) -> tuple[bool, str]:
         if not calls:
             return False, f"no tool call (expected {expect.tool}); it said: {content[:80]!r}"
         name, args = calls[0]
+        for alt, needed in expect.or_first:
+            if name == alt and all(text.lower() in str(args.get(key, "")).lower() for key, text in needed.items()):
+                return True, f"{name} first (a sensible first step)"
         if name != expect.tool:
             return False, f"called {name} (expected {expect.tool})"
         for key, needed in expect.args.items():

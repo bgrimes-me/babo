@@ -67,3 +67,13 @@ def test_checkpoint_says_why_when_nothing_is_written() -> None:
 def test_checkpoint_is_offered_in_menus_and_help() -> None:
     assert any(spec["command"] == "/checkpoint" for spec in builtin_command_palette())
     assert "/checkpoint" in build_help_text()
+
+
+def test_a_confidence_given_as_a_percentage_is_read_as_meant() -> None:
+    from babo.baton.schemas import parse_reply
+
+    base = {"thread": "the index", "doing": "", "done": [], "learned": [], "next": [], "blockers": [], "knowledge_ops": [], "promote": []}
+    assert parse_reply({**base, "confidence": 85})[0].confidence == 0.85  # type: ignore[union-attr]
+    assert parse_reply({**base, "confidence": 0.7})[0].confidence == 0.7  # type: ignore[union-attr]
+    assert parse_reply({**base, "confidence": 250})[0].confidence == 1.0  # type: ignore[union-attr]
+    assert parse_reply({**base, "confidence": -3})[0].confidence == 0.0  # type: ignore[union-attr]
