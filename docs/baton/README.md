@@ -102,6 +102,16 @@ The **Mayor** is the main agent. Its profile applies to every Mayor session (web
 
 The town's own settings (how often checkpoints happen, how much a resident sees when a session starts, when upkeep may run and its quiet hours, where to push a backup) are listed by `babo settings`, and changed with `babo settings <setting> <value>`. The **Settings** tab of the Town page in the web interface shows the same list. Your config file is backed up before each change, and each setting says when the change takes effect.
 
+## How well a model does the work: `babo eval`
+
+`babo eval` runs about thirty representative tasks on a model preset and checks each one itself: does the model pick the right tool, with the right arguments; leave tools alone when it should; follow a tool's result to the next step; act on where it left off (its baton); write a checkpoint Babo can file. They go through the gateway like every model call, so the score is what the town's agents actually get, and the report counts the tool calls the gateway had to repair.
+
+- `babo eval` evaluates the default preset; `--preset cloud` (repeatable) another; `--only restraint` (a task or a category) part of it; `--repeat 3` evens out a local model's ups and downs; `--list` lists the tasks.
+- `--baseline` keeps the run as the preset's baseline. Later runs say which tasks got better or worse, so a change to Babo, a new model or new settings is measured rather than guessed. `babo eval --last` shows each preset's latest score beside its baseline.
+- The **Doctor** tab of the Town page has the same: each preset's latest score and baseline, and *Run the eval* (it runs in the background, task by task).
+
+Results are kept in the town, under `state/eval/`.
+
 ## The town's name
 
 A new town has no name. The residents choose one: any of them can propose a name with `propose_change`, and it comes to you in `babo review` like any other proposal. Accept it and the town takes the name at once; every resident sees it at the start of their next session, and `babo town` shows it. You can also name it yourself with `babo town --name "…"`, but it's nicer to let them.

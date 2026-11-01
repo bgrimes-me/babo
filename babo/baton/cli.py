@@ -573,6 +573,75 @@ def doctor(
     typer.echo("OK: the town is working")
 
 
+@app.command("eval")
+def eval_command(
+    preset: list[str] = typer.Option([], "--preset", "-p", help="A model preset from Settings › Models (default: the default one); repeat for several"),
+    only: list[str] = typer.Option([], "--only", help="Only this task or category (repeat for several)"),
+    repeat: int = typer.Option(1, "--repeat", help="Run each task this many times (local models vary)"),
+    save_baseline: bool = typer.Option(False, "--baseline", help="Keep this run as the preset's baseline, to compare later runs with"),
+    list_tasks: bool = typer.Option(False, "--list", help="List the tasks and stop"),
+    last: bool = typer.Option(False, "--last", help="Show each preset's latest score and stop"),
+    config: str | None = _CONFIG_OPT,
+):
+    """How well a model preset does the town's work: representative tasks, each checked by Babo.
+    Runs through the gateway like every model call; keep a baseline and later runs say what changed."""
+    from babo.baton import evals
+    from babo.baton.gateway import Router, default_preset_name, preset_names
+
+    if list_tasks:
+        table = Table("task", "category", "what it checks")
+        for task in evals.TASKS:
+            table.add_row(task.id, task.category, task.what)
+        console.print(table)
+        console.print(f"{len(evals.TASKS)} tasks.")
+        return
+    t, cfg = _town(config)
+    if last:
+        table = Table("preset", "model", "when", "score", "baseline")
+        for row in evals.latest(t):
+            base = row.get("baseline")
+            table.add_row(row["preset"], row.get("model") or "-", str(row["at"])[:16].replace("T", " "), f"{row['passed']}/{row['total']}",
+                          f"{base['passed']}/{base['total']} ({str(base['at'])[:10]})" if base else "-")
+        console.print(table)
+        return
+    tasks = evals.select(only)
+    if not tasks:
+        _fail(BatonError(f"No task or category called {', '.join(only)}; see `babo eval --list`."))
+    known = preset_names(cfg)
+    chosen = preset or [default_preset_name(cfg)]
+    for name in chosen:
+        if name not in known:
+            _fail(BatonError(f"There's no model preset called '{name}'. Presets: {', '.join(known)}."))
+    router = Router(cfg)
+    for name in chosen:
+        route = router.resolve(name)
+        console.print(f"[bold]{name}[/bold] ({route.model}): {len(tasks)} task(s){f' × {repeat}' if repeat > 1 else ''}")
+
+        def show(o: evals.Outcome) -> None:
+            mark = "[green]pass[/green]" if o.passed else "[red]fail[/red]"
+            fixed = f", {o.repaired} tool call(s) repaired" if o.repaired else ""
+            console.print(f"  {mark} {o.task}: {o.why} ({o.seconds:.1f}s{fixed})")
+
+        report = asyncio.run(evals.run(cfg.baton.model, name, tasks, repeat=repeat, progress=show, real_model=route.model))
+        base = evals.baseline(t, name)
+        path = evals.save(t, report, baseline=save_baseline)
+        table = Table("category", "passed")
+        for category, (done, total) in report.by_category().items():
+            table.add_row(category, f"{done}/{total}")
+        console.print(table)
+        repaired = sum(o.repaired for o in report.outcomes)
+        seconds = sum(o.seconds for o in report.outcomes) / max(1, len(report.outcomes))
+        console.print(f"{name}: {report.passed}/{len(report.outcomes)} passed, {seconds:.1f}s a task on average"
+                      + (f", {repaired} tool call(s) repaired by the gateway" if repaired else "") + f". Saved in {path}.")
+        if base is not None and not save_baseline:
+            better, worse = evals.compare(report, base)
+            console.print(f"Against the baseline of {base.at[:10]} ({base.passed}/{len(base.outcomes)}): "
+                          + (f"better at {', '.join(better)}; " if better else "") + (f"worse at {', '.join(worse)}" if worse else "")
+                          + ("no task changed" if not better and not worse else ""))
+        elif save_baseline:
+            console.print(f"Kept as {name}'s baseline.")
+
+
 @app.command("init-config")
 def init_config(
     upstream: str = typer.Option(..., "--upstream", help="llama-server address, e.g. http://127.0.0.1:8080"),

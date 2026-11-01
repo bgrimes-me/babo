@@ -9,6 +9,7 @@ import { MarkdownText } from "@/components/MarkdownText";
 import { DecisionCard, SessionRequestDetails } from "@/components/town/DecisionCard";
 import type { ResidentSessionRef } from "@/components/town/ResidentSessionsList";
 import { NoticesPanel } from "@/components/town/NoticesPanel";
+import { EvalPanel } from "@/components/town/EvalPanel";
 import { useClient } from "@/providers/ClientProvider";
 import {
   decideTownItem,
@@ -406,6 +407,7 @@ function DoctorView({ token }: { token: () => string }) {
           <span className="mt-0.5 block break-words text-xs text-muted-foreground">{check.detail}</span></span>
       </div>)}
     </SettingsGroup>}
+    <EvalPanel />
   </>;
 }
 
