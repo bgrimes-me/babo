@@ -44,7 +44,8 @@ These are the rules every change is checked against.
 ### Sessions today
 
 - **Starting**: the owner starts a resident's session in the web interface or with `babo session new`; the Mayor asks for one with `request_session` (task, reason, access, exact commands) and the owner approves it, live in the chat, in the terminal or in Review. With **Allow all** on for one of the Mayor's chats, his requests from that chat run without review.
-- **Working**: the resident works in opencode; the owner can open the session (`babo session open`, or *Open* in the web interface).
+- **Working**: the resident works in opencode; the owner can open the session (`babo session open`, or *Open* in the web interface), and steer it from Babo (send, stop, checkpoint now, another model, answer its questions).
+- **Organizing**: every session, the Mayor's chats and residents' sessions alike, is in the sidebar and can be renamed, pinned and archived; residents' sessions also take tags (`babo session rename|pin|tag|archive`).
 - **Ending**: freezing has the resident review the session into its memory, then stops it; resuming continues exactly where it left off. Upkeep freezes sessions nobody has used for a while, and reviews any that stopped without a review. *Remove* drops a broken session without a review.
 
 ## Use cases
@@ -69,9 +70,9 @@ Each step is its own pull request, merged once its tests pass.
 | **H1** | Tool-call repair at the gateway; the baton moved to the end of the prompt | Planned |
 | **H2** | `babo eval`: representative tasks with checks, a baseline per preset | Planned |
 | **H3** | Drift and loop detectors with short reminders, done-checks for tasks, capped memory files | Planned |
-| **B3** | The Mayor's chats get the same session actions as residents' (the parity principle), with D | Planned |
+| **B3** | The Mayor's chats get the same session actions as residents' (the parity principle): `/checkpoint` beside `/stop` and `/model` | Done |
 | **C** | Permissions and visibility: change a running session's permissions, *Allow all* per session, permission questions shown in Babo's interface, what a resident may read (its own folder by default) as a setting like any other, and *private* or *public* sessions | Planned |
-| **D** | One list for all sessions, the Mayor's and the residents': projects, pin, tags, rename, archive | Planned |
+| **D** | One list for all sessions: residents' sessions in the sidebar beside the Mayor's chats; rename, pin, tags and archive for residents' sessions in the web interface and the terminal. Still to come: tags for the Mayor's chats, and projects for residents' sessions (with C's folder access) | Partly done |
 | **E** | Docs the harness brings in at the right moment: a compact index of when to read what, injection on role entry, first tool use and errors, a logged `open_doc` fallback, curated skills, a task list agents keep as they work | Planned |
 | **G** | Own time: a small budget in quiet hours for each resident to reflect, revise itself, write a lesson or a letter, or pursue something of its own | Planned |
 | — | Later: a world to visit (a MUD, reached as a plugin), containers per resident behind the gateway | Ideas |

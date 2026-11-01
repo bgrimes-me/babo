@@ -341,6 +341,40 @@ def archive_session(town: Town, resident: str, session_id: str, *, archived: boo
     return f"“{session.title}” is archived." if archived else f"“{session.title}” is back in the list."
 
 
+def clean_tags(tags: list[str]) -> list[str]:
+    """Tags as the owner typed them, tidied: trimmed, without '#', no repeats, a sensible number."""
+    out: list[str] = []
+    for tag in tags:
+        tag = " ".join(str(tag).strip().lstrip("#").split())[:40]
+        if tag and tag.lower() not in {t.lower() for t in out}:
+            out.append(tag)
+    return out[:12]
+
+
+def organize_session(town: Town, resident: str, session_id: str, *, title: str | None = None,
+                     pinned: bool | None = None, tags: list[str] | None = None) -> str:
+    """Rename, pin or tag a session: the same for a resident's session as for a chat with the Mayor."""
+    from babo.baton import opencode
+
+    session = opencode.get_session(town, resident, session_id)
+    said: list[str] = []
+    if title is not None:
+        if not title.strip():
+            raise BatonError("A session needs a name.")
+        session.title = " ".join(title.split())[:120]
+        said.append(f"renamed “{session.title}”")
+    if pinned is not None:
+        session.pinned = pinned
+        said.append("pinned" if pinned else "unpinned")
+    if tags is not None:
+        session.tags = clean_tags(tags)
+        said.append(f"tagged {', '.join(session.tags)}" if session.tags else "untagged")
+    if not said:
+        raise BatonError("Nothing to change: give a new name, pin or unpin it, or set its tags.")
+    opencode.save_session(town, session)
+    return f"{resident}'s session is {' and '.join(said)}."
+
+
 def remove_session(town: Town, resident: str, session_id: str) -> str:
     from babo.baton import opencode
 

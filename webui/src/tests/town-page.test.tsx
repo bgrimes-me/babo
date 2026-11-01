@@ -183,6 +183,28 @@ describe("town page", () => {
       { resident: "archivist", id: "s1", text: "Use pnpm instead." }, 120_000));
   });
 
+  it("renames, tags and pins a session, like `babo session rename|tag|pin`", async () => {
+    mocks.mutation.mockResolvedValue({ ...sessions, message: "archivist's session is pinned." });
+    render(<TownPage onBackToChat={() => {}} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Sessions" }));
+    const archivist = await screen.findByRole("region", { name: "archivist" });
+    fireEvent.click(within(archivist).getByRole("button", { name: "Pin" }));
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.organize",
+      { resident: "archivist", id: "s1", pinned: true }, 120_000));
+    fireEvent.click(within(archivist).getByRole("button", { name: "Rename / tags" }));
+    fireEvent.change(within(archivist).getByRole("textbox", { name: "Session name" }), { target: { value: "Weekly tidy" } });
+    fireEvent.change(within(archivist).getByRole("textbox", { name: "Tags" }), { target: { value: "weekly, commons ," } });
+    fireEvent.click(within(archivist).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.organize",
+      { resident: "archivist", id: "s1", title: "Weekly tidy", tags: ["weekly", "commons"] }, 120_000));
+  });
+
+  it("opens on the session picked in the sidebar", async () => {
+    render(<TownPage onBackToChat={() => {}} focus={{ resident: "archivist", id: "s1" }} />);
+    const archivist = await screen.findByRole("region", { name: "archivist" });
+    expect(within(archivist).getByText("Tidy the commons").closest("[data-focused]")).not.toBeNull();
+  });
+
   it("removes a broken session only after asking, like `babo session remove`", async () => {
     mocks.mutation.mockResolvedValue({ opencode: true, residents: [{ ...sessions.residents[0], sessions: [] }],
       message: "Removed archivist's session “Tidy the commons”." });

@@ -716,24 +716,31 @@ def _overrides(values: list[str]) -> dict[str, object]:
 @session_app.command("list")
 def session_list(resident: str | None = typer.Argument(None, help="Only this resident"),
                  archived: bool = typer.Option(False, "--archived", help="The archived sessions instead"),
+                 tag: str | None = typer.Option(None, "--tag", help="Only sessions with this tag"),
                  config: str | None = _CONFIG_OPT):
-    """Each resident's sessions: what each is doing now, or frozen, or new."""
+    """Each resident's sessions, pinned ones first: what each is doing now, or frozen, or new."""
     from babo.baton import opencode
     from babo.baton.registry import Registry
 
     t, _ = _town(config)
     residents = [resident] if resident else [r.id for r in Registry(t).all() if r.status == "active" and opencode.runs_in_opencode(r.office)]
-    table = Table("resident", "session", "title", "now", "last active", "changes for this session")
+    table = Table("resident", "session", "title", "now", "last active", "tags", "changes for this session")
+    rows: list[dict[str, Any]] = []
     try:
         for rid in residents:
-            for s in opencode.overview(t, rid, archived=archived):
-                changes = ", ".join(f"{k}={v}" for k, v in s["overrides"].items()) or "-"
-                now = s["live"]["state"] + (f": {s['live']['activity']}" if s["live"]["activity"] else "")
-                table.add_row(rid, s["id"], s["title"], now, (s["last_active"] or "never")[:16].replace("T", " "), changes)
+            rows += [s for s in opencode.overview(t, rid, archived=archived)
+                     if tag is None or tag.lower().lstrip("#") in (x.lower() for x in s["tags"])]
     except BatonError as exc:
         _fail(exc)
+    for s in sorted(rows, key=lambda s: not s["pinned"]):
+        changes = ", ".join(f"{k}={v}" for k, v in s["overrides"].items()) or "-"
+        now = s["live"]["state"] + (f": {s['live']['activity']}" if s["live"]["activity"] else "")
+        title = ("📌 " if s["pinned"] else "") + s["title"]
+        table.add_row(s["resident"], s["id"], title, now, (s["last_active"] or "never")[:16].replace("T", " "),
+                      ", ".join(s["tags"]) or "-", changes)
     console.print(table)
     console.print("Start one with: babo session new <resident>   open one with: babo session open <resident> [session]")
+    console.print("Organize them with: babo session rename | pin | tag | archive")
 
 
 @session_app.command("new")
@@ -836,6 +843,38 @@ def session_archive(resident: str = typer.Argument(...), session_id: str = typer
         console.print(views.archive_session(t, resident, session_id, archived=not undo))
     except BatonError as exc:
         _fail(exc)
+
+
+def _organize(config: str | None, resident: str, session_id: str, **change: Any) -> None:
+    from babo.baton import views
+
+    t, _ = _town(config)
+    try:
+        console.print(views.organize_session(t, resident, session_id, **change))
+    except BatonError as exc:
+        _fail(exc)
+
+
+@session_app.command("rename")
+def session_rename(resident: str = typer.Argument(...), session_id: str = typer.Argument(...),
+                   title: str = typer.Argument(..., help="Its new name"), config: str | None = _CONFIG_OPT):
+    """Give a session a new name (in every list: the web interface's and this one's)."""
+    _organize(config, resident, session_id, title=title)
+
+
+@session_app.command("pin")
+def session_pin(resident: str = typer.Argument(...), session_id: str = typer.Argument(...),
+                undo: bool = typer.Option(False, "--undo", help="Unpin it"), config: str | None = _CONFIG_OPT):
+    """Keep a session at the top of the lists."""
+    _organize(config, resident, session_id, pinned=not undo)
+
+
+@session_app.command("tag")
+def session_tag(resident: str = typer.Argument(...), session_id: str = typer.Argument(...),
+                tags: list[str] = typer.Argument(None, help="Its tags (none: remove them all)"),
+                config: str | None = _CONFIG_OPT):
+    """Set a session's tags, the labels you find it by again (`babo session list --tag …`)."""
+    _organize(config, resident, session_id, tags=list(tags or []))
 
 
 @session_app.command("send")

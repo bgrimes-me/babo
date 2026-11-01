@@ -1,3 +1,4 @@
+import { ResidentSessionsList, type ResidentSessionRef } from "@/components/town/ResidentSessionsList";
 import {
   ArchiveIcon,
   SkillsIcon,
@@ -77,6 +78,9 @@ interface SidebarProps {
   onOpenAutomations: () => void;
   onOpenChannels: () => void;
   onOpenTown?: () => void;
+  /** A resident's session chosen in the sidebar: opens it on the Town page. */
+  onOpenTownSession?: (session: ResidentSessionRef) => void;
+  activeTownSessionId?: string | null;
   onSettingsIntent?: () => void;
   onOpenSearch: () => void;
   activeUtility?: "apps" | "skills" | "automations" | "channels" | "town" | null;
@@ -284,6 +288,9 @@ export function Sidebar(props: SidebarProps) {
           collapsed && "pointer-events-none opacity-0",
         )}
       >
+        {!collapsed && props.onOpenTownSession && (
+          <ResidentSessionsList onOpen={props.onOpenTownSession} activeId={props.activeTownSessionId} />
+        )}
         {!collapsed && (
           <ChatList
             sessions={props.sessions}
