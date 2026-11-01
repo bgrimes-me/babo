@@ -102,6 +102,9 @@ class OpenProposal:
     project: str
     review: str
     town_name: str = ""
+    round: str = ""  # a round it writes (round_text) or removes
+    round_text: str = ""
+    remove_round: bool = False
 
 
 def open_proposals(town: Town) -> list[OpenProposal]:
@@ -111,7 +114,8 @@ def open_proposals(town: Town) -> list[OpenProposal]:
         review_path = path.with_name(path.stem + ".review.md")
         review = _meta(review_path)[1].strip() if review_path.exists() else ""
         out.append(OpenProposal(path, str(meta.get("title", path.stem)), str(meta.get("author", "?")), str(meta.get("project") or ""), review,
-                                 str(meta.get("town_name") or "")))
+                                 str(meta.get("town_name") or ""), str(meta.get("round") or ""), str(meta.get("round_text") or ""),
+                                 meta.get("remove_round") is True))
     return out
 
 
@@ -130,6 +134,20 @@ def decide_proposal(town: Town, path: Path, *, accept: bool, reason: str) -> Pat
     if accept and project:
         bare = promote_project(town, str(meta.get("author", "")), project)
         extra = f"\n\nThe project now lives in the commons ({bare.relative_to(town.root)}); every resident has a working copy in their projects/."
+    round_name = str(meta.get("round") or "")
+    if accept and round_name:
+        from babo.baton import rounds as town_rounds
+
+        target = town_rounds.folder(town) / f"{round_name}.md"
+        if meta.get("remove_round"):
+            target.unlink(missing_ok=True)
+            extra += f"\n\nThe round {round_name} is removed."
+        else:
+            text = str(meta.get("round_text") or "")
+            town_rounds.parse(round_name, text)  # still reads
+            target.parent.mkdir(parents=True, exist_ok=True)
+            atomic_write(target, text)
+            extra += f"\n\nThe round {round_name} is now as proposed (rounds/{round_name}.md)."
     new_name = str(meta.get("town_name") or "")
     if accept and new_name:
         named = town.set_name(new_name, by=f"proposal by {meta.get('author', '?')}")

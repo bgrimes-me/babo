@@ -11,11 +11,11 @@ Babo is a small **town of agents** that share your local model and keep a memory
 
 ## The residents
 
-A new town has one resident, the **Mayor**. Others **move in** when the town needs them: the Mayor posts a move-in request, and you approve or decline it in your review. An office described but held by nobody is a *vacancy*. Residents start without names; choosing a name, a voice or a personality is up to each of them, if and when they want. Two offices are described in the charter already:
+A new town has one resident, the **Mayor**. Others **move in** when the town needs them: the Mayor posts a move-in request, and you approve or decline it in your review. An **office** is a job the town has, written down as a template in `offices/<name>.md`: its role, the access a newcomer in it starts with, and the rounds it takes part in. An office nobody holds is a *vacancy*. Residents start without names; choosing a name, a voice or a personality is up to each of them, if and when they want. A new town has two vacancies, the Archivist and the Inspector:
 
-- **Mayor:** the front desk. When you type `babo`, you're talking to the Mayor. It runs projects, hands work to others, spawns temporary helpers ("crew"), writes letters, visits other residents, and can ask you to found a new resident.
-- **Archivist** (once founded): keeps the commons tidy; until there is one, the Mayor does. It turns notes residents nominate into shared knowledge, merges duplicates, keeps both sides when two views disagree, and keeps the list of what the town can do (`commons/LEDGER.md`).
-- **Inspector** (once founded): a second set of eyes. In the night round it compares what residents said they did with what the harness recorded, and leaves a flag for a resident when the two don't match. It also reviews proposed tools before they reach you.
+- **Mayor:** the front desk. When you type `babo`, you're talking to the Mayor. It runs projects, hands work to others, spawns temporary helpers ("crew"), writes letters, visits other residents, reads the town's offices and rounds, and can ask you to move a newcomer in or propose a round.
+- **Archivist** (once someone moves in): keeps the commons tidy; until there is one, the Mayor does. It turns notes residents nominate into shared knowledge, merges duplicates, keeps both sides when two views disagree, and keeps the list of what the town can do (`commons/LEDGER.md`).
+- **Inspector** (once someone moves in): a second set of eyes. In the night round it compares what residents said they did with what the harness recorded, and leaves a flag for a resident when the two don't match. It also reviews proposed tools before they reach you.
 
 ## The daily flow
 
@@ -140,7 +140,15 @@ The town has its own words now: a newcomer *moves in* (that was "founding a resi
 
 ## A newcomer moves in
 
-The Mayor posts a move-in request to the board when it thinks the town needs someone new. It shows up in your next review. If you approve, the newcomer moves in with a plain description of its job, and chooses its own name later. Nothing else brings a resident to town.
+The Mayor posts a move-in request to the board when it thinks the town needs someone new: the office (a vacancy, or a new one with its role), the access it should start with beyond a new resident's, and the rounds it joins with its duty in each. It shows up in your next review with all of that; approving it approves it as a whole. The newcomer starts with the office's role as its own ROLE.md (theirs to rewrite), and chooses its own name later. A new office becomes one of the town's offices, so the next newcomer can move into it.
+
+You can move someone in yourself, too: on the Residents tab, *Move someone in* beside a vacancy, or *A new office* (its name, its role, what it may do, and the rounds it joins); in the terminal, `babo move-in inspector`, or `babo move-in reporter --role "You write the town's paper." --set web_fetch=allow --join "night: Write the morning edition."`. `babo offices` lists the offices, who holds each, and the vacancies.
+
+A resident can **move away** (*Move away* on the Residents tab, or `babo move-away <resident>`): its sessions are frozen, its folder and memory stay, and its office is a vacancy again, so its steps in rounds wait (or fall to the office a step names instead) until someone moves in. The Mayor can't move away.
+
+**Rounds change through proposals.** The Mayor can propose a new round, a change to one, or its removal; the proposal carries the round's file as it would be, and accepting it writes (or removes) the file, with the access its steps ask for. Rehearse a new round before relying on it.
+
+Nothing else brings a resident to town.
 
 ## When something goes wrong
 

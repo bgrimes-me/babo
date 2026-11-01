@@ -13,6 +13,7 @@ import { EvalPanel } from "@/components/town/EvalPanel";
 import { GuidesPanel } from "@/components/town/GuidesPanel";
 import { SessionAccessFields } from "@/components/town/AccessFields";
 import { RoundsView } from "@/components/town/RoundsView";
+import { OfficesPanel } from "@/components/town/OfficesPanel";
 import { useClient } from "@/providers/ClientProvider";
 import {
   decideTownItem,
@@ -26,6 +27,7 @@ import {
   updateTownProfile,
   updateTownSettings,
   leaveTownNote,
+  moveAwayFromTown,
   nameTown,
   requestTownUpkeep,
   runTownDoctor,
@@ -149,12 +151,19 @@ function ResidentsView({ town, transport, onChanged, onError }: {
   const [noteFor, setNoteFor] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [leaving, setLeaving] = useState("");
   if (!town) return <p className="settings-list-inset text-[13px] text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{t("town.loading", { defaultValue: "Loading the town…" })}</p>;
 
   const send = async () => {
     if (!noteFor || !note.trim()) return;
     setBusy(true);
     try { onChanged(await leaveTownNote(transport, noteFor, note)); setNote(""); setNoteFor(""); }
+    catch (reason) { onError(errorText(reason)); }
+    finally { setBusy(false); }
+  };
+  const moveAway = async (resident: string) => {
+    setBusy(true);
+    try { onChanged(await moveAwayFromTown(transport, resident)); setLeaving(""); }
     catch (reason) { onError(errorText(reason)); }
     finally { setBusy(false); }
   };
@@ -174,6 +183,14 @@ function ResidentsView({ town, transport, onChanged, onError }: {
         <Button variant="ghost" size="sm" onClick={() => setNoteFor(noteFor === r.id ? "" : r.id)}>
           {t("town.leaveNote", { defaultValue: "Leave a note" })}
         </Button>
+        {r.office !== "mayor" && r.status === "active" && <Button variant="ghost" size="sm" onClick={() => setLeaving(leaving === r.id ? "" : r.id)}>
+          {t("town.moveAway", { defaultValue: "Move away" })}
+        </Button>}
+        {leaving === r.id && <div role="group" className="flex w-full flex-wrap items-center gap-2 rounded-md border p-2 text-[13px]">
+          <span className="min-w-0 flex-1">{t("town.moveAwayConfirm", { defaultValue: "{{who}} leaves the town: its sessions are frozen, its folder and memory stay, and its office becomes a vacancy.", who: r.name || r.id })}</span>
+          <Button variant="destructive" size="sm" disabled={busy} onClick={() => void moveAway(r.id)}>{t("town.moveAwayYes", { defaultValue: "Move away" })}</Button>
+          <Button variant="ghost" size="sm" onClick={() => setLeaving("")}>{t("town.cancel", { defaultValue: "Cancel" })}</Button>
+        </div>}
         {noteFor === r.id && <form className="flex w-full gap-2" onSubmit={(event) => { event.preventDefault(); void send(); }}>
           <Input autoFocus value={note} maxLength={4000} onChange={(event) => setNote(event.target.value)}
             aria-label={t("town.noteLabel", { defaultValue: "Note for {{who}}", who: r.name || r.id })}
@@ -182,6 +199,8 @@ function ResidentsView({ town, transport, onChanged, onError }: {
         </form>}
       </div>)}
     </SettingsGroup>
+
+    <OfficesPanel town={town} onChanged={onChanged} onError={onError} />
 
     <h2 className="settings-list-inset mt-2 text-[13px] font-medium text-muted-foreground">{t("town.board", { defaultValue: "Notice board" })}</h2>
     <SettingsGroup>
@@ -342,7 +361,9 @@ function ReviewView({ token, transport, onChanged, onError }: {
       {review.proposals.map((p) => <DecisionCard key={p.id} kind="proposal" id={p.id} onDecide={decide}
         heading={`${p.title} — ${p.author}`} yes={t("town.accept", { defaultValue: "Accept" })} no={t("town.decline", { defaultValue: "Decline" })}
         note={p.town_name ? t("town.namesTown", { defaultValue: "Accepting names the town “{{name}}”.", name: p.town_name })
-          : p.project ? t("town.movesProject", { defaultValue: "Accepting moves the project “{{name}}” to the commons.", name: p.project }) : ""}>
+          : p.project ? t("town.movesProject", { defaultValue: "Accepting moves the project “{{name}}” to the commons.", name: p.project })
+          : p.round ? (p.remove_round ? t("town.removesRound", { defaultValue: "Accepting removes the round “{{name}}”.", name: p.round })
+            : t("town.writesRound", { defaultValue: "Accepting writes the round “{{name}}”, and approves the access its steps ask for.", name: p.round })) : ""}>
         <Expandable label={t("town.proposal", { defaultValue: "The proposal" })} text={p.body} open />
         <Expandable label={t("town.inspectorReview", { defaultValue: "Inspector's review" })} text={p.review || t("town.noReview", { defaultValue: "(none yet)" })} />
       </DecisionCard>)}
@@ -350,9 +371,16 @@ function ReviewView({ token, transport, onChanged, onError }: {
     {review.founding.length > 0 && <ReviewSection title={t("town.review.founding", { defaultValue: "Move-in requests" })}>
       {review.founding.map((f) => <DecisionCard key={f.id} kind="founding" id={f.id} onDecide={decide}
         heading={t("town.newOffice", { defaultValue: "New office “{{office}}” — asked by {{who}}", office: f.office, who: f.author })}
-        yes={t("town.found", { defaultValue: "Found this resident" })} no={t("town.decline", { defaultValue: "Decline" })}
+        yes={t("town.moveIn", { defaultValue: "Move in" })} no={t("town.decline", { defaultValue: "Decline" })}
         note={t("town.foundingCost", { defaultValue: "A new resident uses compute on your machine every day it is active." })}>
         <Expandable label={t("town.request", { defaultValue: "The request" })} text={f.body} open />
+        {f.profile && Object.keys(f.profile).length > 0 && <p className="mt-1 text-xs">
+          <span className="font-medium">{t("town.asksAccess", { defaultValue: "Access it starts with:" })}</span>{" "}
+          {Object.entries(f.profile).map(([k, v]) => `${k}: ${v}`).join(", ")}
+        </p>}
+        {f.joins && f.joins.length > 0 && <ul className="mt-1 text-xs">
+          {f.joins.map((j, i) => <li key={i}><span className="font-medium">{j.round}</span>: {j.duty}</li>)}
+        </ul>}
       </DecisionCard>)}
     </ReviewSection>}
     {review.flags.length > 0 && <ReviewSection title={t("town.review.flags", { defaultValue: "Flags open for over a week" })}>

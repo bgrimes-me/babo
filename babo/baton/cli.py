@@ -575,6 +575,61 @@ def doctor(
     typer.echo("OK: the town is working")
 
 
+@app.command("move-in")
+def move_in_command(office: str = typer.Argument(..., help="The office: a vacancy, or a new one (then describe its role)"),
+                    role: str = typer.Option("", "--role", help="For a new office: its role, in plain words (it becomes the newcomer's ROLE.md)"),
+                    set_: list[str] = typer.Option([], "--set", help="Its profile, beyond a new resident's: e.g. --set web_fetch=allow --set read=town"),
+                    join: list[str] = typer.Option([], "--join", help="A round it joins, with its duty there: --join 'night: Check the board'"),
+                    config: str | None = _CONFIG_OPT):
+    """Move a newcomer into the town yourself (what approving the Mayor's move-in request does)."""
+    from babo.baton import views
+
+    t, _ = _town(config)
+    joins: list[dict[str, object]] = []
+    for item in join:
+        name, sep, duty = item.partition(":")
+        if not sep or not duty.strip():
+            _fail(BatonError(f"--join takes 'round: its duty there', not '{item}'"))
+        joins.append({"round": name.strip(), "duty": duty.strip()})
+    try:
+        console.print(views.move_in(t, office, role=role, profile={k: str(v) for k, v in _overrides(set_).items()}, joins=joins))
+    except BatonError as exc:
+        _fail(exc)
+
+
+@app.command("move-away")
+def move_away_command(resident: str = typer.Argument(...), yes: bool = typer.Option(False, "--yes", help="Don't ask first"),
+                      config: str | None = _CONFIG_OPT):
+    """A resident leaves the town: its sessions stop, its folder and memory stay, its office is a vacancy again."""
+    from babo.baton import views
+
+    t, _ = _town(config)
+    if not yes and not typer.confirm(f"{resident} moves away (its folder and memory stay)?"):
+        return
+    try:
+        console.print(views.move_away(t, resident))
+    except BatonError as exc:
+        _fail(exc)
+
+
+@app.command("offices")
+def offices_command(config: str | None = _CONFIG_OPT):
+    """The town's offices: who holds each, the vacancies, and the rounds each joins."""
+    from babo.baton import offices
+
+    t, _ = _town(config)
+    data = offices.overview(t)
+    table = Table("office", "held by", "profile", "joins")
+    for o in data["offices"]:
+        table.add_row(f"{o['title']}\n[dim]{o['name']}[/dim]", ", ".join(o["holders"]) or ("[yellow]vacancy[/yellow]" if o["vacant"] else "-"),
+                      ", ".join(f"{k} {v}" for k, v in o["profile"].items()) or "as for new residents",
+                      "\n".join(f"{j['round']}: {j['duty']}" for j in o["joins"]) or "-")
+    console.print(table)
+    for name, why in data["broken"].items():
+        console.print(f"[red]offices/{name}.md can't be read:[/red] {why}")
+    console.print("Move someone in with: babo move-in <office>   (a new office: --role '…')")
+
+
 @app.command("eval")
 def eval_command(
     preset: list[str] = typer.Option([], "--preset", "-p", help="A model preset from Settings › Models (default: the default one); repeat for several"),

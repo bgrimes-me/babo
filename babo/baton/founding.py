@@ -260,6 +260,9 @@ def found_town(root: str | Path, *, offices: tuple[str, ...] = FOUNDING_OFFICES,
         elif _refresh_if_untouched(town, target, f"{kind}/{guide.name}"):
             updated.append(rel)
     updated += _migrate_vocabulary(town)
+    from babo.baton import offices as office_files
+
+    created += office_files.ship(town)  # the offices a newcomer can move into (vacancies until then)
     if not town.responses.exists():
         atomic_write(town.responses, "# Responses to the charter\n\nResidents may answer the charter here.\n")
     gitignore = town.root / ".gitignore"
@@ -367,27 +370,55 @@ def approve_founding_request(town: Town, request: Path, *, approved_by: str, not
         raise BatonError(f"{request.name} is not a move-in request")
     if meta.get("status", "open") != "open":
         raise BatonError(f"{request.name} is already {meta.get('status')}")
-    office = str(meta.get("office") or "").strip() or "resident"
+    from babo.baton import offices
+
+    office = slugify(str(meta.get("office") or "").strip() or "resident", 28)
     registry = Registry(town)
     resident_id = _unique_id(registry, town, office)
-    if slugify(office) in DESCRIBED_OFFICES and slugify(office) != "mayor":
-        role = template_text(f"offices/{slugify(office)}.md", town.owner_name)  # an office the charter describes keeps its written role
+    template_office = offices.get(town, office)
+    asked_profile = offices.profile_changes(meta.get("profile"))
+    asked_joins = offices.joins_from(meta.get("joins"))
+    if office in DESCRIBED_OFFICES and office != "mayor":
+        role = template_text(f"offices/{office}.md", town.owner_name)  # an office the charter describes keeps its written role
+    elif template_office is not None:
+        role = template_office.role
     else:
         role = Template(template_text("offices/default.md")).render(
             office_title=office.replace("-", " ").title(), description=body.strip(),
         )
     authority = _authority(f"move-in request {request.name}", approved_by, _TOKEN)
-    resident = _found_resident(town, resident_id, slugify(office), role, authority)
-    if slugify(office) in DESCRIBED_OFFICES:
+    resident = _found_resident(town, resident_id, office, role, authority)
+    if office in DESCRIBED_OFFICES:
         _record_role(town, resident_id)
-    template = town.state / "profiles" / "_new-residents.json"  # profiles.NEW_RESIDENTS
-    if template.is_file():
-        atomic_write(town.state / "profiles" / f"{resident_id}.json", template.read_text(encoding="utf-8"))
+    if template_office is None:  # a new office: the town has it from now on, for the next one too
+        template_office = offices.Office(office, office.replace("-", " ").title(), body.strip() or role, asked_profile, asked_joins)
+        offices.write(town, template_office)
+    _starting_profile(town, resident_id, office, {**template_office.profile, **asked_profile})
+    joined = offices.join_rounds(town, office, (*template_office.joins, *[j for j in asked_joins if j not in template_office.joins]))
+    if joined:
+        meta["joined"] = joined
     meta.update({"status": "approved", "resident": resident_id, "decided": now_iso(), "decided_by": approved_by})
     if note:
         meta["decision_note"] = note
     atomic_write(request, join_frontmatter(meta, body))
     return resident
+
+
+def _starting_profile(town: Town, resident_id: str, office: str, changes: dict[str, str]) -> None:
+    """A newcomer's profile: new residents' template (or its office's defaults), with what the office or
+    the move-in request gives it."""
+    from babo.baton import profiles
+    from babo.baton.config import BatonConfig
+
+    template = town.state / "profiles" / f"{profiles.NEW_RESIDENTS}.json"
+    if template.is_file() and not changes:
+        atomic_write(town.state / "profiles" / f"{resident_id}.json", template.read_text(encoding="utf-8"))
+        return
+    if not template.is_file() and not changes:
+        return
+    base = profiles.load(town, BatonConfig(), profiles.NEW_RESIDENTS if template.is_file() else resident_id, office)
+    profile = profiles.with_changes(base, cast(dict[str, object], dict(changes)), agent=resident_id, mcp_known=list(base.mcp))
+    profiles.save(town, resident_id, profile, message=f"Profile of {resident_id}, as it moved in", commit=False)
 
 
 def decline_founding_request(town: Town, request: Path, *, declined_by: str, reason: str) -> None:

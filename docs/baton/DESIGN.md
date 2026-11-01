@@ -78,12 +78,12 @@ Each step is its own pull request, merged once its tests pass. Steps are numbere
 | 13 | Rounds: the engine; the night round shipped as a file (the Archivist curates, or the Mayor while there's none; then the Inspector); upkeep keeps only Babo's own work; the Rounds tab and `babo rounds` (list, show, run, set); *waits its turn* or *runs right away* |
 | 14 | Rehearsals, unattended or live, with a report and the access it proposes, approved in one step; access and exact commands per step, set by hand or approved from a rehearsal; each step in its own session, nobody at a terminal, at upkeep's priority; a refused question now tells the resident why, so it carries on (opencode otherwise stopped the turn) |
 | 15 | The town's vocabulary: newcomers *move in* (move-in requests), the Mayor sends residents on *errands* (`send_errand`); the old names stay, listed in one place (`babo/baton/aliases.py`) and logging that they're going, until step 23; the town's own files migrated on upgrade. *Moved away* comes with step 16, when residents can leave |
+| 16 | Offices as templates (`offices/<name>.md`: role, starting profile, rounds it joins); vacancies; move-in requests with the profile and rounds a newcomer joins, approved as a whole; moving someone in from the web (*Move someone in*, *A new office*) or `babo move-in`; *moved away*; the Mayor reads offices and rounds and proposes rounds (accepting writes or removes the file) |
 
 ### Next, in this order
 
 | # | Step |
 |---|---|
-| 16 | **Offices as templates; vacancies; move-in requests with the rounds a newcomer joins**; the Mayor reads and proposes rounds; the web form to move someone in |
 | 17 | **Skills**, brought in like guides (E, part 2) |
 | 18 | **A task list** agents keep as they work (E, part 3) |
 | 19 | **Status while something works**, everywhere: `/checkpoint`, *Checkpoint now*, freezing, eval runs, round runs (I1) |
@@ -166,7 +166,8 @@ A session's *visibility* is chosen when it starts, like its other settings. **Pr
 - **Baton**: a resident's running memory; at each checkpoint it writes where it is and what it learned, and the next session picks it up.
 - **Checkpoint**: one entry in the baton, written by the resident in its own words.
 - **Commons**: what the town shares: knowledge notes, skills, tools, proposals, projects, the board.
-- **Office**: a resident's role (archivist, inspector, …); the Mayor's office is the town's main agent.
+- **Office**: a job the town has, as a template (`offices/<name>.md`): its role, the profile a newcomer in it starts with, and the rounds it joins. The Mayor's office is the town's main agent, and isn't a template.
+- **Moved away**: a resident who has left; its folder and memory stay, and its office is a vacancy again.
 - **Profile**: what an agent may do; sessions start from it.
 - **Errand**: a task the Mayor sends a resident on, with the access it needs, once the owner approves (was: session request).
 - **Move in**: a newcomer joining the town in an office, with its profile and rounds, once the owner approves (was: founding a resident).

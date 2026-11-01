@@ -59,7 +59,7 @@ def config_dict(town: Town, resident: str, *, api_base: str, index_path: Path, *
     data: dict[str, Any] = {
         "agents": {"defaults": {"workspace": str(town.resident_dir(resident)), "modelPreset": "local"}},
         "providers": {"custom": {"apiBase": api_base, "apiKey": "test"}},
-        "modelPresets": {"local": {"provider": "custom", "model": "mock-model", "contextWindowTokens": 32768}},
+        "modelPresets": {"local": {"provider": "custom", "model": "mock-model", "contextWindowTokens": 40960}},
         "tools": {"restrictToWorkspace": True},
         "baton": {
             "town": str(town.root),

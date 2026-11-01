@@ -39,10 +39,65 @@ def town_overview(town: Town, cfg: BatonConfig) -> dict[str, Any]:
         if meta.get("status", "open") == "open":
             board.append({"kind": str(meta.get("kind", "")), "author": str(meta.get("author", "?")),
                           "created": str(meta.get("created", "")), "text": first_line(body, 200)})
+    from babo.baton import offices
+
     return {
         "name": town.name, "root": str(town.root), "residents": residents, "board": board,
         "pending": pending_counts(town), "last_upkeep": last_upkeep(town), "upkeep": upkeep_status(town, cfg),
+        "offices": offices.overview(town),
     }
+
+
+def move_in(town: Town, office: str, *, role: str = "", profile: dict[str, str] | None = None,
+            joins: list[dict[str, object]] | None = None, why: str = "") -> str:
+    """The owner moves a newcomer in themselves (the web form, `babo move-in`): the same as approving a
+    move-in request, kept on the board like one."""
+    from babo.baton import gitops, offices
+    from babo.baton.founding import approve_founding_request
+    from babo.baton.notes import join_frontmatter
+    from babo.baton.town import OWNER, atomic_write, now_iso, slugify, today
+
+    name = slugify(office, 28)
+    if not name or name == "mayor":
+        raise BatonError("Name the office the newcomer moves into (not the Mayor's: the town has one).")
+    existing = offices.get(town, name)
+    if existing is None and not role.strip():
+        raise BatonError(f"There's no office called {name} yet: describe its role, and it becomes one.")
+    meta: dict[str, object] = {"kind": "move_in_request", "author": OWNER, "created": now_iso(), "status": "open", "office": name}
+    if profile:
+        meta["profile"] = offices.profile_changes(profile)
+    if joins:
+        offices.joins_from(joins)
+        meta["joins"] = joins
+    post = town.board / f"{today()}-move_in_request-{name}-owner.md"
+    n = 2
+    while post.exists():
+        post = post.with_name(f"{today()}-move_in_request-{name}-owner-{n}.md")
+        n += 1
+    atomic_write(post, join_frontmatter(meta, (role.strip() or why.strip() or (existing.role if existing else "")) + "\n"))
+    resident = approve_founding_request(town, post, approved_by=OWNER, note=why.strip() or "Moved in by the owner.")
+    gitops.commit_all(town, f"{resident.id} moves in (office: {name}), by {town.owner_name}")
+    from babo.baton.notes import split_frontmatter
+
+    joined = cast(list[object], split_frontmatter(post.read_text(encoding="utf-8"))[0].get("joined") or [])
+    return f"{resident.id} moved in as the {name.replace('-', ' ')}." + (f" Rounds: {'; '.join(str(j) for j in joined)}." if joined else "")
+
+
+def move_away(town: Town, resident: str) -> str:
+    """A resident leaves the town: its sessions are frozen, its folder and history stay, and its office is a
+    vacancy again (its steps in rounds wait until someone moves in)."""
+    from babo.baton import gitops, opencode
+    from babo.baton.town import is_owner
+
+    agent = Registry(town).require_active(resident)
+    if is_owner(agent.id) or agent.office == "mayor":
+        raise BatonError("The Mayor can't move away: the town needs one.")
+    for session in opencode.sessions(town, resident):
+        if opencode.running(town, session) is not None:
+            opencode.freeze(town, session)
+    Registry(town).update(resident, status="moved_away")
+    gitops.commit_all(town, f"{resident} moves away")
+    return f"{resident} has moved away; its folder and memory stay in the town, and the {agent.office} is a vacancy."
 
 
 def pending_counts(town: Town) -> dict[str, int]:
@@ -103,13 +158,16 @@ def review_items(town: Town, config: Config | None = None) -> dict[str, Any]:
     proposals = [{
         "id": p.path.name, "title": p.title, "author": p.author, "project": p.project,
         "town_name": p.town_name, "review": p.review,
+        "round": p.round, "round_text": p.round_text, "remove_round": p.remove_round,
         "body": split_frontmatter(p.path.read_text(encoding="utf-8"))[1].strip(),
     } for p in growth.open_proposals(town)]
     founding: list[dict[str, Any]] = []
     for req in founding_requests(town):
         meta, body = split_frontmatter(req.read_text(encoding="utf-8"))
         founding.append({"id": req.name, "office": str(meta.get("office", "")),
-                         "author": str(meta.get("author", "?")), "body": body.strip()})
+                         "author": str(meta.get("author", "?")), "body": body.strip(),
+                         "profile": meta.get("profile") if isinstance(meta.get("profile"), dict) else {},
+                         "joins": meta.get("joins") if isinstance(meta.get("joins"), list) else []})
     flags = [{"id": str(f.get("path", "")), "to": str(f.get("to", "")), "by": str(f.get("by", "")),
               "at": str(f.get("at", "")), "claim": str(f.get("claim", ""))} for f in growth.stale_flags(town)]
     sessions = [_requests().describe(town, config, r) for r in _requests().pending(town)] if config is not None else []

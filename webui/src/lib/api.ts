@@ -1559,6 +1559,29 @@ export interface TownOverview {
   pending: { tools: number; proposals: number; founding: number; flags: number; sessions: number };
   last_upkeep: { pass: string; finished: boolean; steps: string[]; log: string } | null;
   upkeep: TownUpkeep;
+  offices?: TownOffices;
+}
+
+/** A round an office takes part in: its duty there, and (for a round that doesn't exist yet) when it runs. */
+export interface TownJoin { round: string; duty: string; material?: string; when?: Record<string, unknown> }
+
+/** The town's jobs, as templates a newcomer moves into; one nobody holds is a vacancy. */
+export interface TownOffice {
+  name: string; title: string; role: string; profile: Record<string, string>; joins: TownJoin[];
+  holders: string[]; vacant: boolean;
+}
+export interface TownOffices { offices: TownOffice[]; broken: Record<string, string> }
+
+/** Move a newcomer in (the same as `babo move-in`): into an office the town has, or a new one with its role. */
+export function moveInToTown(transport: WebUIMutationTransport, move: {
+  office: string; role?: string; profile?: Record<string, string>; joins?: TownJoin[]; why?: string;
+}): Promise<TownChange> {
+  return mutation<TownChange>(transport, "town.move_in", move);
+}
+
+/** A resident moves away: its sessions are frozen, its folder stays, and its office is a vacancy again. */
+export function moveAwayFromTown(transport: WebUIMutationTransport, resident: string): Promise<TownChange> {
+  return mutation<TownChange>(transport, "town.move_away", { resident });
 }
 
 /** Memory reviews, curation and inspection: what is waiting and why not yet. Same as `babo upkeep`. */
@@ -1614,8 +1637,10 @@ export interface TownReview {
   }[];
   proposals: {
     id: string; title: string; author: string; project: string; town_name: string; review: string; body: string;
+    /** A round it writes (round_text) or removes. */
+    round?: string; round_text?: string; remove_round?: boolean;
   }[];
-  founding: { id: string; office: string; author: string; body: string }[];
+  founding: { id: string; office: string; author: string; body: string; profile?: Record<string, string>; joins?: TownJoin[] }[];
   flags: { id: string; to: string; by: string; at: string; claim: string }[];
 }
 

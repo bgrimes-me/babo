@@ -123,6 +123,9 @@ TOOL_SPECS: dict[str, ToolSpec] = {
                     "description": _str("What should change."),
                     "project": _str("Optional: the name of one of your projects, to propose moving it to the commons."),
                     "town_name": _str("Optional: a name for the town. If the owner accepts, the town takes this name."),
+                    "round": _str("Optional: a round (rounds/<name>.md) to add, change or remove."),
+                    "round_text": _str("With round: the whole file as it should be (title, when, steps with office and duty)."),
+                    "remove_round": {"type": "boolean", "description": "With round: remove it."},
                 },
                 "required": ["title", "rationale", "description"],
             },
@@ -135,7 +138,11 @@ TOOL_SPECS: dict[str, ToolSpec] = {
                 "properties": {
                     "kind": {"type": "string", "enum": list(BOARD_KINDS)},
                     "text": _str("The post. For a move-in request, describe the office and why it is needed."),
-                    "office": _str("For a move-in request: short office name, e.g. gardener."),
+                    "office": _str("For a move-in request: short office name, e.g. gardener (an existing office, or a new one)."),
+                    "profile": {"type": "object", "description": "For a move-in request: access beyond a new resident's, e.g. "
+                                "{shell: ask, read: town} (files, shell, subagents, web_fetch, web_search, image_generation: allow|ask|deny)."},
+                    "joins": {"type": "array", "items": {"type": "object"}, "description": "For a move-in request: rounds it joins, each "
+                              "{round, duty, material?: previous}; a new round also needs when, e.g. {daily: '07:00'}."},
                 },
                 "required": ["kind", "text"],
             },
@@ -402,7 +409,8 @@ class Toolbox:
         atomic_write(folder / "TOOL.md", join_frontmatter(meta, description.strip() + "\n"))
         return f"Proposed tool {name}. It will be tested in isolation, reviewed by the Inspector, and then goes to {self.town.owner_name}."
 
-    def propose_change(self, title: str, rationale: str, description: str, project: str | None = None, town_name: str | None = None) -> str:
+    def propose_change(self, title: str, rationale: str, description: str, project: str | None = None, town_name: str | None = None,
+                       round: str | None = None, round_text: str | None = None, remove_round: bool = False) -> str:
         town_name = " ".join((town_name or "").split())
         if len(town_name) > 60:
             raise BatonError("Not filed: a town name is at most 60 characters. Shorten it and propose again.")
@@ -419,12 +427,31 @@ class Toolbox:
             meta["project"] = project
         if town_name:
             meta["town_name"] = town_name
-        body = f"# {title.strip()}\n\n## Why\n\n{rationale.strip()}\n\n## What\n\n{description.strip()}\n"
+        round_part = ""
+        if round:
+            from babo.baton import rounds as town_rounds
+
+            name = slugify(round, 40)
+            if remove_round:
+                town_rounds.get(self.town, name)  # it exists
+                meta.update({"round": name, "remove_round": True})
+                round_part = f"\n## The round\n\nRemove the round `{name}`.\n"
+            else:
+                if not (round_text or "").strip():
+                    raise BatonError("Give round_text: the whole round file as it should be (or remove_round to remove it).")
+                try:
+                    town_rounds.parse(name, round_text or "")
+                except town_rounds.RoundError as exc:
+                    raise BatonError(f"Not filed: the round can't be read ({exc}). Fix it and propose again.") from exc
+                meta.update({"round": name, "round_text": (round_text or "").strip() + "\n"})
+                round_part = f"\n## The round, as it would be (`rounds/{name}.md`)\n\n```\n{(round_text or '').strip()}\n```\n"
+        body = f"# {title.strip()}\n\n## Why\n\n{rationale.strip()}\n\n## What\n\n{description.strip()}\n{round_part}"
         atomic_write(path, join_frontmatter(meta, body))
         return f"Proposal filed as {self.scope.display(path)}. {self.town.owner_name} will accept or decline it with a reason."
 
     # -- mayor -----------------------------------------------------------
-    def post_board(self, kind: str, text: str, office: str | None = None) -> str:
+    def post_board(self, kind: str, text: str, office: str | None = None, profile: dict[str, object] | None = None,
+                   joins: list[dict[str, object]] | None = None) -> str:
         kind = aliases.board_kind(kind)
         if kind not in BOARD_KINDS:
             raise BatonError(f"kind must be one of {', '.join(BOARD_KINDS)}. Use one of those and post again.")
@@ -433,6 +460,13 @@ class Toolbox:
             if not office or not office.strip():
                 raise BatonError("A move-in request needs an office name (e.g. gardener).")
             meta["office"] = slugify(office, 28)
+            from babo.baton import offices
+
+            if profile:
+                meta["profile"] = offices.profile_changes(profile)  # refused now, if it can't be used
+            if joins:
+                offices.joins_from(joins)
+                meta["joins"] = [dict(j) for j in joins]
         path = self.town.board / f"{today()}-{kind}-{slugify(office or first_line(text, 40))}.md"
         n = 2
         while path.exists():
