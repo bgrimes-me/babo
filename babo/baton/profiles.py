@@ -43,7 +43,7 @@ class Capability:
 
 
 CAPABILITIES: tuple[Capability, ...] = (
-    Capability("files", "Change files", "Write and edit files in its own workspace. Reading is always allowed.",
+    Capability("files", "Change files", "Write and edit files in its own workspace (what it may read is the Read setting).",
                ("write_file",)),
     Capability("shell", "Run commands", "Run shell commands in its workspace.", ("exec",)),
     Capability("subagents", "Start crew", "Start temporary helpers for a task; they have no identity or memory of their own.",
@@ -65,12 +65,20 @@ class ProfileMemory(BaseModel):
     idle_minutes: int | None = Field(default=None, ge=1)
 
 
+ReadScope = Literal["own", "town"]
+READ_SCOPES: tuple[ReadScope, ...] = ("own", "town")  # narrowest first
+READ_HELP = {"own": "its own folder", "town": "the whole town"}
+
+
 class Profile(BaseModel):
-    """Empty ``model`` means Babo's default model; ``None`` memory values mean Babo-wide."""
+    """Empty ``model`` means Babo's default model; ``None`` memory values mean Babo-wide.
+    ``read``: what a resident in opencode may read with its file tools (the town's
+    tools, such as ``read_note``, read the commons and town documents either way)."""
 
     model_config = ConfigDict(extra="forbid")
 
     capabilities: dict[str, Level] = Field(default_factory=dict)
+    read: ReadScope = "own"
     mcp: list[str] = Field(default_factory=list)
     model: str = ""
     memory: ProfileMemory = Field(default_factory=ProfileMemory)
@@ -138,7 +146,7 @@ def mcp_permitted(profile: Profile, tool_name: str) -> bool:
 # -- changing a profile ----------------------------------------------------
 
 def editable_keys() -> list[str]:
-    return [c.key for c in CAPABILITIES] + ["mcp", "model", "memory.checkpoint_every_tool_calls", "memory.idle_minutes"]
+    return [c.key for c in CAPABILITIES] + ["read", "mcp", "model", "memory.checkpoint_every_tool_calls", "memory.idle_minutes"]
 
 
 def with_changes(profile: Profile, changes: dict[str, object], *, agent: str, mcp_known: list[str],
@@ -154,6 +162,10 @@ def with_changes(profile: Profile, changes: dict[str, object], *, agent: str, mc
             if value == "ask" and agent == MAYOR:
                 raise BatonError("The Mayor runs in Babo itself, which can't stop to ask; choose allow or deny.")
             data["capabilities"][key] = value
+        elif key == "read":
+            if value not in READ_SCOPES:
+                raise BatonError("read must be own (its own folder) or town (the whole town)")
+            data["read"] = value
         elif key == "mcp":
             names = [str(n).strip() for n in cast(list[object], value)] if isinstance(value, list) else str(value).split(",")
             names = [n.strip() for n in names if n.strip()]
@@ -185,6 +197,8 @@ def describe_changes(before: Profile, after: Profile) -> list[str]:
     for c in CAPABILITIES:
         if before.level(c.key) != after.level(c.key):
             said.append(f"{c.label}: {before.level(c.key)} → {after.level(c.key)}")
+    if before.read != after.read:
+        said.append(f"Read: {READ_HELP[before.read]} → {READ_HELP[after.read]}")
     if before.mcp != after.mcp:
         def names(mcp: list[str]) -> str:
             return "all" if ALL_MCP in mcp else ", ".join(mcp) or "none"
@@ -217,6 +231,8 @@ def widening(base: Profile, session: Profile) -> list[str]:
         for c in CAPABILITIES
         if LEVELS.index(session.level(c.key)) > LEVELS.index(base.level(c.key))
     ]
+    if READ_SCOPES.index(session.read) > READ_SCOPES.index(base.read):
+        wider.append(f"Read: {READ_HELP[base.read]} → {READ_HELP[session.read]}")
     extra = [] if ALL_MCP in base.mcp else sorted(set(session.mcp) - set(base.mcp))
     if extra:
         wider.append(f"MCP servers added: {', '.join(extra)}")
@@ -237,6 +253,7 @@ def describe(town: Town, cfg: BatonConfig, agent: str, office: str, *, mcp_known
              "levels": ["allow", "deny"] if agent == MAYOR else list(reversed(LEVELS))}
             for c in CAPABILITIES
         ],
+        "read": profile.read,
         "mcp": mcp_servers(profile, mcp_known),
         "mcp_known": mcp_known,
         "model": profile.model,

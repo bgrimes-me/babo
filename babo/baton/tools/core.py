@@ -144,7 +144,10 @@ TOOL_SPECS: dict[str, ToolSpec] = {
             "Ask the owner to run a task in another resident's session, with the access it needs (for example to install a package or run a build). "
             "Nothing happens until the owner approves; you get a letter with the result. Ask for the least access that will do: "
             "prefer exact commands over turning the shell on. Commands run without a terminal, so give flags like --noconfirm or -y; "
-            "sudo works only if the machine allows it without a password.",
+            "sudo works only if the machine allows it without a password. "
+            "A session is private unless you ask for it to be public: from a private one you get only the resident's own summary "
+            "of what it did. If you need to see the output yourself (a command's result, what it found, files it made), ask for "
+            "visibility public.",
             {
                 "type": "object",
                 "properties": {
@@ -158,6 +161,8 @@ TOOL_SPECS: dict[str, ToolSpec] = {
                                        for k in ("files", "shell", "subagents", "web_fetch", "web_search", "image_generation")},
                     },
                     "commands": _list("Exact shell commands the session may run, each written exactly as it will be run."),
+                    "visibility": {"type": "string", "enum": ["private", "public"],
+                                   "description": "private (the default): you get the resident's summary. public: you also get its full output."},
                 },
                 "required": ["resident", "task", "reason"],
             },
@@ -420,12 +425,13 @@ class Toolbox:
         return f"Posted to the board: {self.scope.display(path)}."
 
     def request_session(self, resident: str, task: str, reason: str, access: dict[str, object] | None = None,
-                        commands: list[str] | None = None) -> str:
+                        commands: list[str] | None = None, visibility: str = "private") -> str:
         from babo.agent.tools.context import current_request_session_key
         from babo.baton import requests
 
         request = requests.create(self.town, requested_by=self.resident_id, resident=resident, task=task, reason=reason,
-                                  access=access, commands=commands, session_key=current_request_session_key())
+                                  access=access, commands=commands, session_key=current_request_session_key(),
+                                  visibility=visibility)
         if request.status == "approved":
             return (f"Request {request.id} was approved automatically ({self.town.owner_name} turned allow-all on for this chat). "
                     "It starts within a minute; you'll get a letter with the result.")

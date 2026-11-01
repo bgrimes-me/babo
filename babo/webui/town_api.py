@@ -38,6 +38,7 @@ TOWN_MUTATION_PATHS = {
     "town.session.archive": "/api/town/sessions/archive",
     "town.session.unarchive": "/api/town/sessions/unarchive",
     "town.session.organize": "/api/town/sessions/organize",
+    "town.session.access": "/api/town/sessions/access",
     "town.notices.read": "/api/town/notices/read",
     "town.allow_all": "/api/town/allow-all/update",
     "town.eval": "/api/town/eval/run",
@@ -174,6 +175,12 @@ def _session_change(action: str, payload: dict[str, Any]) -> str:
         return views.set_session_model(town, cfg, resident, session_id, cast(str, preset), config_path=config_path)
     if action == "archive" or action == "unarchive":
         return views.archive_session(town, resident, session_id, archived=action == "archive")
+    if action == "access":
+        changes: object = payload.get("changes") or {}
+        if not isinstance(changes, dict) or not all(isinstance(v, str) for v in cast(dict[str, object], changes).values()):
+            raise BatonError("changes must be an object of settings")
+        return views.change_session_access(town, cfg, resident, session_id, cast(dict[str, str], changes),
+                                           config_path=config_path, everything=payload.get("all") is True)
     if action == "organize":
         title, pinned, tags = payload.get("title"), payload.get("pinned"), payload.get("tags")
         if tags is not None and not (isinstance(tags, list) and all(isinstance(t, str) for t in cast(list[object], tags))):

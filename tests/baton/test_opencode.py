@@ -63,7 +63,10 @@ def test_the_config_follows_the_profile_and_keeps_residents_in_their_own_workspa
     rules = built["agents"]["resident"]["permissions"]
     # Edits are matched relative to the resident's own folder: anything leaving it is refused.
     assert effect(rules, "edit", "notes/today.md") == "allow" and effect(rules, "edit", "../inspector/x.md") == "deny"
-    assert effect(rules, "read", "../inspector/x.md") == "allow" and effect(rules, "external_directory", "/etc/*") == "deny"
+    # It reads its own folder; other residents' folders and the town's state stay private unless its profile says the town.
+    assert effect(rules, "read", "notes/today.md") == "allow" and effect(rules, "read", "../inspector/x.md") == "deny"
+    assert effect(rules, "grep", "../../state/profiles/x.json") == "deny" and effect(rules, "glob", "residents/inspector/*") == "deny"
+    assert effect(rules, "read", "residents/archivist/notes.md") == "allow" and effect(rules, "external_directory", "/etc/*") == "deny"
     assert effect(rules, "shell", "ls") == "ask" and effect(rules, "webfetch", "https://x") == "allow"
     assert effect(rules, "subagent", "general") == "deny" and effect(rules, "question", "*") == "deny"
     assert effect(rules, "babo_send_letter", "*") == "allow" and effect(rules, "notes_search", "*") == "allow"
@@ -261,6 +264,59 @@ def test_a_resident_in_opencode_forms_memory_like_any_other(town: Town, config_f
         assert any(c.trigger == "session_end" and c.source == "authored" for c in iter_checkpoints(home))
         assert opencode.get_session(town, "archivist", session.id).reviewed
         assert list((home / "sessions").rglob(f"*{session.id}*.transcript.jsonl"))
+    finally:
+        opencode.freeze(town, session)
+
+
+@live
+def test_a_resident_reads_only_its_own_folder_unless_its_profile_says_the_town(town: Town, config_file, mock_llama: MockLlama) -> None:
+    path, cfg = config_file()
+    secret = town.resident_dir("mayor") / "SELF.md"
+    secret.write_text("The Mayor's own words.\n")
+    mine = town.resident_dir("archivist") / "notes.md"
+    mine.write_text("My own notes.\n")
+
+    def results() -> str:
+        return json.dumps([m for r in mock_llama.requests for m in r["messages"] if m["role"] == "tool"])
+
+    mock_llama.default = _router([tool_call("read", {"path": str(mine)}), tool_call("read", {"path": str(secret)}), text("Read.")])
+    session = opencode.new_session(town, cfg, "archivist", title="reading")
+    try:
+        opencode.send(town, cfg, session, "Read both.", config_path=path)
+        assert "My own notes." in results()
+        assert "The Mayor's own words." not in results()  # another resident's folder is private
+    finally:
+        opencode.freeze(town, session)
+    mock_llama.requests.clear()
+    mock_llama.default = _router([tool_call("read", {"path": str(secret)}), text("Read.")])
+    wide = opencode.new_session(town, cfg, "archivist", title="reading the town", overrides={"read": "town"})
+    try:
+        opencode.send(town, cfg, wide, "Read the Mayor's SELF.md.", config_path=path)
+        assert "The Mayor's own words." in results()
+    finally:
+        opencode.freeze(town, wide)
+
+
+@live
+def test_a_running_session_gets_new_permissions_and_carries_on(town: Town, config_file, mock_llama: MockLlama) -> None:
+    path, cfg = config_file()
+    secret = town.resident_dir("mayor") / "SELF.md"
+    secret.write_text("The Mayor's own words.\n")
+    mock_llama.default = _router([text("Ready.")])
+    session = opencode.new_session(town, cfg, "archivist", title="reading")
+    try:
+        opencode.start(town, cfg, session, config_path=path)
+        opencode.send(town, cfg, opencode.get_session(town, "archivist", session.id), "Hello.", config_path=path)
+        first = opencode.get_session(town, "archivist", session.id).opencode_id
+        said = views.change_session_access(town, cfg, "archivist", session.id, {"read": "town"}, config_path=path)
+        assert said.endswith("Read: its own folder → the whole town, and carries on where it was.")
+        again = opencode.get_session(town, "archivist", session.id)
+        assert again.opencode_id == first and opencode.running(town, again) is not None
+        mock_llama.requests.clear()
+        mock_llama.default = _router([tool_call("read", {"path": str(secret)}), text("Read.")])
+        opencode.send(town, cfg, again, "Read the Mayor's SELF.md.", config_path=path)
+        assert "The Mayor's own words." in json.dumps([m for r in mock_llama.requests for m in r["messages"] if m["role"] == "tool"])
+        assert any("Hello." in json.dumps(r["messages"]) for r in mock_llama.requests)  # the same conversation, carried on
     finally:
         opencode.freeze(town, session)
 

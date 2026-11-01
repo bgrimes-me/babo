@@ -251,3 +251,40 @@ def test_the_terminal_chat_asks_about_a_new_request_once_between_turns(town: Tow
     cli.ask_about_new_requests(town, make_config("mayor"), seen)
     cli.ask_about_new_requests(town, make_config("mayor"), seen)  # skipped once: not asked again in this chat
     assert len(skips) == 1 and len(requests.pending(town)) == 1
+
+
+def test_a_private_session_tells_the_mayor_its_summary_and_a_public_one_its_full_output(
+        town: Town, box, make_config, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from babo.baton import opencode
+
+    fake = _FakeOpencode()
+    fake.patch(monkeypatch)
+    monkeypatch.setattr(opencode, "public_output", lambda *a, **kw: "[shell] {\"command\": \"pacman -Q nano\"} → nano 8.2-1")
+    cfg = make_config("mayor")
+    for visibility in ("private", "public"):
+        _ask(box, visibility=visibility, task=f"Install nano ({visibility}).")
+        request = next(r for r in requests.all_requests(town) if r.visibility == visibility)
+        shown = requests.describe(town, cfg, request)
+        assert shown["visibility"] == visibility
+        views.decide(town, "session", request.id, yes=True, reason="Fine.", digest=shown["digest"])
+        requests.run(town, cfg, requests.load(town, request.id), config_path=tmp_path / "c.json")
+    private, public = [i for i in unread(town, "mayor") if i.sender == "archivist"][-2:]
+    assert "Installed nano 8.2." in private.body and "full output" not in private.body and "pacman -Q" not in private.body
+    assert "Installed nano 8.2." in public.body and "## The session's full output (public)" in public.body and "nano 8.2-1" in public.body
+    with pytest.raises(BatonError, match="visibility must be private"):
+        requests.create(town, requested_by="mayor", resident="archivist", task="x", reason="y", visibility="everyone")
+
+
+def test_the_request_tool_tells_the_mayor_to_ask_for_public_to_see_the_output() -> None:
+    from babo.baton.tools.core import TOOL_SPECS
+
+    spec = TOOL_SPECS["request_session"]
+    assert "visibility public" in spec.description and spec.parameters["properties"]["visibility"]["enum"] == ["private", "public"]
+
+
+def test_visibility_is_part_of_what_the_owner_approves(town: Town, box) -> None:
+    _ask(box, visibility="public")
+    request = _only(town)
+    digest = request.digest()
+    request.visibility = "private"
+    assert request.digest() != digest

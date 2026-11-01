@@ -61,5 +61,10 @@ export function SessionRequestDetails({ request }: { request: TownSessionRequest
     {request.wider.length > 0 && <p role="note" className="mt-2 text-xs text-amber-600 dark:text-amber-400">
       {t("town.beyondProfile", { defaultValue: "Beyond its profile: {{what}}", what: request.wider.join("; ") })}
     </p>}
+    <p className="mt-2 text-xs text-muted-foreground">
+      {request.visibility === "public"
+        ? t("town.visibilityPublic", { defaultValue: "Public: {{who}} gets the session's full output (what it ran and what came back), not only its summary.", who: request.requested_by })
+        : t("town.visibilityPrivate", { defaultValue: "Private: {{who}} gets only the resident's summary of what it did.", who: request.requested_by })}
+    </p>
   </>;
 }

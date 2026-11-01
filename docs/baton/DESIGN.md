@@ -71,7 +71,8 @@ Each step is its own pull request, merged once its tests pass.
 | **H2** | `babo eval`: representative tasks with checks, a baseline per preset (terminal and the Doctor tab) | Done |
 | **H3** | Drift and loop detectors with short reminders, done-checks for tasks, capped memory files | Planned |
 | **B3** | The Mayor's chats get the same session actions as residents' (the parity principle): `/checkpoint` beside `/stop` and `/model` | Done |
-| **C** | Permissions and visibility: change a running session's permissions, *Allow all* per session, permission questions shown in Babo's interface, what a resident may read (its own folder by default) as a setting like any other, and *private* or *public* sessions | Planned |
+| **C** | Permissions and visibility: change a running session's permissions, *Allow all* per session, permission questions shown in Babo's interface, what a resident may read (its own folder by default) as a setting like any other, and *private* or *public* sessions | Done |
+| **C2** | Folders outside the town (a project on the machine) as a session's or profile's setting, read or change, with the project as the session's place in the list (D's projects for residents' sessions) | Planned |
 | **D** | One list for all sessions: residents' sessions in the sidebar beside the Mayor's chats; rename, pin, tags and archive for residents' sessions in the web interface and the terminal. Still to come: tags for the Mayor's chats, and projects for residents' sessions (with C's folder access) | Partly done |
 | **E** | Docs the harness brings in at the right moment: a compact index of when to read what, injection on role entry, first tool use and errors, a logged `open_doc` fallback, curated skills, a task list agents keep as they work | Planned |
 | **G** | Own time: a small budget in quiet hours for each resident to reflect, revise itself, write a lesson or a letter, or pursue something of its own | Planned |
