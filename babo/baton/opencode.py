@@ -341,6 +341,9 @@ def _command_pieces(command: str) -> list[str]:
     return list(dict.fromkeys([command.strip(), *pieces]))
 
 
+_READING = ("read", "glob", "grep")
+
+
 def _permissions(town: Town, resident: str, profile: profiles.Profile, *, unattended: bool = False,
                  commands: list[str] | None = None, mcp: list[str] | None = None) -> list[dict[str, str]]:
     """opencode's ordered permission rules for a session (the last matching rule wins).
@@ -360,9 +363,17 @@ def _permissions(town: Town, resident: str, profile: profiles.Profile, *, unatte
 
     rules = [
         rule("*", "*", "deny"),
-        # Reading, finding and searching anywhere in the town (the town is one git
-        # repository, so opencode treats it as the project); nothing outside it.
-        rule("read", "*", "allow"), rule("glob", "*", "allow"), rule("grep", "*", "allow"),
+        # Reading, finding and searching: in its own folder, or anywhere in the town when its
+        # profile says so (the town is one git repository, so opencode treats it as the
+        # project); never outside it.
+        *[rule(action, "*", "allow") for action in _READING],
+        *([] if profile.read == "town" else [
+            # Paths are matched relative to the resident's own folder, where it works ...
+            *[rule(action, "../*", "deny") for action in _READING],
+            # ... and by name, for a session seen from the town's root.
+            *[rule(action, pattern, "deny") for action in _READING for pattern in ("residents/*", "state/*", ".git/*")],
+            *[rule(action, f"residents/{resident}/*", "allow") for action in _READING],
+        ]),
         rule("external_directory", "*", "deny"),
         # Edits are matched by their path relative to the resident's own folder,
         # where it works: anything that leaves it (``../``) is another resident's.
@@ -868,15 +879,27 @@ def answer_permission(town: Town, session: Session, request_id: str, decision: s
         client.post(f"/api/session/{session.opencode_id}/permission/{request_id}/reply", json={"decision": decision}).raise_for_status()
 
 
-def switch_model(town: Town, config: Config, session: Session, preset: str, *, config_path: Path) -> Session:
-    """Give a session another model preset. A running session restarts on it and carries on where it was."""
+def allow_everything() -> dict[str, str]:
+    """*Allow all* for one session: every capability allowed, and reading the whole town."""
+    return {**{c.key: "allow" for c in profiles.CAPABILITIES}, "read": "town"}
+
+
+def change_session(town: Town, config: Config, session: Session, changes: dict[str, str], *, by: str = OWNER,
+                   config_path: Path) -> Session:
+    """Change what a session may do (or its model), now. A running session restarts with the new
+    settings and carries on exactly where it was. A value of "" (or "profile") goes back to the
+    resident's profile. Only the owner may give a session more than its resident's profile allows."""
     overrides = dict(session.overrides)
-    if preset.strip() in ("", "default"):
-        overrides.pop("model", None)
-    else:
-        overrides["model"] = preset.strip()
-    effective_profile(town, config, session.resident, overrides, by=session.by)  # validates the preset
+    for key, value in changes.items():
+        value = str(value).strip()
+        if value in ("", "profile") or (key == "model" and value == "default"):
+            overrides.pop(key, None)
+        else:
+            overrides[key] = value
+    effective_profile(town, config, session.resident, overrides, by=by)  # validates, and refuses a widening by anyone else
     session.overrides = overrides
+    if is_owner(by):
+        session.by = OWNER  # its access is now the owner's choice
     save_session(town, session)
     run = running(town, session)
     if run is not None:
@@ -884,6 +907,11 @@ def switch_model(town: Town, config: Config, session: Session, preset: str, *, c
         _runtime_path(town, session).unlink(missing_ok=True)
         start(town, config, session, config_path=config_path)
     return get_session(town, session.resident, session.id)
+
+
+def switch_model(town: Town, config: Config, session: Session, preset: str, *, config_path: Path) -> Session:
+    """Give a session another model preset. A running session restarts on it and carries on where it was."""
+    return change_session(town, config, session, {"model": preset}, by=session.by, config_path=config_path)
 
 
 def _activity(message: dict[str, Any]) -> str:
@@ -1123,6 +1151,18 @@ def _tool_output(part: dict[str, Any]) -> str:
         return str(cast(dict[str, Any], state.get("error") or {}).get("message", "error"))
     content = cast(list[dict[str, Any]], state.get("content") or [])
     return "\n".join(str(c.get("text", "")) for c in content if c.get("type") == "text")
+
+
+def public_output(town: Town, session: Session, *, budget_tokens: int = 3000) -> str:
+    """A public session's output for whoever asked for it: each step it took (tool calls with their
+    results) and what it said, the newest kept within the budget, with secrets redacted."""
+    from babo.baton.secrets import redact_text
+
+    run = running(town, session)
+    if run is None:
+        return ""
+    steps = conversation(_messages(run, session), budget_tokens=budget_tokens)
+    return redact_text("\n\n".join(str(m["content"]) for m in steps if m["role"] == "assistant"))
 
 
 def export_transcript(town: Town, session: Session, messages: list[dict[str, Any]]) -> Path:

@@ -427,6 +427,8 @@ def ask_about_request(t: Town, cfg: Config, request: SessionRequest) -> bool:
         console.print(f"  May run exactly: {command}")
     if shown["wider"]:
         console.print("  [yellow]Beyond its profile:[/yellow] " + "; ".join(shown["wider"]))
+    console.print(f"  Public: {request.requested_by} gets the session's full output, not only its summary." if request.visibility == "public"
+                  else f"  Private: {request.requested_by} gets only the resident's summary of what it did.")
     console.print("  It runs with nobody at a terminal; anything not allowed is denied.")
     choice = _ask_decision("Approve and run it?", "approve", "decline")
     if choice == "skip":
@@ -719,6 +721,8 @@ def _print_profile(row: dict[str, Any], profiles: Any) -> None:
     table = Table("setting", "value", "what it means", title=title, title_justify="left")
     for cap in row["capabilities"]:
         table.add_row(f"{cap['label']}\n[dim]{cap['key']}[/dim]", cap["level"], cap["help"])
+    if not row["main"]:
+        table.add_row("Read\n[dim]read[/dim]", row["read"], "own: its own folder; town: the whole town (with its file tools in opencode).")
     table.add_row("MCP servers\n[dim]mcp[/dim]", ", ".join(row["mcp"]) or "none",
                   f"Known in Babo: {', '.join(row['mcp_known']) or 'none'}")
     if not row["main"]:
@@ -920,6 +924,25 @@ def _organize(config: str | None, resident: str, session_id: str, **change: Any)
     t, _ = _town(config)
     try:
         console.print(views.organize_session(t, resident, session_id, **change))
+    except BatonError as exc:
+        _fail(exc)
+
+
+@session_app.command("set")
+def session_set(resident: str = typer.Argument(...), session_id: str = typer.Argument(...),
+                set_: list[str] = typer.Argument(None, help="Settings, e.g. shell=allow read=town (a value of 'profile' goes back to the profile's)"),
+                everything: bool = typer.Option(False, "--all", help="Allow everything for this session (every capability, reading the whole town)"),
+                reset: bool = typer.Option(False, "--reset", help="Back to the resident's profile for everything"),
+                config: str | None = _CONFIG_OPT):
+    """Change what a session may do, now; a running one restarts with it and carries on where it was."""
+    from babo.baton import opencode, views
+
+    t, cfg = _town(config)
+    try:
+        changes = {k: str(v) for k, v in _overrides(list(set_ or [])).items()}
+        if reset:
+            changes = {key: "profile" for key in opencode.get_session(t, resident, session_id).overrides} | changes
+        console.print(views.change_session_access(t, cfg, resident, session_id, changes, config_path=_config_path(), everything=everything))
     except BatonError as exc:
         _fail(exc)
 

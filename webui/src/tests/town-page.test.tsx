@@ -155,7 +155,8 @@ describe("town page", () => {
     await waitFor(() => expect(tab.location.href).toBe("http://127.0.0.1:4802/auth/connect/abc"));
     expect(mocks.mutation).toHaveBeenCalledWith("town.session.link", { resident: "archivist", id: "s1" }, expect.any(Number));
     fireEvent.change(within(archivist).getByRole("textbox", { name: "What should archivist do?" }), { target: { value: "Index the notes" } });
-    fireEvent.change(within(archivist).getByRole("combobox", { name: "Search the web" }), { target: { value: "allow" } });
+    // The new session's form comes after the sessions' own rows.
+    fireEvent.change(within(archivist).getAllByRole("combobox", { name: "Search the web" }).at(-1)!, { target: { value: "allow" } });
     fireEvent.click(within(archivist).getByRole("button", { name: "Start" }));
     await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.new",
       { resident: "archivist", task: "Index the notes", overrides: { web_search: "allow" } }, 120_000));
@@ -197,6 +198,24 @@ describe("town page", () => {
     fireEvent.click(within(archivist).getByRole("button", { name: "Save" }));
     await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.organize",
       { resident: "archivist", id: "s1", title: "Weekly tidy", tags: ["weekly", "commons"] }, 120_000));
+  });
+
+  it("changes what a running session may do, now, and allows everything for it, like `babo session set`", async () => {
+    mocks.mutation.mockResolvedValue({ ...sessions, message: "“Tidy the commons” now: Read: its own folder → the whole town." });
+    render(<TownPage onBackToChat={() => {}} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Sessions" }));
+    const archivist = await screen.findByRole("region", { name: "archivist" });
+    const [rowRead] = within(archivist).getAllByRole("combobox", { name: "Read" });
+    expect(within(archivist).getAllByRole("combobox", { name: "Run commands" })[0]).toHaveValue("deny");  // this session: shell deny
+    fireEvent.change(rowRead, { target: { value: "town" } });
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.access",
+      { resident: "archivist", id: "s1", changes: { read: "town" } }, 120_000));
+    fireEvent.change(within(archivist).getAllByRole("combobox", { name: "Run commands" })[0], { target: { value: "" } });
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.access",
+      { resident: "archivist", id: "s1", changes: { shell: "profile" } }, 120_000));
+    fireEvent.click(within(archivist).getByRole("button", { name: "Allow everything for this session" }));
+    await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.access",
+      { resident: "archivist", id: "s1", all: true }, 120_000));
   });
 
   it("opens on the session picked in the sidebar", async () => {

@@ -531,6 +531,15 @@ function ProfileCard({ profile, presets, busy, onChange }: {
           onChange={(level) => { if (!busy && level !== cap.level) onChange({ [cap.key]: level }); }}
           options={cap.levels.map((level) => ({ value: level, label: t(`town.level.${level}`, { defaultValue: { allow: "Allow", ask: "Ask", deny: "Deny" }[level] }) }))} />
       </div>)}
+      {!profile.main && <div className="settings-list-row flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+        <span className="min-w-[14rem] flex-1">
+          <span className="block text-[14px] font-medium">{t("town.cap.read", { defaultValue: "Read" })}</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">{t("town.readHelp", { defaultValue: "What it may read with its file tools in opencode. Its own folder keeps other residents' folders private; the commons and the town's documents are always there through its town tools." })}</span>
+        </span>
+        <SegmentedControl<"own" | "town"> mode="radio" value={profile.read ?? "own"} ariaLabel={`${title}: ${t("town.cap.read", { defaultValue: "Read" })}`}
+          onChange={(read) => { if (!busy && read !== (profile.read ?? "own")) onChange({ read }); }}
+          options={[{ value: "own", label: t("town.read.own", { defaultValue: "Its own folder" }) }, { value: "town", label: t("town.read.town", { defaultValue: "The whole town" }) }]} />
+      </div>}
       <div className="settings-list-row py-3">
         <span className="block text-[14px] font-medium">{t("town.mcpServers", { defaultValue: "MCP servers" })}</span>
         {profile.mcp_known.length === 0
@@ -565,6 +574,38 @@ const SESSION_CHANGES = [
   { key: "web_fetch", label: "Read web pages" },
   { key: "web_search", label: "Search the web" },
 ] as const;
+
+/** What a session may do, beyond (or short of) its resident's profile: the same choices when starting one
+ *  and while it runs (`babo session new --set …`, `babo session set …`). Empty means as in the profile. */
+function SessionAccessFields({ values, onChange, disabled = false }: {
+  values: Record<string, string>;
+  onChange: (key: string, value: string) => void;
+  disabled?: boolean;
+}) {
+  const { t } = useTranslation();
+  const asProfile = t("town.asProfile", { defaultValue: "as in the profile" });
+  return <>
+    {SESSION_CHANGES.map((c) => <label key={c.key} className="flex items-center gap-2 text-[13px]">
+      {t(`town.cap.${c.key}`, { defaultValue: c.label })}
+      <select className="rounded border bg-background px-1 py-0.5 text-[13px]" value={values[c.key] ?? ""} disabled={disabled}
+        onChange={(event) => onChange(c.key, event.target.value)}>
+        <option value="">{asProfile}</option>
+        <option value="allow">{t("town.level.allow", { defaultValue: "Allow" })}</option>
+        <option value="ask">{t("town.level.ask", { defaultValue: "Ask" })}</option>
+        <option value="deny">{t("town.level.deny", { defaultValue: "Deny" })}</option>
+      </select>
+    </label>)}
+    <label className="flex items-center gap-2 text-[13px]">
+      {t("town.cap.read", { defaultValue: "Read" })}
+      <select className="rounded border bg-background px-1 py-0.5 text-[13px]" value={values.read ?? ""} disabled={disabled}
+        onChange={(event) => onChange("read", event.target.value)}>
+        <option value="">{asProfile}</option>
+        <option value="own">{t("town.read.own", { defaultValue: "Its own folder" })}</option>
+        <option value="town">{t("town.read.town", { defaultValue: "The whole town" })}</option>
+      </select>
+    </label>
+  </>;
+}
 
 /** Residents other than the Mayor run in opencode, one session at a time or several.
  *  The same as `babo session list|new|open|freeze`. */
@@ -694,6 +735,18 @@ function SessionRow({ session, presets, busy, onAction, onOpen, focused = false 
     <Button variant="ghost" size="sm" disabled={busy} onClick={() => { setName(session.title); setTags((session.tags ?? []).join(", ")); setOrganizing((v) => !v); }}>
       {t("town.renameTag", { defaultValue: "Rename / tags" })}
     </Button>
+    <details className="basis-full">
+      <summary className="cursor-pointer text-xs text-muted-foreground">
+        {t("town.sessionAccess", { defaultValue: "What it may do (changes now; a running session carries on where it was)" })}
+      </summary>
+      <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <SessionAccessFields values={session.overrides} disabled={busy}
+          onChange={(key, value) => onAction("access", { changes: { [key]: value || "profile" } })} />
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => onAction("access", { all: true })}>
+          {t("town.allowEverything", { defaultValue: "Allow everything for this session" })}
+        </Button>
+      </div>
+    </details>
     {organizing && <form className="flex basis-full flex-wrap items-center gap-2" onSubmit={(event) => {
       event.preventDefault();
       setOrganizing(false);
@@ -780,20 +833,11 @@ function NewSessionForm({ resident, presets, disabled, busy, onStart }: {
               return next;
             })} />
         </label>
-        {SESSION_CHANGES.map((c) => <label key={c.key} className="flex items-center gap-2 text-[13px]">
-          {t(`town.cap.${c.key}`, { defaultValue: c.label })}
-          <select className="rounded border bg-background px-1 py-0.5 text-[13px]" value={overrides[c.key] ?? ""}
-            onChange={(event) => setOverrides((current) => {
-              const next = { ...current };
-              if (event.target.value) next[c.key] = event.target.value; else delete next[c.key];
-              return next;
-            })}>
-            <option value="">{t("town.asProfile", { defaultValue: "as in the profile" })}</option>
-            <option value="allow">{t("town.level.allow", { defaultValue: "Allow" })}</option>
-            <option value="ask">{t("town.level.ask", { defaultValue: "Ask" })}</option>
-            <option value="deny">{t("town.level.deny", { defaultValue: "Deny" })}</option>
-          </select>
-        </label>)}
+        <SessionAccessFields values={overrides} onChange={(key, value) => setOverrides((current) => {
+          const next = { ...current };
+          if (value) next[key] = value; else delete next[key];
+          return next;
+        })} />
       </div>
     </details>
   </form>;

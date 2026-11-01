@@ -1597,6 +1597,8 @@ export interface TownSessionRequest {
   profile: Record<string, string>;
   /** What it adds beyond the resident's profile, in words. */
   wider: string[];
+  /** private: the asker gets the resident's summary; public: its full output too. */
+  visibility?: "private" | "public";
 }
 
 export interface TownReview {
@@ -1688,6 +1690,8 @@ export interface TownProfile {
   main: boolean;
   saved: boolean;
   capabilities: { key: string; label: string; help: string; level: TownLevel; levels: TownLevel[] }[];
+  /** What a resident in opencode may read with its file tools: its own folder, or the whole town. */
+  read?: "own" | "town";
   mcp: string[];
   mcp_known: string[];
   model: string;
@@ -1745,7 +1749,7 @@ export interface TownSession {
 
 export type TownSessionAction =
   "new" | "resume" | "freeze" | "remove" | "send" | "stop" | "checkpoint" | "model" | "answer" | "archive" | "unarchive"
-  | "organize";
+  | "organize" | "access";
 
 /** A one-time link that opens a running session's web page, connected (no password to type). */
 export function openTownSessionLink(transport: WebUIMutationTransport, resident: string, id: string): Promise<{ link: string }> {
@@ -1788,6 +1792,8 @@ export function changeTownSession(
     resident: string; id?: string; title?: string; task?: string; overrides?: Record<string, string>;
     text?: string; preset?: string; request?: string; decision?: string;
     pinned?: boolean; tags?: string[];
+    /** For "access": settings to change ("profile" goes back to the profile's); all: allow everything. */
+    changes?: Record<string, string>; all?: boolean;
   },
 ): Promise<TownSessions & { message: string }> {
   return mutation<TownSessions & { message: string }>(transport, `town.session.${action}`, payload, 120_000);

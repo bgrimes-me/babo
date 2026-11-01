@@ -64,11 +64,14 @@ class SessionRequest:
     decided_by: str = ""  # the owner, or "allow-all" when that chat had allow-all on
     session_id: str = ""
     result: str = ""
+    visibility: str = "private"  # private: the asker gets the resident's summary; public: its full output too
 
     def digest(self) -> str:
         """A fingerprint of what the owner is asked to approve."""
         shown = {"resident": self.resident, "task": self.task, "reason": self.reason,
                  "access": dict(sorted(self.access.items())), "commands": self.commands, "requested_by": self.requested_by}
+        if self.visibility != "private":  # (requests from before visibility keep their fingerprint)
+            shown["visibility"] = self.visibility
         return hashlib.sha256(json.dumps(shown, sort_keys=True).encode()).hexdigest()[:16]
 
 
@@ -113,7 +116,7 @@ def pending(town: Town) -> list[SessionRequest]:
 
 def create(town: Town, *, requested_by: str, resident: str, task: str, reason: str,
            access: dict[str, object] | None = None, commands: list[str] | None = None,
-           session_key: str | None = None) -> SessionRequest:
+           session_key: str | None = None, visibility: str = "private") -> SessionRequest:
     """Record a request. It does nothing until the owner approves it, unless the owner
     turned allow-all on for the chat it comes from: then it is approved now."""
     from babo.baton import allow_all
@@ -137,6 +140,9 @@ def create(town: Town, *, requested_by: str, resident: str, task: str, reason: s
         if value not in _LEVELS:
             raise BatonError(f"Access for {key} must be allow or deny (nobody is at a terminal to answer 'ask').")
         clean[key] = value
+    visibility = (visibility or "private").strip().lower()
+    if visibility not in ("private", "public"):
+        raise BatonError("visibility must be private (you get the resident's summary) or public (its full output too).")
     wanted = [str(c).strip() for c in commands or [] if str(c).strip()]
     if len(wanted) > MAX_COMMANDS:
         raise BatonError(f"Ask for at most {MAX_COMMANDS} commands; split the work into more requests.")
@@ -146,7 +152,7 @@ def create(town: Town, *, requested_by: str, resident: str, task: str, reason: s
     request = SessionRequest(
         id=f"{stamp[:10]}-{slugify(target.id, 20)}-{secrets.token_hex(3)}", resident=target.id,
         task=task.strip(), reason=reason.strip(), access=clean, commands=wanted,
-        requested_by=requested_by, created=stamp, session_key=session_key or "",
+        requested_by=requested_by, created=stamp, session_key=session_key or "", visibility=visibility,
     )
     if allow_all.is_on(town, session_key):
         request.status = "approved"
@@ -273,6 +279,7 @@ def run(town: Town, config: Config, request: SessionRequest, *, config_path: Pat
     save(town, request)
     gitops.commit_paths(town, [_path(town, request.id)], f"Session request {request.id} running")
     session = None
+    output = ""
     try:
         session = opencode.new_session(
             town, config, request.resident, title=f"request: {first_line(request.task, 60)}",
@@ -281,6 +288,7 @@ def run(town: Town, config: Config, request: SessionRequest, *, config_path: Pat
         )
         request.session_id = session.id
         reply = opencode.send(town, config, session, task_message(town, request), config_path=config_path)
+        output = opencode.public_output(town, opencode.get_session(town, request.resident, session.id)) if request.visibility == "public" else ""
         opencode.checkpoint(town, config, opencode.get_session(town, request.resident, session.id),
                             trigger="session_end", config_path=config_path)
         request.status = "done"
@@ -295,6 +303,8 @@ def run(town: Town, config: Config, request: SessionRequest, *, config_path: Pat
     gitops.commit_paths(town, [_path(town, request.id)], f"Session request {request.id} {request.status}")
     outcome = "finished" if request.status == "done" else "failed"
     # The result is the resident's own account of what it did.
-    _tell(town, request, request.resident if request.status == "done" else HARNESS,
-          f"Your request {request.id} for {request.resident} {outcome}: {first_line(request.task, 80)}\n\n{request.result[:4000]}")
+    text = f"Your request {request.id} for {request.resident} {outcome}: {first_line(request.task, 80)}\n\n{request.result[:4000]}"
+    if output:  # a public session: what it did, step by step, as well as its own account
+        text += f"\n\n## The session's full output (public)\n\n{output}"
+    _tell(town, request, request.resident if request.status == "done" else HARNESS, text)
     return request

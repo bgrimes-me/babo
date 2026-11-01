@@ -296,6 +296,25 @@ def set_session_model(town: Town, config: Config, resident: str, session_id: str
     return f"{resident}'s session now uses {chosen}" + (", and carries on where it was." if opencode.running(town, session) else ".")
 
 
+def change_session_access(town: Town, config: Config, resident: str, session_id: str, changes: dict[str, str], *,
+                          config_path: Any, everything: bool = False) -> str:
+    """Change what a session may do, now: the same in the web interface and `babo session set`."""
+    from babo.baton import opencode, profiles
+
+    session = opencode.get_session(town, resident, session_id)
+    before = opencode.effective_profile(town, config, resident, session.overrides, by=session.by)
+    wanted = {**(opencode.allow_everything() if everything else {}), **changes}
+    if not wanted:
+        raise BatonError("Nothing to change: give settings such as shell=allow, or allow everything.")
+    session = opencode.change_session(town, config, session, wanted, config_path=config_path)
+    after = opencode.effective_profile(town, config, resident, session.overrides, by=session.by)
+    said = profiles.describe_changes(before, after)
+    if not said:
+        return f"“{session.title}” already had those settings."
+    carried = ", and carries on where it was" if opencode.running(town, session) else ""
+    return f"“{session.title}” now: " + "; ".join(said) + carried + "."
+
+
 def answer_session_question(town: Town, resident: str, session_id: str, request_id: str, decision: str) -> str:
     from babo.baton import opencode
 
