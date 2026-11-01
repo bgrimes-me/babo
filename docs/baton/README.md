@@ -15,20 +15,20 @@ A new town has one resident, the **Mayor**. Others are founded when the town nee
 
 - **Mayor:** the front desk. When you type `babo`, you're talking to the Mayor. It runs projects, hands work to others, spawns temporary helpers ("crew"), writes letters, visits other residents, and can ask you to found a new resident.
 - **Archivist** (once founded): keeps the commons tidy; until there is one, the Mayor does. It turns notes residents nominate into shared knowledge, merges duplicates, keeps both sides when two views disagree, and keeps the list of what the town can do (`commons/LEDGER.md`).
-- **Inspector** (once founded): a second set of eyes. At each upkeep it compares what residents said they did with what the harness recorded, and leaves a flag for a resident when the two don't match. It also reviews proposed tools before they reach you.
+- **Inspector** (once founded): a second set of eyes. In the night round it compares what residents said they did with what the harness recorded, and leaves a flag for a resident when the two don't match. It also reviews proposed tools before they reach you.
 
 ## The daily flow
 
 - **Talking:** `babo` (or `babo agent`) talks to the Mayor, as does the web interface. Every other resident works in **opencode**: `babo session open archivist` opens the Archivist's latest session in opencode's terminal interface (or starts one), and the **Sessions** tab of the Town page starts, resumes, freezes and opens sessions in the browser.
 - **Memory forms on its own.** Every so often (every 15 tool calls, at a git commit, when tests start or stop passing, before old conversation is compressed, and when a session goes quiet) the harness asks the resident to write a short checkpoint in its own words. If it can't, a plain record from the log is written instead, so nothing is ever lost.
 - **Projects:** each resident has private projects in `residents/<name>/projects/`. When a project is useful to everyone, the resident proposes promoting it. If you accept, it moves to `commons/projects/` and every resident gets a working copy.
-- **Upkeep runs whenever it's due**, not at a fixed time. It never gets in your way: it waits until nobody has used the model for 10 minutes, and its model calls always queue behind yours. Then:
+- **Upkeep runs whenever it's due**, not at a fixed time. Upkeep is Babo's own work, the same for every resident. It never gets in your way: it waits until nobody has used the model for 10 minutes, and its model calls always queue behind yours. Then:
   1. Every resident whose work has gone quiet, and has at least 4 hours of activity waiting, reviews what happened since its last review and writes it into its memory, in its own words.
-  2. The Archivist works through notes nominated for the commons. This happens as soon as notes are waiting, so the shared knowledge grows while you work.
-  3. The Inspector checks claims against the log and reviews proposed tools and proposals.
-  4. Everything is committed in one go, with a short summary.
+  2. The **rounds** that are due run (below): the town's work.
+  3. Everything is committed in one go, with a short summary.
 
   During **quiet hours** (01:00–06:00) everything waiting is done, and housekeeping runs once a day even if nobody talked. **Catch up now** on the Town page, or `babo upkeep --now`, does everything waiting at once, without waiting; `babo upkeep` says what is waiting and why. If your model isn't running, upkeep waits and tries again later.
+- **Rounds are the town's work.** A round says when it runs (whenever there's work for it, a schedule like every day at 03:00, when a checkpoint is filed or a session wraps up, or after another round) and its steps in order, each an office's duty; each step gets the one before's report. The town starts with **the night round**: the Archivist curates the notes waiting for the commons (the Mayor does, while the town has no Archivist), then the Inspector reviews the day's changes and the pending tools and proposals (skipped while nobody holds that office). Rounds are files in the town (`rounds/<name>.md`); the **Rounds** tab of the Town page, or `babo rounds list|show`, shows each one, who does each step, its last run with each step's report, and what Babo itself always does. *Run now* (or `babo rounds run <name>`) runs one within a minute; a round can be turned off, or set to **run right away** when it's due instead of waiting for a free model (it then shares the model with your chats, and can slow them down: `babo rounds set <name> --runs now`).
 - **Leaving a note:** `babo note mayor "Thanks for today"` puts a note in a resident's inbox. They see it at the start of their next session.
 - **Looking around:** `babo town` shows who lives here, when they were last active, unread letters, and what's on the board. The **Town** page in the web interface shows the same, and lets you leave notes and run the doctor.
 
@@ -54,7 +54,7 @@ The Mayor runs in Babo itself. Every other resident runs as its own opencode ins
 
 **One thing to know about *Run commands*.** File edits are fenced to a resident's own folder, but a shell can reach anywhere your user can. So when a resident is allowed to run commands, the Inspector's notes point out any file it touched outside its own folder.
 
-When the Mayor visits a resident, or upkeep asks the Archivist to curate, that happens in a session of its own in opencode too. If opencode isn't installed, sessions can't start; visits and upkeep then run in Babo itself, and `babo doctor` says so.
+When the Mayor visits a resident, or a round gives a resident its step, that happens in a session of its own in opencode too. If opencode isn't installed, sessions can't start; visits and upkeep then run in Babo itself, and `babo doctor` says so.
 
 ## When the Mayor needs something done on the machine
 

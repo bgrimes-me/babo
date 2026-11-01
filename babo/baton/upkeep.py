@@ -1,4 +1,4 @@
-"""Upkeep: memory reviews, curation and inspection, whenever they are due.
+"""Upkeep: Babo's own work (memory reviews, the records) and the rounds, whenever they are due.
 
 There is no fixed night. ``babo upkeep --watch`` (the ``babo-upkeep`` service)
 checks every minute what is waiting and runs a pass (``babo.baton.night``)
@@ -6,8 +6,10 @@ when something is due and nobody is using the model:
 
 - a resident's activity is waiting for its memory review, its session has
   gone quiet, and the oldest of it is ``review_after_hours`` old;
-- notes are waiting to be curated into the commons;
-- a proposed tool or proposal is waiting for the Inspector.
+- a round is due (``babo.baton.rounds``): its trigger fired, or one of its
+  steps has work waiting (the night round: notes to curate, tools or
+  proposals to inspect). A round set to run when triggered doesn't wait for
+  a free model.
 
 "Nobody is using the model" means the model queue has served nothing but
 upkeep for ``wait_minutes``. During ``quiet_hours`` everything waiting is done,
@@ -33,9 +35,7 @@ from loguru import logger
 from babo.baton.baton_file import iter_checkpoints
 from babo.baton.config import BatonConfig
 from babo.baton.night import Night, read_offsets, unreviewed_events
-from babo.baton.notes import split_frontmatter
 from babo.baton.registry import Registry
-from babo.baton.tools.core import proposal_files
 from babo.baton.town import OWNER, BatonError, Town, atomic_write, now_iso
 
 if TYPE_CHECKING:
@@ -50,6 +50,7 @@ class Due:
     keys: list[str] = field(default_factory=list)  # identifies the work, so unfinished work isn't retried at once
     residents: list[str] = field(default_factory=list)  # whose activity a pass would review
     sessions: list[str] = field(default_factory=list)  # "<resident>/<session>" opencode sessions to review and freeze
+    rounds: list[tuple[str, str]] = field(default_factory=list)  # (round, why) the next pass runs
     waiting_for: str = ""  # why not now, in plain words ("" when it may run)
 
     @property
@@ -146,17 +147,23 @@ def due(town: Town, cfg: BatonConfig, *, now: datetime, model_idle_s: int | None
             out.reasons.append(f"{resident}: {_hours(age)} of activity to review")
             out.keys.append(f"review:{resident}:{sum(sizes[resident].values())}")
 
-    pending = [p for p in sorted(town.promotions.glob("*.md"))
-               if split_frontmatter(p.read_text(encoding="utf-8"))[0].get("status", "pending") == "pending"]
-    if pending:
-        out.reasons.append(f"{len(pending)} note(s) to curate into the commons")
-        out.keys += [f"curate:{p.name}" for p in pending]
+    # The town's work: rounds that are due (including those with work waiting).
+    from babo.baton import rounds
 
-    tools = [p for p in sorted((town.tools / "pending").glob("*")) if p.is_dir() and not (p / "REVIEW.md").exists()]
-    proposals = [p for p in proposal_files(town.proposals / "open") if not p.with_name(p.stem + ".review.md").exists()]
-    if tools or proposals:
-        out.reasons.append(f"{len(tools) + len(proposals)} tool(s) or proposal(s) for the Inspector")
-        out.keys += [f"inspect:{p.name}" for p in [*tools, *proposals]]
+    urgent = False
+    asked = rounds.requested(town)
+    for name in asked:  # run by hand: now, without waiting for a free model
+        out.rounds.append((name, "run by hand"))
+        out.reasons.append(f"round {name}, run by hand")
+        out.keys.append(f"round:{name}:by-hand:{now.isoformat(timespec='minutes')}")
+        urgent = True
+    for r, why in rounds.due(town, now=now):
+        if r.name in asked:
+            continue
+        out.rounds.append((r.name, why))
+        out.reasons.append(why)
+        out.keys.append(f"round:{r.name}:{why}")
+        urgent = urgent or r.runs == "now"
 
     state = load_state(town)
     last = _parse(str(state.get("last_pass", "")))
@@ -175,6 +182,8 @@ def due(town: Town, cfg: BatonConfig, *, now: datetime, model_idle_s: int | None
         out.waiting_for = f"the same work was tried at {tried:%H:%M}; trying again after {up.retry_after_hours} hours"
     elif model_idle_s is None:
         out.waiting_for = "the model queue isn't answering"
+    elif urgent:
+        pass  # a round set to run when triggered doesn't wait for a free model (it runs at the lowest priority)
     elif model_idle_s < up.wait_minutes * 60:
         out.waiting_for = f"someone used the model in the last {up.wait_minutes} minutes"
     return out
@@ -208,7 +217,7 @@ def _unfinished_pass(town: Town) -> str | None:
 async def run_pass(config: Config, plan: Due, **kwargs: Any) -> dict[str, Any]:
     town = Town.open(config.baton.town_path)
     kwargs.setdefault("night", _unfinished_pass(town))
-    result = await Night(config, residents=plan.residents, sessions=plan.sessions, **kwargs).run()
+    result = await Night(config, residents=plan.residents, sessions=plan.sessions, rounds=plan.rounds, **kwargs).run()
     state = load_state(town)
     if result.get("status") == "ok":
         state.update({"last_pass": now_iso(), "last_tried": now_iso(), "last_keys": plan.keys, "last_reasons": plan.reasons,
@@ -259,6 +268,10 @@ async def watch(config: Config) -> None:
                        config=config)
             if catch_up:
                 _request_path(town).unlink(missing_ok=True)
+            if plan.run and plan.rounds:
+                from babo.baton import rounds
+
+                rounds.clear_requests(town)
             _heartbeat(town, plan, running=plan.run)
             if plan.run:
                 logger.info("Babo upkeep: {}", "; ".join(plan.reasons))

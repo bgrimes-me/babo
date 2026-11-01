@@ -75,12 +75,12 @@ Each step is its own pull request, merged once its tests pass. Steps are numbere
 | 10 | Guides brought in at the right moment (E, part 1) |
 | 11 | What the first eval baseline taught: confidence as a percentage, sensible first steps |
 | 12 | Loop and drift detectors, done-checks for tasks, capped memory files (H3) |
+| 13 | Rounds: the engine; the night round shipped as a file (the Archivist curates, or the Mayor while there's none; then the Inspector); upkeep keeps only Babo's own work; the Rounds tab and `babo rounds` (list, show, run, set); *waits its turn* or *runs right away* |
 
 ### Next, in this order
 
 | # | Step |
 |---|---|
-| 13 | **Rounds** (below): the engine; the night round shipped as a file; upkeep keeps only Babo's own work; the Rounds tab and `babo rounds`; when each round runs |
 | 14 | **Rehearsals and access per round**: unattended or live; the rehearsal report and the access it proposes |
 | 15 | **Vocabulary**: newcomers *move in*, *vacancies*, *errands*, *moved away*; the old names stay as temporary aliases |
 | 16 | **Offices as templates; vacancies; move-in requests with the rounds a newcomer joins**; the Mayor reads and proposes rounds; the web form to move someone in |

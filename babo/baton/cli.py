@@ -784,6 +784,100 @@ def settings(
 
 # -- residents' sessions in opencode -----------------------------------------------------
 
+rounds_app = typer.Typer(help="The town's work: rounds (when each runs, its steps by office), and Babo's own upkeep.", no_args_is_help=True)
+app.add_typer(rounds_app, name="rounds")
+
+
+@rounds_app.command("list")
+def rounds_list(config: str | None = _CONFIG_OPT):
+    """Every round: when it runs, its steps (and who does each), its last run; then what Babo does itself."""
+    from babo.baton import rounds
+
+    t, _ = _town(config)
+    data = rounds.overview(t)
+    table = Table("round", "when", "steps", "last run", "next")
+    for r in data["rounds"]:
+        steps = "\n".join(f"{i}. {s['office']}" + (f" ({s['holder']})" if s["holder"] and s["holder"] != s["office"] else "")
+                          + ("" if s["holder"] else " [vacancy]") for i, s in enumerate(r["steps"], 1))
+        when = r["when"] + ("" if r["runs"] == "wait" else "\nruns when triggered") + ("" if r["enabled"] else "\n[off]")
+        last = f"{r['last_run'][:16].replace('T', ' ')} {r['last_status']}" if r["last_run"] else "never"
+        table.add_row(f"{r['title']}\n[dim]{r['name']}[/dim]", when, steps, last, (r["next_run"] or "-").replace("T", " "))
+    console.print(table)
+    for name, why in data["broken"].items():
+        console.print(f"[red]rounds/{name}.md can't be read:[/red] {why}")
+    console.print("[bold]Part of Babo, always:[/bold] " + "; ".join(f"{b['title']} ({b['what']})" for b in data["babo"]))
+
+
+@rounds_app.command("show")
+def rounds_show(name: str = typer.Argument(...), config: str | None = _CONFIG_OPT):
+    """A round in full: its steps and duties, and its recent runs with each step's report."""
+    from babo.baton import rounds
+
+    t, _ = _town(config)
+    try:
+        r = rounds.get(t, name)
+    except rounds.RoundError as exc:
+        _fail(exc)
+        return
+    console.print(f"[bold]{r.title}[/bold] ({r.name}): {r.describe_when()}; "
+                  + ("waits for a free model" if r.runs == "wait" else "runs when triggered") + ("" if r.enabled else "; off"))
+    if r.about:
+        console.print(r.about)
+    for i, step in enumerate(r.steps, 1):
+        who = step.who(t)
+        console.print(f"  {i}. {step.office}{f' (or {step.fallback})' if step.fallback else ''}: {step.duty}"
+                      f"  [dim]{who or 'vacancy'} · material: {step.material}[/dim]")
+    for run in rounds.runs(t, name, limit=5):
+        console.print(f"\n[bold]{str(run['started'])[:16].replace('T', ' ')}[/bold] {run['status']} ({run['trigger']})")
+        for i, step in enumerate(run["steps"], 1):
+            console.print(f"  {i}. {step['office']} {step['resident']}: {step['status']} {step['note']}".rstrip())
+            if step["report"]:
+                console.print("     " + step["report"][:400].replace("\n", "\n     "))
+
+
+@rounds_app.command("run")
+def rounds_run(name: str = typer.Argument(...), here: bool = typer.Option(False, "--here", help="Run it now in this terminal, not through the upkeep service"),
+               config: str | None = _CONFIG_OPT):
+    """Run a round now: the upkeep service starts it within a minute (or --here, right away)."""
+    from babo.baton import rounds
+
+    t, cfg = _town(config)
+    try:
+        if not here:
+            console.print(rounds.request_run(t, name))
+            return
+        r = rounds.get(t, name)
+    except rounds.RoundError as exc:
+        _fail(exc)
+        return
+    from babo.baton.upkeep import Due, run_pass
+
+    result = asyncio.run(run_pass(cfg, Due(reasons=[f"round {name}, run by hand"], rounds=[(name, "run by hand")], residents=[])))
+    [last] = rounds.runs(t, name, limit=1) or [{"status": result.get("status"), "steps": []}]
+    console.print(f"{r.title}: {last['status']}")
+    for i, step in enumerate(last["steps"], 1):
+        console.print(f"  {i}. {step['office']} {step['resident']}: {step['status']} {step['note']}".rstrip())
+
+
+@rounds_app.command("set")
+def rounds_set(name: str = typer.Argument(...),
+               on: bool | None = typer.Option(None, "--on/--off", help="Turn the round on or off"),
+               runs: str | None = typer.Option(None, "--runs", help="wait (for a free model; the default) or now (when triggered, at the lowest priority: it competes with you for a local model)"),
+               config: str | None = _CONFIG_OPT):
+    """Turn a round on or off, or change when it runs."""
+    from babo.baton import rounds
+
+    t, _ = _town(config)
+    try:
+        r = rounds.set_options(t, name, enabled=on, runs=runs)
+    except rounds.RoundError as exc:
+        _fail(exc)
+        return
+    console.print(f"{r.title}: {'on' if r.enabled else 'off'}, {'waits for a free model' if r.runs == 'wait' else 'runs when triggered'}.")
+    if r.runs == "now":
+        console.print("[yellow]It won't wait for you to finish: while it runs, it shares the model with your chats and can slow them down.[/yellow]")
+
+
 session_app = typer.Typer(help="Residents' sessions in opencode: start (with a task), watch, open, send, stop, checkpoint, change model, freeze, remove.", no_args_is_help=True)
 app.add_typer(session_app, name="session")
 
