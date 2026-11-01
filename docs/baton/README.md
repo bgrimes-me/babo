@@ -111,6 +111,12 @@ Small models rarely open a document they're only told about, so Babo brings the 
 
 The guides are notes in the commons (`commons/guides/`). Babo ships a few and keeps them up to date until someone edits one; change them, or add your own, with a little frontmatter: `title`, `when`, and what brings it in (`tools`, `errors`, `offices`). `babo guides` (and *Guides* on the Town page's Settings tab) lists them with how often each was brought in or opened by hand; a guide that's opened by hand often probably needs a trigger.
 
+## When an agent goes round in circles, and when a task is done
+
+- **Loops are noticed.** The same call with the same arguments three times, or a tool tried again right after it was refused: the agent gets one short reminder with that call's result (step back, try another way, or say what's in the way). If it happens again in the same session, you get a notice that it seems stuck.
+- **Done means done.** Give a task a *done-check* (on the Sessions tab, or `babo session new archivist --task "…" --done-check "pytest -q"`): a command that must succeed in the resident's folder. When the resident finishes its turn, Babo runs it. If it fails, the resident is told what failed and carries on; after two tries you get a notice. The session doesn't wrap up until its check has passed, or given up. Only you can set one, since it runs as a command on the machine.
+- **Memory stays small.** BATON.md shows the twelve most recent threads (every checkpoint stays in `checkpoints/`), a checkpoint's lists keep their first eight items, and SELF.md is kept under about 1,200 tokens: a longer one is refused with that reason.
+
 ## How well a model does the work: `babo eval`
 
 `babo eval` runs about thirty representative tasks on a model preset and checks each one itself: does the model pick the right tool, with the right arguments; leave tools alone when it should; follow a tool's result to the next step; act on where it left off (its baton); write a checkpoint Babo can file. They go through the gateway like every model call, so the score is what the town's agents actually get, and the report counts the tool calls the gateway had to repair.

@@ -116,11 +116,17 @@ def current_entry(resident_dir: Path, thread: str | None = None) -> Checkpoint |
     return entries[0] if entries else None
 
 
+# BATON.md stays small: the most recent threads only (every checkpoint stays in checkpoints/).
+BATON_THREADS = 12
+
+
 def render_baton(entries: list[Checkpoint]) -> str:
     if not entries:
         return "# Baton\n\nNo checkpoints yet.\n"
-    body = "\n".join(cp.render() for cp in entries)
-    return "# Baton\n\nMy latest checkpoint for each thread, newest first.\n\n" + body
+    body = "\n".join(cp.render() for cp in entries[:BATON_THREADS])
+    older = len(entries) - BATON_THREADS
+    more = f"\n{older} older thread(s) are in checkpoints/ (search_memory finds them).\n" if older > 0 else ""
+    return "# Baton\n\nMy latest checkpoint for each thread, newest first.\n\n" + body + more
 
 
 def append_checkpoint(resident_dir: Path, cp: Checkpoint) -> Path:

@@ -157,9 +157,10 @@ describe("town page", () => {
     fireEvent.change(within(archivist).getByRole("textbox", { name: "What should archivist do?" }), { target: { value: "Index the notes" } });
     // The new session's form comes after the sessions' own rows.
     fireEvent.change(within(archivist).getAllByRole("combobox", { name: "Search the web" }).at(-1)!, { target: { value: "allow" } });
+    fireEvent.change(within(archivist).getByRole("textbox", { name: "Done when this command succeeds" }), { target: { value: " test -f index.md " } });
     fireEvent.click(within(archivist).getByRole("button", { name: "Start" }));
     await waitFor(() => expect(mocks.mutation).toHaveBeenCalledWith("town.session.new",
-      { resident: "archivist", task: "Index the notes", overrides: { web_search: "allow" } }, 120_000));
+      { resident: "archivist", task: "Index the notes", overrides: { web_search: "allow" }, done_check: "test -f index.md" }, 120_000));
     expect(await screen.findByRole("status")).toHaveTextContent("is running");
   });
 

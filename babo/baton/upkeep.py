@@ -36,7 +36,7 @@ from babo.baton.night import Night, read_offsets, unreviewed_events
 from babo.baton.notes import split_frontmatter
 from babo.baton.registry import Registry
 from babo.baton.tools.core import proposal_files
-from babo.baton.town import OWNER, Town, atomic_write, now_iso
+from babo.baton.town import OWNER, BatonError, Town, atomic_write, now_iso
 
 if TYPE_CHECKING:
     from babo.config.schema import Config
@@ -120,6 +120,12 @@ def due(town: Town, cfg: BatonConfig, *, now: datetime, model_idle_s: int | None
     opencode.notify_waiting(town)
     if config is not None:
         opencode.refresh_running_now(town, config)  # new letters reach running residents at their next turn
+        from babo.config.loader import get_config_path
+
+        try:  # a finished task is checked before it may wrap up
+            opencode.check_done(town, config, config_path=get_config_path().resolve())
+        except (BatonError, OSError) as exc:
+            logger.warning("Baton upkeep: done-checks: {}", exc)
     closing = opencode.needing_review(town, config, now=now) if config is not None else []
     for session, why in closing:
         out.sessions.append(f"{session.resident}/{session.id}")

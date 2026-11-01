@@ -257,7 +257,10 @@ class CheckpointService:
             if fold and reply.revise_self.strip():
                 from babo.baton.tools.core import Toolbox
 
-                Toolbox(self.town, self.resident_id, self.config.index_file).revise_self(reply.revise_self, reason="memory review")
+                try:
+                    Toolbox(self.town, self.resident_id, self.config.index_file).revise_self(reply.revise_self, reason="memory review")
+                except BatonError as exc:  # (too long, say): the review is still filed
+                    logger.warning("Baton: {}'s SELF.md was not revised: {}", self.resident_id, exc)
         else:
             outcome = self.mechanical(events or [], trigger=trigger, session_key=session_key, error=error)
         self.archive_exchange(session_key, exchange, outcome)

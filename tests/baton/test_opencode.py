@@ -345,6 +345,30 @@ def test_guides_come_with_the_result_that_needs_them_in_opencode_too(town: Town,
 
 
 @live
+def test_a_resident_going_round_in_circles_is_reminded_and_the_owner_told(town: Town, config_file, mock_llama: MockLlama) -> None:
+    from babo.baton import notices
+    from babo.baton.events import resident_events
+
+    path, cfg = config_file()
+    mine = town.resident_dir("archivist") / "notes.md"
+    mine.write_text("My own notes.\n")
+    same = tool_call("read", {"path": str(mine)})
+    mock_llama.default = _router([same] * 6 + [text("Stuck.")])
+    session = opencode.new_session(town, cfg, "archivist", title="circles")
+    try:
+        opencode.send(town, cfg, session, "Read your notes.", config_path=path)
+        last = [r for r in mock_llama.requests if r.get("tools")][-1]
+        results = [str(m["content"]) for m in last["messages"] if m["role"] == "tool"]
+        assert sum("[Babo: You've made the same `read` call 3 times" in r for r in results) == 2
+        opencode.ingest(town, opencode.get_session(town, "archivist", session.id))
+        assert [e["times"] for e in resident_events(town, "archivist") if e["kind"] == "drift"] == [1, 2]
+        [stuck] = [n for n in notices.recent(town) if n["kind"] == "stuck"]
+        assert "archivist seems stuck in “circles”" in stuck["text"]
+    finally:
+        opencode.freeze(town, session)
+
+
+@live
 async def test_upkeep_reviews_a_session_whose_instance_died(town: Town, config_file, mock_llama: MockLlama) -> None:
     import signal
     from datetime import datetime, timedelta

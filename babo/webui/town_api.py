@@ -160,8 +160,10 @@ def _session_change(action: str, payload: dict[str, Any]) -> str:
             raise BatonError("overrides must be an object")
         title = payload.get("title") if isinstance(payload.get("title"), str) else ""
         task = payload.get("task") if isinstance(payload.get("task"), str) else ""
+        done_check = payload.get("done_check") if isinstance(payload.get("done_check"), str) else ""
         return views.start_session(town, cfg, resident, title=cast(str, title)[:200], overrides=cast(dict[str, object], overrides),
-                                   config_path=get_config_path().resolve(), task=cast(str, task)[:20000])
+                                   config_path=get_config_path().resolve(), task=cast(str, task)[:20000],
+                                   done_check=cast(str, done_check)[:2000])
     session_id = _text(payload, "id", 80)
     config_path = get_config_path().resolve()
     if action == "send":

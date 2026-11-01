@@ -1745,6 +1745,9 @@ export interface TownSession {
   pinned?: boolean;
   /** The owner's own labels. */
   tags?: string[];
+  /** A command that must succeed before the task counts as done, and how it went ("" not yet, passed, failed). */
+  done_check?: string;
+  done_status?: string;
 }
 
 export type TownSessionAction =
@@ -1794,6 +1797,7 @@ export function changeTownSession(
     pinned?: boolean; tags?: string[];
     /** For "access": settings to change ("profile" goes back to the profile's); all: allow everything. */
     changes?: Record<string, string>; all?: boolean;
+    done_check?: string;
   },
 ): Promise<TownSessions & { message: string }> {
   return mutation<TownSessions & { message: string }>(transport, `town.session.${action}`, payload, 120_000);
