@@ -58,11 +58,11 @@ class ThinkingSplitter:
 
     def __init__(self, *, opens_thinking: bool = False) -> None:
         self._state: Literal["start", "thinking", "answer"] = "thinking" if opens_thinking else "start"
-        self._buf = ""
-        self._opened = opens_thinking
-        self._answer_started = False
-        self.orphan = False
-        self.saw_thinking = False
+        self._buf: str = ""
+        self._opened: bool = opens_thinking
+        self._answer_started: bool = False
+        self.orphan: bool = False
+        self.saw_thinking: bool = False
 
     def feed(self, text: str) -> list[Part]:
         self._buf += text
@@ -119,7 +119,8 @@ class ThinkingSplitter:
 
     def finish(self) -> list[Part]:
         """The rest, once the reply is complete (an unfinished tag is just text)."""
-        rest, self._buf = self._buf, ""
+        rest: str = self._buf
+        self._buf = ""
         out: list[Part] = []
         if self._state == "thinking":
             self._emit(out, "thinking", rest)
