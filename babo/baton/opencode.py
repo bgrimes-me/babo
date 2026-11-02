@@ -418,7 +418,7 @@ def opencode_config(town: Town, config: Config, session: Session, *, bundle: Pat
     servers: dict[str, Any] = {
         # Tools stay on the model's own tool list (not behind opencode's Code Mode, which is denied).
         PROVIDER: {"type": "local", "disabled": False, "codemode": False,
-                   "command": [babo, "mcp", "--as", session.resident, "-c", str(config_path)]},
+                   "command": [babo, "mcp", "--as", session.resident, "--session", session.id, "-c", str(config_path)]},
     }
     allowed_mcp: list[str] = []
     for name in profiles.mcp_servers(profile, sorted(config.tools.mcp_servers)):
@@ -542,6 +542,7 @@ def _memory_env(town: Town, config: Config, session: Session, *, config_path: Pa
     memory = config.baton.memory
     return {
         "BABO_BIN": babo, "BABO_CONFIG": str(config_path), "BABO_RESIDENT": session.resident, "BABO_SESSION": session.id,
+        "BABO_TASKS": str(_tasks_reminder(town, session)),
         "BABO_HOME": str(town.resident_dir(session.resident)),
         "BABO_SPOOL": str(spool_path(town, session)),
         "BABO_NOW": str(now_path(town, session)),
@@ -585,6 +586,12 @@ def write_bundle(town: Town, config: Config, session: Session) -> Path:
 
     atomic_write(guides_path(town, session), guides.plugin_file(town, Registry(town).require_active(session.resident).office))
     return path
+
+
+def _tasks_reminder(town: Town, session: Session) -> Path:
+    from babo.baton import tasks
+
+    return tasks.reminder_path(town, session.resident, session.id)
 
 
 def guides_path(town: Town, session: Session) -> Path:

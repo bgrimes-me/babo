@@ -221,3 +221,18 @@ def skills_provider(loop: AgentLoop, *, town: Town, resident_id: str, office: st
         return RuntimeContextBlock(source=SKILLS_SOURCE, content="\n\n".join(g.text() for g in found)) if found else None
 
     return provide
+
+
+TASKS_SOURCE = "baton_tasks"
+
+
+def tasks_provider(*, town: Town, resident_id: str) -> Callable[[RequestContext], Awaitable[RuntimeContextBlock | None]]:
+    """The conversation's task list, with each new message while something on it is still open."""
+    from babo.baton import tasks
+
+    async def provide(request: RequestContext) -> RuntimeContextBlock | None:
+        listed = await asyncio.to_thread(tasks.load, town, resident_id, request.session_key or "direct")
+        text = listed.reminder()
+        return RuntimeContextBlock(source=TASKS_SOURCE, content=text) if text else None
+
+    return provide

@@ -26,7 +26,9 @@ _COMMON_BATON = [
 ]
 
 DEFAULT_TOOLSETS: dict[str, list[str]] = {
-    "mayor": ["read_file", "write_file", "exec", "subagent", *_COMMON_BATON, "visit", "post_board", "send_errand"],
+    # (The Mayor does the town's longest work, so it keeps a task list; residents in opencode get
+    # update_tasks with the town's tools.)
+    "mayor": ["read_file", "write_file", "exec", "subagent", *_COMMON_BATON, "visit", "post_board", "send_errand", "update_tasks"],
     "archivist": [
         "read_file",
         *_COMMON_BATON,
@@ -35,7 +37,7 @@ DEFAULT_TOOLSETS: dict[str, list[str]] = {
         "commons_contest",
     ],
     "inspector": ["read_file", *_COMMON_BATON, "file_flag", "review_item"],
-    "default": ["read_file", "write_file", "exec", "subagent", *_COMMON_BATON],
+    "default": ["read_file", "write_file", "exec", "subagent", *_COMMON_BATON, "update_tasks"],
 }
 
 

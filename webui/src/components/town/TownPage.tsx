@@ -14,6 +14,7 @@ import { GuidesPanel } from "@/components/town/GuidesPanel";
 import { SessionAccessFields } from "@/components/town/AccessFields";
 import { RoundsView } from "@/components/town/RoundsView";
 import { OfficesPanel } from "@/components/town/OfficesPanel";
+import { TasksPanel } from "@/components/town/TasksPanel";
 import { useClient } from "@/providers/ClientProvider";
 import {
   decideTownItem,
@@ -199,6 +200,8 @@ function ResidentsView({ town, transport, onChanged, onError }: {
         </form>}
       </div>)}
     </SettingsGroup>
+
+    <TasksPanel />
 
     <OfficesPanel town={town} onChanged={onChanged} onError={onError} />
 

@@ -81,6 +81,15 @@ TOOL_SPECS: dict[str, ToolSpec] = {
             {"type": "object", "properties": {"text": _str("What to remember.")}, "required": ["text"]},
         ),
         ToolSpec(
+            "update_tasks",
+            "Keep a task list for work with several steps: give the whole list each time, each item with its status "
+            "(todo, doing, done, dropped). Babo shows it back to you as you go.",
+            {"type": "object", "properties": {"items": {"type": "array", "description": "The whole list, in order.", "items": {
+                "type": "object", "properties": {"task": _str("The step, in a few words."),
+                                                 "status": {"type": "string", "enum": ["todo", "doing", "done", "dropped"]}},
+                "required": ["task", "status"]}}}, "required": ["items"]},
+        ),
+        ToolSpec(
             "revise_self",
             "Rewrite your SELF.md (your own words about yourself). Optionally record a name you have chosen.",
             {
@@ -264,6 +273,9 @@ class Toolbox:
     on_write: Callable[[Path], None] | None = None
     # Extra tool implementations (checkpoint, visit, commons tools) registered by later phases.
     extra: dict[str, Callable[..., Any]] = field(default_factory=dict)
+    # The session it serves, for a resident in opencode (its tools server is one per session); the
+    # Mayor's comes with each request.
+    session: str = ""
 
     def __post_init__(self) -> None:
         self.registry = Registry(self.town)
@@ -349,6 +361,12 @@ class Toolbox:
         if target.parent == (self.home / "inbox").resolve() or target.parent == self.home / "inbox":
             set_flag(target, read=True)
         return trim_to_tokens(text, READ_NOTE_MAX_TOKENS, "\n[…the note continues; ask for a section if you need more]")
+
+    def update_tasks(self, items: object) -> str:
+        from babo.agent.tools.context import current_request_session_key
+        from babo.baton import tasks
+
+        return tasks.update(self.town, self.resident_id, self.session or current_request_session_key() or "direct", items)
 
     def remember(self, text: str) -> str:
         if not text.strip():

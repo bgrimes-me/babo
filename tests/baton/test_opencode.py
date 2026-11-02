@@ -72,7 +72,8 @@ def test_the_config_follows_the_profile_and_keeps_residents_in_their_own_workspa
     assert effect(rules, "babo_send_letter", "*") == "allow" and effect(rules, "notes_search", "*") == "allow"
     assert effect(rules, "mail_send", "*") == "deny" and effect(rules, "skill", "x") == "deny"
     servers = built["mcp"]["servers"]
-    assert servers["babo"]["command"] == ["babo", "mcp", "--as", "archivist", "-c", "/c.json"]
+    # (One tools server per session: its task list is that session's.)
+    assert servers["babo"]["command"] == ["babo", "mcp", "--as", "archivist", "--session", session.id, "-c", "/c.json"]
     assert servers["notes"] == {"type": "local", "command": ["notes-mcp", "--ro"], "disabled": False, "codemode": False}
     assert "mail" not in servers and effect(rules, "execute", "*") == "deny"  # no Code Mode: tools stay on the list
     assert built["instructions"] == ["/b.md"] and built["default_agent"] == "resident"
@@ -771,5 +772,27 @@ def test_a_skill_comes_with_the_message_that_calls_for_it_on_every_step_of_the_t
         assert opencode.send(town, cfg, session, "Now write to the mayor too.", config_path=path) == "Fine."
         last_user = [m for m in mock_llama.requests[-1]["messages"] if m["role"] == "user"][-1]
         assert "[Skill from Babo" not in _texts({"messages": [last_user]})  # once a session
+    finally:
+        opencode.freeze(town, session)
+
+
+@live
+def test_a_residents_task_list_is_its_sessions_and_comes_back_with_its_next_message(town: Town, config_file, mock_llama: MockLlama) -> None:
+    from babo.baton import tasks
+
+    path, cfg = config_file()
+    mock_llama.script = [tool_call("babo_update_tasks", {"items": [{"task": "List the notes", "status": "done"},
+                                                                   {"task": "Write the index", "status": "todo"}]}), text("Planned.")]
+    session = opencode.new_session(town, cfg, "archivist", title="tasks")
+    try:
+        assert opencode.send(town, cfg, session, "Make an index of the notes.", config_path=path) == "Planned."
+        listed = tasks.load(town, "archivist", session.id)
+        assert [i.task for i in listed.items] == ["List the notes", "Write the index"]  # this session's list
+        result = [m for m in mock_llama.requests[-1]["messages"] if m["role"] == "tool"][-1]
+        assert "1 of 2 done" in str(result["content"])
+        mock_llama.script = [text("Going on.")]
+        assert opencode.send(town, cfg, session, "Carry on.", config_path=path) == "Going on."
+        last_user = [m for m in mock_llama.requests[-1]["messages"] if m["role"] == "user"][-1]
+        assert "[Your task list, from Babo" in _texts({"messages": [last_user]}) and "Write the index" in _texts({"messages": [last_user]})
     finally:
         opencode.freeze(town, session)
