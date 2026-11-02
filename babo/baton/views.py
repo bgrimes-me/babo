@@ -21,7 +21,7 @@ from babo.baton.town import OWNER, BatonError, Town
 if TYPE_CHECKING:
     from babo.config.schema import Config
 
-DecisionKind = Literal["tool", "proposal", "move_in", "flag", "errand", "founding", "session"]  # the last two: old names (step 24)
+DecisionKind = Literal["tool", "proposal", "move_in", "flag", "errand", "founding", "session"]  # the last two: old names (step 28)
 
 
 def town_overview(town: Town, cfg: BatonConfig) -> dict[str, Any]:

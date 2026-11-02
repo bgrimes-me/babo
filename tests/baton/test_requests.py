@@ -305,4 +305,4 @@ def test_the_old_names_still_work_until_step_23(town: Town, box) -> None:
     found_town(town.root, offices=("mayor",))
     assert "kind: move_in_request" in (town.board / "2026-01-01-founding_request-baker.md").read_text()
     assert len(founding_requests(town)) == 2
-    assert aliases.GOING == "step 24"
+    assert aliases.GOING == "step 28"
