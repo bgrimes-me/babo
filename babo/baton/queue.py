@@ -33,7 +33,13 @@ from loguru import logger
 
 from babo.baton.config import BatonModelConfig
 from babo.baton.gateway import ProviderCallError, RouterSource, as_stream, call_provider
-from babo.baton.toolcall_repair import StreamRepair, offered_tools, repair_completion, repair_stream
+from babo.baton.toolcall_repair import (
+    StreamRepair,
+    offered_tools,
+    repair_completion,
+    repair_stream,
+    separate_thinking,
+)
 
 PRIORITIES = {"interactive": 0, "visit": 1, "upkeep": 2}
 UPKEEP = PRIORITIES["upkeep"]
@@ -166,6 +172,7 @@ class ModelQueue:
         priority = PRIORITIES.get(request.headers.get("X-Baton-Priority", "interactive"), 0)
         self._capture(resident, request.path, body)
         tools: dict[str, dict[str, Any]] = {}
+        chat_model = ""  # a chat call's model: its replies are read for thinking (and repaired)
         if self.router is not None and request.method == "POST" and request.path.endswith("chat/completions"):
             try:
                 parsed = cast(dict[str, Any], json.loads(body))
@@ -177,6 +184,7 @@ class ModelQueue:
                 if not route.local:
                     return await self._provider(request, route, parsed, resident, tools)
                 body = json.dumps({**parsed, "model": route.model}).encode()
+                chat_model = route.model
         url = self.config.upstream.rstrip("/") + request.rel_url.path_qs
         headers = {k: v for k, v in request.headers.items() if k.lower() not in _HOP_HEADERS and not k.lower().startswith("x-baton-")}
         someone = priority < UPKEEP
@@ -202,8 +210,8 @@ class ModelQueue:
 
         try:
             async with self._client().request(request.method, url, data=body, headers=headers) as upstream:
-                if tools and upstream.status == 200:
-                    return await self._repaired(request, upstream, tools, resident)
+                if chat_model and upstream.status == 200:
+                    return await self._repaired(request, upstream, tools, resident, chat_model)
                 response = web.StreamResponse(status=upstream.status)
                 for key, value in upstream.headers.items():
                     if key.lower() not in _HOP_HEADERS and key.lower() != "content-encoding":
@@ -221,22 +229,31 @@ class ModelQueue:
 
 
     async def _repaired(self, request: web.Request, upstream: aiohttp.ClientResponse, tools: dict[str, dict[str, Any]],
-                        resident: str) -> web.StreamResponse:
-        """The model server's answer, with any tool call it missed (left as text) repaired."""
+                        resident: str, model: str) -> web.StreamResponse:
+        """The model server's answer, with its thinking told apart from its answer, and any tool call it
+        missed (left as text) repaired."""
+        from babo.providers import thinking
+
+        base = self.config.upstream
+        opens = thinking.opens_thinking(base, model)
         if "text/event-stream" not in upstream.headers.get("Content-Type", ""):
             raw = await upstream.read()
             try:
                 completion = cast(dict[str, Any], json.loads(raw))
             except ValueError:
                 return web.Response(body=raw, status=upstream.status, content_type=upstream.content_type)
+            if separate_thinking(completion, opens=opens) and not opens:
+                thinking.remember_opens_thinking(base, model)
             self._count(repair_completion(completion, tools), resident)
             return web.json_response(completion)
         response = web.StreamResponse(status=200, headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache"})
         await response.prepare(request)
-        repair = StreamRepair(tools)
+        repair = StreamRepair(tools, opens_thinking=opens)
         async for chunk in repair_stream(upstream.content.iter_any(), repair):
             await response.write(chunk)
         await response.write_eof()
+        if repair.orphan and not opens:
+            thinking.remember_opens_thinking(base, model)
         self._count(repair.repaired, resident)
         return response
 

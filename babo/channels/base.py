@@ -191,8 +191,15 @@ class BaseChannel(ABC):
 
         Streaming contract mirrors :meth:`send_delta`: stateful implementations
         should key buffers by ``stream_id`` rather than only by ``chat_id``.
+
+        Babo's default (for channels without their own): the thinking is kept until it
+        ends, then sent as one message of its own, labelled (see :meth:`format_reasoning`).
+        A channel that shouldn't do that (email) sets ``reasoning_as_message = False``.
         """
-        return
+        if not self.reasoning_as_message or not delta:
+            return
+        key = (chat_id, stream_id)
+        self._reasoning_bufs[key] = self._reasoning_bufs.get(key, "") + delta
 
     async def send_reasoning_end(
         self,
@@ -203,11 +210,34 @@ class BaseChannel(ABC):
     ) -> None:
         """Mark the end of a reasoning stream segment.
 
-        Default is no-op. Channels that buffer ``send_reasoning_delta``
-        chunks for in-place updates use this signal to flush and freeze
-        the rendered group; one-shot channels can ignore it entirely.
+        Channels that buffer ``send_reasoning_delta`` chunks for in-place
+        updates use this signal to flush and freeze the rendered group. Babo's
+        default sends what was kept as one labelled message.
         """
-        return
+        text = self._reasoning_bufs.pop((chat_id, stream_id), "")
+        if not self.reasoning_as_message or not text.strip():
+            return
+        await self.send(OutboundMessage(channel=self.name, chat_id=chat_id, content=self.format_reasoning(text.strip()),
+                                        metadata=dict(metadata or {})))
+
+    reasoning_as_message: bool = True
+    REASONING_LIMIT = 1800
+
+    @property
+    def _reasoning_bufs(self) -> dict[tuple[str, str | None], str]:
+        """Thinking kept until it ends, per chat and stream (made on first use: subclasses needn't call anything)."""
+        bufs = cast(dict[tuple[str, str | None], str] | None, getattr(self, "_reasoning_buf_store", None))
+        if bufs is None:
+            bufs = {}
+            self._reasoning_buf_store = bufs
+        return bufs
+
+    def format_reasoning(self, text: str) -> str:
+        """The thinking as one message: labelled, set apart from the answer, cut short if it's long."""
+        if len(text) > self.REASONING_LIMIT:
+            text = text[: self.REASONING_LIMIT].rstrip() + " …"
+        quoted = "\n".join(f"> {line}" if line.strip() else ">" for line in text.splitlines())
+        return f"💭 *Thinking*\n{quoted}"
 
     async def send_file_edit_events(
         self,

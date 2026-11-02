@@ -1252,7 +1252,8 @@ describe("MessageBubble", () => {
       "Step 1: parse intent. Step 2: compute.",
     );
     expect(screen.queryByText("Thinking…")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /thinking/i })).not.toBeInTheDocument();
+    // The label is the button that opens the whole thinking; it starts closed.
+    expect(screen.getByRole("button", { name: /thinking/i })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("keeps completed reasoning on one line above the answer", () => {
@@ -1270,9 +1271,8 @@ describe("MessageBubble", () => {
     const preview = screen.getByText("hidden until expanded");
     expect(preview).toBeInTheDocument();
     expect(screen.getByText("The answer is 42.")).toBeInTheDocument();
-    expect(preview.closest('[data-testid="activity-step"]')).toHaveClass("mb-2");
-    expect(screen.queryByText("Thinking")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /thinking/i })).not.toBeInTheDocument();
+    expect(preview.closest('[data-testid="reasoning-row"]')).toHaveClass("mb-2");
+    expect(screen.getByRole("button", { name: /thinking/i })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("compacts reasoning markdown into plain single-line text", () => {

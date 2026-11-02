@@ -124,3 +124,53 @@ async def test_the_gateway_repairs_calls_from_the_local_model(tmp_path: Path, mo
             assert (await client.get(base.removesuffix("/v1") + "/baton/queue")).json()["repaired_tool_calls"] == 2
     finally:
         await runner.cleanup()
+
+
+def _reasoning_and_content(raw: bytes) -> tuple[str, str]:
+    thought, content = "", ""
+    for line in raw.decode().splitlines():
+        if line.startswith("data: {"):
+            delta = json.loads(line[6:])["choices"][0]["delta"] if json.loads(line[6:])["choices"] else {}
+            thought += delta.get("reasoning_content") or ""
+            content += delta.get("content") or ""
+    return thought, content
+
+
+def test_inline_thinking_in_a_stream_goes_on_as_thinking_with_or_without_tools() -> None:
+    for tools in (TOOLS, {}):
+        repair = StreamRepair(tools)
+        chunks = [c for piece in ["<think>Which", " file?</think>\n\nRead", "ing it."] for c in _stream({"content": piece})[:1]] + _stream()[-2:]
+        raw = b"".join(out for chunk in chunks for out in repair.feed(chunk)) + b"".join(repair.close())
+        assert _reasoning_and_content(raw) == ("Which file?", "Reading it.")
+    repair = StreamRepair({}, opens_thinking=False)  # its template opens thinking: learned from the closing tag
+    raw = b"".join(out for chunk in _stream({"content": "Look first.</think>Done."}) for out in repair.feed(chunk))
+    assert _reasoning_and_content(raw)[1].endswith("Done.") and repair.orphan
+    repair = StreamRepair({}, opens_thinking=True)
+    raw = b"".join(out for chunk in _stream({"content": "Look"}, {"content": " first.</think>Done."}) for out in repair.feed(chunk))
+    assert _reasoning_and_content(raw) == ("Look first.", "Done.")
+
+
+async def test_the_gateway_gives_residents_thinking_as_thinking(tmp_path: Path, mock_llama: MockLlama, monkeypatch) -> None:
+    from babo.providers import thinking
+
+    monkeypatch.setattr(thinking, "_path", lambda: tmp_path / "opens-thinking.json")
+    monkeypatch.setattr(thinking, "_known", None)
+    path = tmp_path / "config.json"
+    queue = ModelQueue(BatonModelConfig(upstream=mock_llama.base_url), router=RouterSource(path))
+    runner, base = await _serve(queue)
+    try:
+        _config(path, upstream=mock_llama.base_url, queue=base, cloud="http://127.0.0.1:9/v1")
+        async with httpx.AsyncClient(timeout=30) as client:
+            mock_llama.default = text("<think>Who asks?</think>\n\nThe archivist.")
+            plain = (await client.post(base + "/chat/completions", json={"model": "town", "messages": []})).json()
+            assert plain["choices"][0]["message"] == {"role": "assistant", "content": "The archivist.", "reasoning_content": "Who asks?"}
+            streamed = await client.post(base + "/chat/completions", json={"model": "town", "stream": True, "messages": []})
+            assert _reasoning_and_content(streamed.content) == ("Who asks?", "The archivist.")
+            # A template that opens thinking: the first reply shows it, and later ones are read that way.
+            mock_llama.default = text("Who asks?</think>The archivist.")
+            plain = (await client.post(base + "/chat/completions", json={"model": "town", "messages": []})).json()
+            assert plain["choices"][0]["message"]["content"] == "The archivist."
+            streamed = await client.post(base + "/chat/completions", json={"model": "town", "stream": True, "messages": []})
+            assert _reasoning_and_content(streamed.content) == ("Who asks?", "The archivist.")
+    finally:
+        await runner.cleanup()

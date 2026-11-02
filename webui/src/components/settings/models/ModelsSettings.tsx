@@ -554,6 +554,7 @@ export function ModelsSettings({
           onChange={(reasoningEffort) => setForm((prev) => ({ ...prev, reasoningEffort }))}
         />
       </SettingsRow>
+      <EffortNote provider={selectedProvider ?? settings.providers.find((provider) => provider.name === selectedPreset?.resolved_provider)} />
       <Dialog open={advancedOpen} onOpenChange={(open) => {
         if (!open && !creating && edits.needsCompletion()) {
           void edits.commit().then((saved) => { if (saved) setAdvancedOpen(false); });
@@ -1073,4 +1074,15 @@ function modelPresetProviderKey(
     );
   }
   return provider;
+}
+
+
+/** What the effort setting really does for this model, said plainly: for a server on your own machine (or any
+ *  custom endpoint) Babo can only pass it on, and the server decides. */
+function EffortNote({ provider }: { provider: { name: string; is_custom?: boolean; model_catalog?: string } | undefined }) {
+  const { t } = useTranslation();
+  if (!provider || !(provider.is_custom || provider.model_catalog === "local" || provider.model_catalog === "custom")) return null;
+  return <p data-testid="effort-note" className="settings-list-inset -mt-1 mb-1 text-[12px] leading-5 text-muted-foreground">
+    {t("settings.models.effortLocal", { defaultValue: "On this server, Babo only passes the effort on (as reasoning_effort); the server decides what it does. llama.cpp ignores it for most models, Qwen included: there, whether and how much the model thinks is set on the server (its chat template and flags). Whatever thinking the model does is shown either way." })}
+  </p>;
 }

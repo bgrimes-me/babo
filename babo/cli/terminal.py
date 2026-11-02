@@ -331,7 +331,10 @@ def _print_cli_reasoning(
     with pause:
         if renderer:
             renderer.ensure_header()
-        target.print(f"[dim italic]✻ {text}[/dim italic]")
+        # Labelled, and set apart from the answer; Text keeps brackets in the thinking from being read as markup.
+        target.print(Text("[thinking]", style="bold magenta dim"))
+        target.print(Text(text.strip(), style="dim italic"))
+        target.print(Text("[/thinking]", style="bold magenta dim"))
 
 
 def _flush_cli_reasoning(

@@ -139,6 +139,26 @@ def parse_calls(text: str, tools: dict[str, dict[str, Any]]) -> tuple[str, list[
     return rest.strip(), calls
 
 
+def separate_thinking(completion: dict[str, Any], *, opens: bool = False) -> bool:
+    """Thinking inside a finished completion's text moved to ``reasoning_content``, in place (see
+    ``babo.providers.thinking``). Returns whether the reply showed its template opens thinking."""
+    from babo.providers.thinking import split_thinking
+
+    orphan = False
+    for choice in cast(list[dict[str, Any]], completion.get("choices") or []):
+        message = cast(dict[str, Any], choice.get("message") or {})
+        content = message.get("content")
+        if not isinstance(content, str) or not content:
+            continue
+        thought, answer, found = split_thinking(content, opens_thinking=opens and not message.get("reasoning_content"))
+        orphan = orphan or found
+        if thought is not None:
+            earlier = message.get("reasoning_content")
+            message["reasoning_content"] = f"{earlier}\n\n{thought}" if isinstance(earlier, str) and earlier else thought
+            message["content"] = answer or None
+    return orphan
+
+
 def repair_completion(completion: dict[str, Any], tools: dict[str, dict[str, Any]]) -> int:
     """Repair a finished (non-streamed) completion in place. Returns how many calls were repaired."""
     repaired = 0
@@ -169,12 +189,31 @@ class StreamRepair:
 
     tools: dict[str, dict[str, Any]]
     repaired: int = 0
+    opens_thinking: bool = False  # learned: the model's template opens thinking (see babo.providers.thinking)
     _buffer: bytes = b""
     _pending: str = ""  # text not sent yet: maybe the start of a marker
     _held: str = ""  # text from a marker on: maybe a call
     _native: bool = False  # the server parsed calls itself: nothing to repair
     _head: dict[str, Any] = field(default_factory=lambda: cast(dict[str, Any], {}))
     _done: bool = False
+    _thinking: Any = None
+
+    def __post_init__(self) -> None:
+        from babo.providers.thinking import ThinkingSplitter
+
+        self._thinking = ThinkingSplitter(opens_thinking=self.opens_thinking)
+
+    @property
+    def orphan(self) -> bool:
+        """This reply showed its model's template opens thinking (remember it)."""
+        return bool(self._thinking.orphan)
+
+    def _content(self, parts: list[tuple[str, str]]) -> list[bytes]:
+        """The reply's text, split: thinking goes on as ``reasoning_content``, the answer as content."""
+        out: list[bytes] = []
+        for kind, text in parts:
+            out += [self._event({"reasoning_content": text})] if kind == "thinking" else self._text(text)
+        return out
 
     def _event(self, delta: dict[str, Any], finish: str | None = None, **extra: Any) -> bytes:
         payload = {**self._head, "choices": [{"index": 0, "delta": delta, "finish_reason": finish}], **extra}
@@ -187,6 +226,8 @@ class StreamRepair:
             return out
         text = self._pending + delta
         self._pending = ""
+        if not self.tools:  # nothing to repair
+            return [self._event({"content": text})] if text else out
         at = min((i for i in (text.find(m) for m in MARKERS) if i >= 0), default=-1)
         if at >= 0:
             before, self._held = text[:at], text[at:]
@@ -198,7 +239,7 @@ class StreamRepair:
         return out
 
     def _finish(self, finish: str | None, extra: dict[str, Any]) -> list[bytes]:
-        out: list[bytes] = []
+        out: list[bytes] = self._content(self._thinking.finish())
         if self._held:
             rest, calls = parse_calls(self._held, self.tools)
             if calls:
@@ -242,9 +283,11 @@ class StreamRepair:
         content = delta.get("content")
         others = {k: v for k, v in delta.items() if k != "content"}
         if others and any(v not in (None, "") for v in others.values()):
+            if others.get("reasoning_content") or others.get("reasoning"):
+                self._thinking.native()  # thinking comes in its own field: the text is all answer
             out.append(self._event(others))
         if isinstance(content, str) and content:
-            out += self._text(content)
+            out += self._content(self._thinking.feed(content))
         if choice.get("finish_reason") is not None:
             extra = {"usage": event["usage"]} if event.get("usage") else {}
             out += self._finish(cast(str, choice["finish_reason"]), extra)

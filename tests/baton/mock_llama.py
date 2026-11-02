@@ -27,6 +27,11 @@ def text(content: str) -> dict[str, Any]:
     return {"content": content}
 
 
+def thought(reasoning: str, content: str) -> dict[str, Any]:
+    """Thinking in its own field, the way llama.cpp sends it by default."""
+    return {"reasoning_content": reasoning, "content": content}
+
+
 def tool_call(name: str, arguments: dict[str, Any] | str) -> dict[str, Any]:
     args = arguments if isinstance(arguments, str) else json.dumps(arguments)
     return {"tool_calls": [{"name": name, "arguments": args}]}
@@ -151,6 +156,8 @@ class MockLlama:
     def _completion(self, reply: dict[str, Any]) -> dict[str, Any]:
         calls = self._tool_calls(reply)
         message: dict[str, Any] = {"role": "assistant", "content": reply.get("content")}
+        if reply.get("reasoning_content"):
+            message["reasoning_content"] = reply["reasoning_content"]
         if calls:
             message["tool_calls"] = calls
         return {
@@ -172,6 +179,8 @@ class MockLlama:
 
         base = {"id": "chatcmpl-mock", "object": "chat.completion.chunk", "created": int(time.time()), "model": "mock-model"}
         await send({**base, "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}]})
+        if reply.get("reasoning_content"):
+            await send({**base, "choices": [{"index": 0, "delta": {"reasoning_content": reply["reasoning_content"]}, "finish_reason": None}]})
         if reply.get("content"):
             await send({**base, "choices": [{"index": 0, "delta": {"content": reply["content"]}, "finish_reason": None}]})
         calls = self._tool_calls(reply)

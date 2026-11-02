@@ -57,3 +57,16 @@ it("does not split a surrogate pair at the reasoning preview boundary", () => {
   render(<ReasoningRow text={"x".repeat(511) + "🚀 tail"} streaming />);
   expect(screen.getByTestId("activity-line").textContent).toBe("x".repeat(511) + "…");
 });
+
+it("opens the whole thinking, labelled, in its own panel", async () => {
+  const user = userEvent.setup();
+  render(<ReasoningRow text={"First I check the board.\n\nThen I answer."} streaming={false} />);
+  const toggle = screen.getByRole("button", { name: /Thinking/ });
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("region", { name: "The model's thinking" })).toBeNull();
+  await user.click(toggle);
+  expect(toggle).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("region", { name: "The model's thinking" }).textContent).toBe("First I check the board.\n\nThen I answer.");
+  await user.click(toggle);
+  expect(screen.queryByRole("region", { name: "The model's thinking" })).toBeNull();
+});

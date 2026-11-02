@@ -1410,7 +1410,9 @@ describe("AgentActivityCluster", () => {
 
     expect(screen.getByText("Planning a focused search for official sources")).toBeInTheDocument();
     expect(screen.queryByText("Thinking…")).not.toBeInTheDocument();
-    expect(screen.queryByText("Thinking")).not.toBeInTheDocument();
+    // One row: the preview, and the label is the button that opens the whole thinking.
+    expect(screen.getAllByTestId("reasoning-row")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: /Thinking/ })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("labels rejected CLI app calls as failed instead of ran", () => {

@@ -18,7 +18,7 @@ import pytest
 from babo.baton import opencode, views
 from babo.baton.town import BatonError, Town
 from baton.conftest import config_dict
-from baton.mock_llama import MockLlama, schema, text, tool_call
+from baton.mock_llama import MockLlama, schema, text, thought, tool_call
 
 OPENCODE = os.environ.get("BABO_TEST_OPENCODE") or shutil.which("opencode")
 live = pytest.mark.skipif(not OPENCODE, reason="opencode is not installed (set BABO_TEST_OPENCODE)")
@@ -730,3 +730,23 @@ def test_a_session_opens_without_a_password_and_babo_knows_who_is_there(town: To
     finally:
         opencode.freeze(town, session)
     _wait(lambda: not opencode._alive(run.door_pid), 10)  # pyright: ignore[reportPrivateUsage]
+
+
+@live
+def test_a_residents_thinking_shows_as_thinking_in_opencode_not_in_its_answer(town: Town, config_file, mock_llama: MockLlama) -> None:
+    """Thinking in its own field (llama.cpp's default, and what Babo's gateway makes of inline thinking): opencode
+    keeps it as thinking, apart from the answer."""
+    path, cfg = config_file()
+    mock_llama.default = thought("Who is asking? The owner.", "I'm the archivist.")
+    session = opencode.new_session(town, cfg, "archivist", title="thinking")
+    try:
+        assert opencode.send(town, cfg, session, "Who are you?", config_path=path) == "I'm the archivist."
+        run = opencode.running(town, opencode.get_session(town, "archivist", session.id))
+        assert run is not None
+        [reply] = [m for m in opencode._messages(run, opencode.get_session(town, "archivist", session.id))  # pyright: ignore[reportPrivateUsage]
+                   if m.get("type") == "assistant"]
+        parts = {str(p.get("type")): str(p.get("text") or "") for p in reply.get("content") or []}
+        assert parts.get("reasoning", "").strip() == "Who is asking? The owner."
+        assert "<think>" not in parts.get("text", "") and "Who is asking" not in parts.get("text", "")
+    finally:
+        opencode.freeze(town, session)
