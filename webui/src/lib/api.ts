@@ -1873,6 +1873,9 @@ export function runTownEval(transport: WebUIMutationTransport, preset: string, b
 /** The guides Babo brings in when they're needed (`babo guides`). */
 export interface TownGuide {
   name: string; title: string; when: string; tools: string[]; errors: string[]; offices: string[];
+  /** Words in a turn's message that bring it in (skills, mostly). */
+  keywords?: string[];
+  kind?: "guide" | "skill";
   brought: number; opened: number; hint: string;
 }
 

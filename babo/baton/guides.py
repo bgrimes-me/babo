@@ -19,6 +19,16 @@ Guides live in the commons (``commons/guides/``), as notes with a little
 frontmatter: ``title``, ``when``, and the triggers (``tools``, ``errors``,
 ``offices``). Babo ships a few, kept up to date while nobody has edited them;
 the owner (and the Archivist, through review) may change them or add more.
+
+**Skills** (step 18) are brought in the same way: the town's skills
+(``commons/skills/<name>/SKILL.md``, written by the Archivist) are listed in the
+ledger (which, unlike this index, is trimmed before a resident's baton), and
+brought in when they're needed: with the
+first call of a tool they name, or with the turn's message when it has one of
+their ``keywords`` in it. Their frontmatter is a skill's usual one (``name``,
+``description``), plus Babo's triggers: ``when``, ``keywords``, ``tools``,
+``offices``. A skill without triggers is still in the index, to be read by hand
+(``read_note("skill:<name>")``).
 """
 
 from __future__ import annotations
@@ -34,6 +44,7 @@ from babo.baton.town import Town
 
 GUIDES_DIR = "guides"
 EVENT = "guide"
+SKILL_MAX_CHARS = 6000  # a skill brought in whole up to this; past it, the start and where to read the rest
 # Tool names as opencode or MCP clients show them, to Babo's own.
 _PREFIXES = ("babo_",)
 _ALIASES = {"bash": "shell", "exec": "shell"}
@@ -48,13 +59,24 @@ class Guide:
     tools: tuple[str, ...] = ()
     errors: tuple[str, ...] = ()
     offices: tuple[str, ...] = ()  # empty: every resident
+    keywords: tuple[str, ...] = ()  # words in the turn's message that bring it in
+    kind: str = "guide"  # guide | skill
 
     def for_office(self, office: str) -> bool:
         return not self.offices or office in self.offices
 
     def text(self) -> str:
         """The guide as it is brought in: marked as Babo's, so it isn't mistaken for the tool's output."""
+        if self.kind == "skill":
+            body = self.body.strip()
+            if len(body) > SKILL_MAX_CHARS:
+                body = body[:SKILL_MAX_CHARS].rstrip() + f"\n\n… (the rest: read_note(\"skill:{self.name}\"))"
+            return f"[Skill from Babo: {self.name}. Follow it for this.]\n\n{body}\n\n[End of the skill]"
         return f"[Guide from Babo: {self.title}. Read it before you go on.]\n\n{self.body.strip()}\n\n[End of the guide]"
+
+    def matches(self, message: str) -> bool:
+        """Whether the message has one of its keywords (whole words, any case)."""
+        return any(re.search(rf"(?<![\w-]){re.escape(k)}(?![\w-])", message, re.IGNORECASE) for k in self.keywords if k.strip())
 
 
 def folder(town: Town) -> Path:
@@ -70,6 +92,27 @@ def _strings(value: object) -> tuple[str, ...]:
 
 
 def load(town: Town) -> list[Guide]:
+    """The town's guides, then its skills."""
+    return load_guides(town) + load_skills(town)
+
+
+def load_skills(town: Town) -> list[Guide]:
+    out: list[Guide] = []
+    for path in sorted(town.skills.glob("*/SKILL.md")):
+        try:
+            meta, body = split_frontmatter(path.read_text(encoding="utf-8"))
+        except OSError:
+            continue
+        if not body.strip():
+            continue
+        name = str(meta.get("name") or path.parent.name)
+        out.append(Guide(name, name, str(meta.get("when") or meta.get("description") or ""), body,
+                         tuple(_tool(t) for t in _strings(meta.get("tools"))), (), _strings(meta.get("offices")),
+                         _strings(meta.get("keywords")), "skill"))
+    return out
+
+
+def load_guides(town: Town) -> list[Guide]:
     out: list[Guide] = []
     for path in sorted(folder(town).glob("*.md")):
         try:
@@ -104,10 +147,13 @@ def _tool(name: str) -> str:
 
 def index_text(town: Town, office: str) -> str:
     """The always-present index: one line per guide, saying when to read it."""
-    mine = [g for g in load(town) if g.for_office(office)]
+    # (Skills aren't listed here: the ledger lists them, and it's trimmed before the baton is; this index
+    # never is, so it stays the guides' few lines.)
+    mine = [g for g in load_guides(town) if g.for_office(office)]
     if not mine:
         return ""
-    lines = ["## Guides", "", "Babo brings a guide in when you need it. Read one any time with `read_note(\"guides/<name>.md\")`."]
+    lines = ["## Guides", "", "Babo brings a guide in when you need it, and a skill when it fits. Read a guide any time with "
+             "`read_note(\"guides/<name>.md\")`, a skill with `read_note(\"skill:<name>\")`."]
     lines += [f"- `{g.name}`: {g.when or g.title}" for g in mine]
     return "\n".join(lines)
 
@@ -133,19 +179,29 @@ class Shown:
         seen.update(g.name for g, _ in out)
         return out
 
+    def due_for_message(self, session: str, guides: list[Guide], message: str) -> list[Guide]:
+        """The skills (and guides) the turn's message calls for, by their keywords. Once per session each."""
+        seen = self.names.setdefault(session, set())
+        out = [g for g in guides if g.keywords and g.name not in seen and g.matches(message)]
+        seen.update(g.name for g in out)
+        return out
+
 
 def plugin_file(town: Town, office: str) -> str:
     """What Babo's opencode plugin needs to bring guides in itself: the triggers and the text."""
-    return json.dumps([{**{k: v for k, v in asdict(g).items() if k in ("name", "tools", "errors")}, "text": g.text()}
-                       for g in load(town) if g.for_office(office) and (g.tools or g.errors)], ensure_ascii=False)
+    return json.dumps([{**{k: v for k, v in asdict(g).items() if k in ("name", "tools", "errors", "keywords", "kind")}, "text": g.text()}
+                       for g in load(town) if g.for_office(office) and (g.tools or g.errors or g.keywords)], ensure_ascii=False)
 
 
 def is_guide_path(town: Town, path: Path) -> str:
-    """The guide's name, if ``path`` is one (for logging guides opened by hand)."""
+    """The guide's (or skill's) name, if ``path`` is one (for logging guides opened by hand)."""
     try:
         resolved = path.resolve()
         if resolved.parent == folder(town).resolve() and resolved.suffix == ".md":
             return resolved.stem
+        if resolved.name == "SKILL.md" and resolved.parent.parent == town.skills.resolve():
+            skill = next((g for g in load_skills(town) if town.skills.resolve() / resolved.parent.name / "SKILL.md" == resolved), None)
+            return skill.name if skill else resolved.parent.name
     except OSError:
         pass
     return ""
@@ -169,9 +225,12 @@ def stats(town: Town) -> list[dict[str, Any]]:
     for g in load(town):
         hint = ""
         if opened.get(g.name, 0) >= 3 and opened.get(g.name, 0) > brought.get(g.name, 0):
-            hint = "Opened by hand more often than brought in: it may need a trigger (tools or errors)."
+            hint = "Opened by hand more often than brought in: it may need a trigger (tools, errors or keywords)."
+        if g.kind == "skill" and not hint and not (g.tools or g.keywords):
+            hint = "No triggers: it's only read by hand. Give it keywords (or tools) to be brought in when it fits."
         rows.append({"name": g.name, "title": g.title, "when": g.when, "tools": list(g.tools), "errors": list(g.errors),
-                     "offices": list(g.offices), "brought": brought.get(g.name, 0), "opened": opened.get(g.name, 0), "hint": hint})
+                     "offices": list(g.offices), "keywords": list(g.keywords), "kind": g.kind,
+                     "brought": brought.get(g.name, 0), "opened": opened.get(g.name, 0), "hint": hint})
     return rows
 
 

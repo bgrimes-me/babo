@@ -750,3 +750,26 @@ def test_a_residents_thinking_shows_as_thinking_in_opencode_not_in_its_answer(to
         assert "<think>" not in parts.get("text", "") and "Who is asking" not in parts.get("text", "")
     finally:
         opencode.freeze(town, session)
+
+
+@live
+def test_a_skill_comes_with_the_message_that_calls_for_it_on_every_step_of_the_turn(town: Town, config_file, mock_llama: MockLlama) -> None:
+    path, cfg = config_file()
+    (town.skills / "letters-out").mkdir(parents=True, exist_ok=True)
+    (town.skills / "letters-out" / "SKILL.md").write_text(
+        "---\nname: letters-out\nwhen: writing to another resident\nkeywords: [write to]\n---\nKeep a letter to three lines.\n")
+    note = town.resident_dir("archivist") / "draft.md"
+    mock_llama.script = [tool_call("write", {"path": str(note), "content": "Hi."}), text("Written.")]
+    session = opencode.new_session(town, cfg, "archivist", title="skills")
+    try:
+        assert opencode.send(town, cfg, session, "Please write to the inspector about the index.", config_path=path) == "Written."
+        steps = [r for r in mock_llama.requests if any(m["role"] == "user" for m in r.get("messages", []))][-2:]
+        for request in steps:  # both steps of the turn: before and after its tool call
+            last_user = [m for m in request["messages"] if m["role"] == "user"][-1]
+            assert "[Skill from Babo: letters-out." in _texts({"messages": [last_user]})
+        mock_llama.script = [text("Fine.")]
+        assert opencode.send(town, cfg, session, "Now write to the mayor too.", config_path=path) == "Fine."
+        last_user = [m for m in mock_llama.requests[-1]["messages"] if m["role"] == "user"][-1]
+        assert "[Skill from Babo" not in _texts({"messages": [last_user]})  # once a session
+    finally:
+        opencode.freeze(town, session)

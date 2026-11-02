@@ -193,3 +193,31 @@ def now_provider(loop: AgentLoop) -> Callable[[RequestContext], Awaitable[Runtim
         return RuntimeContextBlock(source=NOW_SOURCE, content=text)
 
     return provide
+
+
+SKILLS_SOURCE = "baton_skills"
+
+
+def skills_provider(loop: AgentLoop, *, town: Town, resident_id: str, office: str) -> Callable[[RequestContext], Awaitable[RuntimeContextBlock | None]]:
+    """A skill the turn's message calls for (one of its keywords is in it), with the message: once in a
+    conversation, since it stays in the history after that (see ``babo.baton.guides``)."""
+    from babo.baton import guides
+    from babo.baton.events import append_event
+
+    async def provide(request: RequestContext) -> RuntimeContextBlock | None:
+        message = request.original_user_text or ""
+        if not message.strip():
+            return None
+        found = [g for g in await asyncio.to_thread(guides.load, town) if g.keywords and g.for_office(office) and g.matches(message)]
+        if not found:
+            return None
+        if request.session_key and request.persist_session:
+            session = await loop.sessions.state.read(request.session_key)
+            if session is not None:
+                said = "\n".join(_text_of(m.get("content")) for m in session.messages[session.last_archived:] if m.get("role") == "user")
+                found = [g for g in found if g.text() not in said]
+        for g in found:
+            append_event(town, resident_id, request.session_key, guides.EVENT, name=g.name, how="keyword")
+        return RuntimeContextBlock(source=SKILLS_SOURCE, content="\n\n".join(g.text() for g in found)) if found else None
+
+    return provide
