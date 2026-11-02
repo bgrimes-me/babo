@@ -202,3 +202,13 @@ async def test_offices_move_in_and_move_away_from_the_web(town: Town, index_path
     assert status == 200 and "moved away" in result["message"]
     [office] = [o for o in result["town"]["offices"]["offices"] if o["name"] == "reporter"]
     assert office["vacant"]
+
+
+async def test_the_open_task_lists_from_the_web(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from babo.baton import tasks
+
+    routes = _routes(town, index_path, monkeypatch)
+    tasks.update(town, "mayor", "websocket:abc", [{"task": "Check the board", "status": "done"}, {"task": "Write to Robin", "status": "doing"}])
+    tasks.update(town, "archivist", "s1", [{"task": "Finished", "status": "done"}])
+    status, got = await _call(routes, "/api/town/tasks")
+    assert status == 200 and [(x["resident"], x["done"], x["total"]) for x in got["lists"]] == [("mayor", 1, 2)]

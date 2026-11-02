@@ -169,10 +169,11 @@ def attach(loop: AgentLoop, config: Config) -> ResidentRuntime | None:
     loop.tools.register = with_guides  # type: ignore[method-assign]
     # Where it is now (baton, letters) at the end of the conversation, when it changes; then a clock it can trust, on every turn.
     from babo.baton.clock import clock_provider
-    from babo.baton.context import now_provider, skills_provider
+    from babo.baton.context import now_provider, skills_provider, tasks_provider
 
-    # A skill the turn's message calls for, then where it is now (the baton stays last).
+    # A skill the turn's message calls for, its task list, then where it is now (the baton stays last).
     loop.register_runtime_context_provider(skills_provider(loop, town=town, resident_id=resident_id, office=resident.office))
+    loop.register_runtime_context_provider(tasks_provider(town=town, resident_id=resident_id))
     loop.register_runtime_context_provider(now_provider(loop))
 
     loop.register_runtime_context_provider(clock_provider(town, resident_id))

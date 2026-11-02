@@ -22,6 +22,7 @@ const IDLE_MS = Number(env.BABO_IDLE_MINUTES || 20) * 60_000
 const CONTEXT = Number(env.BABO_CONTEXT_TOKENS || 0)
 const NOW = env.BABO_NOW
 const GUIDES = env.BABO_GUIDES
+const TASKS = env.BABO_TASKS
 const COMMIT = /(^|[\s;&|(])git\s+(-[cC]\s+\S+\s+)*commit\b/
 
 export default {
@@ -138,6 +139,8 @@ export default {
     // Skills (and guides) with keywords: brought in with the turn's message when it has one of them.
     const escape = (word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     const skillsFor = new Map()
+    const tasksFor = new Map()
+    const tasksText = () => { try { return TASKS ? readFileSync(TASKS, "utf8").trim() : "" } catch { return "" } }
     const dueForMessage = (message) => {
       const asked = message.split("\n\nNow: ")[0]
       const out = []
@@ -219,6 +222,11 @@ export default {
         const key = last.id ?? text.text
         if (!skillsFor.has(key)) skillsFor.set(key, dueForMessage(text.text))
         for (const skill of skillsFor.get(key)) if (!text.text.includes(skill.text)) text.text += `\n\n${skill.text}`
+        // Its task list, while something on it is open: as it stood when the message came (the tool's
+        // results show it as it changes), so every step of the turn reads the same.
+        if (!tasksFor.has(key)) tasksFor.set(key, tasksText())
+        const list = tasksFor.get(key)
+        if (list && !text.text.includes(list)) text.text += `\n\n${list}`
       }
       // A guide that came after a refusal: once it is in, it stays (the same text on every later step).
       if (text) for (const guide of withTurn) if (!text.text.includes(guide)) text.text += `\n\n${guide}`

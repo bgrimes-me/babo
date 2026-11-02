@@ -275,6 +275,10 @@ class TownRoutes:
             from babo.baton import rounds
 
             return http_json_response(await asyncio.to_thread(lambda: rounds.overview(_town())))
+        if got == "/api/town/tasks":
+            from babo.baton import tasks
+
+            return http_json_response({"lists": await asyncio.to_thread(lambda: [tasks.overview(x) for x in tasks.all_lists(_town()) if x.open])})
         if got == "/api/town/offices":
             from babo.baton import offices
 

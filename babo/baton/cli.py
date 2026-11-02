@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from babo.baton.town import BatonError, Town, now_iso
@@ -141,6 +142,7 @@ def residents(config: str | None = _CONFIG_OPT):
 @app.command()
 def mcp(
     as_: str = typer.Option("", "--as", envvar="BATON_RESIDENT", help="Resident id this server acts as"),
+    session: str = typer.Option("", "--session", help="The resident's session it serves (its task list is that session's)"),
     config: str | None = _CONFIG_OPT,
 ):
     """Serve the Baton tools over MCP stdio for one resident."""
@@ -151,7 +153,7 @@ def mcp(
         _fail(BatonError("--as <resident> is required"))
     try:
         t, cfg = _town(config)
-        box = Toolbox(t, as_, cfg.baton.index_file)
+        box = Toolbox(t, as_, cfg.baton.index_file, session=session)
         extra = _profile_tools(t, cfg, as_, box.me.office)
     except BatonError as exc:
         _fail(exc)
@@ -697,6 +699,26 @@ def eval_command(
                           + ("no task changed" if not better and not worse else ""))
         elif save_baseline:
             console.print(f"Kept as {name}'s baseline.")
+
+
+@app.command("tasks")
+def tasks_command(resident: str = typer.Argument("", help="Only this resident's lists"),
+                  all_: bool = typer.Option(False, "--all", help="Lists that are all done too"),
+                  config: str | None = _CONFIG_OPT):
+    """The task lists agents keep as they work, one per conversation or session: what's done and what's open."""
+    from babo.baton import tasks
+
+    t, _ = _town(config)
+    lists = [x for x in tasks.all_lists(t, resident or None) if all_ or x.open]
+    if not lists:
+        console.print("No task list with anything open." if not all_ else "No task lists yet.")
+        return
+    for listed in lists:
+        c = listed.counts()
+        console.print(f"[bold]{listed.resident}[/bold] · {listed.session} · {c['done']} of {c['total']} done · updated {listed.updated[:16].replace('T', ' ')}")
+        for item in listed.items:
+            mark = {"todo": "[ ]", "doing": "[yellow][>][/yellow]", "done": "[green][x][/green]", "dropped": "[dim][-][/dim]"}[item.status]
+            console.print(f"  {mark} {escape(item.task)}")
 
 
 @app.command("guides")

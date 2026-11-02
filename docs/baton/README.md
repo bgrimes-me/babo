@@ -162,6 +162,12 @@ A resident can **move away** (*Move away* on the Residents tab, or `babo move-aw
 
 Nothing else brings a resident to town.
 
+## Task lists
+
+For work with several steps, the Mayor and the residents keep a task list as they go (`update_tasks`: the whole list each time, each step *todo*, *doing*, *done* or *dropped*). Babo shows it back to them after each change, and again with each new message while something on it is still open, so a small model doesn't lose its place in a long piece of work. There's one list per conversation (the Mayor's) or session (a resident's); what carries over to the next session is the baton, as always.
+
+You see them too: *Working on*, at the top of the Town page's Residents tab, shows each list with something still open (what's done, what's being done, what's left), and `babo tasks` (`--all` for finished ones too) in the terminal.
+
 ## Thinking
 
 When a model thinks before it answers, Babo shows the thinking apart from the answer, everywhere:
