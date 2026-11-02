@@ -98,7 +98,7 @@ def _tool(name: str) -> str:
     for prefix in _PREFIXES:
         if name.startswith(prefix):
             name = name[len(prefix):]
-    name = TOOLS.get(name, name)  # an old tool name (step 23)
+    name = TOOLS.get(name, name)  # an old tool name (step 24)
     return _ALIASES.get(name, name)
 
 

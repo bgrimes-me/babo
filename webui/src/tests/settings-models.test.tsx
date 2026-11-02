@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import type { ProviderModelsPayload, SettingsPayload } from "@/lib/types";
 import { requestMutationMock, jsonResponse, settingsPayload, renderSettingsView, openPopover, installSettingsViewTestHooks } from "@/tests/settings-test-utils";
@@ -298,6 +298,27 @@ describe("Settings models", () => {
         api: { supported_apis: ["responses"], preferred_api: "responses" },
       }, 20_000,
     ));
+  });
+
+  it("says plainly that a local server decides what the effort does, and says nothing for a hosted one", async () => {
+    const payload = settingsPayload();
+    payload.providers = [{ name: "custom", label: "Custom", configured: true, is_custom: true, model_catalog: "custom" }];
+    payload.model_presets[0].provider = "custom";
+    payload.model_presets[0].resolved_provider = "custom";
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(payload)));
+    renderSettingsView({ initialSection: "models" });
+    await togglePresetEditor();
+    expect(await screen.findByTestId("effort-note")).toHaveTextContent("llama.cpp ignores it for most models, Qwen included");
+    cleanup();
+    const hosted = settingsPayload();
+    hosted.providers = [{ name: "openai", label: "OpenAI", configured: true, model_catalog: "official" }];
+    hosted.model_presets[0].provider = "openai";
+    hosted.model_presets[0].resolved_provider = "openai";
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(hosted)));
+    renderSettingsView({ initialSection: "models" });
+    await togglePresetEditor();
+    expect(screen.getByLabelText("Reasoning effort")).toBeVisible();
+    expect(screen.queryByTestId("effort-note")).toBeNull();
   });
 
   it("shows the host's automatic API and discards an older reasoning resolution", async () => {

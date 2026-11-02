@@ -50,7 +50,7 @@ TOWN_MUTATION_PATHS = {
     "town.move_in": "/api/town/move-in",
     "town.move_away": "/api/town/move-away",
 }
-_DECISION_KINDS = ("tool", "proposal", "move_in", "flag", "errand", "founding", "session")  # the last two: old names (step 23)
+_DECISION_KINDS = ("tool", "proposal", "move_in", "flag", "errand", "founding", "session")  # the last two: old names (step 24)
 _doctor_lock = asyncio.Lock()
 
 
@@ -254,7 +254,7 @@ class TownRoutes:
             from babo.config.loader import load_config
 
             return http_json_response({"settings": town_settings.current(load_config().baton)})
-        if got in ("/api/town/errands", "/api/town/session-requests"):  # (the second: the old path, until step 23)
+        if got in ("/api/town/errands", "/api/town/session-requests"):  # (the second: the old path, until step 24)
             return http_json_response(await asyncio.to_thread(_pending_requests))
         if got == "/api/town/allow-all":
             from babo.baton import allow_all

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import hashlib
 import importlib.util
 import json
@@ -43,6 +44,16 @@ from babo.providers.model_api import (
 )
 from babo.providers.openai_responses import ResponsesBackend, responses_state_matches
 from babo.providers.registry import KIMI_K3_MODELS
+from babo.providers.thinking import (
+    Part as ThinkingPart,
+)
+from babo.providers.thinking import (
+    ThinkingSplitter,
+    forget_opens_thinking,
+    opens_thinking,
+    remember_opens_thinking,
+    split_thinking,
+)
 
 if TYPE_CHECKING:
     from openai import AsyncOpenAI as AsyncOpenAIType
@@ -1832,7 +1843,7 @@ class OpenAICompatProvider(LLMProvider):
                 Any,
                 await client.chat.completions.create(**kwargs),
             )
-            return self._parse(chat_raw)
+            return self._separate_thinking(self._parse(chat_raw), model)
         except Exception as e:
             return self._handle_error(e, spec=self._spec, api_base=self.api_base)
 
@@ -1897,6 +1908,17 @@ class OpenAICompatProvider(LLMProvider):
             )
             chunks: list[Any] = []
             completed = False
+            splitter = ThinkingSplitter(opens_thinking=opens_thinking(self.api_base, model or self.default_model))
+
+            async def route(parts: list[ThinkingPart]) -> None:
+                # Thinking inside the reply's text goes where thinking goes.
+                for kind, part in parts:
+                    if kind == "answer":
+                        if on_content_delta:
+                            await on_content_delta(part)
+                    elif on_thinking_delta:
+                        await on_thinking_delta(part)
+
             stream_iter: AsyncIterator[Any] = chat_stream.__aiter__()
             while True:
                 try:
@@ -1911,25 +1933,26 @@ class OpenAICompatProvider(LLMProvider):
                     completed |= bool(chunk.choices[0].finish_reason)
                     delta_obj = chunk.choices[0].delta
                     raw_delta_content = getattr(delta_obj, "content", None)
-                    if on_content_delta:
+                    reasoning = getattr(delta_obj, "reasoning_content", None) or getattr(
+                        delta_obj, "reasoning", None,
+                    )
+                    r_text = self._extract_text_content(reasoning)
+                    if not r_text:
+                        # Mistral keeps the thinking trace inside the
+                        # content array rather than a separate field.
+                        r_text = self._extract_thinking_content(raw_delta_content)
+                    if r_text:
+                        splitter.native()
+                        if on_thinking_delta:
+                            await on_thinking_delta(r_text)
+                    if on_content_delta or on_thinking_delta:
                         # Mistral streams content as a list of {"type":"thinking",
                         # ...} + {"type":"text",...} blocks. Extract just the
                         # text portion before invoking the callback so callers
                         # never see non-string content.
                         text = self._extract_text_content(raw_delta_content)
                         if text:
-                            await on_content_delta(text)
-                    if on_thinking_delta:
-                        reasoning = getattr(delta_obj, "reasoning_content", None) or getattr(
-                            delta_obj, "reasoning", None,
-                        )
-                        r_text = self._extract_text_content(reasoning)
-                        if not r_text:
-                            # Mistral keeps the thinking trace inside the
-                            # content array rather than a separate field.
-                            r_text = self._extract_thinking_content(raw_delta_content)
-                        if r_text:
-                            await on_thinking_delta(r_text)
+                            await route(splitter.feed(text))
                     if on_tool_call_delta:
                         for idx, tool_delta in enumerate(
                             getattr(delta_obj, "tool_calls", None) or []
@@ -1954,7 +1977,8 @@ class OpenAICompatProvider(LLMProvider):
                             })
             if not completed:
                 raise ConnectionError("Model stream ended before a finish reason was received")
-            return self._parse_chunks(chunks)
+            await route(splitter.finish())
+            return self._separate_thinking(self._parse_chunks(chunks), model, orphan=splitter.orphan)
         except asyncio.TimeoutError:
             return LLMResponse(
                 content=(
@@ -1966,6 +1990,23 @@ class OpenAICompatProvider(LLMProvider):
             )
         except Exception as e:
             return self._handle_error(e, spec=self._spec, api_base=self.api_base)
+
+    def _separate_thinking(self, response: LLMResponse, model: str | None, *, orphan: bool = False) -> LLMResponse:
+        """Thinking inside the reply's text (``<think>…</think>``, or opened by the template) moved to
+        ``reasoning_content``; the answer is what's left. See :mod:`babo.providers.thinking`."""
+        name = model or self.default_model
+        if response.finish_reason == "error" or not response.content:
+            return response
+        if response.reasoning_content and opens_thinking(self.api_base, name):
+            forget_opens_thinking(self.api_base, name)  # its thinking comes in its own field now
+        known = opens_thinking(self.api_base, name)
+        thinking, answer, found_orphan = split_thinking(response.content, opens_thinking=known and not response.reasoning_content)
+        if (orphan or found_orphan) and not known:
+            remember_opens_thinking(self.api_base, name)
+        if thinking is None:
+            return response
+        reasoning = f"{response.reasoning_content}\n\n{thinking}" if response.reasoning_content else thinking
+        return dataclasses.replace(response, content=answer or None, reasoning_content=reasoning)
 
     def get_default_model(self) -> str:
         return self.default_model

@@ -77,22 +77,23 @@ Each step is its own pull request, merged once its tests pass. Steps are numbere
 | 12 | Loop and drift detectors, done-checks for tasks, capped memory files (H3) |
 | 13 | Rounds: the engine; the night round shipped as a file (the Archivist curates, or the Mayor while there's none; then the Inspector); upkeep keeps only Babo's own work; the Rounds tab and `babo rounds` (list, show, run, set); *waits its turn* or *runs right away* |
 | 14 | Rehearsals, unattended or live, with a report and the access it proposes, approved in one step; access and exact commands per step, set by hand or approved from a rehearsal; each step in its own session, nobody at a terminal, at upkeep's priority; a refused question now tells the resident why, so it carries on (opencode otherwise stopped the turn) |
-| 15 | The town's vocabulary: newcomers *move in* (move-in requests), the Mayor sends residents on *errands* (`send_errand`); the old names stay, listed in one place (`babo/baton/aliases.py`) and logging that they're going, until step 23; the town's own files migrated on upgrade. *Moved away* comes with step 16, when residents can leave |
+| 15 | The town's vocabulary: newcomers *move in* (move-in requests), the Mayor sends residents on *errands* (`send_errand`); the old names stay, listed in one place (`babo/baton/aliases.py`) and logging that they're going, until step 24; the town's own files migrated on upgrade. *Moved away* comes with step 16, when residents can leave |
 | 16 | Offices as templates (`offices/<name>.md`: role, starting profile, rounds it joins); vacancies; move-in requests with the profile and rounds a newcomer joins, approved as a whole; moving someone in from the web (*Move someone in*, *A new office*) or `babo move-in`; *moved away*; the Mayor reads offices and rounds and proposes rounds (accepting writes or removes the file) |
+| 17 | Thinking, told apart from the answer and shown everywhere: in its own field, inline `<think>`, or opened by the chat template (learned per model); the web interface's *Thinking* dropdown, the terminal, Discord (a spoiler) and other chat apps, opencode; the effort setting says what it does and doesn't do; rehearsals described as the training runs they are |
 
 ### Next, in this order
 
 | # | Step |
 |---|---|
-| 17 | **Skills**, brought in like guides (E, part 2) |
-| 18 | **A task list** agents keep as they work (E, part 3) |
-| 19 | **Status while something works**, everywhere: `/checkpoint`, *Checkpoint now*, freezing, eval runs, round runs (I1) |
-| 20 | **What Babo is doing, and its logs**: what is happening now (turns, sessions, rounds, upkeep, the model queue, errands) and the logs, in the web interface and the terminal (I2) |
-| 21 | **Own time**: a slot for each resident to reflect, revise itself, write a lesson or a letter, or pursue something of its own, shown beside the rounds (G) |
-| 22 | **Folders outside the town** (a project on the machine) as a session's or profile's setting, with projects for residents' sessions (C2) |
-| 23 | **Remove the old names**: the temporary aliases from step 15 go, once the owner has confirmed everything works under the new ones |
-| 24 | **A visual overhaul, for consistency and clear visual communication**: sleek, intuitive and functional; colours and light or dark mode configurable; everything understood at first glance: an action is always a button (never text that happens to be a link), switches for toggles, sliders for ranges, one design language throughout; pages organised logically; everything configurable and visible in the web interface, with exceptions agreed (I3) |
-| 25 | **Named instances**: several towns, or a test town beside a real one (F2) |
+| 18 | **Skills**, brought in like guides (E, part 2) |
+| 19 | **A task list** agents keep as they work (E, part 3) |
+| 20 | **Status while something works**, everywhere: `/checkpoint`, *Checkpoint now*, freezing, eval runs, round runs (I1) |
+| 21 | **What Babo is doing, and its logs**: what is happening now (turns, sessions, rounds, upkeep, the model queue, errands) and the logs, in the web interface and the terminal (I2) |
+| 22 | **Own time**: a slot for each resident to reflect, revise itself, write a lesson or a letter, or pursue something of its own, shown beside the rounds (G) |
+| 23 | **Folders outside the town** (a project on the machine) as a session's or profile's setting, with projects for residents' sessions (C2) |
+| 24 | **Remove the old names**: the temporary aliases from step 15 go, once the owner has confirmed everything works under the new ones |
+| 25 | **A visual overhaul, for consistency and clear visual communication**: sleek, intuitive and functional; colours and light or dark mode configurable; everything understood at first glance: an action is always a button (never text that happens to be a link), switches for toggles, sliders for ranges, one design language throughout; pages organised logically; everything configurable and visible in the web interface, with exceptions agreed. The Town section first: areas grouped and labelled, text inside clear elements, things that matter stand out; changes animate in rather than just appearing; what an action started (a rehearsal, a run) shows its status right where it was clicked (I3) |
+| 26 | **Named instances**: several towns, or a test town beside a real one (F2) |
 | — | Later: a world to visit (a MUD, reached as a plugin); containers per resident; *Open* landing right in the session's own page; tags for the Mayor's chats |
 
 ### What Babo does, and what residents do
@@ -119,7 +120,7 @@ A round is what a watchman, a postman or a doctor does: at set times or when som
 
 **Automations and rounds.** Babo's *Automations* (from upstream: scheduled or recurring messages to the Mayor, delivered into one of the owner's chats) stay what they are: the owner's own reminders and recurring asks. Rounds are the town's work, done by offices in their own sessions. If a round ever needs to post into a chat, the Mayor can do it through an automation; nothing needs merging.
 
-**Vocabulary.** Generic things keep plain names (sessions, profiles, settings, checkpoints, eval, doctor, guides, notices, *Allow all*). The town's own words: a town is *founded*; a newcomer *moves in* (a *move-in request*); an office with nobody in it is a *vacancy*; the Mayor sends a resident on an *errand* (what was a session request); a resident who leaves has *moved away*; the town's work is done in *rounds*; Babo's own is *upkeep*. Old names stay as aliases, listed in one place and saying they're going, until step 23 removes them; the town's own files are migrated once on upgrade instead.
+**Vocabulary.** Generic things keep plain names (sessions, profiles, settings, checkpoints, eval, doctor, guides, notices, *Allow all*). The town's own words: a town is *founded*; a newcomer *moves in* (a *move-in request*); an office with nobody in it is a *vacancy*; the Mayor sends a resident on an *errand* (what was a session request); a resident who leaves has *moved away*; the town's work is done in *rounds*; Babo's own is *upkeep*. Old names stay as aliases, listed in one place and saying they're going, until step 24 removes them; the town's own files are migrated once on upgrade instead.
 
 ### Context for small models: what the research says (steps 7, 8, 10, 12)
 

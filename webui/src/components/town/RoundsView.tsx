@@ -100,6 +100,9 @@ function RoundCard({ round, busy, onRun, onSet, onRehearse, onApprove, onAccess 
         </Button>
         <Button size="sm" variant="outline" disabled={busy} onClick={() => onRehearse(false)}>{t("town.rehearse", { defaultValue: "Rehearse" })}</Button>
         <Button size="sm" variant="outline" disabled={busy} onClick={() => onRehearse(true)}>{t("town.rehearseLive", { defaultValue: "Rehearse live" })}</Button>
+        <p className="basis-full text-xs text-muted-foreground">
+          {t("town.rehearsalIsTraining", { defaultValue: "A rehearsal is a training run: the residents really do the work, and learn from it. Letters, notes and posts are sent, and anything you allow really runs; only what each resident changes in its own folder is put back afterwards." })}
+        </p>
         {round.runs === "now" && <p role="note" className="basis-full text-xs text-amber-600 dark:text-amber-400">
           {t("town.roundNowWarning", { defaultValue: "It won't wait for you to finish: while it runs, it shares the model with your chats and can slow them down (on a local model, noticeably)." })}
         </p>}

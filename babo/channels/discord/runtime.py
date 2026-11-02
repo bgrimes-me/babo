@@ -519,6 +519,12 @@ class DiscordChannel(BaseChannel):
         """Keep a start notice until its matching outcome consumes it."""
         self._compaction_notices[(chat_id, compaction_id)] = message
 
+    def format_reasoning(self, text: str) -> str:
+        """Small label, then the thinking behind a spoiler: click it to read (Discord's nearest to a dropdown)."""
+        if len(text) > self.REASONING_LIMIT:
+            text = text[: self.REASONING_LIMIT].rstrip() + " …"
+        return f"-# 💭 Thinking (click to show)\n||{text.replace('||', '| |')}||"
+
     async def send(self, msg: OutboundMessage) -> None:
         """Send a message through Discord using discord.py."""
         client = self._client

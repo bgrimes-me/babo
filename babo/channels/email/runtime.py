@@ -115,6 +115,8 @@ class EmailChannel(BaseChannel):
     - Send responses via SMTP back to the sender address.
     """
 
+    reasoning_as_message = False  # never an email per thought
+
     name = "email"
     display_name = "Email"
     send_progress = False

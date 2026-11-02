@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Check, CircleDashed } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Check, ChevronDown, CircleDashed } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
@@ -26,18 +26,51 @@ export function ReasoningRow({
   const label = truncated
     ? preview.slice(0, 512).replace(/[\uD800-\uDBFF]$/, "") + "…"
     : preview;
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const full = text.trim();
   return (
-    <ActivityStep
-      marker={<ReasoningMarker streaming={streaming} />}
-      active={streaming}
-      animateLabel={!truncated}
-      tone={streaming ? "active" : "success"}
-      label={label}
-      tooltipContent={preview}
-      labelClassName="italic text-muted-foreground/78"
-      contentClassName="overflow-hidden"
-      className={className}
-    />
+    <div className={cn("flex min-w-0 flex-col", className)} data-testid="reasoning-row">
+      <div className="flex min-w-0 items-start gap-2">
+        <ActivityStep
+          marker={<ReasoningMarker streaming={streaming} />}
+          active={streaming}
+          animateLabel={!truncated}
+          tone={streaming ? "active" : "success"}
+          label={label}
+          tooltipContent={preview}
+          labelClassName="italic text-muted-foreground/78"
+          contentClassName="overflow-hidden"
+          className="min-w-0 flex-1"
+        />
+        {full && <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((value) => !value)}
+          className={cn(
+            "inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-violet-500/25 bg-violet-500/[0.06] px-2",
+            "text-[11px] font-medium uppercase tracking-wide text-violet-700/80 transition-colors hover:bg-violet-500/[0.12]",
+            "dark:text-violet-300/80",
+          )}
+        >
+          {t("message.reasoningLabel", { defaultValue: "Thinking" })}
+          <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", open && "rotate-180")} aria-hidden />
+        </button>}
+      </div>
+      {open && full && <div
+        id={panelId}
+        role="region"
+        aria-label={t("message.reasoningPanel", { defaultValue: "The model's thinking" })}
+        className={cn(
+          "mt-1 max-h-96 overflow-y-auto rounded-md border-l-2 border-violet-500/40 bg-violet-500/[0.05] px-3 py-2",
+          "whitespace-pre-wrap text-[13px] italic leading-6 text-muted-foreground",
+          "animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none",
+        )}
+      >
+        {full}
+      </div>}
+    </div>
   );
 }
 
