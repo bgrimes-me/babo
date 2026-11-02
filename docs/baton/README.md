@@ -114,6 +114,18 @@ Small models rarely open a document they're only told about, so Babo brings the 
 
 The guides are notes in the commons (`commons/guides/`). Babo ships a few and keeps them up to date until someone edits one; change them, or add your own, with a little frontmatter: `title`, `when`, and what brings it in (`tools`, `errors`, `offices`). `babo guides` (and *Guides* on the Town page's Settings tab) lists them with how often each was brought in or opened by hand; a guide that's opened by hand often probably needs a trigger.
 
+**Skills come the same way.** The town's skills (how it does things, written by the Archivist from procedures residents nominate) are in `commons/skills/<name>/SKILL.md`. They're listed in the ledger every agent sees (one line each, saying when it's needed), and Babo brings one in when it fits: with the first call of a tool it names, or with a message that has one of its keywords in it (a resident asked to "install a package" gets the town's way of installing packages, with that message). Each comes once a conversation. Their frontmatter is a skill's usual `name` and `description`, plus Babo's `when` (a line saying when it's needed), `keywords`, `tools` and `offices`. A skill with no keywords or tools is only read by hand (`read_note("skill:<name>")`); `babo guides` says so, and lists skills with what brings each in.
+
+```
+---
+name: install-a-package
+description: Installing a package on the machine.
+when: installing a package
+keywords: [install a package, pacman]
+---
+Ask for it as an errand with the exact command, e.g. `sudo pacman -S --noconfirm nano`, then check it with `pacman -Q nano`.
+```
+
 ## When an agent goes round in circles, and when a task is done
 
 - **Loops are noticed.** The same call with the same arguments three times, or a tool tried again right after it was refused: the agent gets one short reminder with that call's result (step back, try another way, or say what's in the way). If it happens again in the same session, you get a notice that it seems stuck.

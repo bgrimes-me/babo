@@ -80,12 +80,12 @@ Each step is its own pull request, merged once its tests pass. Steps are numbere
 | 15 | The town's vocabulary: newcomers *move in* (move-in requests), the Mayor sends residents on *errands* (`send_errand`); the old names stay, listed in one place (`babo/baton/aliases.py`) and logging that they're going, until step 28; the town's own files migrated on upgrade. *Moved away* comes with step 16, when residents can leave |
 | 16 | Offices as templates (`offices/<name>.md`: role, starting profile, rounds it joins); vacancies; move-in requests with the profile and rounds a newcomer joins, approved as a whole; moving someone in from the web (*Move someone in*, *A new office*) or `babo move-in`; *moved away*; the Mayor reads offices and rounds and proposes rounds (accepting writes or removes the file) |
 | 17 | Thinking, told apart from the answer and shown everywhere: in its own field, inline `<think>`, or opened by the chat template (learned per model); the web interface's *Thinking* dropdown, the terminal, Discord (a spoiler) and other chat apps, opencode; the effort setting says what it does and doesn't do; rehearsals described as the training runs they are |
+| 18 | Skills, brought in like guides: listed in the ledger (one line each, its `when`; the ledger is trimmed before the baton, so many skills never crowd a resident's memory out); brought in with the first call of a tool they name, or with a turn's message that has one of their keywords, once a conversation, for the Mayor and for residents in opencode (kept on every step of that turn); cut short past 6,000 characters with where to read the rest; `babo guides` and the Guides panel list them with what brings each in (E, part 2) |
 
 ### Next, in this order
 
 | # | Step |
 |---|---|
-| 18 | **Skills**, brought in like guides (E, part 2) |
 | 19 | **A task list** agents keep as they work (E, part 3) |
 | 20 | **Status while something works**, everywhere: `/checkpoint`, *Checkpoint now*, freezing, eval runs, round runs (I1) |
 | 21 | **What Babo is doing, and its logs**: what is happening now (turns, sessions, rounds, upkeep, the model queue, errands) and the logs, in the web interface and the terminal (I2) |

@@ -135,6 +135,20 @@ export default {
       return out
     }
 
+    // Skills (and guides) with keywords: brought in with the turn's message when it has one of them.
+    const escape = (word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const skillsFor = new Map()
+    const dueForMessage = (message) => {
+      const asked = message.split("\n\nNow: ")[0]
+      const out = []
+      for (const guide of loadGuides()) {
+        if (shownGuides.has(guide.name) || !(guide.keywords ?? []).length) continue
+        const hit = guide.keywords.some((word) => word.trim() && new RegExp(`(?<![\\w-])${escape(word)}(?![\\w-])`, "i").test(asked))
+        if (hit) { shownGuides.add(guide.name); out.push(guide); spool({ kind: "guide", name: guide.name, how: "keyword" }) }
+      }
+      return out
+    }
+
     // Going round in circles: the same call again and again, or a tool tried again right after it
     // was refused. One short reminder with that call's result; Babo tells the owner the second time.
     // (The same rules as Babo's own, in drift.py.)
@@ -198,6 +212,13 @@ export default {
         const now = new Date()
         const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
         text.text += `\n\nNow: ${now.toLocaleString("en-GB", { weekday: "long", timeZone: zone })} (${zone}; the machine's clock)`
+      }
+      // A skill the turn's message calls for (one of its keywords is in it): with that message, once a session.
+      // (Kept with that message on every step of the turn, the way the clock is.)
+      if (text) {
+        const key = last.id ?? text.text
+        if (!skillsFor.has(key)) skillsFor.set(key, dueForMessage(text.text))
+        for (const skill of skillsFor.get(key)) if (!text.text.includes(skill.text)) text.text += `\n\n${skill.text}`
       }
       // A guide that came after a refusal: once it is in, it stays (the same text on every later step).
       if (text) for (const guide of withTurn) if (!text.text.includes(guide)) text.text += `\n\n${guide}`

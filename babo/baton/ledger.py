@@ -30,7 +30,7 @@ def skills(town: Town) -> list[Capability]:
     for skill_md in sorted(town.skills.glob("*/SKILL.md")):
         meta, body = _read_meta(skill_md)
         name = str(meta.get("name") or skill_md.parent.name)
-        desc = str(meta.get("description") or first_line(body))
+        desc = str(meta.get("when") or meta.get("description") or first_line(body))  # (when it's needed, if it says)
         out.append(Capability("skill", name, desc, skill_md))
     return out
 
