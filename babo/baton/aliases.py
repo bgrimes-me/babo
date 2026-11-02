@@ -1,4 +1,4 @@
-"""The town's old words, kept working for a while: every one is listed here, and goes in step 24.
+"""The town's old words, kept working for a while: every one is listed here, and goes in step 28.
 
 Step 15 gave the town its own vocabulary: a newcomer *moves in* (it was "founding
 a resident"); the Mayor sends a resident on an *errand* (it was a "session
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from loguru import logger
 
-GOING = "step 24"
+GOING = "step 28"
 
 TOOLS = {"request_session": "send_errand"}
 BOARD_KINDS = {"founding_request": "move_in_request"}
