@@ -81,6 +81,9 @@ from babo.webui.http_utils import (
     is_trusted_source_request as _is_trusted_source_request,
 )
 from babo.webui.http_utils import (
+    is_unix_socket_peer as _is_unix_socket_peer,
+)
+from babo.webui.http_utils import (
     issue_route_secret_matches as _issue_route_secret_matches,
 )
 from babo.webui.http_utils import (
@@ -769,7 +772,8 @@ class GatewayHTTPHandler:
     ) -> Response:
         secret = self.config.token_issue_secret.strip() or self.config.token.strip()
         is_local_browser = _is_local_browser_request(connection, request.headers)
-        is_trusted_source = _is_trusted_source_request(connection, self.config.trusted_sources)
+        is_trusted_source = _is_trusted_source_request(connection, self.config.trusted_sources) or (
+            bool(self.config.unix_socket_path) and _is_unix_socket_peer(connection))
         is_proxy_authenticated = _is_trusted_proxy_authenticated_request(
             connection,
             request.headers,

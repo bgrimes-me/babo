@@ -80,3 +80,22 @@ def test_the_ui_verb_targets_the_webui_listener_not_the_health_server() -> None:
     assert cli_module._webui_base(cfg) == "http://10.0.0.5:8843"
     wildcard = Config.model_validate({"channels": {"websocket": {"host": "0.0.0.0", "port": 8843}}})
     assert cli_module._webui_base(wildcard) == "http://127.0.0.1:8843"
+
+
+def test_the_ui_verb_prefers_the_listeners_unix_socket(tmp_path) -> None:
+    """In a pod the CLI must reach the gateway over its own socket, not a network
+    peer: nothing is bound on loopback there, and 10.0.0.5 is not a trusted source."""
+    from babo.baton import cli as cli_module
+    from babo.config.schema import Config
+
+    socket_path = str(tmp_path / "ui.sock")
+    cfg = Config.model_validate({
+        "gateway": {"host": "10.0.0.5", "port": 18790},
+        "channels": {"websocket": {"host": "10.0.0.5", "port": 8843,
+                                   "unix_socket_path": socket_path,
+                                   "trusted_sources": ["10.0.0.2/32"]}},
+    })
+    assert cli_module._webui_base(cfg) == f"unix:{socket_path}"
+    # and without a socket, the previous behaviour stands
+    plain = Config.model_validate({"channels": {"websocket": {"host": "10.0.0.5", "port": 8843}}})
+    assert cli_module._webui_base(plain) == "http://10.0.0.5:8843"

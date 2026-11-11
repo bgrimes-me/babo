@@ -321,6 +321,24 @@ def peer_host(connection: Any) -> str:
     return host[7:] if host.startswith("::ffff:") else host
 
 
+def is_unix_socket_peer(connection: Any) -> bool:
+    """True when this connection came over the listener's own Unix socket.
+
+    A Unix socket is local by construction: filesystem permissions (0600) are the
+    gate, there is no network path and no peer address to spoof. That makes it the
+    right internal door for an operator command running inside the pod — no token
+    to mint, no trusted-source entry, no second external surface.
+    """
+    addr: object = getattr(connection, "remote_address", None)
+    if addr is None:
+        # websockets reports no address for a Unix-domain server connection.
+        return True
+    if isinstance(addr, str):
+        # Some builds report the socket path as the "address".
+        return "/" in addr and not addr.replace(":", "").replace(".", "").isdigit()
+    return False
+
+
 def is_trusted_source_request(connection: Any, trusted_sources: list[str] | tuple[str, ...]) -> bool:
     """True when the socket peer is exactly one of the configured trusted sources.
 
