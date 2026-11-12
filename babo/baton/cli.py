@@ -1845,6 +1845,12 @@ def _webui_base(cfg: Config) -> str:
     `babo ui revoke-sessions` POST at a health endpoint and fail confusingly —
     in a pod, where the two ports differ (8843 UI, 18790 health), always.
     """
+    socket_path = _webui_socket(cfg)
+    if socket_path:
+        # A pod listener serves a 0600 Unix socket: local by construction, so an
+        # operator command next to it needs no trusted-source entry and no token
+        # minted for a network peer. Nothing outside the pod can reach it.
+        return f"unix:{socket_path}"
     channel = cast(dict[str, Any], getattr(cfg.channels, "websocket", None) or {})
     host = str(channel.get("host") or "127.0.0.1")
     port = int(channel.get("port") or 8765)
@@ -1853,21 +1859,87 @@ def _webui_base(cfg: Config) -> str:
     return f"http://{host}:{port}"
 
 
+def _webui_socket(cfg: Config) -> str:
+    """The listener's own Unix socket, when it has one (a pod, typically)."""
+    channel = cast(dict[str, Any], getattr(cfg.channels, "websocket", None) or {})
+    return str(channel.get("unix_socket_path") or "")
+
+
 def _post_json(url: str, token: str = "", payload: dict[str, Any] | None = None) -> tuple[int, str]:
+    """POST ``url`` (``http://host:port/path`` or ``unix:/path/socket``).
+
+    The Unix form is how an operator command reaches the gateway from inside a
+    pod: filesystem permissions are the gate, so there is no network peer to
+    trust and no second external door.
+    """
     import json as _json
-    import urllib.error
-    import urllib.request
+    import socket
+    from http.client import HTTPConnection
 
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
     body = _json.dumps(payload or {}).encode()
-    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
+
+    if url.startswith("unix:"):
+        socket_path, _sep, path = url.split("unix:", 1)[1].partition("/")
+        target = "/" + path
+
+        class _UnixConnection(HTTPConnection):
+            def __init__(self) -> None:
+                super().__init__("localhost")
+
+            def connect(self) -> None:
+                self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self.sock.settimeout(10)
+                self.sock.connect(socket_path)
+
+        connection: HTTPConnection = _UnixConnection()
+    else:
+        netloc, _sep, path = url.split("//", 1)[1].partition("/")
+        target = "/" + path
+        connection = HTTPConnection(netloc, timeout=10)
     try:
-        with urllib.request.urlopen(request, timeout=10) as response:
-            return response.status, response.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as exc:
-        return exc.code, exc.read().decode("utf-8", "replace") if exc.fp else ""
+        connection.request("POST", target, body=body, headers=headers)
+        response = connection.getresponse()
+        return response.status, response.read().decode("utf-8", "replace")
+    except OSError as exc:
+        return 0, str(exc)
+    finally:
+        connection.close()
+
+
+def _get_json(url: str) -> tuple[int, str]:
+    """GET ``url`` over TCP or the listener's Unix socket (see ``_post_json``)."""
+    import socket
+    from http.client import HTTPConnection
+
+    if url.startswith("unix:"):
+        socket_path, _sep, path = url.split("unix:", 1)[1].partition("/")
+        target = "/" + path
+
+        class _UnixConnection(HTTPConnection):
+            def __init__(self) -> None:
+                super().__init__("localhost")
+
+            def connect(self) -> None:
+                self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self.sock.settimeout(10)
+                self.sock.connect(socket_path)
+
+        connection: HTTPConnection = _UnixConnection()
+    else:
+        netloc, _sep, path = url.split("//", 1)[1].partition("/")
+        target = "/" + path
+        connection = HTTPConnection(netloc, timeout=10)
+    try:
+        connection.request("GET", target)
+        response = connection.getresponse()
+        return response.status, response.read().decode("utf-8", "replace")
+    except OSError as exc:
+        return 0, str(exc)
+    finally:
+        connection.close()
 
 
 @ui_app.callback()
@@ -1881,22 +1953,27 @@ def ui_root(ctx: typer.Context) -> None:
 @ui_app.command("revoke-sessions")
 def ui_revoke_sessions(config: str | None = _CONFIG_OPT) -> None:
     """Sign out every browser session: the token store is in memory, so this and a
-    restart are the two operator revocations. Running inside the pod, loopback
-    bootstrap issues the token this call needs — no password, no static secret."""
+    restart are the two operator revocations.
+
+    Inside a pod this goes over the listener's own Unix socket when there is one
+    (0600, local by construction: no trusted-source entry, no token minted for a
+    network peer); otherwise over loopback TCP. Either way it is the same
+    bootstrap-then-revoke path the web interface uses.
+    """
     import json as _json
 
     cfg = _config(config)
     base = _webui_base(cfg)
-    try:
-        import urllib.request
-
-        with urllib.request.urlopen(f"{base}/webui/bootstrap", timeout=10) as response:
-            token = str(_json.loads(response.read().decode()).get("api_token") or "")
-    except Exception as exc:  # pragma: no cover - a gateway that isn't there
-        _fail(BatonError(f"couldn't reach the gateway at {base}: {exc}"))
+    status, body = _get_json(f"{base}/webui/bootstrap")
+    if status == 0:
+        # A transport problem, not an auth one: name the socket and the OS error,
+        # because "no token issued" would send the reader looking at the wrong door.
+        _fail(BatonError(f"couldn't reach the gateway at {base}: {body.strip()[:200]}"))
         return
+    token = str(_json.loads(body).get("api_token") or "") if status == 200 and body.strip() else ""
     if not token:
-        _fail(BatonError("the gateway issued no API token from loopback; is token_issue_path set?"))
+        _fail(BatonError(f"the gateway issued no API token ({status}) at {base}; "
+                         "is token_issue_path set, or is this a trusted source?"))
         return
     status, body = _post_json(f"{base}/api/webui/tokens/revoke", token)
     if status != 200:

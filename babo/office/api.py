@@ -36,8 +36,29 @@ from typing import Protocol, cast, runtime_checkable
 
 from babo.office.model import AgentObserved
 
-# The core's action vocabulary. The page currently exposes the first two.
-ACTIONS = ("spawn", "wake", "freeze", "rescue", "destroy")
+# The closed action vocabulary. `restart-ui` is the cross-pod half of revocation:
+# it asks the Manager to replace the UI pod, which invalidates every in-memory
+# session by construction (D-12: revocation is owned by the pod holding the store).
+ACTIONS = ("spawn", "wake", "freeze", "rescue", "destroy", "restart-ui")
+
+# The verbs an agent handle can carry: everything but the pod verb. `restart-ui`
+# is deliberately absent — its handle is the UI pod and its caller is the host
+# operator, so it is never offered on an agent row and never accepted on the
+# agent path (L-10's standing, ruled 2026-11-11). The vocabulary above stays six
+# verbs; what narrows is the door, not the word.
+AGENT_ACTIONS = tuple(verb for verb in ACTIONS if verb != "restart-ui")
+
+# The one verb the host operator may invoke, and the class token that authorizes
+# it — an allow-list of exactly one (soro's §8 ruling, 2026-11-11). The check is
+# `actor == OPERATOR_ACTOR`, never a deny-list of the classes we happened to think
+# of: a deny-list is a row a sixth class slips past the day someone adds one.
+OPERATOR_ACTIONS = ("restart-ui",)
+OPERATOR_ACTOR = "host_operator"
+
+# The word the door's own authentication carries. Transport peer identity is not
+# operator authority (the ruling's first half): this names *where* the claim came
+# from — the host-WG door — while OPERATOR_ACTOR names the only class admitted.
+OPERATOR_SOURCE = "host-wg"
 
 # Terminal states, verbatim. Anything else is still in flight.
 TERMINAL = ("succeeded", "failed", "refused", "timeout")

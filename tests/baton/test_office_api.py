@@ -146,7 +146,7 @@ async def test_an_unrecorded_agent_is_refused_by_the_core_not_by_the_page(town: 
 async def test_an_unreachable_manager_is_shown_as_unknown_not_running(town: Town, index_path: Path,
                                                                       monkeypatch: pytest.MonkeyPatch) -> None:
     slug = _project(town)
-    manager = FakeCore(unavailable="can't reach the Manager at http://10.0.0.3:9200")
+    manager = FakeCore(unavailable="the manager core is unavailable")
     routes = _routes(town, index_path, monkeypatch, manager=manager)
     await _call(routes, "/api/office/agents/record", {"handle": "crew-1", "resident": "archivist", "project": slug})
     status, view = await _call(routes, "/api/office")
@@ -179,13 +179,13 @@ async def test_the_office_view_reports_the_ui_listener_not_the_health_port(town:
 
     cfg = Config.model_validate({"baton": {"town": str(town.root), "indexPath": str(index_path),
                                           "office": {"backend": "stub"}},
-                                 "gateway": {"host": "10.0.0.5", "port": 18790},
-                                 "channels": {"websocket": {"host": "10.0.0.5", "port": 8843}}})
+                                 "gateway": {"host": "10.0.0.11", "port": 18790},
+                                 "channels": {"websocket": {"host": "10.0.0.11", "port": 8843}}})
     monkeypatch.setattr("babo.config.loader.load_config", lambda *_a, **_k: cfg)
     monkeypatch.setattr(office_api, "_ops", lambda: __import__("babo.office.control", fromlist=["Ops"]).Ops())
     status, view = await _call(routes, "/api/office")
     assert status == 200
-    assert view["listener"] == "10.0.0.5:8843", "the UI port, never the health port"
+    assert view["listener"] == "10.0.0.11:8843", "the UI port, never the health port"
 
 
 async def test_before_the_core_lands_the_office_says_so(town: Town, index_path: Path,

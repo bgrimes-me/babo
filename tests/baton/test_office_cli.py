@@ -24,6 +24,24 @@ def _configure(town: Town, index_path: Path, monkeypatch: pytest.MonkeyPatch, ma
     monkeypatch.setattr(cli, "console", Console(width=200, force_terminal=False))
 
 
+def test_restart_ui_is_not_a_terminal_verb(town: Town) -> None:
+    """A local process is not the host-WG door (L-10's standing, ruled 2026-11-11).
+
+    The verb is real and the refusal is by name — before the core is asked, so no
+    row is left behind to look like a lifecycle event.
+    """
+    from babo.baton.town import BatonError
+    from babo.office import control
+    from babo.office.actors import Actor
+
+    manager = FakeCore()
+    with pytest.raises(BatonError) as caught:
+        control.perform_sync(manager, "babo-ui", "restart-ui", "r",
+                             store=control.AgentStore(town), actor=Actor("evans", "terminal"))
+    assert "host-WG" in str(caught.value)
+    assert not manager.audit, "the refusal happens before the core is asked"
+
+
 def test_the_board_shows_lead_crew_and_the_managers_state(town: Town, index_path: Path,
                                                           monkeypatch: pytest.MonkeyPatch) -> None:
     from typer.testing import CliRunner
@@ -74,9 +92,28 @@ def test_the_ui_verb_targets_the_webui_listener_not_the_health_server() -> None:
     from babo.config.schema import Config
 
     cfg = Config.model_validate({
-        "gateway": {"host": "10.0.0.5", "port": 18790},
-        "channels": {"websocket": {"host": "10.0.0.5", "port": 8843}},
+        "gateway": {"host": "10.0.0.11", "port": 18790},
+        "channels": {"websocket": {"host": "10.0.0.11", "port": 8843}},
     })
-    assert cli_module._webui_base(cfg) == "http://10.0.0.5:8843"
+    assert cli_module._webui_base(cfg) == "http://10.0.0.11:8843"
     wildcard = Config.model_validate({"channels": {"websocket": {"host": "0.0.0.0", "port": 8843}}})
     assert cli_module._webui_base(wildcard) == "http://127.0.0.1:8843"
+
+
+def test_the_ui_verb_prefers_the_listeners_unix_socket(tmp_path) -> None:
+    """In a pod the CLI must reach the gateway over its own socket, not a network
+    peer: nothing is bound on loopback there, and 10.0.0.11 is not a trusted source."""
+    from babo.baton import cli as cli_module
+    from babo.config.schema import Config
+
+    socket_path = str(tmp_path / "ui.sock")
+    cfg = Config.model_validate({
+        "gateway": {"host": "10.0.0.11", "port": 18790},
+        "channels": {"websocket": {"host": "10.0.0.11", "port": 8843,
+                                   "unix_socket_path": socket_path,
+                                   "trusted_sources": ["10.0.0.2/32"]}},
+    })
+    assert cli_module._webui_base(cfg) == f"unix:{socket_path}"
+    # and without a socket, the previous behaviour stands
+    plain = Config.model_validate({"channels": {"websocket": {"host": "10.0.0.11", "port": 8843}}})
+    assert cli_module._webui_base(plain) == "http://10.0.0.11:8843"

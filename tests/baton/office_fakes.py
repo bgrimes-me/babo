@@ -15,6 +15,14 @@ from babo.office.api import ActionRecord
 from babo.office.model import AgentObserved
 
 
+class CoreRefusalError(Exception):
+    """Named to match the core's own refusal type, so the hop maps it to 409."""
+
+
+class UnknownActionError(Exception):
+    """Named to match the core's unknown-id type, so the hop maps it to 404."""
+
+
 @dataclass
 class FakeCore:
     name: str = "fake"
@@ -50,7 +58,12 @@ class FakeCore:
         if action_id and action_id in self.actions:
             existing = self.actions[action_id]
             if existing.handle != handle or existing.action != action:
-                raise ValueError(f"refused: replay id {action_id} is taken by another action")
+                # The core does not raise here: it records a refused row and hands
+                # back its id, so the UI reads the refusal like every other one.
+                self.actions[action_id] = ActionRecord(
+                    id=action_id, handle=existing.handle, action=existing.action, state="refused",
+                    said=f"action {action_id} is already pending for {existing.handle} ({existing.action}); not accepted")
+                return action_id
             return action_id
         if self.unavailable:
             from babo.office.api import CoreNotBuiltError
@@ -75,9 +88,7 @@ class FakeCore:
     def action(self, action_id: str) -> ActionRecord:
         record = self.actions.get(action_id)
         if record is None:
-            from babo.office.api import CoreNotBuiltError
-
-            raise CoreNotBuiltError(f"no such action: {action_id}")
+            raise UnknownActionError(f"no such action: {action_id}")
         if record.state in ("succeeded", "failed", "refused", "timeout"):
             return record
         handle, action = record.handle, record.action
@@ -92,6 +103,9 @@ class FakeCore:
             settled = ActionRecord(id=action_id, handle=handle, action=action,
                                    state="succeeded", said=f"froze {handle}: stood down, work pushed, pod released")
             self._set_state(handle, "frozen")
+        elif action == "restart-ui":
+            settled = ActionRecord(id=action_id, handle=handle, action=action,
+                                   state="succeeded", said="replaced the UI pod; sessions invalidated")
         else:
             settled = ActionRecord(id=action_id, handle=handle, action=action,
                                    state="refused", said=f"fake doesn't run '{action}'")
