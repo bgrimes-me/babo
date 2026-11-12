@@ -24,12 +24,21 @@ from babo.baton import projects as project_board
 from babo.baton.town import BatonError, Town
 from babo.office import model
 from babo.office.actors import Actor
-from babo.office.api import ACTIONS, TERMINAL, ActionRecord, CoreNotBuiltError, OfficeManager
+from babo.office.api import (
+    AGENT_ACTIONS,
+    OPERATOR_ACTIONS,
+    TERMINAL,
+    ActionRecord,
+    CoreNotBuiltError,
+    OfficeManager,
+)
 from babo.office.store import AgentStore, CrewStore
 
-# ACTIONS and TERMINAL are the interface's vocabulary, imported — not restated.
+# AGENT_ACTIONS and TERMINAL are the interface's vocabulary, imported — not restated.
 # A second literal tuple here would drift the moment the interface changed, and
-# the page would keep accepting a verb the core no longer had.
+# the page would keep accepting a verb the core no longer had. The terminal path
+# carries agent verbs only: the pod verb (`restart-ui`) has no terminal door, and
+# the interface declares that narrowing itself, so nobody here has to know it.
 
 
 @dataclass
@@ -209,8 +218,13 @@ def perform_sync(core: OfficeManager, handle: str, verb: str, reason: str, *, st
     """
     import time
 
-    if verb not in ACTIONS:
-        raise BatonError(f"there's no '{verb}' action; it is one of: {', '.join(ACTIONS)}")
+    if verb in OPERATOR_ACTIONS:
+        # A local terminal process is not the host-WG door. The verb exists; the
+        # door does not (ruled 2026-11-11).
+        raise BatonError(f"'{verb}' is the host operator's verb, admitted at the host-WG door; "
+                         "this terminal process is not that door")
+    if verb not in AGENT_ACTIONS:
+        raise BatonError(f"there's no '{verb}' action; it is one of: {', '.join(AGENT_ACTIONS)}")
     try:
         action_id = core.act(handle, verb, reason, actor=actor.name, actor_source=actor.source)
     except CoreNotBuiltError as exc:
@@ -236,8 +250,11 @@ def perform_sync(core: OfficeManager, handle: str, verb: str, reason: str, *, st
 def begin(town: Town, core: OfficeManager, ops: Ops, handle: str, verb: str, reason: str,
           *, actor: Actor, action_id: str | None = None) -> Op:
     """Ask the core for one action and start following it. Pending until it answers."""
-    if verb not in ACTIONS:
-        raise BatonError(f"there's no '{verb}' action; it is one of: {', '.join(ACTIONS)}")
+    if verb in OPERATOR_ACTIONS:
+        raise BatonError(f"'{verb}' is the host operator's verb, admitted at the host-WG door; "
+                         "this terminal process is not that door")
+    if verb not in AGENT_ACTIONS:
+        raise BatonError(f"there's no '{verb}' action; it is one of: {', '.join(AGENT_ACTIONS)}")
     store = AgentStore(town)
     # No local "is it recorded?" gate: that precondition is the core's (L-03) and
     # it refuses by name, so both doors get one refusal instead of two behaviours.

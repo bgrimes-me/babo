@@ -97,12 +97,12 @@ def test_a_trusted_listener_keeps_its_rendered_address_and_gets_no_static_route(
     from babo.config.schema import Config
 
     cfg = Config.model_validate({
-        "channels": {"websocket": {"enabled": True, "host": "10.0.0.5", "port": 18790,
+        "channels": {"websocket": {"enabled": True, "host": "10.0.0.11", "port": 18790,
                                    "trusted_sources": ["10.0.0.2/32"]}},
     })
     changed = _ensure_local_webui_channel(cfg, port=18790, yes=True)
     ws = cfg.channels.websocket
-    assert ws["host"] == "10.0.0.5", "the deliberate bind must survive setup"
+    assert ws["host"] == "10.0.0.11", "the deliberate bind must survive setup"
     assert ws.get("token_issue_secret", "") == "", "no static issuance route on a trusted listener"
     assert ws.get("token_issue_path", "") == ""
     assert ws["trusted_sources"] == ["10.0.0.2/32"]
@@ -123,3 +123,41 @@ def test_api_routes_do_not_accept_a_token_in_the_query_string() -> None:
     ws_token = store2.issue_api_token(3600)
     ws = Request(f"/ws?token={ws_token}", Headers({}))
     assert store2.check_api_token(ws)
+
+
+def test_the_listeners_unix_socket_is_local_and_needs_no_trust_entry() -> None:
+    """The in-pod operator door: a 0600 Unix socket, not a network peer.
+
+    fettle's served run found this seam — in a pod the CLI cannot reach the
+    listener over loopback (nothing is bound there) and is not a trusted source
+    (the only trusted address is the host's). The socket is local by
+    construction, so it needs neither.
+    """
+    from babo.webui.http_utils import is_unix_socket_peer
+
+    handler = object.__new__(GatewayHTTPHandler)
+    handler.config = WebSocketConfig(trusted_sources=["10.0.0.2/32"], unix_socket_path="/run/babo/ui.sock")
+    handler.tokens = GatewayTokenStore()
+    handler._log = SimpleNamespace(info=lambda *a, **k: None, warning=lambda *a, **k: None,
+                                   error=lambda *a, **k: None, exception=lambda *a, **k: None)
+    handler.ingress = SimpleNamespace(bootstrap_limits=lambda **kwargs: {})
+    handler.runtime_model_name = ""
+    handler.settings = SimpleNamespace(config=SimpleNamespace(path=""))
+    handler._runtime_surface = "webui"
+    handler._capabilities = {}
+
+    unix_peer = SimpleNamespace(remote_address=None)
+    assert is_unix_socket_peer(unix_peer)
+    request = Request("/webui/bootstrap", Headers({"Host": "localhost"}))
+    assert handler._handle_bootstrap(unix_peer, request).status_code == 200
+    assert handler.tokens.api_tokens, "the in-pod command gets a session without a network trust entry"
+
+    # A TCP peer is never mistreated as the socket, and the same config still
+    # refuses a source that is not on the list.
+    tcp_peer = SimpleNamespace(remote_address=("10.0.0.99", 5000))
+    assert not is_unix_socket_peer(tcp_peer)
+    assert handler._handle_bootstrap(tcp_peer, request).status_code == 403
+
+    # With no socket configured, "no remote address" does not become a free pass.
+    handler.config = WebSocketConfig(trusted_sources=["10.0.0.2/32"])
+    assert handler._handle_bootstrap(unix_peer, request).status_code == 403

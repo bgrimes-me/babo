@@ -36,8 +36,26 @@ from typing import Protocol, cast, runtime_checkable
 
 from babo.office.model import AgentObserved
 
-# The core's action vocabulary. The page currently exposes the first two.
-ACTIONS = ("spawn", "wake", "freeze", "rescue", "destroy")
+# The closed action vocabulary. `restart-ui` is the cross-pod half of revocation:
+# it asks the Manager to replace the UI pod, which invalidates every in-memory
+# session by construction (D-12: revocation is owned by the pod holding the store).
+ACTIONS = ("spawn", "wake", "freeze", "rescue", "destroy", "restart-ui")
+
+# The verbs an agent handle can carry: everything but the pod verb. `restart-ui`
+# is deliberately absent — its handle is the UI pod and its caller is the host
+# operator, so it is never offered on an agent row and never accepted on the
+# agent path (L-10's standing, ruled 2026-11-11). The vocabulary above stays six
+# verbs; what narrows is the door, not the word.
+AGENT_ACTIONS = tuple(verb for verb in ACTIONS if verb != "restart-ui")
+
+# The one verb the host operator may invoke, and the class word that authorizes
+# it — an allow-list of exactly one (soro's §8 ruling, corrected 2026-11-11: the
+# check is on the *provenance*, `actor_source == "host-wg"`, not on a literal
+# actor token; the actor is the operator's own name beside it). Never a deny-list
+# of the five classes we happened to think of: a deny-list is a row a sixth class
+# slips past the day someone adds one.
+OPERATOR_ACTIONS = ("restart-ui",)
+OPERATOR_SOURCE = "host-wg"
 
 # Terminal states, verbatim. Anything else is still in flight.
 TERMINAL = ("succeeded", "failed", "refused", "timeout")
@@ -61,6 +79,13 @@ class ActionRecord:
     action: str
     state: str = "pending"
     said: str = ""
+    # The read half of the audit row (D-12's contradiction, ruled 2026-11-11):
+    # the UI is the post-restart reader, so the row it polls must name who asked
+    # and why. These are projection fields only — the write contract is unchanged,
+    # and nothing here is a second store.
+    actor: str = ""
+    actor_source: str = ""
+    reason: str = ""
 
     def __post_init__(self) -> None:
         if self.state not in ("pending", "running", *TERMINAL):
