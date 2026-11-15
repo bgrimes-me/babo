@@ -19,7 +19,9 @@ from aiohttp import web
 from loguru import logger
 
 from babo.agent.hook import AgentHook, AgentRunHookContext
+from babo.agent.loop import Quiesced
 from babo.config.paths import get_media_dir
+from babo.office.relay import AGENT_FLUSH, AGENT_MESSAGE, AGENT_QUIESCE, AGENT_STATUS
 from babo.providers.base import LLMUsage
 from babo.providers.unconfigured_provider import UnconfiguredProvider
 from babo.utils.helpers import safe_filename
@@ -54,6 +56,12 @@ _REQUEST_TIMEOUT_KEY = web.AppKey[float]("request_timeout")
 _SESSION_LOCKS_KEY = web.AppKey[dict[str, asyncio.Lock]]("session_locks")
 _PREPARE_AGENT_KEY = web.AppKey[Callable[[], Awaitable[None]] | None]("prepare_agent")
 _REQUEST_ID_KEY = web.RequestKey[str]("request_id")
+
+# The relay's door, and the addresses that may knock on it without the API key:
+# the relay runs in this pod and reaches the agent on loopback. Anything off-host
+# still needs the key, because these routes can close the pod to new work.
+_OFFICE_PATHS = frozenset({AGENT_STATUS, AGENT_QUIESCE, AGENT_FLUSH, AGENT_MESSAGE})
+_LOOPBACK = frozenset({"127.0.0.1", "::1"})
 
 
 class _UsageCaptureHook(AgentHook):
@@ -277,6 +285,12 @@ async def handle_chat_completions(request: web.Request) -> web.Response | web.St
     content_type = _as_str(cast(object, request.content_type or ""))
 
     agent_loop = request.app[_AGENT_LOOP_KEY]
+    refused = agent_loop.quiesced
+    if isinstance(refused, Quiesced):
+        # A quiesced agent takes no new turn. Answering 200 with an empty body
+        # here would be a green with nothing behind it, which is what this whole
+        # line exists to stop.
+        return _error_json(503, refused.sentence, err_type="service_unavailable")
     if isinstance(agent_loop.provider, UnconfiguredProvider):
         return _error_json(
             503,
@@ -452,6 +466,86 @@ async def handle_health(request: web.Request) -> web.Response:
 
 
 # ---------------------------------------------------------------------------
+# The office door — the four routes the relay knocks on
+# (docs/OFFICE-RELAY.md). The paths are imported from babo.office.relay so that
+# the client and the server cannot disagree about what a door is called.
+# ---------------------------------------------------------------------------
+
+
+def _office_refusal(status: int, sentence: str) -> web.Response:
+    """The house shape for a refusal on this door: one key, one sentence.
+
+    The OpenAI endpoints keep their own error envelope; the office door speaks the
+    relay's vocabulary, because the relay is the only thing that reads it and it
+    must be able to quote what it was told without translating.
+    """
+    return web.json_response({"detail": sentence}, status=status)
+
+
+async def _office_body(request: web.Request) -> dict[str, Any]:
+    """The request's JSON object, or an empty one. These calls accept no body."""
+    try:
+        body = await request.json()
+    except Exception:
+        return {}
+    return cast(dict[str, Any], body) if isinstance(body, dict) else {}
+
+
+def _office_position(loop: Any) -> dict[str, Any]:
+    """The plural turn position: every session's live turn, from the turn registry."""
+    turns = loop.active_turns()
+    return {"in_flight": bool(turns), "count": len(turns), "turns": turns}
+
+
+async def handle_office_status(request: web.Request) -> web.Response:
+    """GET /v1/office/status — where the agent's turns are.
+
+    Read from the registry the turns maintain themselves, never from the lock map:
+    a lock can exist with no work behind it, and the loop's locks are weak.
+    """
+    loop = request.app[_AGENT_LOOP_KEY]
+    return web.json_response({"seen": True, **_office_position(loop)})
+
+
+async def handle_office_quiesce(request: web.Request) -> web.Response:
+    """POST /v1/office/quiesce — stop admitting work, and say where the turns stand."""
+    loop = request.app[_AGENT_LOOP_KEY]
+    body = await _office_body(request)
+    reason = _as_str(body.get("reason")) or "no reason given"
+    loop.quiesce(reason)
+    return web.json_response({"accepted": True, **_office_position(loop)})
+
+
+async def handle_office_flush(request: web.Request) -> web.Response:
+    """POST /v1/office/flush — persist and confirm, through the store's own barrier."""
+    loop = request.app[_AGENT_LOOP_KEY]
+    return web.json_response(await loop.office_flush())
+
+
+async def handle_office_message(request: web.Request) -> web.Response:
+    """POST /v1/office/message — accept, queue, return before the turn is taken."""
+    loop = request.app[_AGENT_LOOP_KEY]
+    body = await _office_body(request)
+    attachments = body.get("attachments")
+    if attachments is None:
+        attachments = []
+    if not isinstance(attachments, list):
+        return _office_refusal(400, "attachments must be a list")
+    if attachments:
+        # Refused by name: dropping them would deliver something the sender did
+        # not send, which is the one thing this door must never do silently.
+        return _office_refusal(400, "attachments are not carried by this door yet; nothing was dropped")
+    source = _as_str(body.get("from"))
+    channel = _as_str(body.get("channel"))
+    content = _as_str(body.get("content"))
+    if not source or not channel or not content:
+        return _office_refusal(400, "from, channel and content are required")
+    if not await loop.office_accept(source=source, channel=channel, content=content):
+        return _office_refusal(409, "the agent is not admitting work; the message was not accepted")
+    return web.json_response({"accepted": True})
+
+
+# ---------------------------------------------------------------------------
 # App factory
 # ---------------------------------------------------------------------------
 
@@ -541,6 +635,8 @@ def create_app(
         # Allow unauthenticated health checks.
         if request.path == "/health":
             return await handler(request)
+        if request.path in _OFFICE_PATHS and request.remote in _LOOPBACK:
+            return await handler(request)
         if not api_key:
             return await handler(request)
         auth = request.headers.get("Authorization", "")
@@ -556,4 +652,8 @@ def create_app(
     app.router.add_post("/v1/chat/completions", handle_chat_completions)
     app.router.add_get("/v1/models", handle_models)
     app.router.add_get("/health", handle_health)
+    app.router.add_get(AGENT_STATUS, handle_office_status)
+    app.router.add_post(AGENT_QUIESCE, handle_office_quiesce)
+    app.router.add_post(AGENT_FLUSH, handle_office_flush)
+    app.router.add_post(AGENT_MESSAGE, handle_office_message)
     return app

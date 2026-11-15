@@ -18,6 +18,7 @@ from babo.session.summary import (
 )
 
 if TYPE_CHECKING:
+    from babo.agent.loop import Quiesced
     from babo.agent.memory import Consolidator
     from babo.utils.llm_runtime import LLMRuntime
 
@@ -32,7 +33,7 @@ class AutoCompact:
         session_ttl_minutes: int = 0,
         bind_events: SessionEventFactory | None = None,
         *,
-        session_lock: Callable[[str], asyncio.Lock],
+        session_lock: Callable[[str], asyncio.Lock | Quiesced],
     ):
         self.sessions = sessions
         self.consolidator = consolidator
@@ -95,7 +96,16 @@ class AutoCompact:
             self._archiving.discard(key)
             return
         try:
-            async with self._session_lock(key):
+            admitted = self._session_lock(key)
+            if not isinstance(admitted, asyncio.Lock):
+                # A refusal is a value here too. Compaction is the work most likely
+                # to run while a pod is standing down — it is triggered by idleness
+                # — which is why the gate had to sit inside the lock factory rather
+                # than at each call site: nobody has to remember this branch exists
+                # for the gate to cover it.
+                logger.info("Auto-compact: skipping while quiesced: {}", admitted.sentence)
+                return
+            async with admitted:
                 # A turn may have refreshed activity while this archive waited.
                 session = await self.sessions.state.get_header(key)
                 if not self._is_expired(session.updated_at):
