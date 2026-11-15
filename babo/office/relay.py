@@ -134,8 +134,22 @@ def _no_answer(exc: BaseException, timeout_s: float, timeout_note: str = "") -> 
     return f"the agent did not answer its local door ({said})"
 
 
+def _turns_named(named: list[object]) -> list[dict[str, Any]]:
+    """The turns the agent named, narrowed in one place.
+
+    Every caller has already established that this is a list of objects — that is
+    part of what ``_says_turn_position`` substantiates — so the filter here is the
+    narrowing, not a second policy.
+    """
+    turns: list[dict[str, Any]] = []
+    for turn in named:
+        if isinstance(turn, dict):
+            turns.append(cast(dict[str, Any], turn))
+    return turns
+
+
 def _position(payload: dict[str, Any]) -> dict[str, Any]:
-    """Copy the turn position out of an answer, and nothing else.
+    """Copy the position out of an answer, and nothing else.
 
     The surface is closed: a field the relay has never heard of is not forwarded,
     because a consumer parses five calls with one shape and an unknown key is how
@@ -143,13 +157,11 @@ def _position(payload: dict[str, Any]) -> dict[str, Any]:
     inside each turn — ``session``, ``turn_id`` and ``wall_started_at`` travel;
     anything else the agent attaches to a turn does not.
     """
-    out = {name: payload[name] for name in POSITION_FIELDS if name in payload}
-    turns = out.get("turns")
-    if isinstance(turns, list):
+    out: dict[str, Any] = {name: payload[name] for name in POSITION_FIELDS if name in payload}
+    if "turns" in out:
         out["turns"] = [
             {name: turn[name] for name in TURN_FIELDS if name in turn}
-            for turn in turns
-            if isinstance(turn, dict)
+            for turn in _turns_named(cast(list[object], payload["turns"]))
         ]
     return out
 
@@ -171,9 +183,13 @@ def _says_turn_position(payload: dict[str, Any]) -> str | None:
     in_flight = payload.get("in_flight")
     if not isinstance(in_flight, bool):
         return "the agent answered without saying whether a turn is in flight"
-    turns = payload.get("turns")
-    if not isinstance(turns, list):
+    named = payload.get("turns")
+    if not isinstance(named, list):
         return "the agent answered without saying which turns are in flight"
+    for raw in cast(list[object], named):
+        if not isinstance(raw, dict):
+            return "the agent named a turn that is not an object"
+    turns = _turns_named(cast(list[object], named))
     if in_flight and not turns:
         return "the agent says a turn is in flight and named none"
     if not in_flight and turns:
@@ -182,8 +198,6 @@ def _says_turn_position(payload: dict[str, Any]) -> str | None:
     if isinstance(count, bool) or not isinstance(count, int) or count != len(turns):
         return "the agent's count disagrees with the turns it named"
     for turn in turns:
-        if not isinstance(turn, dict):
-            return "the agent named a turn that is not an object"
         if not _named(turn.get("session")):
             return "the agent named a turn in flight and did not say which session it is"
         if not _named(turn.get("turn_id")):
