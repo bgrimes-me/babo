@@ -67,7 +67,10 @@ def test_when_a_session_wraps_up(town: Town, make_config, monkeypatch: pytest.Mo
     session.last_active = (now - timedelta(minutes=minutes)).isoformat()
     last_seen = "" if not seen else now.isoformat() if seen == "now" else (now - timedelta(minutes=int(seen.split()[1]))).isoformat()
     monkeypatch.setattr(opencode, "live", lambda *_a, **_k: {"state": state, "activity": "", "questions": []})
-    monkeypatch.setattr(opencode, "presence", lambda *_a, **_k: {"connections": connections, "last_seen": last_seen})
+    monkeypatch.setattr(opencode, "presence", lambda *_a, **_k: {
+        "connections": connections, "last_seen": last_seen, "alive": True,
+        "pid": 1, "written_at": now.isoformat(), "age_s": 0.0, "reason": "",
+    })
     assert opencode.wrap_up_reason(town, cfg, session, now=now) == expected
 
 

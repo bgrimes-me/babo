@@ -54,6 +54,12 @@ def test_memory_files_stay_small(town: Town, box) -> None:
 def _running_idle(monkeypatch: pytest.MonkeyPatch, prompts: list[str]) -> None:
     monkeypatch.setattr(opencode, "running", lambda *_a, **_k: object())
     monkeypatch.setattr(opencode, "live", lambda *_a, **_k: {"state": "idle", "activity": "", "questions": []})
+    # A running session has a live door, so presence() answers rather than going
+    # unknown: an unknown room is not an empty one, and wrap-up waits on it.
+    monkeypatch.setattr(opencode, "presence", lambda *_a, **_k: {
+        "connections": 0, "last_seen": "", "alive": True, "pid": 1,
+        "written_at": datetime.now().astimezone().isoformat(), "age_s": 0.0, "reason": "",
+    })
 
     def prompt(town: Town, config: Any, session: opencode.Session, text: str, *, config_path: Any) -> str:
         prompts.append(text)

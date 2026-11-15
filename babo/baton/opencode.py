@@ -734,6 +734,22 @@ def door_status_path(town: Town, session: Session) -> Path:
     return _runtime_dir(town, session.resident) / f"{session.id}.door.json"
 
 
+# The door writes on a two-second heartbeat (``babo/baton/door.py``). Twice that is
+# the point past which its last word is a rumour rather than a reading.
+_DOOR_STALE_S = 4.0
+
+
+def _age_seconds(written_at: str) -> float | None:
+    """How old the door's last word is, or ``None`` when it cannot be read as a time."""
+    try:
+        moment = datetime.fromisoformat(written_at)
+    except ValueError:
+        return None
+    if moment.tzinfo is None:
+        return None
+    return max(0.0, (datetime.now(moment.tzinfo) - moment).total_seconds())
+
+
 def _open_door(town: Town, session: Session, run: Running, log: Any) -> Running:
     """Start the session's door (``babo/baton/door.py``), the way people reach it."""
     import sys
@@ -758,12 +774,47 @@ def _open_door(town: Town, session: Session, run: Running, log: Any) -> Running:
 
 
 def presence(town: Town, session: Session) -> dict[str, Any]:
-    """Who is in the session through its door: how many connections are open, and when the last one was."""
+    """Who is in the session through its door, and whether the door is still there.
+
+    The door dies truthfully when the process it watches exits, but it can also be
+    killed, and a killed door writes nothing. So the file carries ``written_at`` and
+    this reader ages it out: a status older than twice the door's heartbeat is
+    **unknown**, never alive. A stale positive is the one direction that costs
+    somebody work — a caller told "someone is in there" will leave the session
+    alone when there is nobody left to leave it for.
+    """
+    empty: dict[str, Any] = {
+        "connections": 0, "last_seen": "", "alive": None, "pid": 0,
+        "written_at": "", "age_s": None, "reason": "",
+    }
     try:
         data = json.loads(door_status_path(town, session).read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return {"connections": 0, "last_seen": ""}
-    return {"connections": int(data.get("connections") or 0), "last_seen": str(data.get("last_seen") or "")}
+        return {**empty, "reason": "the door has written no status"}
+    written_at = str(data.get("written_at") or "")
+    age_s = _age_seconds(written_at)
+    reported = bool(data.get("alive"))
+    reason = str(data.get("reason") or "")
+    if reported and (age_s is None or age_s > _DOOR_STALE_S):
+        # Never a stale positive: the door may have been killed before it could
+        # say it was going, and its last word was "alive".
+        return {
+            **empty,
+            "last_seen": str(data.get("last_seen") or ""),
+            "pid": int(data.get("pid") or 0),
+            "written_at": written_at,
+            "age_s": None if age_s is None else round(age_s, 1),
+            "reason": "the door's status has aged out; it may have been killed",
+        }
+    return {
+        "connections": int(data.get("connections") or 0),
+        "last_seen": str(data.get("last_seen") or ""),
+        "alive": reported,
+        "pid": int(data.get("pid") or 0),
+        "written_at": written_at,
+        "age_s": None if age_s is None else round(age_s, 1),
+        "reason": reason,
+    }
 
 
 def pairing_link(town: Town, session: Session) -> str:
@@ -1160,6 +1211,10 @@ def wrap_up_reason(town: Town, config: Config, session: Session, *, now: datetim
     if session.done_check and not session.done_status:
         return ""  # its done-check hasn't passed (or given up) yet: upkeep runs it first
     here = presence(town, session)
+    if here.get("alive") is None:
+        # The door cannot say who is there, so nobody is closed out on its silence:
+        # an unknown room is not an empty one.
+        return ""
     if here["connections"]:
         quiet = now - active >= timedelta(minutes=oc.freeze_after_idle_minutes)
         return "open, but nothing has happened for a long while" if quiet else ""
@@ -1453,7 +1508,11 @@ def describe(town: Town, session: Session) -> dict[str, Any]:
     run = running(town, session)
     return {**asdict(session), "status": "running" if run else ("frozen" if session.status != "new" else "new"),
             "url": run.url if run else "", "password": run.password if run else "", "live": live(town, session),
-            "presence": presence(town, session) if run else {"connections": 0, "last_seen": ""}}
+            "presence": presence(town, session) if run else {
+                "connections": 0, "last_seen": "", "alive": False, "pid": 0,
+                "written_at": "", "age_s": None,
+                "reason": "that session isn't running",
+            }}
 
 
 def overview(town: Town, resident: str, *, archived: bool = False) -> list[dict[str, Any]]:
