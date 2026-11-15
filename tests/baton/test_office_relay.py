@@ -15,6 +15,9 @@ The two rows acceptance hangs on are named for what they forbid:
 
 from __future__ import annotations
 
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 from babo.office import relay
@@ -112,6 +115,13 @@ def test_a_json_body_that_is_not_an_object_is_unknown() -> None:
     assert "not a JSON object" in r.status()["unknown"]
 
 
+def test_an_empty_body_is_unknown_not_a_zero() -> None:
+    r, _ = _relay((200, "   "))
+    body = r.status()
+    _one_failure_shape(body, "status")
+    assert "not a JSON object" in body["unknown"]
+
+
 # -- status: silence is not idle ---------------------------------------------
 def test_status_passes_the_turn_position_through() -> None:
     r, door = _relay((200, '{"in_flight": true, "turn_id": "t-9f21", '
@@ -180,6 +190,25 @@ def test_a_refusal_by_the_agent_is_its_own_sentence() -> None:
     body = r.quiesce("sessions leaked")
     assert body == {"detail": sentence}
     assert "unknown" not in body
+
+
+def test_a_refusal_whose_detail_is_not_a_sentence_is_not_an_answer() -> None:
+    r, _ = _relay((409, '{"detail": 5}'))
+    _one_failure_shape(r.quiesce("sessions leaked"), "quiesce")
+
+
+def test_an_error_answer_that_is_not_json_carries_no_sentence() -> None:
+    r, _ = _relay((502, "<html>bad gateway</html>"))
+    body = r.quiesce("sessions leaked")
+    _one_failure_shape(body, "quiesce")
+    assert "502" in body["unknown"]
+
+
+def test_a_quiesce_the_agent_declined_is_unknown_not_accepted() -> None:
+    r, _ = _relay((200, '{"accepted": false, "in_flight": false}'))
+    body = r.quiesce("sessions leaked")
+    _one_failure_shape(body, "quiesce")
+    assert "without accepting" in body["unknown"] and "accepted" not in body
 
 
 def test_a_missing_route_is_not_a_refusal() -> None:
@@ -277,6 +306,54 @@ def test_message_refuses_attachments_by_name_without_calling_the_door() -> None:
                      attachments=("cat.png",))
     _one_failure_shape(body, "message")
     assert "attachments" in body["unknown"] and door.calls == []
+
+
+def _door_server(status: int, payload: bytes, seen: list[dict[str, Any]]) -> tuple[HTTPServer, threading.Thread]:
+    """One real socket that answers once, so the default transport is exercised."""
+
+    class Door(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802 - stdlib hook name
+            length = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(length) if length else b"{}"
+            seen.append({"path": self.path, "body": json.loads(raw)})
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+            return
+
+    server = HTTPServer(("127.0.0.1", 0), Door)
+    worker = threading.Thread(target=server.handle_request, daemon=True)
+    worker.start()
+    return server, worker
+
+
+def test_the_default_transport_speaks_to_a_real_socket() -> None:
+    """The fake door proves the relay. This proves the transport underneath it."""
+    seen: list[dict[str, Any]] = []
+    server, worker = _door_server(200, b'{"accepted": true, "in_flight": false}', seen)
+    try:
+        r = relay.Relay(f"http://127.0.0.1:{server.server_port}")
+        assert r.quiesce("sessions leaked") == {"accepted": True, "in_flight": False}
+        assert seen == [{"path": relay.AGENT_QUIESCE, "body": {"reason": "sessions leaked"}}]
+    finally:
+        worker.join(timeout=5)
+        server.server_close()
+
+
+def test_the_default_transport_reads_a_real_refusal() -> None:
+    """A 4xx on the wire is the agent's sentence, not a connection failure."""
+    seen: list[dict[str, Any]] = []
+    server, worker = _door_server(409, b'{"detail": "a turn is mid-tool-call"}', seen)
+    try:
+        r = relay.Relay(f"http://127.0.0.1:{server.server_port}")
+        assert r.quiesce("sessions leaked") == {"detail": "a turn is mid-tool-call"}
+    finally:
+        worker.join(timeout=5)
+        server.server_close()
 
 
 # -- the relay's own bind and its own body are not this module's job --------
