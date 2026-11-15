@@ -181,6 +181,20 @@ async def test_the_office_door_answers_without_the_api_key_from_loopback(client)
     assert response.status == 200
 
 
+def test_a_mapped_ipv4_loopback_peer_is_the_relay_itself() -> None:
+    """`::ffff:127.0.0.1` is what a dual-stack listener reports for an IPv4 loopback
+    connection — the relay's own. A string comparison would refuse the door to the
+    thing standing on it."""
+    from babo.api.server import AGENT_QUIESCE, _office_door_refusal, is_loopback
+
+    assert is_loopback("::ffff:127.0.0.1") is True
+    assert is_loopback("127.0.0.1") is True and is_loopback("::1") is True
+    assert is_loopback("10.0.0.72") is False and is_loopback(None) is False
+    assert _office_door_refusal(AGENT_QUIESCE, "::ffff:127.0.0.1", "") is None
+    refused = _office_door_refusal(AGENT_QUIESCE, "10.0.0.72", "")
+    assert refused is not None and refused.status == 403
+
+
 def _non_loopback_address() -> str | None:
     """This host's own routable address, so a row can be a non-loopback peer."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

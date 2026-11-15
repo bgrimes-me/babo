@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hmac
+import ipaddress
 import json as _json
 import time
 import uuid
@@ -61,7 +62,26 @@ _REQUEST_ID_KEY = web.RequestKey[str]("request_id")
 # the relay runs in this pod and reaches the agent on loopback. Anything off-host
 # still needs the key, because these routes can close the pod to new work.
 _OFFICE_PATHS = frozenset({AGENT_STATUS, AGENT_QUIESCE, AGENT_FLUSH, AGENT_MESSAGE})
-_LOOPBACK = frozenset({"127.0.0.1", "::1"})
+
+
+def is_loopback(remote: str | None) -> bool:
+    """Whether a peer is on loopback, including the IPv4-mapped IPv6 form.
+
+    ``::ffff:127.0.0.1`` is what a dual-stack listener reports for a connection
+    that came in over IPv4 loopback — the relay's own, on the day the glue binds
+    dual-stack. Comparing strings alone would refuse the door to the thing
+    standing on it.
+    """
+    if not remote:
+        return False
+    try:
+        address = ipaddress.ip_address(remote)
+    except ValueError:
+        return False
+    if address.is_loopback:
+        return True
+    mapped = getattr(address, "ipv4_mapped", None)
+    return bool(mapped is not None and mapped.is_loopback)
 
 
 class _UsageCaptureHook(AgentHook):
@@ -480,7 +500,7 @@ def _office_door_refusal(path: str, remote: str | None, api_key: str) -> web.Res
     refused rather than inheriting the rest of the API's "no key means open" rule,
     because these routes can close the pod to new work.
     """
-    if path not in _OFFICE_PATHS or remote in _LOOPBACK:
+    if path not in _OFFICE_PATHS or is_loopback(remote):
         return None
     if api_key:
         return None  # the ordinary Bearer check decides
@@ -654,7 +674,7 @@ def create_app(
             refused = _office_door_refusal(request.path, request.remote, api_key)
             if refused is not None:
                 return refused
-            if request.remote in _LOOPBACK:
+            if is_loopback(request.remote):
                 return await handler(request)
         if not api_key:
             return await handler(request)

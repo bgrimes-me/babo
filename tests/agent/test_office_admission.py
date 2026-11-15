@@ -40,6 +40,10 @@ def _bare_loop() -> AgentLoop:
     loop._active_turns = {}
     loop._active_tasks = {}
     loop._pending_queues = {}
+    loop._queue_workers = {}
+    loop._recovery_admission = None
+    loop._deferred_automation_turns = {}
+    loop._automation_turn_coordinators = ()
     loop._quiesce = None
     loop._concurrency_gate = None
     return loop
@@ -160,7 +164,106 @@ def test_a_second_quiesce_keeps_the_first_reason() -> None:
     assert isinstance(refused, Quiesced) and "sessions leaked" in refused.sentence
 
 
-# -- resume reopens it --------------------------------------------------------
+# -- resume reopens it, and restarts what stood down --------------------------
+def test_resume_restarts_the_worker_that_stood_down(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The returning half: a stood-down worker is *not* a live one.
+
+    `_active_tasks` is cleared by a done-callback, an iteration after the task
+    finishes, so a resume that asked it would skip the session it exists to
+    restart. The slot this uses is cleared by the worker itself, in its `finally`,
+    before it decides anything about the queue.
+    """
+    loop = _bare_loop()
+    loop.sessions = MagicMock()
+    loop.sessions.state.peek_header.return_value = None
+    loop._pending_queues = {}
+    dispatched: list[object] = []
+
+    async def fake_dispatch(msg: object, pending: asyncio.Queue[object]) -> None:
+        dispatched.append(msg)
+
+    monkeypatch.setattr(loop, "_dispatch_one", fake_dispatch, raising=False)
+    # Freeze the done-callback, which is the window pore measured: a worker that
+    # has finished is still listed in `_active_tasks` until a later iteration, and
+    # a resume that asked that registry would skip the session it exists to save.
+    monkeypatch.setattr(loop, "_active_task_done", lambda *args, **kwargs: None)
+
+    async def scenario() -> None:
+        pending: asyncio.Queue[object] = asyncio.Queue()
+        pending.put_nowait("m1")
+        loop._pending_queues["cli:q"] = pending
+        loop.quiesce("stand down")
+        worker = asyncio.create_task(loop._run_session_queue("cli:q", pending))
+        loop._record_worker("cli:q", worker)
+        await worker  # stands down
+        assert loop._queue_workers == {}, "the slot must be clear the moment the worker returns"
+        assert "cli:q" in loop._active_tasks, "the callback-owned registry is still stale here"
+        assert loop._pending_queues["cli:q"] is pending
+        loop.resume()
+        for _ in range(4):
+            await asyncio.sleep(0)
+
+    asyncio.run(scenario())
+    assert dispatched == ["m1"], "the parked message must actually be dispatched"
+
+
+def test_resume_does_not_start_a_second_worker_when_one_is_live(monkeypatch: pytest.MonkeyPatch) -> None:
+    loop = _bare_loop()
+    loop.sessions = MagicMock()
+    loop.sessions.state.peek_header.return_value = None
+    loop._pending_queues = {}
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def blocking(msg: object, pending: asyncio.Queue[object]) -> None:
+        started.set()
+        await release.wait()
+
+    monkeypatch.setattr(loop, "_dispatch_one", blocking, raising=False)
+
+    async def scenario() -> asyncio.Task[None]:
+        pending: asyncio.Queue[object] = asyncio.Queue()
+        pending.put_nowait("m1")
+        loop._pending_queues["cli:q"] = pending
+        task = asyncio.create_task(loop._run_session_queue("cli:q", pending))
+        loop._record_worker("cli:q", task)
+        await started.wait()
+        loop.resume()
+        assert loop._queue_workers["cli:q"] is task, "a live worker is not restarted"
+        release.set()
+        await task
+        return task
+
+    asyncio.run(scenario())
+
+
+def test_a_refused_message_keeps_its_place_at_the_head() -> None:
+    """`put_nowait` appends; a refusal with messages behind it must not reorder them."""
+    pending: asyncio.Queue[str] = asyncio.Queue()
+    for item in ("m2", "m3"):
+        pending.put_nowait(item)
+    AgentLoop._requeue_front(pending, "m1")
+    order = [pending.get_nowait() for _ in range(pending.qsize())]
+    assert order == ["m1", "m2", "m3"]
+
+
+def test_the_refusal_path_is_what_requeues_at_the_head(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The helper is only worth its row if the door actually calls it."""
+    loop = _bare_loop()
+    loop.sessions = MagicMock()
+    loop.quiesce("stand down")
+    calls: list[str] = []
+
+    monkeypatch.setattr(
+        AgentLoop, "_requeue_front",
+        staticmethod(lambda pending, msg: calls.append(str(msg))),
+    )
+    loop._effective_session_key = lambda msg: "cli:q"  # type: ignore[method-assign]
+
+    asyncio.run(loop._dispatch_one("m1", asyncio.Queue()))
+    assert calls == ["m1"]
+
+
 def test_resume_admits_again() -> None:
     loop = _bare_loop()
     loop.quiesce("stand down")
@@ -171,6 +274,33 @@ def test_resume_admits_again() -> None:
 
 # -- the structural row -------------------------------------------------------
 def _callers_of(name: str) -> list[tuple[str, int]]:
+    """Every call of `name` in babo/, not just in loop.py.
+
+    A sixth call site from another module would pass a row that only read
+    `loop.py`, and the row's name would be a lie.
+    """
+    found: list[tuple[str, int]] = []
+    for path in sorted((LOOP_SOURCE.parents[1]).rglob("*.py")):
+        try:
+            tree = ast.parse(path.read_text())
+        except (SyntaxError, UnicodeDecodeError):  # pragma: no cover - non-source
+            continue
+        parents: dict[ast.AST, ast.AST] = {}
+        for node in ast.walk(tree):
+            for child in ast.iter_child_nodes(node):
+                parents[child] = node
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Attribute) or node.attr != name:
+                continue
+            owner = node
+            while owner in parents and not isinstance(owner, ast.FunctionDef):
+                owner = parents[owner]
+            label = owner.name if isinstance(owner, ast.FunctionDef) else "<module>"
+            found.append((label, node.lineno))
+    return found
+
+
+def _unused_callers_of(name: str) -> list[tuple[str, int]]:
     tree = ast.parse(LOOP_SOURCE.read_text())
     parents: dict[ast.AST, ast.AST] = {}
     for node in ast.walk(tree):

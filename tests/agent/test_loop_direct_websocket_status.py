@@ -93,6 +93,10 @@ async def test_process_direct_websocket_clears_run_status(tmp_path) -> None:
 async def test_process_direct_reuses_existing_session_lock(tmp_path) -> None:
     loop = _make_loop(tmp_path)
     session_key = "api:fixed"
+    # Fixture, not pattern: this builds a lock directly, which after the admission
+    # gate (2026-11-15) is a bypass. It is here to give a session a lock that a
+    # turn may contend on, and it does not go through `_admit` on purpose --
+    # copy `loop.admit(...)` in real code, never this line.
     lock = loop._session_locks.setdefault(session_key, asyncio.Lock())
     await lock.acquire()
     entered = asyncio.Event()

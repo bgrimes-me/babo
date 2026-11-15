@@ -273,6 +273,11 @@ class AgentLoop:
     # replaced per instance on first use; nothing shares it.
     _quiesce: Quiesced | None = None
     _active_turns: dict[str, dict[str, TurnRecord]] | None = None
+    # session -> the worker task that drains its inbox. Cleared by the worker
+    # itself, synchronously, before it decides anything about the queue; a
+    # done-callback is one loop iteration late and `resume` would skip the
+    # session it exists to restart.
+    _queue_workers: dict[str, asyncio.Task[Any]] | None = None
 
     @property
     def tool_names(self) -> list[str]:
@@ -483,6 +488,7 @@ class AgentLoop:
         # again here is a redeclaration the strict checker rejects.
         self._active_turns = {}
         self._quiesce = None
+        self._queue_workers = {}
         self._discarding_sessions: set[str] = set()
         self._background_tasks: set[asyncio.Task[Any]] = set()
         self._close_lock = asyncio.Lock()
@@ -1659,7 +1665,7 @@ class AgentLoop:
         new_pending.put_nowait(msg)
         self._pending_queues[session_key] = new_pending
         task = asyncio.create_task(self._run_session_queue(session_key, new_pending))
-        self._track_active_task(session_key, task)
+        self._record_worker(session_key, task)
 
     async def _run_session_queue(
         self,
@@ -1703,11 +1709,16 @@ class AgentLoop:
             await self._cancel_pending_messages(session_key, pending, exc)
             raise
         finally:
+            # Clear the slot synchronously, before anything else in this block:
+            # `resume` decides by this map, and the done-callback that would
+            # otherwise clear it runs a loop iteration later — long after
+            # `resume` has already skipped the session it was written for.
+            self._forget_worker(session_key)
             owns_queue = self._pending_queues.get(session_key) is pending
-            if owns_queue and self._quiesce is None:
-                # A worker that stood down leaves its queue registered, with the
-                # admitted work still in it: `resume` needs something to restart,
-                # and a popped queue is how that work would be lost silently.
+            if owns_queue and pending.empty() and self._quiesce is None:
+                # A queue with work in it is never deregistered, whatever
+                # `resume` decided: that clause is the difference between work
+                # still parked and work lost.
                 self._pending_queues.pop(session_key, None)
 
     async def _cancel_pending_messages(
@@ -1761,8 +1772,11 @@ class AgentLoop:
         admitted = self._admit(session_key)
         if isinstance(admitted, Quiesced):
             # Put it back where it was: it was admitted before the gate closed,
-            # and the worker's next iteration sees the quiesce and stops.
-            pending.put_nowait(msg)
+            # and the worker's next iteration sees the quiesce and stops. At the
+            # *head*, not the tail — `put_nowait` appends, and there is an await
+            # between the worker's quiesce check and this gate, so messages may
+            # have queued behind it.
+            self._requeue_front(pending, msg)
             logger.info("Deferred a queued turn while quiesced: {}", admitted.sentence)
             return
         lock = admitted
@@ -2877,6 +2891,37 @@ class AgentLoop:
             return quiesced
         return self._get_session_lock(session_key)
 
+    def _record_worker(self, session_key: str, task: asyncio.Task[Any]) -> None:
+        workers = self._queue_workers
+        if workers is None:
+            workers = {}
+            self._queue_workers = workers
+        workers[session_key] = task
+        self._track_active_task(session_key, task)
+
+    def _forget_worker(self, session_key: str) -> None:
+        """Clear the worker slot. Called by the worker itself, never by a callback."""
+        workers = self._queue_workers
+        if workers is not None:
+            workers.pop(session_key, None)
+
+    @staticmethod
+    def _requeue_front(pending: asyncio.Queue[InboundMessage], msg: InboundMessage) -> None:
+        """Put a refused message back at the head of its session's inbox.
+
+        ``put_nowait`` appends, and there is an ``await`` between the worker's own
+        quiesce check and the door it refuses at, so a refusal can happen with
+        messages already queued behind it. A session queue is FIFO for a reason:
+        re-appending would run the conversation out of order on resume. No awaits
+        here, so nothing can interleave with the drain.
+        """
+        held: list[InboundMessage] = []
+        while not pending.empty():
+            held.append(pending.get_nowait())
+        pending.put_nowait(msg)
+        for item in held:
+            pending.put_nowait(item)
+
     def _get_session_lock(self, session_key: str) -> asyncio.Lock:
         """Return the shared lock while allowing idle session entries to expire.
 
@@ -2948,10 +2993,17 @@ class AgentLoop:
         work admitted before the quiesce is stranded in a queue nobody drains.
         """
         self._quiesce = None
+        workers = self._queue_workers
+        if workers is None:
+            workers = {}
+            self._queue_workers = workers
         for session_key, pending in list(self._pending_queues.items()):
-            if session_key in self._active_tasks:
+            # The slot, not `_active_tasks`: it is cleared by the worker itself
+            # before it stands down, so a session whose worker has returned is
+            # restartable even while the done-callback has not fired yet.
+            if session_key in workers:
                 continue
-            self._track_active_task(
+            self._record_worker(
                 session_key,
                 asyncio.create_task(self._run_session_queue(session_key, pending)),
             )

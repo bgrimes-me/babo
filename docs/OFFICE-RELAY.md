@@ -113,6 +113,13 @@ relay answers `unknown` for `in_flight: false` with a non-empty `turns`, for
 `in_flight: true` with an empty one, and for a `count` that disagrees with the list
 — the same rule that makes a turn in flight with no `turn_id` unknown.
 
+**The position is a lower bound.** A turn registers when its body starts, and a turn
+that has been admitted but is still resolving its session is not counted yet. So
+`count` means *at least* this many, and **no consumer may treat `in_flight: false`
+on a quiesced pod as authority to destroy** until registration is exact. The
+optimistic direction is the one that loses work: the Manager's next act after
+`quiesce` is `flush`, and then destroy.
+
 A **200 with `unknown`** — the relay is fine and the agent is not answering, and the
 absence of `seen`/`in_flight` is the fact. A relay that turned that into a 500 would
 report its own health as the agent's.
