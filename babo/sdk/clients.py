@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable, Iterable, Mapping
 from copy import deepcopy
 from pathlib import Path
@@ -16,7 +17,7 @@ from babo.sdk.types import (
 )
 
 if TYPE_CHECKING:
-    from babo.agent.loop import AgentLoop
+    from babo.agent.loop import AgentLoop, Quiesced
 
 
 class SessionClient:
@@ -148,9 +149,17 @@ class RuntimeClient:
         """Register a persisted-turn callback and return an unsubscribe callback."""
         return self._loop.bus.subscribe(handler, SessionTurnPersisted)
 
-    async def compact_session(self, session_key: str) -> SessionSnapshot:
-        """Summarize one session and exclude its archived messages from replay."""
-        async with self._loop._get_session_lock(session_key):  # pyright: ignore[reportPrivateUsage]
+    async def compact_session(self, session_key: str) -> SessionSnapshot | Quiesced:
+        """Summarize one session and exclude its archived messages from replay.
+
+        A pod that is standing down answers ``Quiesced`` instead of compacting, and
+        that refusal is a value like any other answer: an exception here would put
+        the decision about what a refusal means into every caller.
+        """
+        admitted = self._loop.admit(session_key)
+        if not isinstance(admitted, asyncio.Lock):
+            return admitted
+        async with admitted:
             session = await self._loop.sessions.state.get(session_key)
             runtime = await self._loop.runtime_for_session(session)
             await self._loop.consolidator.compact_idle_session(
@@ -161,9 +170,19 @@ class RuntimeClient:
                 await self._loop.sessions.state.get(session_key)
             )
 
-    async def compact_idle_session(self, session_key: str, *, max_suffix: int = 0) -> str | None:
-        """Return a replacement summary; legacy ``max_suffix`` no longer retains history."""
-        async with self._loop._get_session_lock(session_key):  # pyright: ignore[reportPrivateUsage]
+    async def compact_idle_session(
+        self, session_key: str, *, max_suffix: int = 0,
+    ) -> str | Quiesced | None:
+        """Return a replacement summary; legacy ``max_suffix`` no longer retains history.
+
+        Three outcomes, three meanings, and the refusal must not collapse into the
+        ``None``: ``None`` says "there was nothing to compact", while ``Quiesced``
+        says "this was not done, and here is why".
+        """
+        admitted = self._loop.admit(session_key)
+        if not isinstance(admitted, asyncio.Lock):
+            return admitted
+        async with admitted:
             session = await self._loop.sessions.state.get(session_key)
             runtime = await self._loop.runtime_for_session(session)
             return await self._loop.consolidator.compact_idle_session(

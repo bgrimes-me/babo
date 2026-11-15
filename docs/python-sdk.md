@@ -590,10 +590,12 @@ Ingested messages must include `role` and `content`. Roles may be `user`, `assis
 | `workspace` | Current runtime workspace path. |
 | `add_context_provider(provider)` | Register an async per-turn context provider and return an unsubscribe callback. |
 | `on_session_turn_persisted(handler)` | Register a best-effort sync or async callback for locally persisted turns and return an unsubscribe callback. |
-| `await compact_session(session_key)` | Run token-based consolidation for a session. |
-| `await compact_idle_session(session_key, max_suffix=8)` | Run idle-session compaction and return its summary. |
+| `await compact_session(session_key)` | Run token-based consolidation for a session. Returns a `SessionSnapshot`, or a `Quiesced` refusal while the agent is standing down. |
+| `await compact_idle_session(session_key, max_suffix=8)` | Run idle-session compaction and return its summary (`str`), `None` when there was nothing to compact, or a `Quiesced` refusal. A refusal is never reported as `None`. |
 
 Both compaction methods serialize with turns for the same session key. Call them after `bot.run()` returns, or from a separate task that can wait for the active turn to finish.
+
+Both can also answer with a **`Quiesced`** value instead of doing the work, when the agent has been asked to stop admitting new work (the office relay's `quiesce`). That refusal is a returned value, not an exception: `Quiesced` carries a `sentence` saying why, and `compact_idle_session`'s refusal is deliberately not the same thing as its `None`, which means "there was nothing to compact".
 
 ### Host integration context and persisted-turn callbacks
 

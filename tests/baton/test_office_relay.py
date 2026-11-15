@@ -301,16 +301,13 @@ def test_message_is_delivered_on_a_2xx_and_says_nothing_else() -> None:
     assert r.message(source="@evans:matrix.home", channel="matrix", content="hello") == {"delivered": True}
 
 
-def test_message_posts_one_user_message_and_names_the_sender() -> None:
+def test_message_goes_to_the_office_door_and_names_the_sender() -> None:
     r, door = _relay((200, "{}"))
     r.message(source="@evans:matrix.home", channel="matrix", content="hello")
     call = door.calls[0]
-    assert call["method"] == "POST" and call["url"].endswith("/v1/chat/completions")
-    assert call["body"]["messages"] == [{"role": "user", "content": "hello"}]
-    assert call["body"]["session_id"] == "matrix:@evans:matrix.home"
-    # The door compares "model" against its configured model and 400s on a
-    # mismatch; the relay has no business choosing one.
-    assert "model" not in call["body"]
+    assert call["method"] == "POST" and call["url"].endswith(relay.AGENT_MESSAGE)
+    assert call["body"] == {"from": "@evans:matrix.home", "channel": "matrix",
+                            "content": "hello", "attachments": []}
 
 
 def test_message_four_xx_is_unknown_even_when_the_door_explains() -> None:
@@ -341,23 +338,21 @@ def test_message_timeout_is_unknown() -> None:
     r, _ = _relay(TimeoutError("timed out"))
     said = r.message(source="@evans:matrix.home", channel="matrix", content="hi")["unknown"]
     assert "within 30.0s" in said
-    # A caller reading `unknown` must not conclude it never arrived: the door we
-    # use takes a whole turn, so a deadline leaves the turn running or not taken.
-    assert "whether it took the turn is unknown" in said
+    # A caller reading `unknown` must not conclude it never arrived: the attempt
+    # may have been accepted after the deadline, and the relay cannot tell.
+    assert "whether it was accepted is unknown" in said
 
 
-def test_a_2xx_from_this_door_means_a_turn_was_taken_not_that_it_queued() -> None:
-    """The semantic of the door behind `message`, asserted where it is decided.
+def test_a_2xx_from_the_office_door_means_accepted_not_finished() -> None:
+    """`delivered` is a claim about the inbox, which is what this door can prove.
 
-    /v1/chat/completions carries a turn (one user message, awaited to completion),
-    so `delivered` is as strong as that door can be. /v1/office/message is the
-    route where a 2xx will mean accepted-for-delivery.
+    The agent's route accepts, queues and returns; the turn that follows is
+    `status`'s question. A 2xx therefore means the message landed, and the relay
+    says exactly that and no more.
     """
-    r, door = _relay((200, '{"choices": [{"message": {"content": "done"}}]}'))
+    r, door = _relay((200, '{"accepted": true}'))
     assert r.message(source="@evans:matrix.home", channel="matrix", content="hello") == {"delivered": True}
-    sent = door.calls[0]["body"]
-    assert list(sent) == ["messages", "session_id"], sent
-    assert sent["messages"][0]["role"] == "user"
+    assert door.calls[0]["url"].endswith("/v1/office/message")
 
 
 def test_message_refuses_attachments_by_name_without_calling_the_door() -> None:

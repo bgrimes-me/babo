@@ -68,13 +68,14 @@ RELAY_VERSION = "1"
 # this number rather than re-typing it.
 RELAY_PORT = 9300
 
-# The one door that exists today (babo/api/server.py:556). The other three are the
-# routes item 2 adds behind them; named here so that nobody has to derive them a
-# second time in the server.
-CHAT_COMPLETIONS = "/v1/chat/completions"
+# The agent's local door. These are the paths `babo/api/server.py` registers, and
+# it imports them from here rather than re-typing them: a prefix that drifts by one
+# character would leave the relay saying "the door has no /v1/office/status"
+# forever while every row stayed green.
 AGENT_STATUS = "/v1/office/status"
 AGENT_QUIESCE = "/v1/office/quiesce"
 AGENT_FLUSH = "/v1/office/flush"
+AGENT_MESSAGE = "/v1/office/message"
 
 # The fields of a substantiated position. Copied when the agent sends them,
 # omitted when it does not — never defaulted, because a default here is a claim.
@@ -296,36 +297,33 @@ class Relay:
 
     def message(self, *, source: str, channel: str, content: str,
                 attachments: tuple[str, ...] = ()) -> dict[str, Any]:
-        """Deliver one message. ``delivered: true`` only on a 2xx that came back.
+        """Deliver one message. ``delivered: true`` only when the agent accepted it.
 
-        **What that 2xx means is decided here, by the door chosen below.** The
-        door today is ``/v1/chat/completions``, which takes a turn: the server
-        awaits it before answering (``babo/api/server.py``), so a 2xx means *the
-        agent took a turn and returned*, not *an entry was queued*, and two
-        messages to one caller serialize on that session's lock. ``delivered``
-        is therefore the strongest word this door can support, and the weakest
-        word a notification needs. ``/v1/office/message`` (item 2) is the route
-        where 2xx means accepted-for-delivery; when it lands, this call changes
-        one constant and the word gets its ordinary meaning.
+        The door is ``/v1/office/message``, which accepts, queues and returns — so
+        a 2xx means *the message is in the agent's inbox*, and ``delivered`` means
+        delivery rather than completion. The completion door it used before this
+        route existed took a whole turn and answered afterwards, which made a
+        non-trivial turn look like a timeout and two messages serialize on one
+        session lock. Nothing here decides whether the turn that follows succeeds;
+        that is ``status``'s question, and a different call.
 
-        ``from`` and ``channel`` are not decoration: they become the door's
-        session identity, because a caller that cannot say who is speaking cannot
-        be answered in the right conversation. Attachments are refused by name
-        rather than dropped — a rebuild that forgets a field is how identity was
-        deleted from the store once already.
+        ``from`` and ``channel`` are not decoration: they are the message's
+        identity, and the agent keys the conversation on them. Attachments are
+        refused by name rather than dropped — a rebuild that forgets a field is how
+        identity was deleted from the store once already.
         """
         if attachments:
             return _unknown("message", "the agent's local door does not accept attachments yet")
         body: dict[str, Any] = {
-            "messages": [{"role": "user", "content": content}],
-            "session_id": f"{channel}:{source}",
+            "from": source,
+            "channel": channel,
+            "content": content,
+            "attachments": [],
         }
-        # Deliberately no "model": the door compares it against its configured
-        # model and 400s on a mismatch, and the relay has no business choosing.
         _, failure = self._ask(
-            "message", "POST", CHAT_COMPLETIONS, body, self.message_timeout_s,
+            "message", "POST", AGENT_MESSAGE, body, self.message_timeout_s,
             None, allow_sentence=False, parse=False,
-            timeout_note="so whether it took the turn is unknown",
+            timeout_note="so whether it was accepted is unknown",
         )
         if failure is not None:
             return failure

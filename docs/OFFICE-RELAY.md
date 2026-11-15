@@ -113,6 +113,13 @@ relay answers `unknown` for `in_flight: false` with a non-empty `turns`, for
 `in_flight: true` with an empty one, and for a `count` that disagrees with the list
 — the same rule that makes a turn in flight with no `turn_id` unknown.
 
+**The position is a lower bound.** A turn registers when its body starts, and a turn
+that has been admitted but is still resolving its session is not counted yet. So
+`count` means *at least* this many, and **no consumer may treat `in_flight: false`
+on a quiesced pod as authority to destroy** until registration is exact. The
+optimistic direction is the one that loses work: the Manager's next act after
+`quiesce` is `flush`, and then destroy.
+
 A **200 with `unknown`** — the relay is fine and the agent is not answering, and the
 absence of `seen`/`in_flight` is the fact. A relay that turned that into a 500 would
 report its own health as the agent's.
@@ -140,6 +147,10 @@ relay does not reword what it is told — a refusal is an answer, and `unknown` 
 The position it returns is `status`'s shape and for the same reason: an admission
 gate that can only name one of two live turns has not closed anything.
 
+**`quiesce` is one-way by design.** There is no `unquiesce` call: the surface is
+five, and a pod is closed so that it can be flushed and destroyed. The exit from a
+quiesced pod is `flush`, then destroy — there is no path back to admitting work.
+
 ### `POST /flush`
 
 Persist and confirm. It must not claim a persist it cannot substantiate.
@@ -161,6 +172,13 @@ POST {"from": "@evans:matrix.home", "channel": "matrix", "content": "hello",
 200  {"delivered": true}
 200  {"unknown": "message: the agent's local door did not accept it"}
 ```
+
+**The door is `POST /v1/office/message` on the agent's loopback**, which accepts the
+message into the agent's queue and returns before the turn is taken. So
+`delivered: true` means *delivered* — the message is in the inbox — not that a turn
+completed and answered. The relay used the completion door before that route
+existed, and the word meant the weaker thing then; it does not now. A consumer that
+wants to know whether the turn happened asks `status`.
 
 ## What it must never do
 

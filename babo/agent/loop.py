@@ -13,7 +13,7 @@ from collections.abc import Coroutine, Iterable, Mapping
 from contextlib import AbstractContextManager, ExitStack, nullcontext, suppress
 from copy import deepcopy
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum, auto
 from functools import partial
 from pathlib import Path
@@ -212,6 +212,50 @@ class TurnContext:
         return self.session
 
 
+def _iso_utc(wall_started_at: float) -> str:
+    """The wire's clock: seconds precision, UTC, the same shape the contract shows."""
+    return datetime.fromtimestamp(wall_started_at, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+@dataclass(frozen=True)
+class TurnRecord:
+    """One turn in flight, as the pod can testify to it.
+
+    Registered by the turn itself, so it exists for exactly as long as the work
+    does. Locks are not the authority for this: ``_session_locks`` is weak, and a
+    lock can expire while a turn still runs.
+    """
+
+    session_key: str
+    turn_id: str
+    wall_started_at: float
+
+    def as_wire(self) -> dict[str, Any]:
+        """The shape the relay's ``status`` returns, one entry of it."""
+        return {
+            "session": self.session_key,
+            "turn_id": self.turn_id,
+            "wall_started_at": _iso_utc(self.wall_started_at),
+        }
+
+
+@dataclass(frozen=True)
+class Quiesced:
+    """A refusal as a value, carrying its own sentence.
+
+    Returned by `AgentLoop._admit`, never raised. A caller that forgets to look at
+    it gets a type error from the checker rather than a wedged agent at runtime:
+    the failure mode of a forgotten refusal has to be a failed row, not a pod that
+    silently answers nothing forever.
+    """
+
+    sentence: str
+    reason: str = ""
+
+    def __str__(self) -> str:
+        return self.sentence
+
+
 class AgentLoop:
     """
     The agent loop is the core processing engine.
@@ -223,6 +267,17 @@ class AgentLoop:
     4. Executes tool calls
     5. Sends responses back
     """
+
+    # Admission state, at class level so instances built without ``__init__`` (the
+    # tests do this) read a real default instead of raising. ``_active_turns`` is
+    # replaced per instance on first use; nothing shares it.
+    _quiesce: Quiesced | None = None
+    _active_turns: dict[str, dict[str, TurnRecord]] | None = None
+    # session -> the worker task that drains its inbox. Cleared by the worker
+    # itself, synchronously, before it decides anything about the queue; a
+    # done-callback is one loop iteration late and `resume` would skip the
+    # session it exists to restart.
+    _queue_workers: dict[str, asyncio.Task[Any]] | None = None
 
     @property
     def tool_names(self) -> list[str]:
@@ -426,6 +481,14 @@ class AgentLoop:
         self._running = False
         self._runtime_context_providers: list[RuntimeContextProvider] = []
         self._active_tasks: dict[str, set[asyncio.Task[Any]]] = {}
+        # Turns that are executing right now, per session, registered by the turn
+        # itself. This — not the lock registry — is what `status` reports: locks
+        # may exist with no work and expire while work runs.
+        # Types come from the class-level declarations above; annotating them
+        # again here is a redeclaration the strict checker rejects.
+        self._active_turns = {}
+        self._quiesce = None
+        self._queue_workers = {}
         self._discarding_sessions: set[str] = set()
         self._background_tasks: set[asyncio.Task[Any]] = set()
         self._close_lock = asyncio.Lock()
@@ -460,7 +523,7 @@ class AgentLoop:
             consolidator=self.consolidator,
             session_ttl_minutes=session_ttl_minutes,
             bind_events=self._idle_events,
-            session_lock=self._get_session_lock,
+            session_lock=self._admit,
         )
         self._idle_compact_check_interval_s = idle_compact_check_interval_seconds
         self._next_idle_compact_check_at = time.monotonic()
@@ -1571,6 +1634,12 @@ class AgentLoop:
     async def _enqueue_session_message(self, msg: InboundMessage) -> None:
         """Admit session work without waiting for its execution or result."""
         self.bus.admission.check()
+        quiesced = self._quiesce
+        if quiesced is not None:
+            # Admission, not execution: a message that reaches an inbox during a
+            # quiesce would become a turn after the pod said it had stopped.
+            logger.info("Refused an inbound message while quiesced: {}", quiesced.sentence)
+            return
         session_key = self._effective_session_key(msg)
         if not self.subagents.accepts_result(msg, session_key):
             return
@@ -1596,7 +1665,7 @@ class AgentLoop:
         new_pending.put_nowait(msg)
         self._pending_queues[session_key] = new_pending
         task = asyncio.create_task(self._run_session_queue(session_key, new_pending))
-        self._track_active_task(session_key, task)
+        self._record_worker(session_key, task)
 
     async def _run_session_queue(
         self,
@@ -1606,6 +1675,10 @@ class AgentLoop:
         """Run the sole worker for a session until its inbox is empty."""
         try:
             while self._pending_queues.get(session_key) is pending:
+                if self._quiesce is not None:
+                    # Already-admitted work stays in its inbox: quiesce stops
+                    # admission, it does not discard. `resume` restarts a worker.
+                    break
                 try:
                     msg = pending.get_nowait()
                 except asyncio.QueueEmpty:
@@ -1636,8 +1709,16 @@ class AgentLoop:
             await self._cancel_pending_messages(session_key, pending, exc)
             raise
         finally:
+            # Clear the slot synchronously, before anything else in this block:
+            # `resume` decides by this map, and the done-callback that would
+            # otherwise clear it runs a loop iteration later — long after
+            # `resume` has already skipped the session it was written for.
+            self._forget_worker(session_key)
             owns_queue = self._pending_queues.get(session_key) is pending
-            if owns_queue:
+            if owns_queue and pending.empty() and self._quiesce is None:
+                # A queue with work in it is never deregistered, whatever
+                # `resume` decided: that clause is the difference between work
+                # still parked and work lost.
                 self._pending_queues.pop(session_key, None)
 
     async def _cancel_pending_messages(
@@ -1688,7 +1769,17 @@ class AgentLoop:
                 if recovery_task_registered and current_task is not None:
                     recovery_admission.unregister_recovery_task(session_key, current_task)
                 return
-        lock = self._get_session_lock(session_key)
+        admitted = self._admit(session_key)
+        if isinstance(admitted, Quiesced):
+            # Put it back where it was: it was admitted before the gate closed,
+            # and the worker's next iteration sees the quiesce and stops. At the
+            # *head*, not the tail — `put_nowait` appends, and there is an await
+            # between the worker's quiesce check and this gate, so messages may
+            # have queued behind it.
+            self._requeue_front(pending, msg)
+            logger.info("Deferred a queued turn while quiesced: {}", admitted.sentence)
+            return
+        lock = admitted
         gate = self._concurrency_gate or nullcontext()
 
         delivery = self.turn_delivery_factory.unrouted(msg, session_key)
@@ -1964,18 +2055,24 @@ class AgentLoop:
 
             ctx.events = EventSink(track_output, ctx.events.accepts)
 
-        with logger.contextualize(turn_id=ctx.turn_id, session_key=ctx.session_key):
-            await self._run_turn_stage(ctx, "restore", self._restore_turn)
-            await self._run_turn_stage(ctx, "compact", self._compact_session)
-            if await self._run_turn_stage(ctx, "command", self._dispatch_command):
-                self._log_turn_completion(ctx, outcome="command")
+        # Registered for exactly as long as this turn can be doing work, so that
+        # `status` reports a turn that is running rather than a lock that exists.
+        self._begin_turn(ctx)
+        try:
+            with logger.contextualize(turn_id=ctx.turn_id, session_key=ctx.session_key):
+                await self._run_turn_stage(ctx, "restore", self._restore_turn)
+                await self._run_turn_stage(ctx, "compact", self._compact_session)
+                if await self._run_turn_stage(ctx, "command", self._dispatch_command):
+                    self._log_turn_completion(ctx, outcome="command")
+                    return ctx.outbound
+                await self._run_turn_stage(ctx, "build", self._build_turn)
+                await self._run_turn_stage(ctx, "run", self._run_turn)
+                await self._run_turn_stage(ctx, "save", self._persist_turn)
+                await self._run_turn_stage(ctx, "respond", self._prepare_outbound)
+                self._log_turn_completion(ctx)
                 return ctx.outbound
-            await self._run_turn_stage(ctx, "build", self._build_turn)
-            await self._run_turn_stage(ctx, "run", self._run_turn)
-            await self._run_turn_stage(ctx, "save", self._persist_turn)
-            await self._run_turn_stage(ctx, "respond", self._prepare_outbound)
-            self._log_turn_completion(ctx)
-            return ctx.outbound
+        finally:
+            self._end_turn(ctx)
 
     async def _run_turn_stage(
         self,
@@ -2708,7 +2805,11 @@ class AgentLoop:
             content=content, media=media or [], metadata=metadata,
         )
         # Share the dispatch lock so direct calls serialize with bus turns.
-        lock = self._get_session_lock(session_key)
+        admitted = self._admit(session_key)
+        if isinstance(admitted, Quiesced):
+            logger.info("Refused a direct turn while quiesced: {}", admitted.sentence)
+            return None
+        lock = admitted
         with self.bus.admission.activity():
             temporary_parent = False
             try:
@@ -2758,10 +2859,185 @@ class AgentLoop:
                 await self.runtime_event_publisher.run_status_changed(msg, session_key, "idle")
                 self.runtime_event_publisher.clear_turn(session_key)
 
+    # -- admission --------------------------------------------------------
+    def admit(self, session_key: str) -> asyncio.Lock | Quiesced:
+        """The public door to the gate, so the SDK needs no private access.
+
+        The SDK used to reach ``_get_session_lock`` directly under a
+        ``reportPrivateUsage`` suppression, which is how a second admission path
+        was born without anyone deciding it should exist. This is the seam: one
+        name, gated, and the suppression is gone with it.
+        """
+        return self._admit(session_key)
+
+    def _admit(self, session_key: str) -> asyncio.Lock | Quiesced:
+        """The gate above lock creation, and the only way to obtain a session lock.
+
+        Checked *before* the lock exists. A turn that creates its lock first and
+        asks afterwards has already slipped under the gate, because the creation
+        is what lets it run. ``process_direct``, the bus dispatch path, idle
+        compaction and the SDK all arrive here, so none of them can be forgotten.
+
+        This door is **one-way** (``docs/OFFICE-RELAY.md``): there is no unquiesce
+        call, and the exit from a quiesced pod is ``flush`` then destroy. That is
+        only safe while the process holding this flag cannot outlive the pod — the
+        supervisor exits the container when either child dies, so the flag resets
+        only by the pod ending. If that changes, this gate needs a different
+        lifetime, because a relay that restarted alone would reopen the pod
+        silently.
+        """
+        quiesced = self._quiesce
+        if quiesced is not None:
+            return quiesced
+        return self._get_session_lock(session_key)
+
+    def _record_worker(self, session_key: str, task: asyncio.Task[Any]) -> None:
+        workers = self._queue_workers
+        if workers is None:
+            workers = {}
+            self._queue_workers = workers
+        workers[session_key] = task
+        self._track_active_task(session_key, task)
+
+    def _forget_worker(self, session_key: str) -> None:
+        """Clear the worker slot. Called by the worker itself, never by a callback."""
+        workers = self._queue_workers
+        if workers is not None:
+            workers.pop(session_key, None)
+
+    @staticmethod
+    def _requeue_front(pending: asyncio.Queue[InboundMessage], msg: InboundMessage) -> None:
+        """Put a refused message back at the head of its session's inbox.
+
+        ``put_nowait`` appends, and there is an ``await`` between the worker's own
+        quiesce check and the door it refuses at, so a refusal can happen with
+        messages already queued behind it. A session queue is FIFO for a reason:
+        re-appending would run the conversation out of order on resume. No awaits
+        here, so nothing can interleave with the drain.
+        """
+        held: list[InboundMessage] = []
+        while not pending.empty():
+            held.append(pending.get_nowait())
+        pending.put_nowait(msg)
+        for item in held:
+            pending.put_nowait(item)
+
     def _get_session_lock(self, session_key: str) -> asyncio.Lock:
-        """Return the shared lock while allowing idle session entries to expire."""
+        """Return the shared lock while allowing idle session entries to expire.
+
+        Called from ``_admit`` and nowhere else, which an AST row asserts: a gate
+        that lives beside creation instead of inside it is a gate somebody routes
+        around without meaning to.
+        """
         lock = self._session_locks.get(session_key)
         if lock is None:
             lock = asyncio.Lock()
             self._session_locks[session_key] = lock
         return lock
+
+    # -- what is running --------------------------------------------------
+    def _begin_turn(self, ctx: TurnContext) -> None:
+        registry = self._active_turns
+        if registry is None:
+            registry = {}
+            self._active_turns = registry
+        registry.setdefault(ctx.session_key, {})[ctx.turn_id] = TurnRecord(
+            session_key=ctx.session_key,
+            turn_id=ctx.turn_id,
+            wall_started_at=ctx.turn_wall_started_at,
+        )
+
+    def _end_turn(self, ctx: TurnContext) -> None:
+        registry = self._active_turns
+        if not registry:
+            return
+        running = registry.get(ctx.session_key)
+        if running is None:
+            return
+        running.pop(ctx.turn_id, None)
+        if not running:
+            registry.pop(ctx.session_key, None)
+
+    def active_turns(self) -> list[dict[str, Any]]:
+        """Every turn executing now, in the shape ``status`` and ``quiesce`` return."""
+        registry = self._active_turns or {}
+        records = [record for running in registry.values() for record in running.values()]
+        records.sort(key=lambda record: (record.wall_started_at, record.turn_id))
+        return [record.as_wire() for record in records]
+
+    # -- the office surface the relay knocks on ---------------------------
+    @property
+    def quiesced(self) -> Quiesced | None:
+        """The refusal this loop is currently handing out, or ``None``."""
+        return self._quiesce
+
+    def quiesce(self, reason: str) -> list[dict[str, Any]]:
+        """Stop admitting new work and return where the turns stand.
+
+        Idempotent: a second quiesce keeps the first refusal's sentence, because
+        the pod has been closed since then and the reason that closed it is the
+        one a caller needs.
+        """
+        if self._quiesce is None:
+            self._quiesce = Quiesced(
+                sentence=f"the agent is not admitting new work ({reason})",
+                reason=reason,
+            )
+        return self.active_turns()
+
+    def resume(self) -> list[dict[str, Any]]:
+        """Admit work again, and restart the workers that stood down.
+
+        Queued messages were left in their inboxes, so resuming is more than
+        clearing the flag: a session whose worker broke out needs one back, or the
+        work admitted before the quiesce is stranded in a queue nobody drains.
+        """
+        self._quiesce = None
+        workers = self._queue_workers
+        if workers is None:
+            workers = {}
+            self._queue_workers = workers
+        for session_key, pending in list(self._pending_queues.items()):
+            # The slot, not `_active_tasks`: it is cleared by the worker itself
+            # before it stands down, so a session whose worker has returned is
+            # restartable even while the done-callback has not fired yet.
+            if session_key in workers:
+                continue
+            self._record_worker(
+                session_key,
+                asyncio.create_task(self._run_session_queue(session_key, pending)),
+            )
+        return self.active_turns()
+
+    async def office_flush(self) -> dict[str, Any]:
+        """Persist and confirm, without claiming more than the store can prove.
+
+        The store commits each operation inside its own transaction, so there is
+        no write buffer to drain. What can be proven is *ordering*: every session
+        state operation awaits each operation admitted before it, and
+        ``list_sessions`` is a keyless read, so when it returns, every write
+        submitted before it has completed. That barrier is the store's own.
+        """
+        sessions = await self.sessions.state.list_sessions()
+        turns = self.active_turns()
+        detail = (
+            f"the store committed every accepted operation; {len(sessions)} session(s) readable"
+        )
+        if turns:
+            detail += f"; {len(turns)} turn(s) still in flight are not part of this confirmation"
+        return {"persisted": True, "detail": detail}
+
+    async def office_accept(self, *, source: str, channel: str, content: str) -> bool:
+        """Accept a message for delivery and return before it becomes a turn.
+
+        Refusing while quiesced is the point: "accepted" is a claim about the
+        pod's future behaviour, and a closed pod has no future work to promise.
+        The message's session key is ``<channel>:<source>``, the same identity the
+        relay sends, so a caller's messages stay in that caller's conversation.
+        """
+        if self._quiesce is not None:
+            return False
+        await self._enqueue_session_message(
+            InboundMessage(channel=channel, sender_id=source, chat_id=source, content=content)
+        )
+        return True
