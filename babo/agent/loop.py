@@ -2863,6 +2863,14 @@ class AgentLoop:
         asks afterwards has already slipped under the gate, because the creation
         is what lets it run. ``process_direct``, the bus dispatch path, idle
         compaction and the SDK all arrive here, so none of them can be forgotten.
+
+        This door is **one-way** (``docs/OFFICE-RELAY.md``): there is no unquiesce
+        call, and the exit from a quiesced pod is ``flush`` then destroy. That is
+        only safe while the process holding this flag cannot outlive the pod — the
+        supervisor exits the container when either child dies, so the flag resets
+        only by the pod ending. If that changes, this gate needs a different
+        lifetime, because a relay that restarted alone would reopen the pod
+        silently.
         """
         quiesced = self._quiesce
         if quiesced is not None:
