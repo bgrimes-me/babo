@@ -20,6 +20,15 @@ for it; nothing outside the pod talks to the agent at all.
 - Ingress is the relay's. The agent's own services bind loopback; the pod still has
   its own network for egress (Forgejo, at minimum).
 
+### Where it listens
+
+**The pod's WireGuard address, port 9300.** The port is the Ruby relay's, kept for
+the same reason `message`'s shape was kept: a caller should not learn two
+vocabularies for one hop. The address is the pod's, and it is not loopback —
+the Manager is outside the pod, and the relay is the pod's only window. The port is
+`RELAY_PORT` in `babo/office/relay.py` and the Manager side reads it from there
+rather than re-typing the number.
+
 ## Why Python, not the Ruby relay that exists
 
 `neoclaw-rails/app/services/hub/relay.rb` is the existing sidecar (`<wg_address>:9300`,
@@ -79,18 +88,30 @@ say *the agent is well*; for that it asks `status`.
 
 ### `GET /status`
 
-Where the agent's turn is, **asked locally**, and `unknown` when the relay cannot see
-it. Never `idle` by default: silence must not become "nothing is happening".
+Where the agent's turns are, **asked locally**, and `unknown` when the relay cannot
+see them. Never `idle` by default: silence must not become "nothing is happening".
+
+**Plural, because the pod is plural.** The agent holds one lock per session, so
+several turns can be in flight in one pod at once. A single `turn_id` would let a
+Manager conclude "quiet enough to restart" from one session's answer and restart
+into another session's live turn — and `quiesce` exists precisely to say where the
+turns stand before a restart.
 
 ```
-200 {"seen": true, "in_flight": true,
-     "turn_id": "t-9f21", "wall_started_at": "2026-11-14T22:10:00Z"}
+200 {"seen": true, "in_flight": true, "count": 1,
+     "turns": [{"session": "api:matrix:@evans", "turn_id": "t-9f21",
+                "wall_started_at": "2026-11-14T22:10:00Z"}]}
 
-200 {"seen": true, "in_flight": false,
-     "turn_id": null, "wall_started_at": null}
+200 {"seen": true, "in_flight": false, "count": 0, "turns": []}
 
 200 {"unknown": "status: the agent did not answer its local door (connection refused)"}
 ```
+
+`in_flight` is true if **any** session is in flight; `turns` is the whole set, and
+`count` is its length. A position that contradicts itself is not a position: the
+relay answers `unknown` for `in_flight: false` with a non-empty `turns`, for
+`in_flight: true` with an empty one, and for a `count` that disagrees with the list
+— the same rule that makes a turn in flight with no `turn_id` unknown.
 
 A **200 with `unknown`** — the relay is fine and the agent is not answering, and the
 absence of `seen`/`in_flight` is the fact. A relay that turned that into a 500 would
@@ -98,15 +119,16 @@ report its own health as the agent's.
 
 ### `POST /quiesce`
 
-Stop admitting new work and return where the turn stands. **Quiesce, not kill**:
+Stop admitting new work and return where the turns stand. **Quiesce, not kill**:
 a turn in flight is allowed to reach a boundary; the pod is not torn down here.
 
 ```
 POST {"reason": "sessions leaked"}
-200  {"accepted": true, "in_flight": true, "turn_id": "t-9f21",
-      "wall_started_at": "2026-11-14T22:10:00Z"}
+200  {"accepted": true, "in_flight": true, "count": 1,
+      "turns": [{"session": "api:matrix:@evans", "turn_id": "t-9f21",
+                 "wall_started_at": "2026-11-14T22:10:00Z"}]}
 
-200  {"accepted": true, "in_flight": false}
+200  {"accepted": true, "in_flight": false, "count": 0, "turns": []}
 
 200  {"unknown": "quiesce: the agent did not answer its local door (timeout after 5.0s)"}
 ```
@@ -114,6 +136,9 @@ POST {"reason": "sessions leaked"}
 An `unknown` answer means *the request was not taken*, not *the agent refused*. A
 refusal by the agent is a `200` with the agent's own sentence in `detail`, because the
 relay does not reword what it is told — a refusal is an answer, and `unknown` is not.
+
+The position it returns is `status`'s shape and for the same reason: an admission
+gate that can only name one of two live turns has not closed anything.
 
 ### `POST /flush`
 
@@ -143,8 +168,9 @@ POST {"from": "@evans:matrix.home", "channel": "matrix", "content": "hello",
   "delivered". Delivery is the only thing a caller is told, and only when it happened.
 - **Speak for the agent.** Any sentence attributed to the agent is quoted; any answer
   the relay could not obtain is `unknown` with the reason it could not.
-- **Listen anywhere the agent can be reached without the relay.** The relay's own bind
-  is its decision; the agent's is not a decision at all (loopback).
+- **Listen anywhere the agent can be reached without the relay.** The relay binds the
+  pod's WireGuard address and nothing else; the agent's bind is not a decision at all
+  (loopback).
 
 ## How it is tested without a pod
 
