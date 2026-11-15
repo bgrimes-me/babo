@@ -68,9 +68,13 @@ AGENT_STATUS = "/v1/office/status"
 AGENT_QUIESCE = "/v1/office/quiesce"
 AGENT_FLUSH = "/v1/office/flush"
 
-# The fields of a substantiated turn position. Copied when the agent sends them,
+# The fields of a substantiated position. Copied when the agent sends them,
 # omitted when it does not — never defaulted, because a default here is a claim.
-POSITION_FIELDS = ("in_flight", "turn_id", "wall_started_at")
+# Plural on purpose: the agent holds one lock per session, so a pod can be running
+# several turns at once, and a singular position lets a Manager restart into a
+# live one.
+POSITION_FIELDS = ("in_flight", "count", "turns")
+TURN_FIELDS = ("session", "turn_id", "wall_started_at")
 
 Transport = Callable[[str, str, dict[str, Any] | None, float], tuple[int, str]]
 
@@ -135,23 +139,55 @@ def _position(payload: dict[str, Any]) -> dict[str, Any]:
 
     The surface is closed: a field the relay has never heard of is not forwarded,
     because a consumer parses five calls with one shape and an unknown key is how
-    "could not see" starts to look like "fine, and by the way".
+    "could not see" starts to look like "fine, and by the way". The same rule runs
+    inside each turn — ``session``, ``turn_id`` and ``wall_started_at`` travel;
+    anything else the agent attaches to a turn does not.
     """
-    return {name: payload[name] for name in POSITION_FIELDS if name in payload}
+    out = {name: payload[name] for name in POSITION_FIELDS if name in payload}
+    turns = out.get("turns")
+    if isinstance(turns, list):
+        out["turns"] = [
+            {name: turn[name] for name in TURN_FIELDS if name in turn}
+            for turn in turns
+            if isinstance(turn, dict)
+        ]
+    return out
+
+
+def _named(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
 
 
 def _says_turn_position(payload: dict[str, Any]) -> str | None:
-    """A turn position is one claim, not two, and half of it is not an answer.
+    """A position is one claim, and half of one is not an answer.
 
-    ``in_flight: true`` with no ``turn_id`` says a turn is running and cannot
-    name it; forwarding that would hand the caller a position they cannot use or
-    check, which is the same failure as filling a success field with ``false``.
+    Five ways to be half a position, all answered ``unknown``: no boolean
+    ``in_flight``; no ``turns`` list; a list that contradicts ``in_flight`` in
+    either direction; a ``count`` that disagrees with the list; and a turn that
+    cannot say which session it is or what it is called. Forwarding any of them
+    hands the caller a position they can neither use nor check — the same failure
+    as filling a success field with ``false``, one layer in.
     """
     in_flight = payload.get("in_flight")
     if not isinstance(in_flight, bool):
         return "the agent answered without saying whether a turn is in flight"
-    if in_flight and not (isinstance(payload.get("turn_id"), str) and payload["turn_id"].strip()):
-        return "the agent says a turn is in flight and did not name it"
+    turns = payload.get("turns")
+    if not isinstance(turns, list):
+        return "the agent answered without saying which turns are in flight"
+    if in_flight and not turns:
+        return "the agent says a turn is in flight and named none"
+    if not in_flight and turns:
+        return "the agent named a turn in flight and says nothing is running"
+    count = payload.get("count")
+    if isinstance(count, bool) or not isinstance(count, int) or count != len(turns):
+        return "the agent's count disagrees with the turns it named"
+    for turn in turns:
+        if not isinstance(turn, dict):
+            return "the agent named a turn that is not an object"
+        if not _named(turn.get("session")):
+            return "the agent named a turn in flight and did not say which session it is"
+        if not _named(turn.get("turn_id")):
+            return "the agent named a turn in flight and did not name it"
     return None
 
 
@@ -195,7 +231,11 @@ class Relay:
         return {"ok": True, "relay": {"version": RELAY_VERSION, "uptime_s": int(uptime)}}
 
     def status(self) -> dict[str, Any]:
-        """Where the agent's turn is, asked locally. Silence is not ``idle``."""
+        """Where the agent's turns are, asked locally. Silence is not ``idle``.
+
+        Plural on purpose: several sessions can be running in one pod, and a
+        restart decided against one of them runs into the others.
+        """
         payload, failure = self._ask(
             "status", "GET", AGENT_STATUS, None, self.status_timeout_s, _says_turn_position,
             allow_sentence=True,
@@ -206,7 +246,11 @@ class Relay:
         return {"seen": True, **_position(payload)}
 
     def quiesce(self, reason: str) -> dict[str, Any]:
-        """Stop admitting work and say where the turn stands. Quiesce, not kill."""
+        """Stop admitting work and say where the turns stand. Quiesce, not kill.
+
+        The position it returns is ``status``'s shape, for the same reason: an
+        admission gate that can only name one of two live turns has closed nothing.
+        """
         payload, failure = self._ask(
             "quiesce", "POST", AGENT_QUIESCE, {"reason": reason}, self.quiesce_timeout_s,
             _accepted_turn_position, allow_sentence=True,

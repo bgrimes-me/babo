@@ -122,20 +122,36 @@ def test_an_empty_body_is_unknown_not_a_zero() -> None:
     assert "not a JSON object" in body["unknown"]
 
 
-# -- status: silence is not idle ---------------------------------------------
-def test_status_passes_the_turn_position_through() -> None:
-    r, door = _relay((200, '{"in_flight": true, "turn_id": "t-9f21", '
-                           '"wall_started_at": "2026-11-14T22:10:00Z"}'))
+# -- status: silence is not idle, and one turn is not the position -----------
+ONE = ('{"in_flight": true, "count": 1, "turns": [{"session": "api:matrix:@evans", '
+       '"turn_id": "t-9f21", "wall_started_at": "2026-11-14T22:10:00Z"}]}')
+TWO = ('{"in_flight": true, "count": 2, "turns": ['
+       '{"session": "api:matrix:@evans", "turn_id": "t-9f21", "wall_started_at": "2026-11-14T22:10:00Z"}, '
+       '{"session": "api:cli@z620", "turn_id": "t-2b07", "wall_started_at": "2026-11-14T22:11:04Z"}]}')
+IDLE = '{"in_flight": false, "count": 0, "turns": []}'
+
+
+def test_status_passes_the_whole_position_through() -> None:
+    r, door = _relay((200, ONE))
     body = r.status()
-    assert body == {"seen": True, "in_flight": True, "turn_id": "t-9f21",
-                    "wall_started_at": "2026-11-14T22:10:00Z"}
+    assert body == {"seen": True, "in_flight": True, "count": 1,
+                    "turns": [{"session": "api:matrix:@evans", "turn_id": "t-9f21",
+                               "wall_started_at": "2026-11-14T22:10:00Z"}]}
     assert door.calls[0]["method"] == "GET"
     assert door.calls[0]["url"].endswith("/v1/office/status")
 
 
+def test_two_live_sessions_both_arrive() -> None:
+    """The defect a singular shape had: a restart decided against one turn of two."""
+    r, _ = _relay((200, TWO))
+    body = r.status()
+    assert body["count"] == 2
+    assert [turn["session"] for turn in body["turns"]] == ["api:matrix:@evans", "api:cli@z620"]
+
+
 def test_status_is_idle_only_when_the_agent_says_so() -> None:
-    r, _ = _relay((200, '{"in_flight": false, "turn_id": null, "wall_started_at": null}'))
-    assert r.status() == {"seen": True, "in_flight": False, "turn_id": None, "wall_started_at": None}
+    r, _ = _relay((200, IDLE))
+    assert r.status() == {"seen": True, "in_flight": False, "count": 0, "turns": []}
 
 
 def test_status_without_a_turn_position_is_unknown() -> None:
@@ -145,34 +161,68 @@ def test_status_without_a_turn_position_is_unknown() -> None:
     assert "in flight" in body["unknown"]
 
 
+def test_a_position_that_contradicts_itself_is_unknown_both_ways() -> None:
+    for answer in ('{"in_flight": true, "count": 0, "turns": []}',
+                   '{"in_flight": false, "count": 1, "turns": [{"session": "s", "turn_id": "t"}]}'):
+        r, _ = _relay((200, answer))
+        body = r.status()
+        _one_failure_shape(body, "status")
+        assert "in_flight" not in body and "turns" not in body
+
+
+def test_a_count_that_disagrees_with_the_turns_is_unknown() -> None:
+    answer = ('{"in_flight": true, "count": 1, "turns": ['
+              '{"session": "a", "turn_id": "t-1"}, {"session": "b", "turn_id": "t-2"}]}')
+    r, _ = _relay((200, answer))
+    body = r.status()
+    _one_failure_shape(body, "status")
+    assert "count disagrees" in body["unknown"]
+
+
 def test_a_position_that_cannot_name_the_turn_is_unknown() -> None:
     """Half a claim is not a position: a running turn the relay cannot name is no use."""
-    r, _ = _relay((200, '{"in_flight": true}'))
+    r, _ = _relay((200, '{"in_flight": true, "count": 1, "turns": [{"session": "api:matrix:@evans"}]}'))
     body = r.status()
     _one_failure_shape(body, "status")
     assert "did not name it" in body["unknown"]
     assert "in_flight" not in body and "turn_id" not in body
 
 
-def test_quiesce_does_not_forward_half_a_position_either() -> None:
-    r, _ = _relay((200, '{"accepted": true, "in_flight": true, "turn_id": "  "}'))
-    body = r.quiesce("sessions leaked")
-    _one_failure_shape(body, "quiesce")
-    assert "accepted" not in body
+def test_a_position_that_cannot_say_which_session_is_unknown() -> None:
+    r, _ = _relay((200, '{"in_flight": true, "count": 1, "turns": [{"turn_id": "t-9f21"}]}'))
+    body = r.status()
+    _one_failure_shape(body, "status")
+    assert "which session" in body["unknown"]
+
+
+def test_a_position_with_no_turns_key_is_unknown() -> None:
+    r, _ = _relay((200, '{"in_flight": true, "count": 1}'))
+    body = r.status()
+    _one_failure_shape(body, "status")
+    assert "which turns" in body["unknown"]
+
+
+def test_a_turn_that_is_not_an_object_is_unknown() -> None:
+    r, _ = _relay((200, '{"in_flight": true, "count": 1, "turns": ["t-9f21"]}'))
+    body = r.status()
+    _one_failure_shape(body, "status")
+    assert "not an object" in body["unknown"]
 
 
 def test_the_surface_is_closed_a_field_nobody_knows_is_not_forwarded() -> None:
-    r, _ = _relay((200, '{"in_flight": true, "turn_id": "t-1", "queue_depth": 7}'))
-    assert r.status() == {"seen": True, "in_flight": True, "turn_id": "t-1"}
+    answer = ('{"in_flight": true, "count": 1, "queue_depth": 7, "turns": ['
+              '{"session": "a", "turn_id": "t-1", "tool": "bash"}]}')
+    r, _ = _relay((200, answer))
+    assert r.status() == {"seen": True, "in_flight": True, "count": 1,
+                          "turns": [{"session": "a", "turn_id": "t-1"}]}
 
 
 # -- quiesce: a turn in flight is reported, not quiesced ---------------------
-def test_quiesce_with_a_turn_in_flight_reports_the_turn() -> None:
-    r, door = _relay((200, '{"accepted": true, "in_flight": true, "turn_id": "t-9f21", '
-                           '"wall_started_at": "2026-11-14T22:10:00Z"}'))
+def test_quiesce_with_turns_in_flight_reports_the_turns() -> None:
+    r, door = _relay((200, '{"accepted": true, ' + TWO[1:]))
     body = r.quiesce("sessions leaked")
     assert body["accepted"] is True
-    assert body["in_flight"] is True and body["turn_id"] == "t-9f21"
+    assert body["count"] == 2 and len(body["turns"]) == 2
     # The word the report must not contain: there is no such field, and a
     # consumer that finds one will believe the pod is safe to stop.
     assert "quiesced" not in body
@@ -180,8 +230,17 @@ def test_quiesce_with_a_turn_in_flight_reports_the_turn() -> None:
 
 
 def test_quiesce_with_no_turn_says_so_without_inventing_idle() -> None:
-    r, _ = _relay((200, '{"accepted": true, "in_flight": false}'))
-    assert r.quiesce("sessions leaked") == {"accepted": True, "in_flight": False}
+    r, _ = _relay((200, '{"accepted": true, ' + IDLE[1:]))
+    assert r.quiesce("sessions leaked") == {"accepted": True, "in_flight": False,
+                                            "count": 0, "turns": []}
+
+
+def test_quiesce_does_not_forward_half_a_position_either() -> None:
+    r, _ = _relay((200, '{"accepted": true, "in_flight": true, "count": 1, '
+                        '"turns": [{"session": "api:matrix:@evans", "turn_id": "  "}]}'))
+    body = r.quiesce("sessions leaked")
+    _one_failure_shape(body, "quiesce")
+    assert "accepted" not in body
 
 
 def test_a_refusal_by_the_agent_is_its_own_sentence() -> None:
@@ -204,19 +263,20 @@ def test_an_error_answer_that_is_not_json_carries_no_sentence() -> None:
     assert "502" in body["unknown"]
 
 
-def test_a_quiesce_the_agent_declined_is_unknown_not_accepted() -> None:
-    r, _ = _relay((200, '{"accepted": false, "in_flight": false}'))
-    body = r.quiesce("sessions leaked")
-    _one_failure_shape(body, "quiesce")
-    assert "without accepting" in body["unknown"] and "accepted" not in body
-
-
 def test_a_missing_route_is_not_a_refusal() -> None:
     """Until item 2 lands, 404 is the truth about quiesce, and it is not a sentence."""
     r, _ = _relay((404, '{"detail": "Not Found"}'))
     body = r.quiesce("sessions leaked")
     _one_failure_shape(body, "quiesce")
     assert "/v1/office/quiesce" in body["unknown"] and "404" in body["unknown"]
+    assert "Not Found" in body["unknown"]
+
+
+def test_a_quiesce_the_agent_declined_is_unknown_not_accepted() -> None:
+    r, _ = _relay((200, '{"accepted": false, "in_flight": false, "count": 0, "turns": []}'))
+    body = r.quiesce("sessions leaked")
+    _one_failure_shape(body, "quiesce")
+    assert "without accepting" in body["unknown"] and "accepted" not in body
 
 
 # -- flush: no persist it cannot substantiate -------------------------------
@@ -334,10 +394,11 @@ def _door_server(status: int, payload: bytes, seen: list[dict[str, Any]]) -> tup
 def test_the_default_transport_speaks_to_a_real_socket() -> None:
     """The fake door proves the relay. This proves the transport underneath it."""
     seen: list[dict[str, Any]] = []
-    server, worker = _door_server(200, b'{"accepted": true, "in_flight": false}', seen)
+    server, worker = _door_server(200, b'{"accepted": true, "in_flight": false, "count": 0, "turns": []}', seen)
     try:
         r = relay.Relay(f"http://127.0.0.1:{server.server_port}")
-        assert r.quiesce("sessions leaked") == {"accepted": True, "in_flight": False}
+        assert r.quiesce("sessions leaked") == {"accepted": True, "in_flight": False,
+                                                "count": 0, "turns": []}
         assert seen == [{"path": relay.AGENT_QUIESCE, "body": {"reason": "sessions leaked"}}]
     finally:
         worker.join(timeout=5)
@@ -358,7 +419,8 @@ def test_the_default_transport_reads_a_real_refusal() -> None:
 
 # -- the relay's own bind and its own body are not this module's job --------
 def test_handlers_choose_no_status_code_at_all() -> None:
-    r, _ = _relay((200, '{"in_flight": false, "accepted": true, "persisted": true}'))
+    r, _ = _relay((200, '{"in_flight": false, "count": 0, "turns": [], '
+                        '"accepted": true, "persisted": true}'))
     bodies = [r.health(), r.status(), r.quiesce("r"), r.flush("r"),
               r.message(source="s", channel="c", content="x")]
     assert all(isinstance(body, dict) for body in bodies)
