@@ -472,6 +472,21 @@ async def handle_health(request: web.Request) -> web.Response:
 # ---------------------------------------------------------------------------
 
 
+def _office_door_refusal(path: str, remote: str | None, api_key: str) -> web.Response | None:
+    """The office door's own trust rule, as a decision and not a fall-through.
+
+    Loopback is inside the pod, which is where the relay is. Everything else must
+    present the key — and when no key is configured, a non-loopback caller is
+    refused rather than inheriting the rest of the API's "no key means open" rule,
+    because these routes can close the pod to new work.
+    """
+    if path not in _OFFICE_PATHS or remote in _LOOPBACK:
+        return None
+    if api_key:
+        return None  # the ordinary Bearer check decides
+    return _office_refusal(403, "the office door is loopback-only; no key is configured")
+
+
 def _office_refusal(status: int, sentence: str) -> web.Response:
     """The house shape for a refusal on this door: one key, one sentence.
 
@@ -635,8 +650,12 @@ def create_app(
         # Allow unauthenticated health checks.
         if request.path == "/health":
             return await handler(request)
-        if request.path in _OFFICE_PATHS and request.remote in _LOOPBACK:
-            return await handler(request)
+        if request.path in _OFFICE_PATHS:
+            refused = _office_door_refusal(request.path, request.remote, api_key)
+            if refused is not None:
+                return refused
+            if request.remote in _LOOPBACK:
+                return await handler(request)
         if not api_key:
             return await handler(request)
         auth = request.headers.get("Authorization", "")

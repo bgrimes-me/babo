@@ -9,8 +9,10 @@ without the API key).
 
 from __future__ import annotations
 
+import socket
 from typing import Any
 
+import aiohttp
 import pytest
 import pytest_asyncio
 
@@ -177,6 +179,64 @@ async def test_the_office_door_answers_without_the_api_key_from_loopback(client)
     """The relay is in this pod and reaches the agent on loopback, so it needs no key."""
     response = await client.get("/v1/office/status")  # no Authorization header
     assert response.status == 200
+
+
+def _non_loopback_address() -> str | None:
+    """This host's own routable address, so a row can be a non-loopback peer."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.connect(("10.255.255.255", 1))
+        address = sock.getsockname()[0]
+    except OSError:
+        return None
+    finally:
+        sock.close()
+    return None if address in {"127.0.0.1", "0.0.0.0"} else address
+
+
+@pytest_asyncio.fixture
+async def wide_client(loop: FakeLoop):
+    """A client that reaches the app from this host's non-loopback address."""
+
+    async def _open(api_key: str):
+        app = create_app(loop, model_name="test-model", request_timeout=10.0, api_key=api_key)
+        server = TestServer(app, host="0.0.0.0")
+        await server.start_server()
+        address = _non_loopback_address()
+        if address is None:
+            await server.close()
+            pytest.skip("this host has no non-loopback address to be a foreign peer from")
+        return server, f"http://{address}:{server.port}"
+
+    opened: list[TestServer] = []
+    try:
+        async def opener(api_key: str):
+            server, url = await _open(api_key)
+            opened.append(server)
+            return url
+        yield opener
+    finally:
+        for server in opened:
+            await server.close()
+
+
+@pytest.mark.asyncio
+async def test_a_non_loopback_peer_with_no_key_is_refused_not_served(wide_client, loop: FakeLoop) -> None:
+    """The office door does not inherit "no key configured means open"."""
+    url = await wide_client("")
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{url}/v1/office/quiesce", json={"reason": "x"}) as response:
+            assert response.status == 403
+            assert "loopback-only" in (await response.json())["detail"]
+    assert loop.refusal is None, "a refused caller must not have closed the pod"
+
+
+@pytest.mark.asyncio
+async def test_a_non_loopback_peer_with_a_key_falls_through_to_the_bearer_check(wide_client) -> None:
+    url = await wide_client(API_KEY)
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{url}/v1/office/quiesce", json={"reason": "x"}) as response:
+            assert response.status == 401
 
 
 @pytest.mark.asyncio
