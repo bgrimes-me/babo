@@ -9,6 +9,12 @@ own calls go straight to opencode and never count.
 
 It runs as its own small process beside opencode, whichever Babo process
 started the session, and stops by itself when opencode does.
+
+It listens on the address it is given. Loopback is the default, because a door
+between people and their own session belongs where only that host can reach it;
+a pod passes its reachable address instead, because there the door is the pod's
+window and the only thing that should be listening outward. It watches one pid and
+does not care what that process is.
 """
 
 from __future__ import annotations
@@ -26,15 +32,33 @@ def _now() -> str:
 
 
 class Door:
-    def __init__(self, target_port: int, status: Path):
+    def __init__(self, target_port: int, status: Path, watch_pid: int = 0) -> None:
         self.target_port = target_port
         self.status = status
+        self.watch_pid = watch_pid
         self.open = 0
         self.last_seen = ""
+        self.alive = True
+        self.reason = ""
 
     def _write(self) -> None:
+        """Say what the door knows, and when it knew it.
+
+        ``written_at`` is not decoration: a status file without an age is a report
+        about the last moment somebody happened to write, not about now. A door
+        killed with SIGKILL runs no ``finally``, so its last write would keep
+        saying ``alive: true`` forever; the reader ages it out instead.
+        """
+        payload = {
+            "connections": self.open,
+            "last_seen": self.last_seen,
+            "alive": self.alive,
+            "pid": self.watch_pid,
+            "reason": self.reason,
+            "written_at": _now(),
+        }
         tmp = self.status.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"connections": self.open, "last_seen": self.last_seen}), encoding="utf-8")
+        tmp.write_text(json.dumps(payload), encoding="utf-8")
         tmp.replace(self.status)
 
     async def _pipe(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
@@ -89,18 +113,29 @@ def _alive(pid: int) -> bool:
         return True
 
 
-async def serve(listen_port: int, target_port: int, status: Path, watch_pid: int) -> None:
-    door = Door(target_port, status)
+async def serve(
+    listen_port: int, target_port: int, status: Path, watch_pid: int, host: str = "127.0.0.1",
+) -> None:
+    door = Door(target_port, status, watch_pid)
     door._write()  # pyright: ignore[reportPrivateUsage]
-    server = await asyncio.start_server(door.handle, "127.0.0.1", listen_port)
+    server = await asyncio.start_server(door.handle, host, listen_port)
     async with server:
         while _alive(watch_pid):
+            # A heartbeat, not only a transition: an idle door that wrote once
+            # would age out of its own status file while it was still listening.
             await asyncio.sleep(2)
+            door._write()  # pyright: ignore[reportPrivateUsage]
+        door.alive = False
+        door.reason = "the process it watches has exited"
+        door._write()  # pyright: ignore[reportPrivateUsage]
 
 
 def main() -> None:
     listen_port, target_port, status, watch_pid = int(sys.argv[1]), int(sys.argv[2]), Path(sys.argv[3]), int(sys.argv[4])
-    asyncio.run(serve(listen_port, target_port, status, watch_pid))
+    # The address is the caller's, not the door's: a session's door stays on
+    # loopback, and a pod's window listens on the pod's reachable address.
+    host = sys.argv[5] if len(sys.argv) > 5 else "127.0.0.1"
+    asyncio.run(serve(listen_port, target_port, status, watch_pid, host))
 
 
 if __name__ == "__main__":
