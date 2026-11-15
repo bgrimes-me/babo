@@ -135,9 +135,25 @@ def test_status_without_a_turn_position_is_unknown() -> None:
     assert "in flight" in body["unknown"]
 
 
+def test_a_position_that_cannot_name_the_turn_is_unknown() -> None:
+    """Half a claim is not a position: a running turn the relay cannot name is no use."""
+    r, _ = _relay((200, '{"in_flight": true}'))
+    body = r.status()
+    _one_failure_shape(body, "status")
+    assert "did not name it" in body["unknown"]
+    assert "in_flight" not in body and "turn_id" not in body
+
+
+def test_quiesce_does_not_forward_half_a_position_either() -> None:
+    r, _ = _relay((200, '{"accepted": true, "in_flight": true, "turn_id": "  "}'))
+    body = r.quiesce("sessions leaked")
+    _one_failure_shape(body, "quiesce")
+    assert "accepted" not in body
+
+
 def test_the_surface_is_closed_a_field_nobody_knows_is_not_forwarded() -> None:
-    r, _ = _relay((200, '{"in_flight": true, "queue_depth": 7}'))
-    assert r.status() == {"seen": True, "in_flight": True}
+    r, _ = _relay((200, '{"in_flight": true, "turn_id": "t-1", "queue_depth": 7}'))
+    assert r.status() == {"seen": True, "in_flight": True, "turn_id": "t-1"}
 
 
 # -- quiesce: a turn in flight is reported, not quiesced ---------------------
@@ -235,7 +251,24 @@ def test_message_refusal_is_unknown_not_delivered_false() -> None:
 def test_message_timeout_is_unknown() -> None:
     r, _ = _relay(TimeoutError("timed out"))
     said = r.message(source="@evans:matrix.home", channel="matrix", content="hi")["unknown"]
-    assert "timeout after 30.0s" in said
+    assert "within 30.0s" in said
+    # A caller reading `unknown` must not conclude it never arrived: the door we
+    # use takes a whole turn, so a deadline leaves the turn running or not taken.
+    assert "whether it took the turn is unknown" in said
+
+
+def test_a_2xx_from_this_door_means_a_turn_was_taken_not_that_it_queued() -> None:
+    """The semantic of the door behind `message`, asserted where it is decided.
+
+    /v1/chat/completions carries a turn (one user message, awaited to completion),
+    so `delivered` is as strong as that door can be. /v1/office/message is the
+    route where a 2xx will mean accepted-for-delivery.
+    """
+    r, door = _relay((200, '{"choices": [{"message": {"content": "done"}}]}'))
+    assert r.message(source="@evans:matrix.home", channel="matrix", content="hello") == {"delivered": True}
+    sent = door.calls[0]["body"]
+    assert list(sent) == ["messages", "session_id"], sent
+    assert sent["messages"][0]["role"] == "user"
 
 
 def test_message_refuses_attachments_by_name_without_calling_the_door() -> None:

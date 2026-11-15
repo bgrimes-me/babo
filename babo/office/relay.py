@@ -24,16 +24,25 @@ Five rules, each of which is a row:
   rather than reporting a router artefact as the agent's opinion.
 - **``health`` makes no claim about the agent**, and ``status`` never turns
   silence into ``in_flight: false``.
-- **``message`` reports delivery and nothing else.** It is the one call with a
-  door behind it today (``babo/api/server.py``'s ``POST /v1/chat/completions``),
-  and success is a 2xx that came back — so a 4xx, a 5xx, a refusal and a timeout
-  all land in ``unknown``, and a sentence is quoted inside the reason rather than
-  returned as an outcome.
+- **``message`` reports what the door it used can confirm, and nothing else.**
+  The one door behind this call today (``babo/api/server.py``'s
+  ``POST /v1/chat/completions``) does not accept a message and return; it takes a
+  whole turn — the server awaits the turn before it answers — and then returns.
+  So a 2xx here means **a turn was taken and returned**, not that an entry was
+  queued, and two messages to one caller serialize on that session lock. That is
+  why a timeout is ``unknown`` and says so: the relay cannot tell "never
+  arrived" from "still working", and inventing either is the failure this line
+  exists to prevent. ``/v1/office/message`` — accept, queue, return, own the
+  "accepted" claim — is item 2's fourth route, and the day it lands is the day
+  ``delivered`` means delivery rather than completion.
 
 Only ``message`` has a route to knock on today. ``status``, ``quiesce`` and
 ``flush`` name the paths they will ask, once, here: the relay is the only
 component that will ever ask them, so the paths are declared in one place and the
-agent grows the routes behind them. Until it does, the honest answer is
+agent grows the routes behind them — **importing these constants, never
+re-typing them.** A path that drifts by one prefix leaves the relay saying "the
+door has no /v1/office/status" forever while every row here stays green, which is
+the green that means nothing. Until the routes land, the honest answer is
 ``unknown`` — and a row that expects ``unknown`` from those three is a **pass**,
 not a red.
 """
@@ -105,13 +114,17 @@ def _sentence(payload: dict[str, Any] | None) -> str:
     return said.strip() if isinstance(said, str) else ""
 
 
-def _no_answer(exc: BaseException, timeout_s: float) -> str:
+def _no_answer(exc: BaseException, timeout_s: float, timeout_note: str = "") -> str:
     """Why the door did not answer, in words a caller can act on.
 
     A timeout is named as a timeout because it is the one failure whose reason is
-    the relay's own deadline rather than anything the agent said or did.
+    the relay's own deadline rather than anything the agent said or did. A call
+    that must be more specific about what the deadline leaves unknown — ``message``,
+    where a turn may still be running — passes the sentence to add.
     """
     if isinstance(exc, TimeoutError) or isinstance(getattr(exc, "reason", None), TimeoutError):
+        if timeout_note:
+            return f"the agent did not answer its local door within {timeout_s}s, {timeout_note}"
         return f"the agent did not answer its local door (timeout after {timeout_s}s)"
     said = str(exc).strip() or type(exc).__name__
     return f"the agent did not answer its local door ({said})"
@@ -128,8 +141,17 @@ def _position(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _says_turn_position(payload: dict[str, Any]) -> str | None:
-    if not isinstance(payload.get("in_flight"), bool):
+    """A turn position is one claim, not two, and half of it is not an answer.
+
+    ``in_flight: true`` with no ``turn_id`` says a turn is running and cannot
+    name it; forwarding that would hand the caller a position they cannot use or
+    check, which is the same failure as filling a success field with ``false``.
+    """
+    in_flight = payload.get("in_flight")
+    if not isinstance(in_flight, bool):
         return "the agent answered without saying whether a turn is in flight"
+    if in_flight and not (isinstance(payload.get("turn_id"), str) and payload["turn_id"].strip()):
+        return "the agent says a turn is in flight and did not name it"
     return None
 
 
@@ -208,7 +230,17 @@ class Relay:
 
     def message(self, *, source: str, channel: str, content: str,
                 attachments: tuple[str, ...] = ()) -> dict[str, Any]:
-        """Deliver one message. ``delivered: true`` only when the door took it.
+        """Deliver one message. ``delivered: true`` only on a 2xx that came back.
+
+        **What that 2xx means is decided here, by the door chosen below.** The
+        door today is ``/v1/chat/completions``, which takes a turn: the server
+        awaits it before answering (``babo/api/server.py``), so a 2xx means *the
+        agent took a turn and returned*, not *an entry was queued*, and two
+        messages to one caller serialize on that session's lock. ``delivered``
+        is therefore the strongest word this door can support, and the weakest
+        word a notification needs. ``/v1/office/message`` (item 2) is the route
+        where 2xx means accepted-for-delivery; when it lands, this call changes
+        one constant and the word gets its ordinary meaning.
 
         ``from`` and ``channel`` are not decoration: they become the door's
         session identity, because a caller that cannot say who is speaking cannot
@@ -227,6 +259,7 @@ class Relay:
         _, failure = self._ask(
             "message", "POST", CHAT_COMPLETIONS, body, self.message_timeout_s,
             None, allow_sentence=False, parse=False,
+            timeout_note="so whether it took the turn is unknown",
         )
         if failure is not None:
             return failure
@@ -235,7 +268,8 @@ class Relay:
     # -- one door, one shape ----------------------------------------------
     def _ask(self, call: str, method: str, path: str, body: dict[str, Any] | None,
              timeout_s: float, substantiate: Callable[[dict[str, Any]], str | None] | None,
-             *, allow_sentence: bool, parse: bool = True) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+             *, allow_sentence: bool, parse: bool = True,
+             timeout_note: str = "") -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
         """Ask the agent's door once.
 
         Returns ``(payload, None)`` on an answer and ``(None, body)`` on anything
@@ -246,7 +280,7 @@ class Relay:
         try:
             status, text = self.transport(method, url, body, timeout_s)
         except Exception as exc:  # report, never raise: the door is not ours
-            return None, _unknown(call, _no_answer(exc, timeout_s))
+            return None, _unknown(call, _no_answer(exc, timeout_s, timeout_note))
 
         # The body is parsed even when a call does not need it, because a 4xx's
         # sentence is the agent's own words and losing it would leave the caller
