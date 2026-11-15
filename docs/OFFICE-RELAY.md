@@ -41,6 +41,30 @@ a design conversation, not a patch.
 All responses are `application/json`. Every failure that is not the relay's own
 fault uses the house shape `{"detail": "<sentence>"}`.
 
+## One failure shape, five call sites
+
+Every call that cannot substantiate an answer returns **the same shape**:
+
+```
+200 {"unknown": "<call>: <the reason, in the house's words>"}
+```
+
+- one key, `unknown`, always a string, always prefixed with the call it belongs to;
+- **the endpoint's own success fields are ABSENT, never `false`** — `seen: false`,
+  `accepted: false`, `persisted: false`, `delivered: false` are all *claims*, and a
+  relay that cannot see has no claim to make;
+- no per-endpoint dialect. A consumer parses one shape for five call sites, so
+  "I could not see" cannot be mistaken for "fine" by the one case somebody forgot.
+
+`health` never carries `unknown`: if the relay answers at all, the relay is up. That
+is the one thing it can know without asking anybody.
+
+## The status code is a claim about the transport
+
+A relay that returned 500 because the agent did not answer would be **reporting its
+own health as the agent's**. The code belongs to this hop; the answer belongs to the
+thing it asked. Same error as `delivered` on a 404, or `status: ok` over an error.
+
 ### `GET /health`
 
 Is the **relay** up. It makes **no claim about the agent** — that is `status`'s job,
@@ -65,12 +89,12 @@ it. Never `idle` by default: silence must not become "nothing is happening".
 200 {"seen": true, "in_flight": false,
      "turn_id": null, "wall_started_at": null}
 
-200 {"seen": false, "unknown": "the agent did not answer its local door: connection refused"}
+200 {"unknown": "status: the agent did not answer its local door (connection refused)"}
 ```
 
-`seen: false` is a **200 with a named reason** — the relay is fine and the agent is
-not answering, which is a fact about the agent and not an error in the relay. A
-relay that turned that into a 500 would report its own health as the agent's.
+A **200 with `unknown`** — the relay is fine and the agent is not answering, and the
+absence of `seen`/`in_flight` is the fact. A relay that turned that into a 500 would
+report its own health as the agent's.
 
 ### `POST /quiesce`
 
@@ -84,12 +108,12 @@ POST {"reason": "sessions leaked"}
 
 200  {"accepted": true, "in_flight": false}
 
-200  {"accepted": false, "unknown": "the agent did not answer its local door: timeout after 5.0s"}
+200  {"unknown": "quiesce: the agent did not answer its local door (timeout after 5.0s)"}
 ```
 
-`accepted: false` means *the request was not taken*, not *the agent refused*. A
-refusal by the agent is a `200` with the agent's own sentence in `detail`, because
-the relay does not reword what it is told.
+An `unknown` answer means *the request was not taken*, not *the agent refused*. A
+refusal by the agent is a `200` with the agent's own sentence in `detail`, because the
+relay does not reword what it is told — a refusal is an answer, and `unknown` is not.
 
 ### `POST /flush`
 
@@ -98,7 +122,7 @@ Persist and confirm. It must not claim a persist it cannot substantiate.
 ```
 POST {"reason": "quiesced for restart"}
 200  {"persisted": true,  "detail": "the agent confirmed its store was written"}
-200  {"persisted": false, "unknown": "the agent did not confirm; the store state is unknown"}
+200  {"unknown": "flush: the agent did not confirm, so the store state is unknown"}
 ```
 
 ### `POST /message`
@@ -110,7 +134,7 @@ kept from the Ruby relay so a caller does not learn two vocabularies.
 POST {"from": "@evans:matrix.home", "channel": "matrix", "content": "hello",
       "attachments": []}
 200  {"delivered": true}
-200  {"delivered": false, "detail": "the agent's local door did not accept the message"}
+200  {"unknown": "message: the agent's local door did not accept it"}
 ```
 
 ## What it must never do
