@@ -20,6 +20,15 @@ for it; nothing outside the pod talks to the agent at all.
 - Ingress is the relay's. The agent's own services bind loopback; the pod still has
   its own network for egress (Forgejo, at minimum).
 
+### Where it listens
+
+**The pod's WireGuard address, port 9300.** The port is the Ruby relay's, kept for
+the same reason `message`'s shape was kept: a caller should not learn two
+vocabularies for one hop. The address is the pod's, and it is not loopback —
+the Manager is outside the pod, and the relay is the pod's only window. The port is
+`RELAY_PORT` in `babo/office/relay.py` and the Manager side reads it from there
+rather than re-typing the number.
+
 ## Why Python, not the Ruby relay that exists
 
 `neoclaw-rails/app/services/hub/relay.rb` is the existing sidecar (`<wg_address>:9300`,
@@ -159,8 +168,9 @@ POST {"from": "@evans:matrix.home", "channel": "matrix", "content": "hello",
   "delivered". Delivery is the only thing a caller is told, and only when it happened.
 - **Speak for the agent.** Any sentence attributed to the agent is quoted; any answer
   the relay could not obtain is `unknown` with the reason it could not.
-- **Listen anywhere the agent can be reached without the relay.** The relay's own bind
-  is its decision; the agent's is not a decision at all (loopback).
+- **Listen anywhere the agent can be reached without the relay.** The relay binds the
+  pod's WireGuard address and nothing else; the agent's bind is not a decision at all
+  (loopback).
 
 ## How it is tested without a pod
 

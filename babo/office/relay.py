@@ -60,6 +60,14 @@ from typing import Any, Callable, cast
 # this number, and it changes when the shapes change.
 RELAY_VERSION = "1"
 
+# Where the relay listens: the pod's WireGuard address, on this port. The port is
+# the Ruby relay's, kept for the same reason `message`'s shape was kept — a caller
+# should not learn two vocabularies for one hop. The *address* is not a constant,
+# because it is the pod's; but loopback is wrong for both, since the Manager is
+# outside the pod and the relay is the pod's only window. The Manager's side reads
+# this number rather than re-typing it.
+RELAY_PORT = 9300
+
 # The one door that exists today (babo/api/server.py:556). The other three are the
 # routes item 2 adds behind them; named here so that nobody has to derive them a
 # second time in the server.
