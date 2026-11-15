@@ -479,8 +479,10 @@ class AgentLoop:
         # Turns that are executing right now, per session, registered by the turn
         # itself. This — not the lock registry — is what `status` reports: locks
         # may exist with no work and expire while work runs.
-        self._active_turns: dict[str, dict[str, TurnRecord]] = {}
-        self._quiesce: Quiesced | None = None
+        # Types come from the class-level declarations above; annotating them
+        # again here is a redeclaration the strict checker rejects.
+        self._active_turns = {}
+        self._quiesce = None
         self._discarding_sessions: set[str] = set()
         self._background_tasks: set[asyncio.Task[Any]] = set()
         self._close_lock = asyncio.Lock()
